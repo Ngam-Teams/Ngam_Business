@@ -37,12 +37,12 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
     }
   }
 
-  void _showAddProductModal() {
+  void _showAddProductModal({ProductModel? product}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const _AddProductSheet(),
+      builder: (context) => _AddProductSheet(existingProduct: product),
     ).then((value) {
       if (value == true) {
         _loadProducts();
@@ -163,6 +163,8 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
       borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: GestureDetector(
+        onTap: () => _showAddProductModal(product: product),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.05),
@@ -245,13 +247,15 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
 }
 
 class _AddProductSheet extends StatefulWidget {
-  const _AddProductSheet();
+  final ProductModel? existingProduct;
+  const _AddProductSheet({this.existingProduct});
 
   @override
   State<_AddProductSheet> createState() => _AddProductSheetState();
@@ -270,6 +274,20 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   
   XFile? _imageFile;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingProduct != null) {
+      final p = widget.existingProduct!;
+      _nameController.text = p.name;
+      _priceController.text = p.price.toStringAsFixed(2);
+      _categoryController.text = p.category ?? '';
+      _stockController.text = p.stock.toString();
+      _descController.text = p.description ?? '';
+      _skuController.text = p.sku ?? '';
+    }
+  }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -295,23 +313,46 @@ class _AddProductSheetState extends State<_AddProductSheet> {
       imageExt = _imageFile!.name.split('.').last;
     }
     
-    final product = await _service.addProduct(
-      name: _nameController.text.trim(),
-      price: price,
-      category: _categoryController.text.trim(),
-      description: _descController.text.trim(),
-      sku: _skuController.text.trim(),
-      stock: stock,
-      imageBytes: imageBytes,
-      imageExt: imageExt,
-    );
+    bool success = false;
+    
+    if (widget.existingProduct != null) {
+      // Update
+      final updates = {
+        'name': _nameController.text.trim(),
+        'price': price,
+        'category': _categoryController.text.trim(),
+        'description': _descController.text.trim(),
+        'sku': _skuController.text.trim(),
+        'stock': stock,
+      };
+      
+      success = await _service.updateProduct(
+        widget.existingProduct!.id, 
+        updates,
+        imageBytes: imageBytes,
+        imageExt: imageExt,
+      );
+    } else {
+      // Add new
+      final product = await _service.addProduct(
+        name: _nameController.text.trim(),
+        price: price,
+        category: _categoryController.text.trim(),
+        description: _descController.text.trim(),
+        sku: _skuController.text.trim(),
+        stock: stock,
+        imageBytes: imageBytes,
+        imageExt: imageExt,
+      );
+      success = product != null;
+    }
     
     if (mounted) {
-      if (product != null) {
-        showGlassToast(context, 'Product added successfully');
+      if (success) {
+        showGlassToast(context, widget.existingProduct != null ? 'Product updated successfully' : 'Product added successfully');
         Navigator.pop(context, true);
       } else {
-        showGlassToast(context, 'Failed to add product', isError: true);
+        showGlassToast(context, 'Failed to save product', isError: true);
         setState(() => _isSaving = false);
       }
     }
@@ -341,9 +382,9 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Add New Item / Service',
-                    style: TextStyle(
+                  Text(
+                    widget.existingProduct != null ? 'Edit Item / Service' : 'Add New Item / Service',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -366,7 +407,12 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                                 image: NetworkImage(_imageFile!.path),
                                 fit: BoxFit.cover,
                               )
-                            : null,
+                            : (widget.existingProduct?.imageUrl != null
+                                ? DecorationImage(
+                                    image: NetworkImage(widget.existingProduct!.imageUrl!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null),
                       ),
                       child: _imageFile == null
                           ? const Column(

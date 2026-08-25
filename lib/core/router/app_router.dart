@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
 import '../../features/home/presentation/home_dashboard.dart';
+import '../../features/orders/presentation/orders_page.dart';
 import '../../features/pos/presentation/pos_page.dart';
 import '../../features/analytics/presentation/analytics_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
@@ -80,21 +81,24 @@ class _AppShellState extends State<_AppShell> {
 
   static final _navItems = [
     (icon: HugeIcons.strokeRoundedHome11, label: 'Overview'),
+    (icon: HugeIcons.strokeRoundedInvoice01, label: 'Orders'),
     (icon: HugeIcons.strokeRoundedShoppingCart02, label: 'POS'),
     (icon: HugeIcons.strokeRoundedAnalytics01, label: 'Analytics'),
     (icon: HugeIcons.strokeRoundedSettings01, label: 'Settings'),
   ];
 
-  static const _titles = ['Overview', 'Point of Sale', 'Analytics', 'Settings'];
+  static const _titles = ['Overview', 'Orders', 'Point of Sale', 'Analytics', 'Settings'];
   static const _subtitles = [
     'Your business at a glance',
-    'Manage orders & products',
+    'Manage online and active orders',
+    'Create new orders in-store',
     'Revenue & performance',
     'Account & preferences',
   ];
 
   static const _pages = [
     HomeDashboard(),
+    OrdersPage(),
     PosPage(),
     AnalyticsPage(),
     SettingsPage(),

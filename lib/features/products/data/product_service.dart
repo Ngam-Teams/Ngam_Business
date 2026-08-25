@@ -69,8 +69,21 @@ class ProductService {
   }
 
   /// Updates an existing product
-  Future<bool> updateProduct(String productId, Map<String, dynamic> updates) async {
+  Future<bool> updateProduct(
+    String productId, 
+    Map<String, dynamic> updates, {
+    Uint8List? imageBytes,
+    String? imageExt,
+  }) async {
     try {
+      if (imageBytes != null && imageExt != null) {
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.$imageExt';
+        final path = 'products/$fileName';
+        await _client.storage.from('business-assets').uploadBinary(path, imageBytes);
+        final imageUrl = _client.storage.from('business-assets').getPublicUrl(path);
+        updates['image_url'] = imageUrl;
+      }
+
       await _client.from('products').update(updates).eq('id', productId);
       return true;
     } catch (e) {

@@ -29,7 +29,7 @@ class _PosPageState extends State<PosPage> {
 
   List<String> get _categories {
     final cats = _allProducts
-        .map((p) => p.category ?? 'Other')
+        .map((p) => (p.category == null || p.category!.trim().isEmpty) ? 'Other' : p.category!.trim())
         .toSet()
         .toList()
       ..sort();
@@ -73,8 +73,8 @@ class _PosPageState extends State<PosPage> {
       _filteredProducts = _allProducts.where((p) {
         final matchQuery = query.isEmpty ||
             p.name.toLowerCase().contains(query);
-        final matchCat = _selectedCategory == 'All' ||
-            (p.category ?? 'Other') == _selectedCategory;
+        final pCat = (p.category == null || p.category!.trim().isEmpty) ? 'Other' : p.category!.trim();
+        final matchCat = _selectedCategory == 'All' || pCat == _selectedCategory;
         return matchQuery && matchCat;
       }).toList();
     });
@@ -296,26 +296,45 @@ class _PosPageState extends State<PosPage> {
                   ),
                 )
               : _filteredProducts.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No products found',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.4),
-                        ),
+                  ? RefreshIndicator(
+                      onRefresh: _loadProducts,
+                      color: const Color(0xFF42A5F5),
+                      backgroundColor: const Color(0xFF1A1A2E),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            height: 300,
+                            child: Center(
+                              child: Text(
+                                'No products found',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.4),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     )
-                  : GridView.builder(
-                      padding: const EdgeInsets.only(bottom: 120),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1.2,
+                  : RefreshIndicator(
+                      onRefresh: _loadProducts,
+                      color: const Color(0xFF42A5F5),
+                      backgroundColor: const Color(0xFF1A1A2E),
+                      child: GridView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 120),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.2,
+                        ),
+                        itemCount: _filteredProducts.length,
+                        itemBuilder: (context, i) =>
+                            _buildProductCard(_filteredProducts[i]),
                       ),
-                      itemCount: _filteredProducts.length,
-                      itemBuilder: (context, i) =>
-                          _buildProductCard(_filteredProducts[i]),
                     ),
         ),
       ],
@@ -399,7 +418,7 @@ class _PosPageState extends State<PosPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (product.category != null)
+                      if (product.category != null && product.category!.trim().isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,

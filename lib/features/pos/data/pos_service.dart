@@ -44,6 +44,7 @@ class PosService {
       final orderData = {
         'total': total,
         'status': 'completed',
+        'source': 'pos',
         if (customerName != null && customerName.isNotEmpty)
           'customer_name': customerName,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
@@ -83,5 +84,4 @@ class PosService {
       return [];
     }
   }
-
 }
