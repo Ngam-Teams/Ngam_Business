@@ -10,6 +10,8 @@ import '../../features/pos/presentation/pos_page.dart';
 import '../../features/analytics/presentation/analytics_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/settings/presentation/business_profile_page.dart';
+import '../../features/products/presentation/product_catalogue_page.dart';
+import '../../features/settings/presentation/staff_management_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
 
 // ---------------------------------------------------------------------------
@@ -178,6 +180,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/business-profile',
       builder: (context, state) => const BusinessProfilePage(),
+    ),
+    GoRoute(
+      path: '/product-catalogue',
+      builder: (context, state) => const ProductCataloguePage(),
+    ),
+    GoRoute(
+      path: '/staff-management',
+      builder: (context, state) => const StaffManagementPage(),
     ),
   ],
 );

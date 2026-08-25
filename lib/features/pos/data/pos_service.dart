@@ -25,8 +25,7 @@ class PosService {
           .map((json) => ProductModel.fromJson(json as Map<String, dynamic>))
           .toList();
     } on PostgrestException {
-      // Return mock products if table doesn't exist yet
-      return _mockProducts();
+      return [];
     }
   }
 
@@ -85,66 +84,4 @@ class PosService {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Mock data (fallback when DB tables not yet set up)
-  // ---------------------------------------------------------------------------
-
-  List<ProductModel> _mockProducts() => [
-        const ProductModel(
-          id: 'mock-1',
-          name: 'Nasi Lemak',
-          price: 8.50,
-          category: 'Food',
-          stock: 50,
-        ),
-        const ProductModel(
-          id: 'mock-2',
-          name: 'Teh Tarik',
-          price: 3.50,
-          category: 'Drinks',
-          stock: 100,
-        ),
-        const ProductModel(
-          id: 'mock-3',
-          name: 'Roti Canai',
-          price: 2.00,
-          category: 'Food',
-          stock: 80,
-        ),
-        const ProductModel(
-          id: 'mock-4',
-          name: 'Milo Ais',
-          price: 4.00,
-          category: 'Drinks',
-          stock: 60,
-        ),
-        const ProductModel(
-          id: 'mock-5',
-          name: 'Nasi Goreng',
-          price: 9.00,
-          category: 'Food',
-          stock: 40,
-        ),
-        const ProductModel(
-          id: 'mock-6',
-          name: 'Kopi O',
-          price: 2.50,
-          category: 'Drinks',
-          stock: 120,
-        ),
-        const ProductModel(
-          id: 'mock-7',
-          name: 'Char Kuey Teow',
-          price: 10.00,
-          category: 'Food',
-          stock: 30,
-        ),
-        const ProductModel(
-          id: 'mock-8',
-          name: 'Air Sirap',
-          price: 2.00,
-          category: 'Drinks',
-          stock: 90,
-        ),
-      ];
 }

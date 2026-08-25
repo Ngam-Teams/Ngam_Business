@@ -66,7 +66,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           ? '...'
                           : fmt.format(data?['avgOrderValue'] ?? 0.0),
                       color: const Color(0xFFF9C80E),
-                      icon: HugeIcons.strokeRoundedCalculator,
+                      icon: HugeIcons.strokeRoundedReceiptText,
                     ),
                   ];
 
@@ -85,13 +85,25 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           .toList(),
                     );
                   }
+                  // For mobile, use a 2x2 grid (two rows of two Expanded items)
                   return Column(
-                    children: summaryCards
-                        .map((c) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: c,
-                            ))
-                        .toList(),
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: summaryCards[0]),
+                          const SizedBox(width: 12),
+                          Expanded(child: summaryCards[1]),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(child: summaryCards[2]),
+                          const SizedBox(width: 12),
+                          Expanded(child: summaryCards[3]),
+                        ],
+                      ),
+                    ],
                   );
                 },
               );
@@ -404,13 +416,17 @@ class _SummaryCard extends StatelessWidget {
         children: [
           HugeIcon(icon: icon, color: color, size: 22, strokeWidth: 2.1),
           const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
           const SizedBox(height: 4),

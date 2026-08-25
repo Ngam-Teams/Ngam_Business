@@ -47,21 +47,31 @@ class AnalyticsService {
         productCount = 0;
       }
 
+      // Pending Orders
+      int pendingOrders = 0;
+      for (final o in orders) {
+        if (o['status'] == 'pending') {
+          pendingOrders++;
+        }
+      }
+
       return {
         'todayRevenue': todayRevenue,
         'todayOrders': orders.length,
         'monthlyRevenue': monthlyRevenue,
         'productCount': productCount,
         'avgOrderValue': orders.isEmpty ? 0.0 : todayRevenue / orders.length,
+        'pendingOrders': pendingOrders,
       };
     } on PostgrestException {
       // Return mock stats if tables not set up yet
       return {
         'todayRevenue': 487.50,
-        'todayOrders': 23,
-        'monthlyRevenue': 8234.00,
-        'productCount': 8,
-        'avgOrderValue': 21.20,
+        'todayOrders': 24,
+        'monthlyRevenue': 12450.00,
+        'productCount': 142,
+        'avgOrderValue': 20.30,
+        'pendingOrders': 3,
       };
     }
   }

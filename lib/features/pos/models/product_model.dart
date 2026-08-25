@@ -8,6 +8,8 @@ class ProductModel {
   final double price;
   final String? category;
   final String? imageUrl;
+  final String? description;
+  final String? sku;
   final int stock;
   final bool isAvailable;
 
@@ -17,6 +19,8 @@ class ProductModel {
     required this.price,
     this.category,
     this.imageUrl,
+    this.description,
+    this.sku,
     this.stock = 0,
     this.isAvailable = true,
   });
@@ -28,6 +32,8 @@ class ProductModel {
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       category: json['category'] as String?,
       imageUrl: json['image_url'] as String?,
+      description: json['description'] as String?,
+      sku: json['sku'] as String?,
       stock: json['stock'] as int? ?? 0,
       isAvailable: json['is_available'] as bool? ?? true,
     );
@@ -39,6 +45,8 @@ class ProductModel {
         'price': price,
         'category': category,
         'image_url': imageUrl,
+        'description': description,
+        'sku': sku,
         'stock': stock,
         'is_available': isAvailable,
       };

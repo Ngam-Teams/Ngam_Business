@@ -57,10 +57,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
         final data = snapshot.data;
         final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
 
-        final todayRev = data?['todayRevenue'] ?? 0.0;
-        final todayOrders = data?['todayOrders'] ?? '—';
-        final monthlyRev = data?['monthlyRevenue'] ?? 0.0;
-        final productCount = data?['productCount'] ?? '—';
+        final double todayRev = (data?['todayRevenue'] as num?)?.toDouble() ?? 0.0;
+        final int todayOrders = (data?['todayOrders'] as num?)?.toInt() ?? 0;
 
         final loading = snapshot.connectionState == ConnectionState.waiting;
 
@@ -79,15 +77,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
             accentColor: const Color(0xFF42A5F5),
           ),
           StatCard(
-            label: 'Monthly Revenue',
-            value: loading ? '...' : fmt.format(monthlyRev),
-            icon: HugeIcons.strokeRoundedChartIncrease,
-            accentColor: const Color(0xFF44CF6C),
-          ),
-          StatCard(
-            label: 'Active Products',
-            value: loading ? '...' : productCount.toString(),
-            icon: HugeIcons.strokeRoundedGridView,
+            label: 'Pending Orders',
+            value: loading ? '...' : (data?['pendingOrders'] ?? 0).toString(),
+            icon: HugeIcons.strokeRoundedTime02,
             accentColor: const Color(0xFFF9C80E),
           ),
         ];
@@ -147,28 +139,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
             )
             .toList(),
       );
-    } else if (width >= 520) {
-      return Column(
-        children: [
-          Row(children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: 16),
-            Expanded(child: cards[1]),
-          ]),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(child: cards[2]),
-            const SizedBox(width: 16),
-            Expanded(child: cards[3]),
-          ]),
-        ],
-      );
     } else {
+      // Stack cards vertically for mobile
       return Column(
         children: cards
             .map((c) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: c,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: c,
+                  ),
                 ))
             .toList(),
       );

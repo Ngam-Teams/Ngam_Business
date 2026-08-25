@@ -89,21 +89,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   _buildNavRow(
                     label: 'Staff Management',
                     icon: HugeIcons.strokeRoundedUserGroup,
-                    onTap: () => showGlassToast(
-                      context,
-                      'Coming soon',
-                      customColor: const Color(0xFF42A5F5),
-                    ),
+                    onTap: () => context.push('/staff-management'),
                   ),
                   const Divider(height: 24, color: Color(0x1AFFFFFF)),
                   _buildNavRow(
-                    label: 'Product Catalogue',
+                    label: 'Items & Services',
                     icon: HugeIcons.strokeRoundedGridView,
-                    onTap: () => showGlassToast(
-                      context,
-                      'Coming soon',
-                      customColor: const Color(0xFF42A5F5),
-                    ),
+                    onTap: () => context.push('/product-catalogue'),
                   ),
                 ],
               ),
