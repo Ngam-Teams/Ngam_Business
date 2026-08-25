@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../widgets/glass_toast.dart';
 
@@ -82,11 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   _buildNavRow(
                     label: 'Business Profile',
                     icon: HugeIcons.strokeRoundedNote01,
-                    onTap: () => showGlassToast(
-                      context,
-                      'Coming soon',
-                      customColor: const Color(0xFF42A5F5),
-                    ),
+                    onTap: () => context.push('/business-profile'),
                   ),
                   const Divider(height: 24, color: Color(0x1AFFFFFF)),
                   _buildNavRow(

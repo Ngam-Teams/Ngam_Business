@@ -9,6 +9,7 @@ import '../../features/home/presentation/home_dashboard.dart';
 import '../../features/pos/presentation/pos_page.dart';
 import '../../features/analytics/presentation/analytics_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
+import '../../features/settings/presentation/business_profile_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
 
 // ---------------------------------------------------------------------------
@@ -173,6 +174,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/unauthorized',
       builder: (context, state) => const _UnauthorizedScreen(),
+    ),
+    GoRoute(
+      path: '/business-profile',
+      builder: (context, state) => const BusinessProfilePage(),
     ),
   ],
 );
