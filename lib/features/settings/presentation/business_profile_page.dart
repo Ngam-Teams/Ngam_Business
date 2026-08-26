@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../widgets/glass_toast.dart';
 import '../data/business_service.dart';
+import '../../../widgets/map_picker_screen.dart';
+import 'package:latlong2/latlong.dart';
 
 class BusinessProfilePage extends StatefulWidget {
   const BusinessProfilePage({super.key});
@@ -31,6 +33,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
   String? _logoUrl;
   String? _coverUrl;
+  double? _latitude;
+  double? _longitude;
 
   @override
   void initState() {
@@ -54,6 +58,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         _regNoController.text = data['business_registration_number'] ?? '';
         _logoUrl = data['business_logo_url'];
         _coverUrl = data['business_cover_url'];
+        _latitude = (data['latitude'] as num?)?.toDouble();
+        _longitude = (data['longitude'] as num?)?.toDouble();
       }
       setState(() => _isLoading = false);
     }
@@ -71,6 +77,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       'business_city': _cityController.text.trim(),
       'business_country': _countryController.text.trim(),
       'business_registration_number': _regNoController.text.trim(),
+      'latitude': _latitude,
+      'longitude': _longitude,
     };
 
     try {
@@ -241,6 +249,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                             ),
                           ],
                         ),
+                        
+                        const SizedBox(height: 16),
+                        _buildMapSection(),
                         
                         const SizedBox(height: 48),
                         
@@ -500,6 +511,97 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
               borderSide: const BorderSide(
                 color: Color(0xFF42A5F5),
               ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMapSection() {
+    final bool hasLocation = _latitude != null && _longitude != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Exact Location Pin',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        GestureDetector(
+          onTap: () async {
+            final LatLng? initial = hasLocation ? LatLng(_latitude!, _longitude!) : null;
+            final LatLng? selectedLoc = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MapPickerScreen(initialLocation: initial),
+              ),
+            );
+            if (selectedLoc != null) {
+              setState(() {
+                _latitude = selectedLoc.latitude;
+                _longitude = selectedLoc.longitude;
+              });
+              _saveProfile();
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: hasLocation ? const Color(0xFF42A5F5) : Colors.white.withValues(alpha: 0.1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: hasLocation ? const Color(0xFF42A5F5).withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeRoundedLocation01,
+                    color: hasLocation ? const Color(0xFF42A5F5) : Colors.white54,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasLocation ? 'Location Pinned' : 'Set Location Pin',
+                        style: TextStyle(
+                          color: hasLocation ? Colors.white : Colors.white70,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hasLocation
+                            ? '${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}'
+                            : 'Required for customers to find you',
+                        style: TextStyle(
+                          color: hasLocation ? const Color(0xFF42A5F5) : Colors.white38,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const HugeIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: Colors.white38, size: 20),
+              ],
             ),
           ),
         ),
