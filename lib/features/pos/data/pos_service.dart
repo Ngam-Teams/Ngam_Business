@@ -29,6 +29,18 @@ class PosService {
     }
   }
 
+  /// Streams available products for real-time updates.
+  Stream<List<ProductModel>> streamProducts() {
+    return _client
+        .from('products')
+        .stream(primaryKey: ['id'])
+        .eq('is_available', true)
+        .order('name')
+        .map((list) => list
+            .map((json) => ProductModel.fromJson(json))
+            .toList());
+  }
+
   // ---------------------------------------------------------------------------
   // Orders
   // ---------------------------------------------------------------------------
@@ -66,8 +78,9 @@ class PosService {
           }).toList();
 
       await _client.from('order_items').insert(orderItems);
-    } on PostgrestException {
-      // Silently fail if table doesn't exist — mock mode
+    } catch (e) {
+      // Re-throw so the UI can show the error
+      rethrow;
     }
   }
 

@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -19,15 +20,35 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
   final _service = ProductService();
   bool _isLoading = true;
   List<ProductModel> _products = [];
+  StreamSubscription<List<ProductModel>>? _productSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadProducts();
+    _initProductStream();
+  }
+
+  @override
+  void dispose() {
+    _productSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _initProductStream() {
+    setState(() => _isLoading = true);
+    _productSubscription = _service.streamAllProducts().listen((products) {
+      if (!mounted) return;
+      setState(() {
+        _products = products;
+        _isLoading = false;
+      });
+    }, onError: (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    });
   }
 
   Future<void> _loadProducts() async {
-    setState(() => _isLoading = true);
     final products = await _service.fetchAllProducts();
     if (mounted) {
       setState(() {
@@ -37,6 +58,8 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
     }
   }
 
+
+
   void _showAddProductModal({ProductModel? product}) {
     showModalBottomSheet(
       context: context,
@@ -45,7 +68,7 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
       builder: (context) => _AddProductSheet(existingProduct: product),
     ).then((value) {
       if (value == true) {
-        _loadProducts();
+        _loadProducts(); // Fallback to instantly refresh UI
       }
     });
   }
@@ -56,7 +79,7 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
       {'is_available': !product.isAvailable},
     );
     if (success) {
-      _loadProducts();
+      _loadProducts(); // Fallback to instantly refresh UI
     } else {
       if (mounted) {
         showGlassToast(context, 'Failed to update product', isError: true);
@@ -87,7 +110,7 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
     if (confirm == true) {
       final success = await _service.deleteProduct(product.id);
       if (success) {
-        _loadProducts();
+        _loadProducts(); // Fallback to instantly refresh UI
         if (mounted) showGlassToast(context, 'Product deleted');
       } else {
         if (mounted) showGlassToast(context, 'Failed to delete product', isError: true);

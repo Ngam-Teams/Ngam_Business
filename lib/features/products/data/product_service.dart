@@ -24,6 +24,17 @@ class ProductService {
     }
   }
 
+  /// Streams all products for the catalogue real-time updates
+  Stream<List<ProductModel>> streamAllProducts() {
+    return _client
+        .from('products')
+        .stream(primaryKey: ['id'])
+        .order('created_at', ascending: false)
+        .map((list) => list
+            .map((json) => ProductModel.fromJson(json))
+            .toList());
+  }
+
   /// Adds a new product
   Future<ProductModel?> addProduct({
     required String name,

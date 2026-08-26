@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -42,30 +43,44 @@ class _PosPageState extends State<PosPage> {
   int get _cartCount =>
       _cart.fold(0, (sum, item) => sum + item.quantity);
 
+  StreamSubscription<List<ProductModel>>? _productSubscription;
+
   @override
   void initState() {
     super.initState();
-    _loadProducts();
+    _initProductStream();
     _searchController.addListener(_applyFilter);
   }
 
   @override
   void dispose() {
+    _productSubscription?.cancel();
     _searchController.dispose();
     _customerController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadProducts() async {
+  void _initProductStream() {
     setState(() => _loading = true);
-    final products = await _service.fetchProducts();
-    if (!mounted) return;
-    setState(() {
-      _allProducts = products;
-      _applyFilter();
-      _loading = false;
+    _productSubscription = _service.streamProducts().listen((products) {
+      if (!mounted) return;
+      setState(() {
+        _allProducts = products;
+        
+        // Remove items from the cart if they are deleted or made unavailable
+        _cart.removeWhere((cartItem) => 
+            !_allProducts.any((p) => p.id == cartItem.product.id));
+
+        _applyFilter();
+        _loading = false;
+      });
+    }, onError: (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
     });
   }
+
+
 
   void _applyFilter() {
     final query = _searchController.text.toLowerCase();
@@ -129,7 +144,7 @@ class _PosPageState extends State<PosPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      showGlassToast(context, 'Failed to place order.', isError: true);
+      showGlassToast(context, 'Failed: $e', isError: true);
     }
   }
 
@@ -224,7 +239,12 @@ class _PosPageState extends State<PosPage> {
                   onTap: () => ModalSheet.show(
                     context: context,
                     initialChildSize: 0.7,
-                    builder: (ctx, _) => _buildCartContent(),
+                    builder: (ctx, _) => Column(
+                      children: [
+                        Expanded(child: _buildCartContent()),
+                        _buildCartFooter(),
+                      ],
+                    ),
                   ),
                   child: _buildCartBadge(),
                 ),
@@ -296,45 +316,35 @@ class _PosPageState extends State<PosPage> {
                   ),
                 )
               : _filteredProducts.isEmpty
-                  ? RefreshIndicator(
-                      onRefresh: _loadProducts,
-                      color: const Color(0xFF42A5F5),
-                      backgroundColor: const Color(0xFF1A1A2E),
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          SizedBox(
-                            height: 300,
-                            child: Center(
-                              child: Text(
-                                'No products found',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.4),
-                                ),
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: [
+                        SizedBox(
+                          height: 300,
+                          child: Center(
+                            child: Text(
+                              'No products found',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.4),
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadProducts,
-                      color: const Color(0xFF42A5F5),
-                      backgroundColor: const Color(0xFF1A1A2E),
-                      child: GridView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(bottom: 120),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.2,
                         ),
-                        itemCount: _filteredProducts.length,
-                        itemBuilder: (context, i) =>
-                            _buildProductCard(_filteredProducts[i]),
+                      ],
+                    )
+                  : GridView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 120),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1.2,
                       ),
+                      itemCount: _filteredProducts.length,
+                      itemBuilder: (context, i) =>
+                          _buildProductCard(_filteredProducts[i]),
                     ),
         ),
       ],
