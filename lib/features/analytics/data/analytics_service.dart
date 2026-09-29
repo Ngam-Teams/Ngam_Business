@@ -1,23 +1,33 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../settings/data/business_service.dart';
 
 class AnalyticsService {
   final SupabaseClient _client;
+  final BusinessService _businessService;
 
-  AnalyticsService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  AnalyticsService({SupabaseClient? client, BusinessService? businessService})
+      : _client = client ?? Supabase.instance.client,
+        _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);
 
   /// Fetches overview stats: today's revenue, order count, avg order value.
   Future<Map<String, dynamic>> fetchOverviewStats() async {
     try {
+      final profile = await _businessService.getBusinessProfile();
+      final businessId = profile?['id'];
+
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day)
           .toIso8601String();
 
-      final ordersRes = await _client
+      var ordersQuery = _client
           .from('orders')
-          .select('total, created_at')
+          .select('total, created_at, status')
           .gte('created_at', startOfDay);
+      if (businessId != null) {
+        ordersQuery = ordersQuery.eq('business_id', businessId);
+      }
 
+      final ordersRes = await ordersQuery;
       final orders = ordersRes as List;
       double todayRevenue = 0;
       for (final o in orders) {
@@ -27,11 +37,15 @@ class AnalyticsService {
       // Monthly revenue
       final startOfMonth =
           DateTime(today.year, today.month, 1).toIso8601String();
-      final monthlyRes = await _client
+      var monthlyQuery = _client
           .from('orders')
           .select('total')
           .gte('created_at', startOfMonth);
+      if (businessId != null) {
+        monthlyQuery = monthlyQuery.eq('business_id', businessId);
+      }
 
+      final monthlyRes = await monthlyQuery;
       double monthlyRevenue = 0;
       for (final o in monthlyRes as List) {
         monthlyRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
@@ -40,8 +54,14 @@ class AnalyticsService {
       // Product count
       int productCount = 0;
       try {
-        final prodRes =
-            await _client.from('products').select('id').eq('is_available', true);
+        var prodQuery = _client
+            .from('business_products')
+            .select('id')
+            .eq('is_active', true);
+        if (businessId != null) {
+          prodQuery = prodQuery.eq('shop_id', businessId);
+        }
+        final prodRes = await prodQuery;
         productCount = (prodRes as List).length;
       } on PostgrestException {
         productCount = 0;
@@ -79,14 +99,21 @@ class AnalyticsService {
   /// Fetches last 7 days revenue by day.
   Future<List<Map<String, dynamic>>> fetchWeeklyRevenue() async {
     try {
+      final profile = await _businessService.getBusinessProfile();
+      final businessId = profile?['id'];
+
       final today = DateTime.now();
       final weekAgo = today.subtract(const Duration(days: 7));
 
-      final res = await _client
+      var query = _client
           .from('orders')
           .select('total, created_at')
-          .gte('created_at', weekAgo.toIso8601String())
-          .order('created_at');
+          .gte('created_at', weekAgo.toIso8601String());
+      if (businessId != null) {
+        query = query.eq('business_id', businessId);
+      }
+
+      final res = await query.order('created_at');
 
       return (res as List).cast<Map<String, dynamic>>();
     } on PostgrestException {

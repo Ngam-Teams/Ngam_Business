@@ -1,12 +1,15 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../settings/data/business_service.dart';
 import '../models/product_model.dart';
 import '../models/order_model.dart';
 
 class PosService {
   final SupabaseClient _client;
+  final BusinessService _businessService;
 
-  PosService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  PosService({SupabaseClient? client, BusinessService? businessService})
+      : _client = client ?? Supabase.instance.client,
+        _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);
 
   // ---------------------------------------------------------------------------
   // Products
@@ -15,11 +18,15 @@ class PosService {
   /// Fetches all available products for the current tenant's business.
   Future<List<ProductModel>> fetchProducts() async {
     try {
-      final response = await _client
-          .from('products')
-          .select()
-          .eq('is_available', true)
-          .order('name');
+      final profile = await _businessService.getBusinessProfile();
+      final businessId = profile?['id'];
+
+      var query = _client.from('business_products').select().eq('is_active', true);
+      if (businessId != null) {
+        query = query.eq('shop_id', businessId);
+      }
+
+      final response = await query.order('name');
 
       return (response as List)
           .map((json) => ProductModel.fromJson(json as Map<String, dynamic>))
@@ -32,9 +39,9 @@ class PosService {
   /// Streams available products for real-time updates.
   Stream<List<ProductModel>> streamProducts() {
     return _client
-        .from('products')
+        .from('business_products')
         .stream(primaryKey: ['id'])
-        .eq('is_available', true)
+        .eq('is_active', true)
         .order('name')
         .map((list) => list
             .map((json) => ProductModel.fromJson(json))
@@ -53,10 +60,16 @@ class PosService {
     String? notes,
   }) async {
     try {
+      final profile = await _businessService.getBusinessProfile();
+      final businessId = profile?['id'];
+      final user = _client.auth.currentUser;
+
       final orderData = {
         'total': total,
         'status': 'completed',
         'source': 'pos',
+        if (businessId != null) 'business_id': businessId,
+        if (user != null) 'owner_user_id': user.id,
         if (customerName != null && customerName.isNotEmpty)
           'customer_name': customerName,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
@@ -84,12 +97,18 @@ class PosService {
     }
   }
 
-  /// Fetches recent orders.
+  /// Fetches recent orders for the current business.
   Future<List<Map<String, dynamic>>> fetchRecentOrders({int limit = 20}) async {
     try {
-      final response = await _client
-          .from('orders')
-          .select()
+      final profile = await _businessService.getBusinessProfile();
+      final businessId = profile?['id'];
+
+      var query = _client.from('orders').select();
+      if (businessId != null) {
+        query = query.eq('business_id', businessId);
+      }
+
+      final response = await query
           .order('created_at', ascending: false)
           .limit(limit);
       return (response as List).cast<Map<String, dynamic>>();

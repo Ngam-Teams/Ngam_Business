@@ -35,7 +35,7 @@ class ProductModel {
       description: json['description'] as String?,
       sku: json['sku'] as String?,
       stock: json['stock'] as int? ?? 0,
-      isAvailable: json['is_available'] as bool? ?? true,
+      isAvailable: json['is_active'] as bool? ?? true,
     );
   }
 
@@ -48,6 +48,6 @@ class ProductModel {
         'description': description,
         'sku': sku,
         'stock': stock,
-        'is_available': isAvailable,
+        'is_active': isAvailable,
       };
 }

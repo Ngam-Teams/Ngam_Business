@@ -7,7 +7,8 @@ class BusinessService {
   BusinessService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
-  /// Fetch the business record for the currently logged in owner
+  /// Fetch the business record for the currently logged in owner.
+  /// If it doesn't exist, it will create one automatically.
   Future<Map<String, dynamic>?> getBusinessProfile() async {
     final user = _client.auth.currentUser;
     if (user == null) return null;
@@ -18,7 +19,24 @@ class BusinessService {
           .select()
           .eq('owner_user_id', user.id)
           .maybeSingle();
-      return response;
+          
+      if (response != null) {
+        return response;
+      }
+
+      // Auto-create if it doesn't exist
+      final businessName = user.userMetadata?['business_name'] ?? 'Unknown Business';
+      
+      final newProfile = await _client.from('businesses').insert({
+        'owner_user_id': user.id,
+        'business_name': businessName,
+        'business_industry': 'services',
+        'business_registration_number': 'PENDING',
+        'status': 'active',
+        'platform_fee_percent': 2.00,
+      }).select().maybeSingle();
+
+      return newProfile;
     } catch (e) {
       return null;
     }

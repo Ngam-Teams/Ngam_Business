@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
@@ -401,10 +402,11 @@ class _AddProductSheetState extends State<_AddProductSheet> {
             ),
             child: Form(
               key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   Text(
                     widget.existingProduct != null ? 'Edit Item / Service' : 'Add New Item / Service',
                     style: const TextStyle(
@@ -427,7 +429,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                         image: _imageFile != null
                             ? DecorationImage(
-                                image: NetworkImage(_imageFile!.path),
+                                image: FileImage(File(_imageFile!.path)),
                                 fit: BoxFit.cover,
                               )
                             : (widget.existingProduct?.imageUrl != null
@@ -544,6 +546,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
           ),

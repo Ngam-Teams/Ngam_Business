@@ -88,7 +88,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        showGlassToast(context, 'Failed to update profile.', isError: true);
+        showGlassToast(context, 'Failed to update profile: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

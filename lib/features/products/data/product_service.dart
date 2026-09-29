@@ -1,19 +1,31 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../pos/models/product_model.dart';
+import '../../settings/data/business_service.dart';
 
 class ProductService {
   final SupabaseClient _client;
+  final BusinessService _businessService;
 
-  ProductService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  ProductService({SupabaseClient? client, BusinessService? businessService})
+      : _client = client ?? Supabase.instance.client,
+        _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);
+
+  Future<String?> _getShopId() async {
+    final profile = await _businessService.getBusinessProfile();
+    return profile?['id'];
+  }
 
   /// Fetches all products (including unavailable ones) for the catalogue
   Future<List<ProductModel>> fetchAllProducts() async {
     try {
+      final shopId = await _getShopId();
+      if (shopId == null) return [];
+
       final response = await _client
-          .from('products')
+          .from('business_products')
           .select()
+          .eq('shop_id', shopId)
           .order('created_at', ascending: false);
 
       return (response as List)
@@ -25,10 +37,17 @@ class ProductService {
   }
 
   /// Streams all products for the catalogue real-time updates
-  Stream<List<ProductModel>> streamAllProducts() {
-    return _client
-        .from('products')
+  Stream<List<ProductModel>> streamAllProducts() async* {
+    final shopId = await _getShopId();
+    if (shopId == null) {
+      yield [];
+      return;
+    }
+
+    yield* _client
+        .from('business_products')
         .stream(primaryKey: ['id'])
+        .eq('shop_id', shopId)
         .order('created_at', ascending: false)
         .map((list) => list
             .map((json) => ProductModel.fromJson(json))
@@ -48,6 +67,9 @@ class ProductService {
     String? imageExt,
   }) async {
     try {
+      final shopId = await _getShopId();
+      if (shopId == null) return null;
+
       String? imageUrl;
       if (imageBytes != null && imageExt != null) {
         final fileName = '${DateTime.now().millisecondsSinceEpoch}.$imageExt';
@@ -57,18 +79,19 @@ class ProductService {
       }
 
       final data = {
+        'shop_id': shopId,
         'name': name,
         'price': price,
         'category': category,
         'description': description,
         'sku': sku,
         'stock': stock,
-        'is_available': isAvailable,
+        'is_active': isAvailable,
         if (imageUrl != null) 'image_url': imageUrl,
       };
 
       final response = await _client
-          .from('products')
+          .from('business_products')
           .insert(data)
           .select()
           .single();
@@ -95,7 +118,12 @@ class ProductService {
         updates['image_url'] = imageUrl;
       }
 
-      await _client.from('products').update(updates).eq('id', productId);
+      // Ensure any 'is_available' key is translated to 'is_active'
+      if (updates.containsKey('is_available')) {
+        updates['is_active'] = updates.remove('is_available');
+      }
+
+      await _client.from('business_products').update(updates).eq('id', productId);
       return true;
     } catch (e) {
       return false;
@@ -105,7 +133,7 @@ class ProductService {
   /// Deletes a product
   Future<bool> deleteProduct(String productId) async {
     try {
-      await _client.from('products').delete().eq('id', productId);
+      await _client.from('business_products').delete().eq('id', productId);
       return true;
     } catch (e) {
       return false;

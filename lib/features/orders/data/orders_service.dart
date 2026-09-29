@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../settings/data/business_service.dart';
+
 class OrderModel {
   final String id;
   final String ownerUserId;
@@ -37,17 +39,24 @@ class OrderModel {
 
 class OrdersService {
   final SupabaseClient _client;
+  final BusinessService _businessService;
 
-  OrdersService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  OrdersService({SupabaseClient? client, BusinessService? businessService})
+      : _client = client ?? Supabase.instance.client,
+        _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);
 
   /// Fetch all orders for the current business
   Future<List<OrderModel>> fetchOrders() async {
     try {
-      final response = await _client
-          .from('orders')
-          .select()
-          .order('created_at', ascending: false);
+      final profile = await _businessService.getBusinessProfile();
+      final businessId = profile?['id'];
+
+      var query = _client.from('orders').select();
+      if (businessId != null) {
+        query = query.eq('business_id', businessId);
+      }
+
+      final response = await query.order('created_at', ascending: false);
 
       return (response as List)
           .map((json) => OrderModel.fromJson(json as Map<String, dynamic>))
