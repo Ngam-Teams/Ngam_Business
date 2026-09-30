@@ -1,10 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 
 import '../../../widgets/stat_card.dart';
 import '../../analytics/data/analytics_service.dart';
+import '../../settings/data/business_service.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -15,6 +17,26 @@ class HomeDashboard extends StatefulWidget {
 
 class _HomeDashboardState extends State<HomeDashboard> {
   final AnalyticsService _analytics = AnalyticsService();
+  final BusinessService _businessService = BusinessService();
+
+  Map<String, dynamic>? _businessProfile;
+  bool _loadingBusiness = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBusinessProfile();
+  }
+
+  Future<void> _loadBusinessProfile() async {
+    final profile = await _businessService.getBusinessProfile();
+    if (mounted) {
+      setState(() {
+        _businessProfile = profile;
+        _loadingBusiness = false;
+      });
+    }
+  }
 
   static const _activities = [
     (
@@ -84,6 +106,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
         ];
 
+        final hasLocation = _businessProfile?['latitude'] != null && _businessProfile?['longitude'] != null;
+        final businessName = _businessProfile?['business_name'] ?? 'Your Business';
+
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
@@ -92,6 +117,79 @@ class _HomeDashboardState extends State<HomeDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Business Profile Setup Reminder if location or details missing
+                  if (!_loadingBusiness && (!hasLocation || (_businessProfile?['address_line'] ?? '').isEmpty))
+                    _buildProfileIncompleteBanner(context),
+
+                  // Welcome Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _loadingBusiness ? 'Welcome to Ngam Business' : businessName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            hasLocation
+                                ? 'Live on Ngam Explore'
+                                : 'Setup incomplete — Action needed',
+                            style: TextStyle(
+                              color: hasLocation
+                                  ? const Color(0xFF44CF6C)
+                                  : const Color(0xFFF9C80E),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () async {
+                          await context.push('/business-profile');
+                          _loadBusinessProfile();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          child: const Row(
+                            children: [
+                              HugeIcon(
+                                icon: HugeIcons.strokeRoundedEdit02,
+                                color: Color(0xFF42A5F5),
+                                size: 16,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Alter Details',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
                   // Stat cards grid
                   _buildStatCards(cards, width),
                   const SizedBox(height: 28),
@@ -123,6 +221,82 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
+  Widget _buildProfileIncompleteBanner(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFF9C80E).withValues(alpha: 0.15),
+            Colors.white.withValues(alpha: 0.04),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFF9C80E).withValues(alpha: 0.4),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9C80E).withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const HugeIcon(
+              icon: HugeIcons.strokeRoundedLocation01,
+              color: Color(0xFFF9C80E),
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Set Up Your Store Location & Details',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Pin your entrance on the map and add street address so customers can discover you on Ngam Explore.',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton(
+            onPressed: () async {
+              await context.push('/business-profile');
+              _loadBusinessProfile();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF9C80E),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
+            child: const Text(
+              'Add Details',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatCards(List<Widget> cards, double width) {
     if (width >= 900) {
       return Row(
@@ -140,7 +314,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
             .toList(),
       );
     } else {
-      // Stack cards vertically for mobile
       return Column(
         children: cards
             .map((c) => Padding(
@@ -158,24 +331,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _buildRecentActivity() {
     return _buildPanel(
       title: 'Recent Activity',
-      icon: HugeIcons.strokeRoundedClock01,
+      icon: HugeIcons.strokeRoundedActivity01,
       child: Column(
         children: _activities
             .map(
-              (a) => Padding(
+              (act) => Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: a.color.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
+                        color: act.color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: HugeIcon(
-                        icon: a.icon,
-                        color: a.color,
-                        size: 20,
+                        icon: act.icon,
+                        color: act.color,
+                        size: 16,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -184,19 +357,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            a.event,
+                            act.event,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            a.time,
+                            act.time,
                             style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.45),
-                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.35),
+                              fontSize: 11,
                             ),
                           ),
                         ],
@@ -214,19 +387,97 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
       (
-        label: 'New Order',
-        icon: HugeIcons.strokeRoundedAdd01,
+        label: 'Bookings & Slots',
+        icon: HugeIcons.strokeRoundedCalendar01,
         color: const Color(0xFF42A5F5),
+        onTap: () => context.push('/appointments'),
       ),
       (
-        label: 'Add Product',
-        icon: HugeIcons.strokeRoundedGridView,
-        color: const Color(0xFF42A5F5),
+        label: 'Inventory & Stock Alerts',
+        icon: HugeIcons.strokeRoundedPackageDelivered,
+        color: const Color(0xFFF9C80E),
+        onTap: () => context.push('/inventory'),
       ),
       (
-        label: 'View Reports',
-        icon: HugeIcons.strokeRoundedChartIncrease,
+        label: 'Promotions & Vouchers',
+        icon: HugeIcons.strokeRoundedDiscountTag02,
         color: const Color(0xFF44CF6C),
+        onTap: () => context.push('/promotions'),
+      ),
+      (
+        label: 'Customer Reviews',
+        icon: HugeIcons.strokeRoundedStar,
+        color: const Color(0xFFFFA726),
+        onTap: () => context.push('/customer-reviews'),
+      ),
+      (
+        label: 'Hours & Rush Mode',
+        icon: HugeIcons.strokeRoundedTime02,
+        color: const Color(0xFF26C6DA),
+        onTap: () => context.push('/operating-hours'),
+      ),
+      (
+        label: 'Customer Insights & VIPs',
+        icon: HugeIcons.strokeRoundedUserGroup,
+        color: const Color(0xFFAB47BC),
+        onTap: () => context.push('/customers'),
+      ),
+      (
+        label: 'Manage Items & Services',
+        icon: HugeIcons.strokeRoundedGridView,
+        color: const Color(0xFF44CF6C),
+        onTap: () => context.push('/product-catalogue'),
+      ),
+      (
+        label: 'Business Details & Map Pin',
+        icon: HugeIcons.strokeRoundedStore01,
+        color: const Color(0xFF42A5F5),
+        onTap: () async {
+          await context.push('/business-profile');
+          _loadBusinessProfile();
+        },
+      ),
+      (
+        label: 'Payouts & Settlement',
+        icon: HugeIcons.strokeRoundedMoneySend02,
+        color: const Color(0xFF10B981),
+        onTap: () => context.push('/payouts'),
+      ),
+      (
+        label: 'Kitchen Display (KDS)',
+        icon: HugeIcons.strokeRoundedRestaurant01,
+        color: const Color(0xFFF9C80E),
+        onTap: () => context.push('/kds'),
+      ),
+      (
+        label: 'Customer Inbox & Chat',
+        icon: HugeIcons.strokeRoundedChatting01,
+        color: const Color(0xFF42A5F5),
+        onTap: () => context.push('/merchant-inbox'),
+      ),
+      (
+        label: 'QR & Standee Generator',
+        icon: HugeIcons.strokeRoundedQrCode,
+        color: const Color(0xFF6C5CE7),
+        onTap: () => context.push('/qr-generator'),
+      ),
+      (
+        label: 'Cash Drawer & Z-Report',
+        icon: HugeIcons.strokeRoundedMoney01,
+        color: const Color(0xFF26C6DA),
+        onTap: () => context.push('/cash-drawer'),
+      ),
+      (
+        label: 'Receipts & Thermal Printer',
+        icon: HugeIcons.strokeRoundedPrinter,
+        color: const Color(0xFFEC4899),
+        onTap: () => context.push('/receipt-settings'),
+      ),
+      (
+        label: 'Staff Management',
+        icon: HugeIcons.strokeRoundedUserGroup,
+        color: const Color(0xFFE5B9FF),
+        onTap: () => context.push('/staff-management'),
       ),
     ];
 
@@ -240,7 +491,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               (a) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: GestureDetector(
-                  onTap: () {},
+                  onTap: a.onTap,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
@@ -269,6 +520,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
+                        ),
+                        const Spacer(),
+                        HugeIcon(
+                          icon: HugeIcons.strokeRoundedArrowRight01,
+                          color: Colors.white.withValues(alpha: 0.3),
+                          size: 16,
                         ),
                       ],
                     ),
@@ -331,12 +588,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: -0.2,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               child,
             ],
           ),

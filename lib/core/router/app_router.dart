@@ -13,6 +13,18 @@ import '../../features/settings/presentation/settings_page.dart';
 import '../../features/settings/presentation/business_profile_page.dart';
 import '../../features/products/presentation/product_catalogue_page.dart';
 import '../../features/settings/presentation/staff_management_page.dart';
+import '../../features/appointments/presentation/appointments_page.dart';
+import '../../features/reviews/presentation/customer_reviews_page.dart';
+import '../../features/promotions/presentation/promotions_page.dart';
+import '../../features/inventory/presentation/inventory_page.dart';
+import '../../features/settings/presentation/operating_hours_page.dart';
+import '../../features/customers/presentation/customer_insights_page.dart';
+import '../../features/payouts/presentation/payouts_page.dart';
+import '../../features/qr/presentation/qr_generator_page.dart';
+import '../../features/hardware/presentation/receipt_settings_page.dart';
+import '../../features/cash_drawer/presentation/cash_drawer_page.dart';
+import '../../features/inbox/presentation/merchant_inbox_page.dart';
+import '../../features/kds/presentation/kds_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
 
 // ---------------------------------------------------------------------------
@@ -192,6 +204,54 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/staff-management',
       builder: (context, state) => const StaffManagementPage(),
+    ),
+    GoRoute(
+      path: '/appointments',
+      builder: (context, state) => const AppointmentsPage(),
+    ),
+    GoRoute(
+      path: '/customer-reviews',
+      builder: (context, state) => const CustomerReviewsPage(),
+    ),
+    GoRoute(
+      path: '/promotions',
+      builder: (context, state) => const PromotionsPage(),
+    ),
+    GoRoute(
+      path: '/inventory',
+      builder: (context, state) => const InventoryPage(),
+    ),
+    GoRoute(
+      path: '/operating-hours',
+      builder: (context, state) => const OperatingHoursPage(),
+    ),
+    GoRoute(
+      path: '/customers',
+      builder: (context, state) => const CustomerInsightsPage(),
+    ),
+    GoRoute(
+      path: '/payouts',
+      builder: (context, state) => const PayoutsPage(),
+    ),
+    GoRoute(
+      path: '/qr-generator',
+      builder: (context, state) => const QrGeneratorPage(),
+    ),
+    GoRoute(
+      path: '/receipt-settings',
+      builder: (context, state) => const ReceiptSettingsPage(),
+    ),
+    GoRoute(
+      path: '/cash-drawer',
+      builder: (context, state) => const CashDrawerPage(),
+    ),
+    GoRoute(
+      path: '/merchant-inbox',
+      builder: (context, state) => const MerchantInboxPage(),
+    ),
+    GoRoute(
+      path: '/kds',
+      builder: (context, state) => const KdsPage(),
     ),
   ],
 );

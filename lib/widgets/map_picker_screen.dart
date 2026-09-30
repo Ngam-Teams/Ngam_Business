@@ -88,9 +88,9 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
               initialCenter: _currentCenter,
               initialZoom: 15.0,
               onPositionChanged: (MapCamera camera, bool hasGesture) {
-                if (hasGesture && camera.center != null) {
+                if (hasGesture) {
                   setState(() {
-                    _currentCenter = camera.center!;
+                    _currentCenter = camera.center;
                   });
                 }
               },

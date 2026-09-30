@@ -1,0 +1,588 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+import '../../../widgets/glass_toast.dart';
+
+// ============================================================
+// QrGeneratorPage — Storefront & Table QR Standee Generator
+// ============================================================
+
+enum QrMode { storefront, table }
+
+class QrGeneratorPage extends StatefulWidget {
+  const QrGeneratorPage({super.key});
+
+  @override
+  State<QrGeneratorPage> createState() => _QrGeneratorPageState();
+}
+
+class _QrGeneratorPageState extends State<QrGeneratorPage> {
+  QrMode _selectedMode = QrMode.storefront;
+  int _tableNumber = 1;
+  final int _totalTables = 15;
+
+  final String _storeName = 'Warung Ngam Melaka';
+  final String _wifiSsid = 'WarungNgam_Guest';
+  final String _wifiPassword = 'makanansedap';
+  bool _includeWifi = true;
+
+  Color _accentColor = const Color(0xFF6C5CE7);
+  final List<Color> _colorOptions = [
+    const Color(0xFF6C5CE7), // Ngam Purple
+    const Color(0xFF42A5F5), // Electric Blue
+    const Color(0xFF10B981), // Emerald Mint
+    const Color(0xFFF59E0B), // Amber Gold
+    const Color(0xFFEC4899), // Neon Pink
+  ];
+
+  String get _qrPayloadUrl {
+    if (_selectedMode == QrMode.storefront) {
+      return 'https://ngam.app/store/warung-ngam';
+    } else {
+      return 'https://ngam.app/store/warung-ngam?table=$_tableNumber';
+    }
+  }
+
+  void _downloadStandee() {
+    showGlassToast(
+      context,
+      _selectedMode == QrMode.storefront
+          ? 'Downloading Print-Ready A5 Storefront Standee (PDF)...'
+          : 'Downloading Print-Ready Table #$_tableNumber Standee (PDF)...',
+    );
+  }
+
+  void _downloadAllTables() {
+    showGlassToast(context, 'Exporting full standee pack: Tables 1 to $_totalTables (ZIP/PDF)...');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A14),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0A0A14),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'QR Code & Standee Generator',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'Printable table ordering & storefront QR standees',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedPrinter, color: Colors.white70, size: 20),
+            tooltip: 'Print Standee',
+            onPressed: _downloadStandee,
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Mode Segmented Control
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF141424),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedMode = QrMode.storefront),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _selectedMode == QrMode.storefront ? _accentColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              HugeIcon(
+                                icon: HugeIcons.strokeRoundedStore01,
+                                color: _selectedMode == QrMode.storefront ? Colors.white : Colors.white60,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Storefront QR',
+                                style: TextStyle(
+                                  color: _selectedMode == QrMode.storefront ? Colors.white : Colors.white60,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedMode = QrMode.table),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _selectedMode == QrMode.table ? _accentColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              HugeIcon(
+                                icon: HugeIcons.strokeRoundedRestaurant01,
+                                color: _selectedMode == QrMode.table ? Colors.white : Colors.white60,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Table Ordering QR',
+                                style: TextStyle(
+                                  color: _selectedMode == QrMode.table ? Colors.white : Colors.white60,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Standee Live Preview Card (Visual Acrylic Standee Mockup)
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 340),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _accentColor.withValues(alpha: 0.25),
+                        blurRadius: 30,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header with Brand Color
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _accentColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _selectedMode == QrMode.storefront ? 'SCAN TO BROWSE & ORDER' : 'DINE-IN ORDERING',
+                          style: TextStyle(
+                            color: _accentColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Store Title
+                      Text(
+                        _storeName,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFF1E293B),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      if (_selectedMode == QrMode.table)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: Text(
+                            'TABLE $_tableNumber',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ),
+
+                      // QR Code Rendering Block
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                        ),
+                        child: CustomPaint(
+                          size: const Size(190, 190),
+                          painter: _StylizedQrPainter(accentColor: _accentColor),
+                        ),
+                      ),
+
+                      // Instructions
+                      const Text(
+                        'Point your phone camera to order',
+                        style: TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // WiFi Badge (if enabled)
+                      if (_includeWifi)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.wifi, size: 14, color: Color(0xFF334155)),
+                              const SizedBox(width: 6),
+                              Text(
+                                'WiFi: $_wifiSsid  |  Pass: $_wifiPassword',
+                                style: const TextStyle(
+                                  color: Color(0xFF334155),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 14),
+
+                      // Powered by Ngam badge
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: _accentColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Center(
+                              child: Text('N', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Powered by Ngam App',
+                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // Table Selection Controls (if Table Mode)
+            if (_selectedMode == QrMode.table) ...[
+              const Text(
+                'Select Table Number',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 48,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _totalTables,
+                  itemBuilder: (ctx, idx) {
+                    final tNum = idx + 1;
+                    final isSel = tNum == _tableNumber;
+                    return GestureDetector(
+                      onTap: () => setState(() => _tableNumber = tNum),
+                      child: Container(
+                        width: 52,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: isSel ? _accentColor : const Color(0xFF141424),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSel ? _accentColor : Colors.white12,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '#$tNum',
+                            style: TextStyle(
+                              color: isSel ? Colors.white : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // Customization Options
+            const Text(
+              'Standee Branding & Colors',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color(0xFF141424),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Accent Theme Color',
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                      Row(
+                        children: _colorOptions.map((c) {
+                          final isSelected = c == _accentColor;
+                          return GestureDetector(
+                            onTap: () => setState(() => _accentColor = c),
+                            child: Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: c,
+                                shape: BoxShape.circle,
+                                border: isSelected ? Border.all(color: Colors.white, width: 2.5) : null,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 28, color: Colors.white12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Show Guest WiFi Credentials', style: TextStyle(color: Colors.white, fontSize: 14)),
+                    subtitle: Text('$_wifiSsid ($wifiPasswordMask)', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    value: _includeWifi,
+                    activeColor: _accentColor,
+                    onChanged: (val) => setState(() => _includeWifi = val),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _accentColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: _downloadStandee,
+                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
+                    label: const Text('Download PDF', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (_selectedMode == QrMode.table)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white24),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: _downloadAllTables,
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedFolder01, color: Colors.white, size: 18),
+                      label: const Text('Batch 1-15 Tables', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        side: const BorderSide(color: Colors.white24),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () {
+                        showGlassToast(context, 'Storefront link copied: $_qrPayloadUrl');
+                      },
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedCopy01, color: Colors.white, size: 18),
+                      label: const Text('Copy URL', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String get wifiPasswordMask => _wifiPassword;
+}
+
+// ============================================================
+// Stylized Custom QR Code Painter with Finder Eyes & Micro-Logo
+// ============================================================
+class _StylizedQrPainter extends CustomPainter {
+  final Color accentColor;
+
+  _StylizedQrPainter({required this.accentColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double cellSize = size.width / 21; // 21x21 standard QR grid
+    final paintDark = Paint()..color = const Color(0xFF0F172A);
+    final paintAccent = Paint()..color = accentColor;
+
+    // Draw standard 3 Corner Position Detection Eyes (Top-Left, Top-Right, Bottom-Left)
+    _drawEye(canvas, 0, 0, cellSize, paintDark, paintAccent);
+    _drawEye(canvas, 14 * cellSize, 0, cellSize, paintDark, paintAccent);
+    _drawEye(canvas, 0, 14 * cellSize, cellSize, paintDark, paintAccent);
+
+    // Deterministic procedural pattern for the data matrix
+    final random = Random(42);
+    for (int r = 0; r < 21; r++) {
+      for (int c = 0; c < 21; c++) {
+        // Skip corner eye regions
+        if ((r < 7 && c < 7) || (r < 7 && c >= 14) || (r >= 14 && c < 7)) continue;
+        // Skip center logo region
+        if (r >= 8 && r <= 12 && c >= 8 && c <= 12) continue;
+
+        if (random.nextDouble() > 0.48) {
+          final rect = RRect.fromRectAndRadius(
+            Rect.fromLTWH(c * cellSize + 0.6, r * cellSize + 0.6, cellSize - 1.2, cellSize - 1.2),
+            const Radius.circular(2),
+          );
+          canvas.drawRRect(rect, paintDark);
+        }
+      }
+    }
+
+    // Draw Center Logo Badge
+    final centerRect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2),
+      width: 5 * cellSize,
+      height: 5 * cellSize,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(centerRect, const Radius.circular(8)),
+      Paint()..color = Colors.white,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(centerRect.deflate(2), const Radius.circular(6)),
+      paintAccent,
+    );
+
+    // Center "N" letter
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: 'N',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(
+        (size.width - textPainter.width) / 2,
+        (size.height - textPainter.height) / 2,
+      ),
+    );
+  }
+
+  void _drawEye(Canvas canvas, double x, double y, double cellSize, Paint dark, Paint accent) {
+    // Outer 7x7 square
+    final outerRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(x, y, 7 * cellSize, 7 * cellSize),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(outerRect, dark);
+
+    // Inner white gap
+    final innerWhite = RRect.fromRectAndRadius(
+      Rect.fromLTWH(x + cellSize, y + cellSize, 5 * cellSize, 5 * cellSize),
+      const Radius.circular(4),
+    );
+    canvas.drawRRect(innerWhite, Paint()..color = Colors.white);
+
+    // Center 3x3 solid block
+    final centerBlock = RRect.fromRectAndRadius(
+      Rect.fromLTWH(x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(centerBlock, accent);
+  }
+
+  @override
+  bool shouldRepaint(covariant _StylizedQrPainter oldDelegate) => oldDelegate.accentColor != accentColor;
+}

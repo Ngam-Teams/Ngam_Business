@@ -64,6 +64,19 @@ class AuthService {
       } catch (_) {
         // Ignore errors; might fail due to RLS, in which case trigger must handle it
       }
+
+      try {
+        await _client.from('businesses').insert({
+          'owner_user_id': response.user!.id,
+          'business_name': businessName.trim().isNotEmpty ? businessName.trim() : 'My Business',
+          'business_industry': 'services',
+          'business_registration_number': 'PENDING-REG',
+          'status': 'active',
+          'platform_fee_percent': 2.00,
+        });
+      } catch (_) {
+        // Handled lazily by BusinessService.getBusinessProfile
+      }
     }
   }
 
