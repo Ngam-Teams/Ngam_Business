@@ -95,6 +95,7 @@ class _AppShell extends StatefulWidget {
 
 class _AppShellState extends State<_AppShell> {
   int _selectedIndex = 0;
+  final Set<int> _activatedTabs = {0}; // Lazy tab cache: only active tab is mounted initially
 
   @override
   void initState() {
@@ -111,7 +112,10 @@ class _AppShellState extends State<_AppShell> {
           businessId: businessId,
           onTabSwitch: (index) {
             if (mounted) {
-              setState(() => _selectedIndex = index);
+              setState(() {
+                _selectedIndex = index;
+                _activatedTabs.add(index);
+              });
             }
           },
         );
@@ -144,25 +148,40 @@ class _AppShellState extends State<_AppShell> {
     'Account & preferences',
   ];
 
-  static const _pages = [
-    HomeDashboard(),
-    OrdersPage(),
-    PosPage(),
-    AnalyticsPage(),
-    SettingsPage(),
-  ];
+  Widget _buildTab(int index) {
+    if (!_activatedTabs.contains(index)) {
+      return const SizedBox.shrink();
+    }
+    switch (index) {
+      case 0:
+        return const HomeDashboard();
+      case 1:
+        return const OrdersPage();
+      case 2:
+        return const PosPage();
+      case 3:
+        return const AnalyticsPage();
+      case 4:
+        return const SettingsPage();
+      default:
+        return const HomeDashboard();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return DashboardScaffold(
       selectedIndex: _selectedIndex,
-      onNavTap: (i) => setState(() => _selectedIndex = i),
+      onNavTap: (i) => setState(() {
+        _selectedIndex = i;
+        _activatedTabs.add(i);
+      }),
       pageTitle: _titles[_selectedIndex],
       pageSubtitle: _subtitles[_selectedIndex],
       navItems: _navItems,
       child: IndexedStack(
         index: _selectedIndex,
-        children: _pages,
+        children: List.generate(5, (index) => _buildTab(index)),
       ),
     );
   }
@@ -174,7 +193,7 @@ class _AppShellState extends State<_AppShell> {
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/home',
-  redirect: (context, state) async {
+  redirect: (context, state) {
     final user = Supabase.instance.client.auth.currentUser;
     final isGoingToAuth =
         state.uri.path == '/login' || 
@@ -189,26 +208,6 @@ final appRouter = GoRouter(
     // Logged in and going to auth screen — redirect to home
     if (state.uri.path == '/login' || state.uri.path == '/signup') {
       return '/home';
-    }
-
-    // For protected routes — verify business role
-    if (!isGoingToAuth) {
-      try {
-        final response = await Supabase.instance.client
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-        final role = response?['role'] as String?;
-        if (role != null && role != 'tenant_admin' && role != 'staff') {
-          // If a role exists but isn't a business role → unauthorized
-          return '/unauthorized';
-        }
-      } catch (_) {
-        // If user_roles table doesn't exist yet, allow access
-        // (useful during development before DB is fully set up)
-      }
     }
 
     return null;

@@ -27,7 +27,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
   void initState() {
     super.initState();
     _loadBusinessProfile();
-    AppUpdateService.checkOnStartup(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          AppUpdateService.checkOnStartup(context);
+        }
+      });
+    });
   }
 
   Future<void> _loadBusinessProfile() async {
