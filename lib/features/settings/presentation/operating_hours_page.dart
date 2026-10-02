@@ -191,10 +191,6 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
       };
 
       await BusinessService().saveBusinessSettings(_businessId!, payload);
-      await Supabase.instance.client
-          .from('businesses')
-          .update({'open_time': openStr, 'close_time': closeStr})
-          .eq('id', _businessId!);
     } catch (e) {
       debugPrint('Error saving schedule: $e');
     }
