@@ -210,13 +210,17 @@ class _OrdersPageState extends State<OrdersPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: order.source == 'pre_order'
+                          ? Colors.purpleAccent.withValues(alpha: 0.2)
+                          : Colors.white.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      order.source == 'online' ? 'Ngam App' : 'In-Store',
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      order.source == 'online'
+                          ? 'Ngam App'
+                          : (order.source == 'pre_order' ? 'Pre-Order' : 'In-Store'),
+                      style: TextStyle(
+                        color: order.source == 'pre_order' ? Colors.purpleAccent : Colors.white70,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),

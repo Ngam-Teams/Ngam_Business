@@ -27,6 +27,10 @@ import '../../features/inbox/presentation/merchant_inbox_page.dart';
 import '../../features/kds/presentation/kds_page.dart';
 import '../../features/settings/presentation/subscription_plans_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
+import '../services/order_alert_service.dart';
+import '../../features/settings/data/business_service.dart';
+
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 // ---------------------------------------------------------------------------
 // Unauthorized screen
@@ -92,6 +96,37 @@ class _AppShell extends StatefulWidget {
 class _AppShellState extends State<_AppShell> {
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    _initOrderAlerts();
+  }
+
+  Future<void> _initOrderAlerts() async {
+    try {
+      final profile = await BusinessService().getBusinessProfile();
+      final businessId = profile?['id']?.toString();
+      if (businessId != null && mounted) {
+        OrderAlertService.instance.initialize(
+          businessId: businessId,
+          onTabSwitch: (index) {
+            if (mounted) {
+              setState(() => _selectedIndex = index);
+            }
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('[AppShell] Error initializing order alerts: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    OrderAlertService.instance.dispose();
+    super.dispose();
+  }
+
   static final _navItems = [
     (icon: HugeIcons.strokeRoundedHome11, label: 'Overview'),
     (icon: HugeIcons.strokeRoundedInvoice01, label: 'Orders'),
@@ -137,6 +172,7 @@ class _AppShellState extends State<_AppShell> {
 // Router
 // ---------------------------------------------------------------------------
 final appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/home',
   redirect: (context, state) async {
     final user = Supabase.instance.client.auth.currentUser;
