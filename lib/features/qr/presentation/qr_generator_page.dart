@@ -1,7 +1,8 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../settings/data/business_service.dart';
 
 // ============================================================
 // QrGeneratorPage — Storefront & Table QR Standee Generator
@@ -21,10 +22,38 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   int _tableNumber = 1;
   final int _totalTables = 15;
 
-  final String _storeName = 'Warung Ngam Melaka';
-  final String _wifiSsid = 'WarungNgam_Guest';
-  final String _wifiPassword = 'makanansedap';
+  String _storeName = 'Kedai Saya';
+  String _businessId = 'store';
+  String _wifiSsid = 'WarungNgam_Guest';
+  String _wifiPassword = 'makanansedap';
   bool _includeWifi = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBusinessProfile();
+  }
+
+  void _loadBusinessProfile() async {
+    try {
+      final profile = await BusinessService().getBusinessProfile();
+      if (profile != null && mounted) {
+        setState(() {
+          _storeName = profile['name'] ?? 'Kedai Saya';
+          _businessId = profile['id'] ?? 'store';
+          final settings = profile['settings'] as Map<String, dynamic>?;
+          if (settings != null) {
+            if (settings['wifi_ssid'] != null && settings['wifi_ssid'].toString().isNotEmpty) {
+              _wifiSsid = settings['wifi_ssid'].toString();
+            }
+            if (settings['wifi_password'] != null && settings['wifi_password'].toString().isNotEmpty) {
+              _wifiPassword = settings['wifi_password'].toString();
+            }
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
   Color _accentColor = const Color(0xFF6C5CE7);
   final List<Color> _colorOptions = [
@@ -37,9 +66,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
 
   String get _qrPayloadUrl {
     if (_selectedMode == QrMode.storefront) {
-      return 'https://ngam.app/store/warung-ngam';
+      return 'https://ngam.app/store/$_businessId';
     } else {
-      return 'https://ngam.app/store/warung-ngam?table=$_tableNumber';
+      return 'https://ngam.app/store/$_businessId?table=$_tableNumber';
     }
   }
 
@@ -459,9 +488,18 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
                         ),
-                        child: CustomPaint(
-                          size: const Size(190, 190),
-                          painter: _StylizedQrPainter(accentColor: _accentColor),
+                        child: QrImageView(
+                          data: _qrPayloadUrl,
+                          version: QrVersions.auto,
+                          size: 190.0,
+                          eyeStyle: QrEyeStyle(
+                            eyeShape: QrEyeShape.square,
+                            color: _accentColor,
+                          ),
+                          dataModuleStyle: const QrDataModuleStyle(
+                            dataModuleShape: QrDataModuleShape.square,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                       ),
 
@@ -736,106 +774,4 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   }
 
   String get wifiPasswordMask => _wifiPassword;
-}
-
-// ============================================================
-// Stylized Custom QR Code Painter with Finder Eyes & Micro-Logo
-// ============================================================
-class _StylizedQrPainter extends CustomPainter {
-  final Color accentColor;
-
-  _StylizedQrPainter({required this.accentColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double cellSize = size.width / 21; // 21x21 standard QR grid
-    final paintDark = Paint()..color = const Color(0xFF0F172A);
-    final paintAccent = Paint()..color = accentColor;
-
-    // Draw standard 3 Corner Position Detection Eyes (Top-Left, Top-Right, Bottom-Left)
-    _drawEye(canvas, 0, 0, cellSize, paintDark, paintAccent);
-    _drawEye(canvas, 14 * cellSize, 0, cellSize, paintDark, paintAccent);
-    _drawEye(canvas, 0, 14 * cellSize, cellSize, paintDark, paintAccent);
-
-    // Deterministic procedural pattern for the data matrix
-    final random = Random(42);
-    for (int r = 0; r < 21; r++) {
-      for (int c = 0; c < 21; c++) {
-        // Skip corner eye regions
-        if ((r < 7 && c < 7) || (r < 7 && c >= 14) || (r >= 14 && c < 7)) continue;
-        // Skip center logo region
-        if (r >= 8 && r <= 12 && c >= 8 && c <= 12) continue;
-
-        if (random.nextDouble() > 0.48) {
-          final rect = RRect.fromRectAndRadius(
-            Rect.fromLTWH(c * cellSize + 0.6, r * cellSize + 0.6, cellSize - 1.2, cellSize - 1.2),
-            const Radius.circular(2),
-          );
-          canvas.drawRRect(rect, paintDark);
-        }
-      }
-    }
-
-    // Draw Center Logo Badge
-    final centerRect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height / 2),
-      width: 5 * cellSize,
-      height: 5 * cellSize,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(centerRect, const Radius.circular(8)),
-      Paint()..color = Colors.white,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(centerRect.deflate(2), const Radius.circular(6)),
-      paintAccent,
-    );
-
-    // Center "N" letter
-    final textPainter = TextPainter(
-      text: const TextSpan(
-        text: 'N',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-    textPainter.layout();
-    textPainter.paint(
-      canvas,
-      Offset(
-        (size.width - textPainter.width) / 2,
-        (size.height - textPainter.height) / 2,
-      ),
-    );
-  }
-
-  void _drawEye(Canvas canvas, double x, double y, double cellSize, Paint dark, Paint accent) {
-    // Outer 7x7 square
-    final outerRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(x, y, 7 * cellSize, 7 * cellSize),
-      const Radius.circular(6),
-    );
-    canvas.drawRRect(outerRect, dark);
-
-    // Inner white gap
-    final innerWhite = RRect.fromRectAndRadius(
-      Rect.fromLTWH(x + cellSize, y + cellSize, 5 * cellSize, 5 * cellSize),
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(innerWhite, Paint()..color = Colors.white);
-
-    // Center 3x3 solid block
-    final centerBlock = RRect.fromRectAndRadius(
-      Rect.fromLTWH(x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize),
-      const Radius.circular(3),
-    );
-    canvas.drawRRect(centerBlock, accent);
-  }
-
-  @override
-  bool shouldRepaint(covariant _StylizedQrPainter oldDelegate) => oldDelegate.accentColor != accentColor;
 }

@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../settings/data/business_service.dart';
 
 // ============================================================
 // AppointmentsPage — Merchant Booking & Schedule Management
@@ -21,6 +24,8 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   final List<String> _filters = ['All', 'Pending', 'Confirmed', 'Completed'];
 
   late List<Map<String, dynamic>> _appointments;
+  StreamSubscription<List<Map<String, dynamic>>>? _bookingsSub;
+  String? _businessId;
 
   @override
   void initState() {
@@ -75,6 +80,88 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
         'notes': 'Reference photo attached in booking.',
       },
     ];
+
+    _subscribeToLiveBookings();
+  }
+
+  void _subscribeToLiveBookings() async {
+    try {
+      final profile = await BusinessService().getBusinessProfile();
+      _businessId = profile?['id'];
+
+      _bookingsSub = Supabase.instance.client
+          .from('bookings')
+          .stream(primaryKey: ['id'])
+          .order('created_at', ascending: false)
+          .listen((data) {
+        if (!mounted) return;
+
+        final relevantBookings = data.where((b) {
+          final isHolding = b['status'] == 'holding';
+          if (isHolding) return false;
+          if (_businessId != null && _businessId!.isNotEmpty) {
+            return b['business_id'] == _businessId;
+          }
+          return true;
+        }).toList();
+
+        if (relevantBookings.isNotEmpty) {
+          setState(() {
+            final liveList = relevantBookings.map((b) {
+              final meta = b['booking_metadata'] as Map<String, dynamic>? ?? {};
+              AppointmentStatus apptStatus;
+              switch ((b['status'] as String? ?? 'pending').toLowerCase()) {
+                case 'confirmed':
+                  apptStatus = AppointmentStatus.confirmed;
+                  break;
+                case 'in_progress':
+                case 'preparing':
+                  apptStatus = AppointmentStatus.inProgress;
+                  break;
+                case 'completed':
+                  apptStatus = AppointmentStatus.completed;
+                  break;
+                case 'cancelled':
+                  apptStatus = AppointmentStatus.cancelled;
+                  break;
+                case 'pending':
+                default:
+                  apptStatus = AppointmentStatus.pending;
+                  break;
+              }
+
+              double price = 0.0;
+              final rawPrice = meta['total_price']?.toString() ?? '0';
+              price = double.tryParse(rawPrice.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 35.0;
+
+              return {
+                'db_id': b['id'],
+                'id': meta['booking_id'] ?? meta['short_ref'] ?? 'BK-${b['id'].toString().substring(0, b['id'].toString().length > 6 ? 6 : b['id'].toString().length)}',
+                'customerName': b['customer_name'] ?? meta['customer_name'] ?? 'Pelanggan Ngam',
+                'phone': meta['phone'] ?? '+60 12-345 6789',
+                'service': b['service_name'] ?? meta['category'] ?? 'Perkhidmatan',
+                'dateTime': '${b['booking_date'] ?? 'Hari Ini'}, ${b['booking_time'] ?? ''}',
+                'staff': meta['provider_name'] ?? 'Staff',
+                'price': price,
+                'deposit': price * 0.3,
+                'status': apptStatus,
+                'notes': meta['notes'] ?? 'Tempahan melalui Aplikasi Ngam',
+              };
+            }).toList();
+
+            _appointments = liveList;
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('Error subscribing to bookings: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _bookingsSub?.cancel();
+    super.dispose();
   }
 
   List<Map<String, dynamic>> get _filteredAppointments {
@@ -101,6 +188,36 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     setState(() {
       appt['status'] = newStatus;
     });
+
+    final dbId = appt['db_id'];
+    if (dbId != null) {
+      String statusStr;
+      switch (newStatus) {
+        case AppointmentStatus.confirmed:
+          statusStr = 'confirmed';
+          break;
+        case AppointmentStatus.inProgress:
+          statusStr = 'in_progress';
+          break;
+        case AppointmentStatus.completed:
+          statusStr = 'completed';
+          break;
+        case AppointmentStatus.cancelled:
+          statusStr = 'cancelled';
+          break;
+        case AppointmentStatus.pending:
+          statusStr = 'pending';
+          break;
+      }
+      Supabase.instance.client
+          .from('bookings')
+          .update({'status': statusStr})
+          .eq('id', dbId)
+          .catchError((e) {
+            debugPrint('Error updating booking status: $e');
+          });
+    }
+
     final statusLabel = newStatus == AppointmentStatus.confirmed
         ? 'Confirmed'
         : newStatus == AppointmentStatus.completed

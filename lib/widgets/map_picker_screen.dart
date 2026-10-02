@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -31,6 +33,13 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
   MapLayerType _currentLayer = MapLayerType.voyager;
   late AnimationController _pulseController;
 
+  // Search Autocomplete State
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  Timer? _searchDebounce;
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +63,78 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
   @override
   void dispose() {
     _pulseController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _onSearchChanged(String query) async {
+    _searchDebounce?.cancel();
+    final trimmed = query.trim();
+    if (trimmed.length < 3) {
+      if (_searchResults.isNotEmpty) {
+        setState(() => _searchResults = []);
+      }
+      return;
+    }
+
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () async {
+      setState(() => _isSearching = true);
+      try {
+        final uri = Uri.parse(
+          'https://photon.komoot.io/api/?q=${Uri.encodeComponent(trimmed)}&limit=5&lat=${_currentCenter.latitude}&lon=${_currentCenter.longitude}',
+        );
+        final response = await http.get(uri).timeout(const Duration(seconds: 4));
+        if (response.statusCode == 200 && mounted) {
+          final data = json.decode(utf8.decode(response.bodyBytes));
+          final features = data['features'] as List? ?? [];
+          final results = <Map<String, dynamic>>[];
+          for (final f in features) {
+            final props = f['properties'] as Map<String, dynamic>? ?? {};
+            final geom = f['geometry'] as Map<String, dynamic>? ?? {};
+            final coords = geom['coordinates'] as List? ?? [];
+            if (coords.length >= 2) {
+              final lon = (coords[0] as num).toDouble();
+              final lat = (coords[1] as num).toDouble();
+              final name = props['name'] ?? props['street'] ?? '';
+              final parts = [
+                props['street'],
+                props['city'] ?? props['county'],
+                props['state'],
+              ].where((p) => p != null && p.toString().isNotEmpty && p != name).join(', ');
+
+              results.add({
+                'title': name.isNotEmpty ? name : (parts.isNotEmpty ? parts : 'Lokasi'),
+                'subtitle': parts,
+                'lat': lat,
+                'lng': lon,
+              });
+            }
+          }
+          setState(() {
+            _searchResults = results;
+            _isSearching = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) setState(() => _isSearching = false);
+      }
+    });
+  }
+
+  void _selectSearchResult(Map<String, dynamic> result) {
+    final lat = result['lat'] as double;
+    final lng = result['lng'] as double;
+    final target = LatLng(lat, lng);
+    setState(() {
+      _currentCenter = target;
+      _searchResults = [];
+      _searchController.text = result['title'] as String;
+    });
+    _searchFocusNode.unfocus();
+    _mapController.move(target, 17.0);
+    showGlassToast(context, 'Peta dialihkan ke: ${result['title']}');
   }
 
   static const String _cartoApiKey = 'cb1_470b_1_5dec1f354e103fb7efca8d68';
@@ -456,57 +536,169 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
             ),
           ),
 
-          // Layer Switcher Floating Pill (Top-Right)
+          // Top Control Bar: Search Autocomplete & Layer Switcher
           Positioned(
             top: 16,
+            left: 16,
             right: 16,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: _showLayerSelector,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF161622).withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.4),
-                        blurRadius: 10,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    // Address Search Field
+                    Expanded(
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF161622).withValues(alpha: 0.95),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.4),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 14),
+                            const HugeIcon(
+                              icon: HugeIcons.strokeRoundedSearch01,
+                              color: Color(0xFF42A5F5),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                focusNode: _searchFocusNode,
+                                onChanged: _onSearchChanged,
+                                style: const TextStyle(color: Colors.white, fontSize: 13),
+                                decoration: const InputDecoration(
+                                  hintText: 'Cari alamat, jalan, atau kawasan...',
+                                  hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            ),
+                            if (_isSearching)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 10),
+                                child: SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)),
+                                ),
+                              )
+                            else if (_searchController.text.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white54, size: 16),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchResults = []);
+                                },
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      HugeIcon(
-                        icon: _currentLayer == MapLayerType.voyager
-                            ? HugeIcons.strokeRoundedMapsLocation01
-                            : _currentLayer == MapLayerType.darkMatter
-                                ? HugeIcons.strokeRoundedMoon02
-                                : HugeIcons.strokeRoundedEarth,
-                        color: const Color(0xFF42A5F5),
-                        size: 16,
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Layer Switcher Floating Pill
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(22),
+                        onTap: _showLayerSelector,
+                        child: Container(
+                          height: 44,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF161622).withValues(alpha: 0.95),
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                blurRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              HugeIcon(
+                                icon: _currentLayer == MapLayerType.voyager
+                                    ? HugeIcons.strokeRoundedMapsLocation01
+                                    : _currentLayer == MapLayerType.darkMatter
+                                        ? HugeIcons.strokeRoundedMoon02
+                                        : HugeIcons.strokeRoundedEarth,
+                                color: const Color(0xFF42A5F5),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _currentLayer == MapLayerType.voyager
+                                    ? 'Voyager'
+                                    : _currentLayer == MapLayerType.darkMatter
+                                        ? 'Dark'
+                                        : _currentLayer == MapLayerType.satelliteHybrid
+                                            ? 'Hybrid'
+                                            : 'Esri',
+                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 4),
+                              const HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01, color: Colors.white70, size: 14),
+                            ],
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _currentLayer == MapLayerType.voyager
-                            ? 'Voyager'
-                            : _currentLayer == MapLayerType.darkMatter
-                                ? 'Dark Matter'
-                                : _currentLayer == MapLayerType.satelliteHybrid
-                                    ? 'Satelit (Hybrid)'
-                                    : 'Satelit (Esri)',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 4),
-                      const HugeIcon(icon: HugeIcons.strokeRoundedArrowDown01, color: Colors.white70, size: 14),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
+
+                // Search Results Dropdown
+                if (_searchResults.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161626).withValues(alpha: 0.98),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shrinkWrap: true,
+                      itemCount: _searchResults.length,
+                      separatorBuilder: (_, __) => Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
+                      itemBuilder: (context, index) {
+                        final item = _searchResults[index];
+                        return ListTile(
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          leading: const HugeIcon(icon: HugeIcons.strokeRoundedLocation01, color: Color(0xFF42A5F5), size: 18),
+                          title: Text(item['title'] as String, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                          subtitle: (item['subtitle'] as String).isNotEmpty ? Text(item['subtitle'] as String, style: const TextStyle(color: Colors.white54, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis) : null,
+                          onTap: () => _selectSearchResult(item),
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
 
