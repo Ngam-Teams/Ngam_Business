@@ -1,0 +1,80 @@
+name: Build & Release Business APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Release Business APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Determine Version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            RAW_VER=$(grep '^version:' pubspec.yaml | head -1 | awk '{print $2}' | cut -d'+' -f1 | tr -d '[:space:]')
+            TAG="v${RAW_VER}"
+          fi
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "Using version tag: $TAG"
+        shell: bash
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Configure Environment (.env)
+        run: |
+          if [ -n "${{ secrets.ENV_FILE }}" ]; then
+            echo "${{ secrets.ENV_FILE }}" > .env
+          elif [ ! -f .env ]; then
+            touch .env
+          fi
+        shell: bash
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      - name: Prepare Release Artifacts
+        run: |
+          TAG="${{ steps.version.outputs.TAG }}"
+          cp build/app/outputs/flutter-apk/app-release.apk "Ngam-Business-${TAG}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk Ngam-Business.apk
+        shell: bash
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          name: Ngam Business Release ${{ steps.version.outputs.TAG }}
+          files: |
+            Ngam-Business-*.apk
+            Ngam-Business.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

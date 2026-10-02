@@ -155,11 +155,15 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
           children: [
             Text(
               _activeThread != null && !isDesktop ? (_activeThread!['customerName'] as String) : 'Customer Inbox',
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
-              _activeThread != null && !isDesktop ? (_activeThread!['orderRef'] as String) : 'Live customer inquiries & support',
+              _activeThread != null && !isDesktop ? (_activeThread!['orderRef'] as String) : 'Customer inquiries & chat',
               style: const TextStyle(color: Colors.white54, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

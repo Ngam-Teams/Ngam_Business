@@ -216,10 +216,11 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
                       child: Row(
                         children: [
                           SizedBox(
-                            width: 90,
+                            width: 72,
                             child: Text(
                               item['day'],
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           Expanded(
@@ -227,35 +228,45 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
                                 ? Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      GestureDetector(
-                                        onTap: () => _pickTime(context, item, true),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.06),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            _formatTime(openTime),
-                                            style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold, fontSize: 12),
+                                      Flexible(
+                                        child: GestureDetector(
+                                          onTap: () => _pickTime(context, item, true),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withValues(alpha: 0.06),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                _formatTime(openTime),
+                                                style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold, fontSize: 11),
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
                                       const Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: 6),
+                                        padding: EdgeInsets.symmetric(horizontal: 4),
                                         child: Text('–', style: TextStyle(color: Colors.white38)),
                                       ),
-                                      GestureDetector(
-                                        onTap: () => _pickTime(context, item, false),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.06),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            _formatTime(closeTime),
-                                            style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold, fontSize: 12),
+                                      Flexible(
+                                        child: GestureDetector(
+                                          onTap: () => _pickTime(context, item, false),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withValues(alpha: 0.06),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                _formatTime(closeTime),
+                                                style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold, fontSize: 11),
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -268,13 +279,16 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
                                     ),
                                   ),
                           ),
-                          Switch(
-                            value: isOpen,
-                            activeColor: const Color(0xFF44CF6C),
-                            onChanged: (val) {
-                              setState(() => item['isOpen'] = val);
-                              showGlassToast(context, '${item['day']} set to ${val ? 'Open' : 'Closed'}');
-                            },
+                          Transform.scale(
+                            scale: 0.85,
+                            child: Switch(
+                              value: isOpen,
+                              activeColor: const Color(0xFF44CF6C),
+                              onChanged: (val) {
+                                setState(() => item['isOpen'] = val);
+                                showGlassToast(context, '${item['day']} set to ${val ? 'Open' : 'Closed'}');
+                              },
+                            ),
                           ),
                         ],
                       ),

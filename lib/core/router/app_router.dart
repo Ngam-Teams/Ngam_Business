@@ -25,6 +25,7 @@ import '../../features/hardware/presentation/receipt_settings_page.dart';
 import '../../features/cash_drawer/presentation/cash_drawer_page.dart';
 import '../../features/inbox/presentation/merchant_inbox_page.dart';
 import '../../features/kds/presentation/kds_page.dart';
+import '../../features/settings/presentation/subscription_plans_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
 
 // ---------------------------------------------------------------------------
@@ -252,6 +253,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/kds',
       builder: (context, state) => const KdsPage(),
+    ),
+    GoRoute(
+      path: '/subscription-plans',
+      builder: (context, state) => const SubscriptionPlansPage(),
     ),
   ],
 );

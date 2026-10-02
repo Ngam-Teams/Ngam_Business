@@ -322,7 +322,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                           showGlassToast(context, 'Printing physical Z-Report receipt...');
                         },
                         icon: const HugeIcon(icon: HugeIcons.strokeRoundedPrinter, color: Colors.white, size: 18),
-                        label: const Text('Print Z-Report'),
+                        label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Print Z-Report')),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -339,7 +339,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                           showGlassToast(context, 'Shift #$_shiftNumber closed and submitted to cloud audit!');
                         },
                         icon: const Icon(Icons.lock_clock_rounded, size: 18),
-                        label: const Text('Close Shift', style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Close Shift', style: TextStyle(fontWeight: FontWeight.bold))),
                       ),
                     ),
                   ],
@@ -358,8 +358,21 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.white70, fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
-          Text(value, style: TextStyle(color: color ?? Colors.white, fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.w600)),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: Colors.white70, fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(color: color ?? Colors.white, fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );
@@ -381,12 +394,16 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Cash Drawer & Shift Closing',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              'Cash Drawer & Closing',
+              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
-              'Petty cash logs, drawer audits & Z-Reports',
+              'Petty cash logs & Z-Reports',
               style: TextStyle(color: Colors.white54, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -431,13 +448,15 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 4,
                           children: [
                             Text(
                               'Shift #$_shiftNumber Active',
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                             ),
-                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
@@ -525,7 +544,10 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Expected Cash in Drawer', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                      const Flexible(
+                        child: Text('Expected Cash in Drawer', style: TextStyle(color: Colors.white70, fontSize: 14), overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 8),
                       Text(
                         'RM ${_expectedCashInDrawer.toStringAsFixed(2)}',
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
@@ -565,25 +587,33 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Audit Discrepancy', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _cashDiscrepancy == 0
-                              ? const Color(0xFF10B981).withValues(alpha: 0.2)
-                              : (_cashDiscrepancy > 0 ? const Color(0xFF42A5F5).withValues(alpha: 0.2) : Colors.redAccent.withValues(alpha: 0.2)),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          _cashDiscrepancy == 0
-                              ? 'RM 0.00 (Balanced)'
-                              : '${_cashDiscrepancy > 0 ? "+" : ""}RM ${_cashDiscrepancy.toStringAsFixed(2)} (${_cashDiscrepancy > 0 ? "Surplus" : "Shortage"})',
-                          style: TextStyle(
+                      const Flexible(
+                        child: Text('Audit Discrepancy', style: TextStyle(color: Colors.white70, fontSize: 14), overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
                             color: _cashDiscrepancy == 0
-                                ? const Color(0xFF10B981)
-                                : (_cashDiscrepancy > 0 ? const Color(0xFF42A5F5) : Colors.redAccent),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                                ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                                : (_cashDiscrepancy > 0 ? const Color(0xFF42A5F5).withValues(alpha: 0.2) : Colors.redAccent.withValues(alpha: 0.2)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _cashDiscrepancy == 0
+                                  ? 'RM 0.00 (Balanced)'
+                                  : '${_cashDiscrepancy > 0 ? "+" : ""}RM ${_cashDiscrepancy.toStringAsFixed(2)} (${_cashDiscrepancy > 0 ? "Surplus" : "Shortage"})',
+                              style: TextStyle(
+                                color: _cashDiscrepancy == 0
+                                    ? const Color(0xFF10B981)
+                                    : (_cashDiscrepancy > 0 ? const Color(0xFF42A5F5) : Colors.redAccent),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -598,12 +628,19 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Petty Cash Log (Expenses & Top-ups)',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                const Expanded(
+                  child: Text(
+                    'Petty Cash Log (Expenses)',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: _openAddPettyCashDialog,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
                   icon: const Icon(Icons.add, size: 16, color: Color(0xFF42A5F5)),
                   label: const Text('Add Entry', style: TextStyle(color: Color(0xFF42A5F5), fontSize: 13)),
                 ),
@@ -642,14 +679,19 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                           Text(
                             e['reason'] as String,
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             '${e['time']} • Logged by ${e['author']}',
                             style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       '${isOut ? "-" : "+"}RM ${(e['amount'] as double).toStringAsFixed(2)}',
                       style: TextStyle(
@@ -698,9 +740,18 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
         children: [
           HugeIcon(icon: icon, color: color, size: 22),
           const SizedBox(height: 12),
-          Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11)),
+          Text(
+            label,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
         ],
       ),
     );

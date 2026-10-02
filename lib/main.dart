@@ -43,6 +43,8 @@ class NgamBusinessApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF0A0A14),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.white.withValues(alpha: 0.04),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF42A5F5),
           brightness: Brightness.dark,

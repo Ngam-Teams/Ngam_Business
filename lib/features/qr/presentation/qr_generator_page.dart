@@ -56,6 +56,207 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     showGlassToast(context, 'Exporting full standee pack: Tables 1 to $_totalTables (ZIP/PDF)...');
   }
 
+  void _showCustomColorPicker() {
+    final hexCtrl = TextEditingController(
+      text: _accentColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase(),
+    );
+    Color tempColor = _accentColor;
+
+    final List<Color> extendedPalette = [
+      const Color(0xFF6C5CE7), // Ngam Purple
+      const Color(0xFF42A5F5), // Electric Blue
+      const Color(0xFF10B981), // Emerald Mint
+      const Color(0xFFF59E0B), // Amber Gold
+      const Color(0xFFEC4899), // Neon Pink
+      const Color(0xFFEF4444), // Coral Red
+      const Color(0xFF8B5CF6), // Royal Violet
+      const Color(0xFF06B6D4), // Cyan
+      const Color(0xFF14B8A6), // Deep Teal
+      const Color(0xFFF97316), // Sunset Orange
+      const Color(0xFFE11D48), // Crimson Rose
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFF84CC16), // Lime Green
+      const Color(0xFF0EA5E9), // Sky Blue
+      const Color(0xFFA855F7), // Purple Orchid
+      const Color(0xFFD946EF), // Fuchsia
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Color(0xFF141424),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border(top: BorderSide(color: Color(0x22FFFFFF))),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Choose Custom Accent Color',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: tempColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(color: tempColor.withValues(alpha: 0.5), blurRadius: 10, spreadRadius: 1),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Select from the vibrant brand palette or type a HEX code.',
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Palette Grid
+                    const Text('Color Palette', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: extendedPalette.map((c) {
+                        final isSel = c.toARGB32() == tempColor.toARGB32();
+                        return GestureDetector(
+                          onTap: () {
+                            setModalState(() {
+                              tempColor = c;
+                              hexCtrl.text = c.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase();
+                            });
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: c,
+                              shape: BoxShape.circle,
+                              border: isSel
+                                  ? Border.all(color: Colors.white, width: 3)
+                                  : Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                              boxShadow: isSel
+                                  ? [BoxShadow(color: c.withValues(alpha: 0.7), blurRadius: 8, spreadRadius: 1)]
+                                  : null,
+                            ),
+                            child: isSel ? const Icon(Icons.check, size: 20, color: Colors.white) : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // HEX Code Field
+                    const Text('Custom Hex Code', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: hexCtrl,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                            maxLength: 6,
+                            decoration: InputDecoration(
+                              counterText: '',
+                              prefixText: '# ',
+                              prefixStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 16),
+                              hintText: '6C5CE7',
+                              hintStyle: const TextStyle(color: Colors.white24),
+                              filled: true,
+                              fillColor: const Color(0xFF0F0F1B),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF42A5F5))),
+                            ),
+                            onChanged: (val) {
+                              final clean = val.replaceAll('#', '').trim();
+                              if (clean.length == 6) {
+                                final parsed = int.tryParse('0xFF$clean');
+                                if (parsed != null) {
+                                  setModalState(() {
+                                    tempColor = Color(parsed);
+                                  });
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: tempColor,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Apply Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: tempColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _accentColor = tempColor;
+                            if (!_colorOptions.any((c) => c.toARGB32() == tempColor.toARGB32())) {
+                              _colorOptions.insert(0, tempColor);
+                            }
+                          });
+                          Navigator.pop(ctx);
+                          showGlassToast(context, 'Accent color updated!');
+                        },
+                        child: const Text('Apply Custom Color', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,12 +273,16 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'QR Code & Standee Generator',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              'QR & Standee Generator',
+              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
-              'Printable table ordering & storefront QR standees',
+              'Table ordering & storefront QR',
               style: TextStyle(color: Colors.white54, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -385,31 +590,79 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                 border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         'Accent Theme Color',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                        style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
                       ),
-                      Row(
-                        children: _colorOptions.map((c) {
-                          final isSelected = c == _accentColor;
-                          return GestureDetector(
-                            onTap: () => setState(() => _accentColor = c),
-                            child: Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: c,
-                                shape: BoxShape.circle,
-                                border: isSelected ? Border.all(color: Colors.white, width: 2.5) : null,
+                      GestureDetector(
+                        onTap: _showCustomColorPicker,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _accentColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: _accentColor.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(color: _accentColor, shape: BoxShape.circle),
                               ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '#${_accentColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+                                style: TextStyle(color: _accentColor, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.edit_rounded, size: 12, color: Colors.white54),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      ..._colorOptions.map((c) {
+                        final isSelected = c.toARGB32() == _accentColor.toARGB32();
+                        return GestureDetector(
+                          onTap: () => setState(() => _accentColor = c),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: c,
+                              shape: BoxShape.circle,
+                              border: isSelected ? Border.all(color: Colors.white, width: 2.5) : Border.all(color: Colors.white24),
                             ),
-                          );
-                        }).toList(),
+                            child: isSelected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
+                          ),
+                        );
+                      }),
+                      GestureDetector(
+                        onTap: _showCustomColorPicker,
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFF42A5F5), width: 1.5),
+                          ),
+                          child: const Icon(Icons.add_rounded, size: 18, color: Color(0xFF42A5F5)),
+                        ),
                       ),
                     ],
                   ),
@@ -439,8 +692,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     onPressed: _downloadStandee,
-                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
-                    label: const Text('Download PDF', style: TextStyle(fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+                    label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Download PDF', style: TextStyle(fontWeight: FontWeight.bold))),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -455,7 +708,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                       ),
                       onPressed: _downloadAllTables,
                       icon: const HugeIcon(icon: HugeIcons.strokeRoundedFolder01, color: Colors.white, size: 18),
-                      label: const Text('Batch 1-15 Tables', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Batch 1-15 Tables', style: TextStyle(fontWeight: FontWeight.bold))),
                     ),
                   )
                 else
@@ -471,7 +724,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                         showGlassToast(context, 'Storefront link copied: $_qrPayloadUrl');
                       },
                       icon: const HugeIcon(icon: HugeIcons.strokeRoundedCopy01, color: Colors.white, size: 18),
-                      label: const Text('Copy URL', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Copy URL', style: TextStyle(fontWeight: FontWeight.bold))),
                     ),
                   ),
               ],

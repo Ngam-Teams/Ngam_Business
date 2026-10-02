@@ -125,40 +125,47 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _loadingBusiness ? 'Welcome to Ngam Business' : businessName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.3,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _loadingBusiness ? 'Welcome to Ngam Business' : businessName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.3,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            hasLocation
-                                ? 'Live on Ngam Explore'
-                                : 'Setup incomplete — Action needed',
-                            style: TextStyle(
-                              color: hasLocation
-                                  ? const Color(0xFF44CF6C)
-                                  : const Color(0xFFF9C80E),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                            const SizedBox(height: 4),
+                            Text(
+                              hasLocation
+                                  ? 'Live on Ngam Explore'
+                                  : 'Setup incomplete — Action needed',
+                              style: TextStyle(
+                                color: hasLocation
+                                    ? const Color(0xFF44CF6C)
+                                    : const Color(0xFFF9C80E),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       GestureDetector(
                         onTap: () async {
                           await context.push('/business-profile');
                           _loadBusinessProfile();
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.06),
                             borderRadius: BorderRadius.circular(12),
@@ -167,6 +174,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             ),
                           ),
                           child: const Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               HugeIcon(
                                 icon: HugeIcons.strokeRoundedEdit02,
@@ -207,9 +215,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   else
                     Column(
                       children: [
-                        _buildRecentActivity(),
-                        const SizedBox(height: 24),
                         _buildQuickActions(context),
+                        const SizedBox(height: 24),
+                        _buildRecentActivity(),
                       ],
                     ),
                 ],
@@ -224,7 +232,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _buildProfileIncompleteBanner(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -237,62 +245,129 @@ class _HomeDashboardState extends State<HomeDashboard> {
           color: const Color(0xFFF9C80E).withValues(alpha: 0.4),
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9C80E).withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const HugeIcon(
-              icon: HugeIcons.strokeRoundedLocation01,
-              color: Color(0xFFF9C80E),
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Column(
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final isNarrow = c.maxWidth < 450;
+          if (isNarrow) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Set Up Your Store Location & Details',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF9C80E).withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedLocation01,
+                        color: Color(0xFFF9C80E),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Set Up Store Location & Details',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 2),
-                Text(
+                const SizedBox(height: 8),
+                const Text(
                   'Pin your entrance on the map and add street address so customers can discover you on Ngam Explore.',
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
                   ),
                 ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await context.push('/business-profile');
+                      _loadBusinessProfile();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF9C80E),
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    ),
+                    child: const Text(
+                      'Add Details',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ),
               ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: () async {
-              await context.push('/business-profile');
-              _loadBusinessProfile();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF9C80E),
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            ),
-            child: const Text(
-              'Add Details',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-          ),
-        ],
+            );
+          }
+          return Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9C80E).withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedLocation01,
+                  color: Color(0xFFF9C80E),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Set Up Your Store Location & Details',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Pin your entrance on the map and add street address so customers can discover you on Ngam Explore.',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: () async {
+                  await context.push('/business-profile');
+                  _loadBusinessProfile();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF9C80E),
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+                child: const Text(
+                  'Add Details',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -513,15 +588,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           strokeWidth: 2.1,
                         ),
                         const SizedBox(width: 12),
-                        Text(
-                          a.label,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
+                        Expanded(
+                          child: Text(
+                            a.label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         HugeIcon(
                           icon: HugeIcons.strokeRoundedArrowRight01,
                           color: Colors.white.withValues(alpha: 0.3),
@@ -548,7 +627,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.07),
             borderRadius: BorderRadius.circular(24),

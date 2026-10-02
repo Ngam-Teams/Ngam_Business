@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../widgets/glass_toast.dart';
@@ -20,6 +21,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _detectingGps = false;
   String? _businessId;
 
   // Identity Controllers
@@ -563,12 +565,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           Row(
                             children: [
                               Expanded(
-                                flex: 3,
                                 child: _buildStateDropdown(),
                               ),
-                              const SizedBox(width: 14),
+                              const SizedBox(width: 12),
                               Expanded(
-                                flex: 2,
                                 child: _buildTextField(
                                   label: 'Country',
                                   controller: _countryController,
@@ -1046,23 +1046,26 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           ),
         ),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           value: _selectedState != null && _malaysianStates.contains(_selectedState)
               ? _selectedState
               : null,
           dropdownColor: const Color(0xFF1A1A24),
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
           decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
             hintText: 'Select State',
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2)),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13),
             prefixIcon: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.only(left: 10, right: 6),
               child: HugeIcon(
                 icon: HugeIcons.strokeRoundedMapPin,
                 color: Colors.white.withValues(alpha: 0.5),
-                size: 20,
+                size: 18,
               ),
             ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 40),
+            prefixIconConstraints: const BoxConstraints(minWidth: 34),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
@@ -1081,7 +1084,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           items: _malaysianStates.map((state) {
             return DropdownMenuItem<String>(
               value: state,
-              child: Text(state),
+              child: Text(state, overflow: TextOverflow.ellipsis),
             );
           }).toList(),
           onChanged: (val) => setState(() => _selectedState = val),
@@ -1106,6 +1109,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           ),
         ),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           value: _selectedBank != null && _malaysianBanks.contains(_selectedBank)
               ? _selectedBank
               : null,
@@ -1141,7 +1145,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           items: _malaysianBanks.map((bank) {
             return DropdownMenuItem<String>(
               value: bank,
-              child: Text(bank),
+              child: Text(bank, overflow: TextOverflow.ellipsis),
             );
           }).toList(),
           onChanged: (val) => setState(() => _selectedBank = val),
@@ -1166,6 +1170,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           ),
         ),
         DropdownButtonFormField<int>(
+          isExpanded: true,
           value: _slotDuration,
           dropdownColor: const Color(0xFF1A1A24),
           style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -1195,12 +1200,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
             ),
           ),
           items: const [
-            DropdownMenuItem(value: 15, child: Text('15 Minutes')),
-            DropdownMenuItem(value: 30, child: Text('30 Minutes')),
-            DropdownMenuItem(value: 45, child: Text('45 Minutes')),
-            DropdownMenuItem(value: 60, child: Text('60 Minutes (1 Hour)')),
-            DropdownMenuItem(value: 90, child: Text('90 Minutes')),
-            DropdownMenuItem(value: 120, child: Text('120 Minutes (2 Hours)')),
+            DropdownMenuItem(value: 15, child: Text('15 Minutes', overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 30, child: Text('30 Minutes', overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 45, child: Text('45 Minutes', overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 60, child: Text('60 Minutes (1 Hour)', overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 90, child: Text('90 Minutes', overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 120, child: Text('120 Minutes (2 Hours)', overflow: TextOverflow.ellipsis)),
           ],
           onChanged: (val) {
             if (val != null) setState(() => _slotDuration = val);
@@ -1245,7 +1250,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     const Text(
                       'Halal Certified / Muslim Friendly',
@@ -1255,8 +1263,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                         fontSize: 14,
                       ),
                     ),
-                    if (_isHalal) ...[
-                      const SizedBox(width: 8),
+                    if (_isHalal)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
@@ -1272,7 +1279,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           ),
                         ),
                       ),
-                    ],
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -1371,19 +1377,21 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           controller: controller,
           keyboardType: keyboardType,
           validator: validator,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
           decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2)),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13),
             prefixIcon: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.only(left: 10, right: 6),
               child: HugeIcon(
                 icon: icon,
                 color: Colors.white.withValues(alpha: 0.5),
-                size: 20,
+                size: 18,
               ),
             ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 40),
+            prefixIconConstraints: const BoxConstraints(minWidth: 34),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
@@ -1408,6 +1416,87 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     );
   }
 
+  Future<void> _autoDetectGps() async {
+    setState(() => _detectingGps = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          showGlassToast(context, 'GPS dimatikan. Sila hidupkan lokasi dalam tetapan.', isError: true);
+        }
+        await Geolocator.openLocationSettings();
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            showGlassToast(context, 'Kebenaran GPS ditolak. Sila benarkan akses lokasi.', isError: true);
+          }
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          showGlassToast(context, 'Kebenaran GPS disekat kekal. Sila benarkan dalam tetapan aplikasi.', isError: true);
+        }
+        await Geolocator.openAppSettings();
+        return;
+      }
+
+      // Check last known position first as quick fallback
+      final Position? lastKnown = await Geolocator.getLastKnownPosition();
+      if (lastKnown != null) {
+        setState(() {
+          _latitude = lastKnown.latitude;
+          _longitude = lastKnown.longitude;
+        });
+      }
+
+      Position currentPos;
+      try {
+        currentPos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 8),
+          ),
+        );
+      } catch (_) {
+        currentPos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            timeLimit: Duration(seconds: 6),
+          ),
+        );
+      }
+
+      setState(() {
+        _latitude = currentPos.latitude;
+        _longitude = currentPos.longitude;
+      });
+
+      if (_businessId != null) {
+        await _service.updateBusinessProfile(_businessId!, {
+          'latitude': _latitude,
+          'longitude': _longitude,
+        });
+      }
+
+      if (mounted) {
+        showGlassToast(context, 'Lokasi GPS berjaya dikesan: ${currentPos.latitude.toStringAsFixed(4)}, ${currentPos.longitude.toStringAsFixed(4)}');
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'Satelit GPS lemah. Anda boleh buka peta untuk pin kedai secara manual.', isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _detectingGps = false);
+    }
+  }
+
   Widget _buildMapSection() {
     final bool hasLocation = _latitude != null && _longitude != null;
 
@@ -1425,89 +1514,113 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
             ),
           ),
         ),
-        GestureDetector(
-          onTap: () async {
-            final LatLng? initial = hasLocation ? LatLng(_latitude!, _longitude!) : null;
-            final LatLng? selectedLoc = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => MapPickerScreen(initialLocation: initial),
-              ),
-            );
-            if (selectedLoc != null) {
-              setState(() {
-                _latitude = selectedLoc.latitude;
-                _longitude = selectedLoc.longitude;
-              });
-              if (_businessId != null) {
-                // Auto update coordinates
-                await _service.updateBusinessProfile(_businessId!, {
-                  'latitude': _latitude,
-                  'longitude': _longitude,
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () async {
+              final LatLng? initial = hasLocation ? LatLng(_latitude!, _longitude!) : null;
+              final LatLng? selectedLoc = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MapPickerScreen(initialLocation: initial),
+                ),
+              );
+              if (selectedLoc != null) {
+                setState(() {
+                  _latitude = selectedLoc.latitude;
+                  _longitude = selectedLoc.longitude;
                 });
+                if (_businessId != null) {
+                  await _service.updateBusinessProfile(_businessId!, {
+                    'latitude': _latitude,
+                    'longitude': _longitude,
+                  });
+                }
+                if (mounted) {
+                  showGlassToast(context, 'Location pinned successfully!');
+                }
               }
-              if (mounted) {
-                showGlassToast(context, 'Location pinned successfully!');
-              }
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: hasLocation ? const Color(0xFF42A5F5) : Colors.white.withValues(alpha: 0.1),
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: hasLocation ? const Color(0xFF42A5F5) : Colors.white.withValues(alpha: 0.1),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: hasLocation
+                          ? const Color(0xFF42A5F5).withValues(alpha: 0.2)
+                          : Colors.white.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: HugeIcon(
+                      icon: HugeIcons.strokeRoundedLocation01,
+                      color: hasLocation ? const Color(0xFF42A5F5) : Colors.white54,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hasLocation ? 'Location Pinned' : 'Pin Business Location',
+                          style: TextStyle(
+                            color: hasLocation ? Colors.white : Colors.white70,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          hasLocation
+                              ? 'Lat: ${_latitude!.toStringAsFixed(5)}, Lng: ${_longitude!.toStringAsFixed(5)}'
+                              : 'Tap to open map and pinpoint store entrance',
+                          style: TextStyle(
+                            color: hasLocation ? const Color(0xFF42A5F5) : Colors.white38,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  HugeIcon(
+                    icon: HugeIcons.strokeRoundedArrowRight01,
+                    color: hasLocation ? const Color(0xFF42A5F5) : Colors.white38,
+                    size: 20,
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: hasLocation
-                        ? const Color(0xFF42A5F5).withValues(alpha: 0.2)
-                        : Colors.white.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: HugeIcon(
-                    icon: HugeIcons.strokeRoundedLocation01,
-                    color: hasLocation ? const Color(0xFF42A5F5) : Colors.white54,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        hasLocation ? 'Location Pinned' : 'Set Exact Location Pin',
-                        style: TextStyle(
-                          color: hasLocation ? Colors.white : Colors.white70,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        hasLocation
-                            ? 'Lat: ${_latitude!.toStringAsFixed(5)}, Lng: ${_longitude!.toStringAsFixed(5)}'
-                            : 'Tap to open map and pinpoint your store entrance for customers',
-                        style: TextStyle(
-                          color: hasLocation ? const Color(0xFF42A5F5) : Colors.white38,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                HugeIcon(
-                  icon: HugeIcons.strokeRoundedArrowRight01,
-                  color: hasLocation ? const Color(0xFF42A5F5) : Colors.white38,
-                  size: 20,
-                ),
-              ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF42A5F5),
+              side: BorderSide(color: const Color(0xFF42A5F5).withValues(alpha: 0.4)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: _detectingGps ? null : _autoDetectGps,
+            icon: _detectingGps
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)))
+                : const HugeIcon(icon: HugeIcons.strokeRoundedNavigation03, color: Color(0xFF42A5F5), size: 18),
+            label: Text(
+              _detectingGps ? 'Detecting current GPS...' : 'Auto-Detect Current GPS Location',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ),
         ),

@@ -235,29 +235,33 @@ class _OrdersPageState extends State<OrdersPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    order.customerName?.isNotEmpty == true ? order.customerName! : 'Guest Customer',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      order.customerName?.isNotEmpty == true ? order.customerName! : 'Guest Customer',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    fmt.format(order.total),
-                    style: const TextStyle(
-                      color: Color(0xFF42A5F5),
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                    const SizedBox(height: 4),
+                    Text(
+                      fmt.format(order.total),
+                      style: const TextStyle(
+                        color: Color(0xFF42A5F5),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              
+              const SizedBox(width: 8),
               if (isPending)
                 ElevatedButton.icon(
                   onPressed: () => _updateStatus(order, 'completed'),

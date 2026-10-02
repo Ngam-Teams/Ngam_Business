@@ -122,46 +122,44 @@ class _KdsPageState extends State<KdsPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const HugeIcon(icon: HugeIcons.strokeRoundedRestaurant01, color: Color(0xFFF9C80E), size: 24),
-            const SizedBox(width: 12),
-            const Text(
-              'Kitchen Display System (KDS)',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            const HugeIcon(icon: HugeIcons.strokeRoundedRestaurant01, color: Color(0xFFF9C80E), size: 20),
+            const SizedBox(width: 8),
+            const Flexible(
+              child: Text(
+                'Kitchen Display',
+                style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: const Color(0xFF10B981).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                '${filteredTickets.length} ACTIVE',
+                '${filteredTickets.length}',
                 style: const TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
         actions: [
-          // Filter pills
-          Row(
-            children: ['All', 'Dine-In', 'Takeaway'].map((type) {
-              final isSel = _filterType == type;
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: ChoiceChip(
-                  label: Text(type, style: TextStyle(color: isSel ? Colors.black : Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
-                  selected: isSel,
-                  selectedColor: const Color(0xFFF9C80E),
-                  backgroundColor: const Color(0xFF141424),
-                  side: const BorderSide(color: Colors.white12),
-                  onSelected: (val) => setState(() => _filterType = type),
-                ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.filter_list_rounded, color: Colors.white70),
+            tooltip: 'Filter Tickets',
+            color: const Color(0xFF1A1A2E),
+            onSelected: (val) => setState(() => _filterType = val),
+            itemBuilder: (context) => ['All', 'Dine-In', 'Takeaway'].map((type) {
+              return PopupMenuItem(
+                value: type,
+                child: Text(type, style: TextStyle(color: _filterType == type ? const Color(0xFFF9C80E) : Colors.white)),
               );
             }).toList(),
           ),
-          const SizedBox(width: 8),
           IconButton(
             icon: Icon(
               _soundEnabled ? Icons.notifications_active_rounded : Icons.notifications_off_rounded,

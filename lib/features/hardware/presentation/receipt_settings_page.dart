@@ -66,12 +66,16 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Receipts & Thermal Printer',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              'Receipts & Printer',
+              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
-              'Bluetooth/LAN printer setup & receipt layout',
+              'Bluetooth/LAN printer & layout',
               style: TextStyle(color: Colors.white54, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -121,13 +125,15 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 4,
                               children: [
                                 Text(
                                   _selectedPrinter,
                                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                                 ),
-                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
@@ -169,7 +175,10 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Auto-print when new order placed', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      const Expanded(
+                        child: Text('Auto-print when new order placed', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      ),
+                      const SizedBox(width: 8),
                       Switch(
                         value: _autoPrintOnOrder,
                         activeColor: const Color(0xFF42A5F5),
@@ -180,7 +189,10 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Auto cut paper roll after receipt', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      const Expanded(
+                        child: Text('Auto cut paper roll after receipt', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      ),
+                      const SizedBox(width: 8),
                       Switch(
                         value: _autoCutPaper,
                         activeColor: const Color(0xFF42A5F5),
@@ -205,21 +217,35 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   child: GestureDetector(
                     onTap: () => setState(() => _paperWidth = 58),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                       decoration: BoxDecoration(
                         color: _paperWidth == 58 ? const Color(0xFF42A5F5) : const Color(0xFF141424),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: _paperWidth == 58 ? const Color(0xFF42A5F5) : Colors.white12),
                       ),
-                      child: Center(
-                        child: Text(
-                          '58mm (Pocket / Handheld POS)',
-                          style: TextStyle(
-                            color: _paperWidth == 58 ? Colors.white : Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '58mm',
+                            style: TextStyle(
+                              color: _paperWidth == 58 ? Colors.white : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Pocket / Handheld',
+                            style: TextStyle(
+                              color: _paperWidth == 58 ? Colors.white.withValues(alpha: 0.85) : Colors.white54,
+                              fontSize: 11,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -229,21 +255,35 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   child: GestureDetector(
                     onTap: () => setState(() => _paperWidth = 80),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                       decoration: BoxDecoration(
                         color: _paperWidth == 80 ? const Color(0xFF42A5F5) : const Color(0xFF141424),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: _paperWidth == 80 ? const Color(0xFF42A5F5) : Colors.white12),
                       ),
-                      child: Center(
-                        child: Text(
-                          '80mm (Countertop Standard)',
-                          style: TextStyle(
-                            color: _paperWidth == 80 ? Colors.white : Colors.white70,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '80mm',
+                            style: TextStyle(
+                              color: _paperWidth == 80 ? Colors.white : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Countertop POS',
+                            style: TextStyle(
+                              color: _paperWidth == 80 ? Colors.white.withValues(alpha: 0.85) : Colors.white54,
+                              fontSize: 11,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -261,7 +301,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             Center(
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
-                width: _paperWidth == 58 ? 280 : 340,
+                width: _paperWidth == 58 ? 260 : double.infinity,
+                constraints: const BoxConstraints(maxWidth: 320),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFFDF5), // Warm thermal paper tint
                   borderRadius: BorderRadius.circular(8),
@@ -273,7 +314,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -311,23 +352,29 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontFamily: 'Courier', color: Colors.black87, fontSize: 10),
                     ),
-                    const SizedBox(height: 10),
-                    const Text('------------------------------------------', style: TextStyle(fontFamily: 'Courier', color: Colors.black38)),
+                    const SizedBox(height: 8),
+                    _buildReceiptDivider(),
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Order: #NG-4029', style: TextStyle(fontFamily: 'Courier', color: Colors.black, fontWeight: FontWeight.bold, fontSize: 11)),
+                        Flexible(
+                          child: Text('Order: #NG-4029', style: TextStyle(fontFamily: 'Courier', color: Colors.black, fontWeight: FontWeight.bold, fontSize: 11), overflow: TextOverflow.ellipsis),
+                        ),
+                        SizedBox(width: 4),
                         Text('30/09/2026 12:45', style: TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 10)),
                       ],
                     ),
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Table: 04 (Dine-in)', style: TextStyle(fontFamily: 'Courier', color: Colors.black, fontSize: 11)),
+                        Flexible(
+                          child: Text('Table: 04 (Dine-in)', style: TextStyle(fontFamily: 'Courier', color: Colors.black, fontSize: 11), overflow: TextOverflow.ellipsis),
+                        ),
+                        SizedBox(width: 4),
                         Text('Cashier: Ahmad', style: TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 10)),
                       ],
                     ),
-                    const Text('------------------------------------------', style: TextStyle(fontFamily: 'Courier', color: Colors.black38)),
+                    _buildReceiptDivider(),
 
                     // Sample Items
                     _buildReceiptLine('1x Nasi Lemak Rendang Daging', '16.90'),
@@ -335,7 +382,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     _buildReceiptLine('1x Teh Tarik Kaw (Ais)', '3.80'),
                     _buildReceiptLine('1x Roti Bakar Kaya Butter', '4.50'),
 
-                    const Text('------------------------------------------', style: TextStyle(fontFamily: 'Courier', color: Colors.black38)),
+                    _buildReceiptDivider(),
 
                     _buildReceiptLine('Subtotal', '28.70', isBold: false),
                     if (_showSst) _buildReceiptLine('SST (6%)', '1.72', isBold: false),
@@ -344,7 +391,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     _buildReceiptLine('TOTAL PAYABLE', 'RM 30.40', isBold: true, fontSize: 14),
                     _buildReceiptLine('PAID (DuitNow QR)', 'RM 30.40', isBold: false),
 
-                    const Text('------------------------------------------', style: TextStyle(fontFamily: 'Courier', color: Colors.black38)),
+                    _buildReceiptDivider(),
                     const SizedBox(height: 6),
 
                     Text(
@@ -507,8 +554,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
                 fontSize: fontSize,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
+          const SizedBox(width: 6),
           Text(
             right,
             style: TextStyle(
@@ -519,6 +569,20 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildReceiptDivider() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Text(
+        '- - - - - - - - - - - - - - - - - - - - - - - -',
+        maxLines: 1,
+        overflow: TextOverflow.clip,
+        softWrap: false,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontFamily: 'Courier', color: Colors.black38),
       ),
     );
   }
