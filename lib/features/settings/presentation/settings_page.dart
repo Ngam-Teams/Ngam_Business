@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../widgets/glass_toast.dart';
 import '../data/business_service.dart';
+import '../../../core/services/app_update_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -240,11 +241,39 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: HugeIcons.strokeRoundedInformationCircle,
               child: Column(
                 children: [
-                  _buildInfoRow(
-                    label: 'Version',
-                    value: '1.0.1 (Latest Live)',
-                    icon: HugeIcons.strokeRoundedCode,
-                    valueColor: const Color(0xFF44CF6C),
+                  InkWell(
+                    onTap: () => AppUpdateService.checkManually(context),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildInfoRow(
+                              label: 'Version',
+                              value: 'v${AppUpdateService.currentVersion}',
+                              icon: HugeIcons.strokeRoundedCode,
+                              valueColor: const Color(0xFF44CF6C),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF44CF6C).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Semak Kemas Kini',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF44CF6C),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   const Divider(height: 24, color: Color(0x1AFFFFFF)),
                   _buildInfoRow(

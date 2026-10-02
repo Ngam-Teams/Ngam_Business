@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../widgets/stat_card.dart';
 import '../../analytics/data/analytics_service.dart';
 import '../../settings/data/business_service.dart';
+import '../../../core/services/app_update_service.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -26,6 +27,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   void initState() {
     super.initState();
     _loadBusinessProfile();
+    AppUpdateService.checkOnStartup(context);
   }
 
   Future<void> _loadBusinessProfile() async {
