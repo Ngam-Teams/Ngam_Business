@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
 
@@ -26,6 +27,8 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   late List<Map<String, dynamic>> _appointments;
   StreamSubscription<List<Map<String, dynamic>>>? _bookingsSub;
   String? _businessId;
+  Set<String> _knownBookingIds = {};
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -151,11 +154,61 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
 
             _appointments = liveList;
           });
+          _checkForNewBookings(relevantBookings);
         }
       });
     } catch (e) {
       debugPrint('Error subscribing to bookings: $e');
     }
+  }
+
+  void _checkForNewBookings(List<Map<String, dynamic>> rawBookings) {
+    final currentIds = rawBookings.map((b) => b['id'].toString()).toSet();
+    if (_isFirstLoad) {
+      _knownBookingIds = currentIds;
+      _isFirstLoad = false;
+      return;
+    }
+
+    final newlyAdded = currentIds.difference(_knownBookingIds);
+    if (newlyAdded.isNotEmpty) {
+      final hasNewPending = rawBookings.any((b) =>
+          newlyAdded.contains(b['id'].toString()) &&
+          (b['status'] == null ||
+              b['status'] == 'pending' ||
+              b['status'] == 'confirmed'));
+
+      if (hasNewPending) {
+        FlutterRingtonePlayer().playNotification();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  HugeIcon(
+                    icon: HugeIcons.strokeRoundedCalendar03,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Tempahan Baru Diterima!',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF2E7D32),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+      }
+    }
+    _knownBookingIds = currentIds;
   }
 
   @override
