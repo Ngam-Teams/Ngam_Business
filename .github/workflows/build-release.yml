@@ -55,7 +55,8 @@ jobs:
           if [ -n "${{ secrets.ENV_FILE }}" ]; then
             echo "${{ secrets.ENV_FILE }}" > .env
           elif [ ! -f .env ]; then
-            touch .env
+            echo "SUPABASE_URL=https://rsueaoglsdxhzpupjljd.supabase.co" > .env
+            echo "SUPABASE_ANON_KEY=sb_publishable_qP4whY5B6wxIasWOVGoPCw_vrhOXj_J" >> .env
           fi
         shell: bash
 
