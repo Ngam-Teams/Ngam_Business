@@ -9,25 +9,36 @@ class AnalyticsService {
       : _client = client ?? Supabase.instance.client,
         _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);
 
+  Future<String?> _getBusinessId() async {
+    final profile = await _businessService.getBusinessProfile();
+    return profile?['id'];
+  }
+
   /// Fetches overview stats: today's revenue, order count, avg order value.
   Future<Map<String, dynamic>> fetchOverviewStats() async {
     try {
-      final profile = await _businessService.getBusinessProfile();
-      final businessId = profile?['id'];
+      final businessId = await _getBusinessId();
+      if (businessId == null) {
+        return {
+          'todayRevenue': 0.0,
+          'todayOrders': 0,
+          'monthlyRevenue': 0.0,
+          'productCount': 0,
+          'avgOrderValue': 0.0,
+          'pendingOrders': 0,
+        };
+      }
 
       final today = DateTime.now();
       final startOfDay = DateTime(today.year, today.month, today.day)
           .toIso8601String();
 
-      var ordersQuery = _client
+      final ordersRes = await _client
           .from('orders')
           .select('total, created_at, status')
+          .eq('business_id', businessId)
           .gte('created_at', startOfDay);
-      if (businessId != null) {
-        ordersQuery = ordersQuery.eq('business_id', businessId);
-      }
 
-      final ordersRes = await ordersQuery;
       final orders = ordersRes as List;
       double todayRevenue = 0;
       for (final o in orders) {
@@ -37,15 +48,12 @@ class AnalyticsService {
       // Monthly revenue
       final startOfMonth =
           DateTime(today.year, today.month, 1).toIso8601String();
-      var monthlyQuery = _client
+      final monthlyRes = await _client
           .from('orders')
           .select('total')
+          .eq('business_id', businessId)
           .gte('created_at', startOfMonth);
-      if (businessId != null) {
-        monthlyQuery = monthlyQuery.eq('business_id', businessId);
-      }
 
-      final monthlyRes = await monthlyQuery;
       double monthlyRevenue = 0;
       for (final o in monthlyRes as List) {
         monthlyRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
@@ -54,14 +62,11 @@ class AnalyticsService {
       // Product count
       int productCount = 0;
       try {
-        var prodQuery = _client
+        final prodRes = await _client
             .from('business_products')
             .select('id')
+            .eq('shop_id', businessId)
             .eq('is_active', true);
-        if (businessId != null) {
-          prodQuery = prodQuery.eq('shop_id', businessId);
-        }
-        final prodRes = await prodQuery;
         productCount = (prodRes as List).length;
       } on PostgrestException {
         productCount = 0;
@@ -84,14 +89,13 @@ class AnalyticsService {
         'pendingOrders': pendingOrders,
       };
     } on PostgrestException {
-      // Return mock stats if tables not set up yet
       return {
-        'todayRevenue': 487.50,
-        'todayOrders': 24,
-        'monthlyRevenue': 12450.00,
-        'productCount': 142,
-        'avgOrderValue': 20.30,
-        'pendingOrders': 3,
+        'todayRevenue': 0.0,
+        'todayOrders': 0,
+        'monthlyRevenue': 0.0,
+        'productCount': 0,
+        'avgOrderValue': 0.0,
+        'pendingOrders': 0,
       };
     }
   }
@@ -99,21 +103,18 @@ class AnalyticsService {
   /// Fetches last 7 days revenue by day.
   Future<List<Map<String, dynamic>>> fetchWeeklyRevenue() async {
     try {
-      final profile = await _businessService.getBusinessProfile();
-      final businessId = profile?['id'];
+      final businessId = await _getBusinessId();
+      if (businessId == null) return [];
 
       final today = DateTime.now();
       final weekAgo = today.subtract(const Duration(days: 7));
 
-      var query = _client
+      final res = await _client
           .from('orders')
           .select('total, created_at')
-          .gte('created_at', weekAgo.toIso8601String());
-      if (businessId != null) {
-        query = query.eq('business_id', businessId);
-      }
-
-      final res = await query.order('created_at');
+          .eq('business_id', businessId)
+          .gte('created_at', weekAgo.toIso8601String())
+          .order('created_at');
 
       return (res as List).cast<Map<String, dynamic>>();
     } on PostgrestException {
@@ -121,25 +122,46 @@ class AnalyticsService {
     }
   }
 
-  /// Fetches top selling products by quantity.
+  /// Fetches top selling products by quantity for this business.
   Future<List<Map<String, dynamic>>> fetchTopProducts({int limit = 5}) async {
     try {
+      final businessId = await _getBusinessId();
+      if (businessId == null) return [];
+
+      final ordersRes = await _client
+          .from('orders')
+          .select('id')
+          .eq('business_id', businessId)
+          .limit(100);
+
+      final orderIds = (ordersRes as List)
+          .map((o) => o['id']?.toString())
+          .whereType<String>()
+          .toList();
+
+      if (orderIds.isEmpty) return [];
+
       final res = await _client
           .from('order_items')
           .select('product_name, quantity')
-          .order('quantity', ascending: false)
-          .limit(limit);
+          .filter('order_id', 'in', orderIds);
 
-      return (res as List).cast<Map<String, dynamic>>();
+      final Map<String, int> counts = {};
+      for (final item in (res as List)) {
+        final name = item['product_name'] as String? ?? 'Item';
+        final qty = (item['quantity'] as num?)?.toInt() ?? 1;
+        counts[name] = (counts[name] ?? 0) + qty;
+      }
+
+      final sorted = counts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      return sorted
+          .take(limit)
+          .map((e) => {'product_name': e.key, 'quantity': e.value})
+          .toList();
     } on PostgrestException {
-      // Mock top products
-      return [
-        {'product_name': 'Nasi Lemak', 'quantity': 142},
-        {'product_name': 'Teh Tarik', 'quantity': 98},
-        {'product_name': 'Roti Canai', 'quantity': 87},
-        {'product_name': 'Nasi Goreng', 'quantity': 65},
-        {'product_name': 'Milo Ais', 'quantity': 54},
-      ];
+      return [];
     }
   }
 }
