@@ -78,10 +78,9 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Configure Persistent Signing Keystore
+      - name: Verify Signing Keystore Exists
         run: |
-          mkdir -p ~/.android
-          base64 -d android/debug.keystore.base64 > ~/.android/debug.keystore
+          ls -la android/app/upload.jks
         shell: bash
 
       - name: Build Release APK
