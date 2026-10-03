@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Mark as Pre-release'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,6 +35,15 @@ jobs:
           fi
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
           echo "Using version tag: $TAG"
+
+          # Auto-detect pre-release keywords (beta, alpha, dev, preview, rc) or manual input
+          if [[ "${{ github.event.inputs.prerelease }}" == "true" ]] || [[ "$TAG" =~ -(beta|alpha|dev|preview|rc) ]]; then
+            echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+            echo "Pre-release detected: true"
+          else
+            echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+            echo "Pre-release detected: false"
+          fi
         shell: bash
 
       - name: Set up Java 17
@@ -85,12 +100,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.TAG }}
-          name: Ngam Business Release ${{ steps.version.outputs.TAG }}
+          name: Ngam Business ${{ steps.version.outputs.TAG }}
           files: |
             Ngam-Business-*.apk
             Ngam-Business.apk
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.version.outputs.IS_PRERELEASE == 'true' }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
