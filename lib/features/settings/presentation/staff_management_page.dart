@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../widgets/glass_toast.dart';
@@ -482,6 +483,11 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
+              icon: const HugeIcon(icon: HugeIcons.strokeRoundedQrCode, color: Color(0xFFF9C80E), size: 19),
+              tooltip: 'QR Code & Fast Link',
+              onPressed: () => _showStaffQrModal(staff),
+            ),
+            IconButton(
               icon: const HugeIcon(icon: HugeIcons.strokeRoundedShare01, color: Color(0xFF2DD4BF), size: 18),
               tooltip: 'Share Invite & Staff Code',
               onPressed: () => _copyStaffInvite(staff),
@@ -499,6 +505,167 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showStaffQrModal(Map<String, dynamic> staff) {
+    final name = staff['name'] ?? 'Staff';
+    final code = (staff['staff_code'] ?? 'STF-001').toString().toUpperCase();
+    final role = (staff['role'] ?? 'staff').toString().toUpperCase();
+    final qrData = 'NGAM_STAFF:$code';
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Dialog(
+            backgroundColor: const Color(0xFF141420),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const HugeIcon(
+                              icon: HugeIcons.strokeRoundedQrCode,
+                              color: Color(0xFF42A5F5),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                'Pautan Pantas Staf • $role',
+                                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white54),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF42A5F5).withValues(alpha: 0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: QrImageView(
+                      data: qrData,
+                      version: QrVersions.auto,
+                      size: 200,
+                      gapless: true,
+                      backgroundColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'KOD PANTAS STAF',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: code));
+                      showGlassToast(context, 'Kod $code disalin!');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            code,
+                            style: const TextStyle(
+                              color: Color(0xFF42A5F5),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Icon(Icons.copy_rounded, color: Color(0xFF42A5F5), size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Buka Ngam Teams > Profil > Imbas QR atau masukkan kod di atas untuk pautkan akaun serta-merta.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.4),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _copyStaffInvite(staff);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF42A5F5),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedShare01, color: Colors.white, size: 16),
+                      label: const Text('Kongsi Jemputan WhatsApp', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

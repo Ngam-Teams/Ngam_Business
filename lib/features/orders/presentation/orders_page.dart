@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
@@ -122,6 +123,73 @@ class _OrdersPageState extends State<OrdersPage> {
         return ListView(
           padding: const EdgeInsets.all(16).copyWith(bottom: 100),
           children: [
+            // Kitchen Display (KDS) Quick Access Banner
+            InkWell(
+              onTap: () => context.push('/kds'),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFFF9C80E).withValues(alpha: 0.15),
+                      const Color(0xFF10B981).withValues(alpha: 0.08),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFF9C80E).withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF9C80E).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedRestaurant01,
+                        color: Color(0xFFF9C80E),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Buka Kitchen Display System (KDS)',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Paparan langsung status masakan & penyediaan makanan',
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Color(0xFFF9C80E),
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             if (pendingOrders.isNotEmpty) ...[
               const Text(
                 'New / Pending',
