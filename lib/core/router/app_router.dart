@@ -26,6 +26,8 @@ import '../../features/cash_drawer/presentation/cash_drawer_page.dart';
 import '../../features/inbox/presentation/merchant_inbox_page.dart';
 import '../../features/kds/presentation/kds_page.dart';
 import '../../features/settings/presentation/subscription_plans_page.dart';
+import '../../features/queue/presentation/queue_page.dart';
+import '../../features/queue/presentation/queue_tv_display_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
 import '../services/order_alert_service.dart';
 import '../../features/settings/data/business_service.dart';
@@ -292,6 +294,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/subscription-plans',
       builder: (context, state) => const SubscriptionPlansPage(),
+    ),
+    GoRoute(
+      path: '/queue',
+      builder: (context, state) => const QueuePage(),
+    ),
+    GoRoute(
+      path: '/queue/tv',
+      builder: (context, state) => const QueueTvDisplayPage(),
     ),
   ],
 );

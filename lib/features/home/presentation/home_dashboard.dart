@@ -470,6 +470,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
       (
+        label: 'Smart Queue & TV Display',
+        icon: HugeIcons.strokeRoundedTv01,
+        color: const Color(0xFF6C5CE7),
+        onTap: () => context.push('/queue'),
+      ),
+      (
         label: 'Bookings & Slots',
         icon: HugeIcons.strokeRoundedCalendar01,
         color: const Color(0xFF42A5F5),
