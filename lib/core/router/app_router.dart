@@ -29,6 +29,7 @@ import '../../features/settings/presentation/subscription_plans_page.dart';
 import '../../features/queue/presentation/queue_page.dart';
 import '../../features/queue/presentation/queue_tv_display_page.dart';
 import '../../features/payroll/presentation/payroll_management_page.dart';
+import '../../features/loyalty/presentation/loyalty_stamps_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
 import '../services/order_alert_service.dart';
 import '../../features/settings/data/business_service.dart';
@@ -307,6 +308,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/payroll',
       builder: (context, state) => const PayrollManagementPage(),
+    ),
+    GoRoute(
+      path: '/loyalty',
+      builder: (context, state) => const LoyaltyStampsPage(),
     ),
   ],
 );

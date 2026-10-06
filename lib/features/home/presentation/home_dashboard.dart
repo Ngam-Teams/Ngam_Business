@@ -482,6 +482,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onTap: () => context.push('/payroll'),
       ),
       (
+        label: 'Kad Cop Digital (Loyalty)',
+        icon: HugeIcons.strokeRoundedAward01,
+        color: const Color(0xFFF59E0B),
+        onTap: () => context.push('/loyalty'),
+      ),
+      (
         label: 'Bookings & Slots',
         icon: HugeIcons.strokeRoundedCalendar01,
         color: const Color(0xFF42A5F5),
