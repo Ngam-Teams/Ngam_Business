@@ -476,6 +476,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onTap: () => context.push('/queue'),
       ),
       (
+        label: 'Payroll & Komisen Staf',
+        icon: HugeIcons.strokeRoundedCoins01,
+        color: const Color(0xFF10B981),
+        onTap: () => context.push('/payroll'),
+      ),
+      (
         label: 'Bookings & Slots',
         icon: HugeIcons.strokeRoundedCalendar01,
         color: const Color(0xFF42A5F5),

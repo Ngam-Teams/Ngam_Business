@@ -5,6 +5,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:go_router/go_router.dart';
 import '../../../widgets/glass_toast.dart';
 import '../data/business_service.dart';
 
@@ -216,6 +217,13 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
           ],
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedCoins01, color: Color(0xFF10B981), size: 22),
+            tooltip: 'Urus Gaji & Komisen Staf',
+            onPressed: () => context.push('/payroll'),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showInviteModal,

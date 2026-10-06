@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../widgets/glass_toast.dart';
 import '../data/business_service.dart';
 
