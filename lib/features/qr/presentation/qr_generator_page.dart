@@ -8,7 +8,7 @@ import '../../settings/data/business_service.dart';
 // QrGeneratorPage — Storefront & Table QR Standee Generator
 // ============================================================
 
-enum QrMode { storefront, table }
+enum QrMode { storefront, table, queue }
 
 class QrGeneratorPage extends StatefulWidget {
   const QrGeneratorPage({super.key});
@@ -67,8 +67,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   String get _qrPayloadUrl {
     if (_selectedMode == QrMode.storefront) {
       return 'https://ngam.app/store/$_businessId';
-    } else {
+    } else if (_selectedMode == QrMode.table) {
       return 'https://ngam.app/store/$_businessId?table=$_tableNumber';
+    } else {
+      return 'NGAM_QUEUE:$_businessId';
     }
   }
 
@@ -77,7 +79,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       context,
       _selectedMode == QrMode.storefront
           ? 'Downloading Print-Ready A5 Storefront Standee (PDF)...'
-          : 'Downloading Print-Ready Table #$_tableNumber Standee (PDF)...',
+          : _selectedMode == QrMode.table
+              ? 'Downloading Print-Ready Table #$_tableNumber Standee (PDF)...'
+              : 'Downloading Print-Ready Smart Walk-In Queue Standee (PDF)...',
     );
   }
 
@@ -342,7 +346,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     child: GestureDetector(
                       onTap: () => setState(() => _selectedMode = QrMode.storefront),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           color: _selectedMode == QrMode.storefront ? _accentColor : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
@@ -354,15 +358,15 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                               HugeIcon(
                                 icon: HugeIcons.strokeRoundedStore01,
                                 color: _selectedMode == QrMode.storefront ? Colors.white : Colors.white60,
-                                size: 18,
+                                size: 16,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Text(
-                                'Storefront QR',
+                                'Storefront',
                                 style: TextStyle(
                                   color: _selectedMode == QrMode.storefront ? Colors.white : Colors.white60,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -375,7 +379,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     child: GestureDetector(
                       onTap: () => setState(() => _selectedMode = QrMode.table),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           color: _selectedMode == QrMode.table ? _accentColor : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
@@ -387,15 +391,48 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                               HugeIcon(
                                 icon: HugeIcons.strokeRoundedRestaurant01,
                                 color: _selectedMode == QrMode.table ? Colors.white : Colors.white60,
-                                size: 18,
+                                size: 16,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Text(
-                                'Table Ordering QR',
+                                'Meja / Dine-in',
                                 style: TextStyle(
                                   color: _selectedMode == QrMode.table ? Colors.white : Colors.white60,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedMode = QrMode.queue),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: _selectedMode == QrMode.queue ? _accentColor : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              HugeIcon(
+                                icon: HugeIcons.strokeRoundedTicket01,
+                                color: _selectedMode == QrMode.queue ? Colors.white : Colors.white60,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Giliran Walk-In',
+                                style: TextStyle(
+                                  color: _selectedMode == QrMode.queue ? Colors.white : Colors.white60,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],
@@ -437,7 +474,11 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          _selectedMode == QrMode.storefront ? 'SCAN TO BROWSE & ORDER' : 'DINE-IN ORDERING',
+                          _selectedMode == QrMode.storefront
+                              ? 'SCAN TO BROWSE & ORDER'
+                              : _selectedMode == QrMode.table
+                                  ? 'DINE-IN ORDERING'
+                                  : 'SMART WALK-IN QUEUE',
                           style: TextStyle(
                             color: _accentColor,
                             fontSize: 11,
@@ -504,9 +545,11 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                       ),
 
                       // Instructions
-                      const Text(
-                        'Point your phone camera to order',
-                        style: TextStyle(
+                      Text(
+                        _selectedMode == QrMode.queue
+                            ? 'Imbas kamera untuk ambil giliran walk-in'
+                            : 'Point your phone camera to order',
+                        style: const TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,

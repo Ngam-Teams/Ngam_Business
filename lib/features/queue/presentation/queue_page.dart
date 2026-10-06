@@ -80,6 +80,9 @@ class _QueuePageState extends State<QueuePage> {
         'Memanggil ${next.ticketNumber} - ${next.customerName}',
         customColor: const Color(0xFF42A5F5),
       );
+      if (next.phoneNumber != null && next.phoneNumber!.isNotEmpty) {
+        _sendWhatsAppReminder(next);
+      }
     } catch (e) {
       if (!mounted) return;
       showGlassToast(context, 'Ralat: $e', isError: true);
@@ -572,7 +575,12 @@ class _QueuePageState extends State<QueuePage> {
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
-                  onPressed: () => _queueService.callTicket(ticket.id),
+                  onPressed: () async {
+                    await _queueService.callTicket(ticket.id);
+                    if (ticket.phoneNumber != null && ticket.phoneNumber!.isNotEmpty) {
+                      _sendWhatsAppReminder(ticket);
+                    }
+                  },
                   icon: const Icon(Icons.campaign_rounded, size: 16),
                   label: const Text('Panggil', style: TextStyle(fontSize: 12)),
                   style: ElevatedButton.styleFrom(

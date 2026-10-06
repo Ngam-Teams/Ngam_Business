@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/glass_toast.dart';
 
 // ============================================================
@@ -241,6 +243,190 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
     );
   }
 
+  void _openDenominationCounter() {
+    int c100 = 0, c50 = 0, c20 = 0, c10 = 0, c5 = 0, c1 = 0;
+    double coins = 0.0;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF141424),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            double total = (c100 * 100.0) +
+                (c50 * 50.0) +
+                (c20 * 20.0) +
+                (c10 * 10.0) +
+                (c5 * 5.0) +
+                (c1 * 1.0) +
+                coins;
+
+            Widget buildDenomRow(String label, double value, int count, Function(int) onChanged) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 70,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E34),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        label,
+                        style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline, color: Colors.white54, size: 22),
+                      onPressed: count > 0 ? () => setModalState(() => onChanged(count - 1)) : null,
+                    ),
+                    Container(
+                      width: 44,
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline, color: Color(0xFF42A5F5), size: 22),
+                      onPressed: () => setModalState(() => onChanged(count + 1)),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'RM ${(count * value).toStringAsFixed(2)}',
+                      style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(width: 44, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const HugeIcon(icon: HugeIcons.strokeRoundedCoinsSwap, color: Color(0xFF10B981), size: 24),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Kiraan Wang Kertas & Syiling',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Kira kepingan wang tunai fizikal dalam laci untuk mengelakkan ralat manual.',
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                    const SizedBox(height: 16),
+                    buildDenomRow('RM 100', 100, c100, (v) => c100 = v),
+                    buildDenomRow('RM 50', 50, c50, (v) => c50 = v),
+                    buildDenomRow('RM 20', 20, c20, (v) => c20 = v),
+                    buildDenomRow('RM 10', 10, c10, (v) => c10 = v),
+                    buildDenomRow('RM 5', 5, c5, (v) => c5 = v),
+                    buildDenomRow('RM 1', 1, c1, (v) => c1 = v),
+                    const Divider(color: Colors.white12, height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Jumlah Nilai Tunai:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text(
+                          'RM ${total.toStringAsFixed(2)}',
+                          style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w900, fontSize: 20),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _countedCashCtrl.text = total.toStringAsFixed(2);
+                          });
+                          Navigator.pop(modalCtx);
+                          showGlassToast(context, 'Jumlah kiraan RM ${total.toStringAsFixed(2)} dimasukkan!');
+                        },
+                        child: const Text('Gunakan Jumlah Kiraan Ini', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _shareZReportWhatsApp() async {
+    final counted = double.tryParse(_countedCashCtrl.text) ?? 0.0;
+    final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
+    final statusText = _cashDiscrepancy == 0
+        ? 'Tepat (RM 0.00)'
+        : _cashDiscrepancy > 0
+            ? 'Lebihan (+RM ${_cashDiscrepancy.toStringAsFixed(2)})'
+            : 'Kurangan (-RM ${_cashDiscrepancy.abs().toStringAsFixed(2)})';
+
+    final message = '''
+📊 *PENYATA TUTUP KAUNTER (Z-REPORT)*
+🏪 Premis: Bisnes Ngam
+⏰ Tarikh: $dateStr
+👤 Syif: #$_shiftNumber | Juruwang: $_cashierName
+--------------------------------
+💵 Jualan Tunai: RM ${_cashSales.toStringAsFixed(2)}
+📱 DuitNow QR / E-Wallet: RM ${_qrSales.toStringAsFixed(2)}
+💳 Kad Kredit / Debit: RM ${_cardSales.toStringAsFixed(2)}
+--------------------------------
+💰 *JUMLAH HASIL SYIF: RM ${_totalShiftRevenue.toStringAsFixed(2)}*
+--------------------------------
+Float Permulaan: RM ${_openingFloat.toStringAsFixed(2)}
+Petty Cash Masuk: +RM ${_totalPettyCashIn.toStringAsFixed(2)}
+Petty Cash Keluar: -RM ${_totalPettyCashOut.toStringAsFixed(2)}
+Jangkaan Tunai Laci: RM ${_expectedCashInDrawer.toStringAsFixed(2)}
+Kiraan Tunai Sebenar: RM ${counted.toStringAsFixed(2)}
+Selisih Tunai: $statusText
+--------------------------------
+Status: Syif Ditutup & Disahkan ke Cloud
+''';
+
+    final uri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(message)}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) showGlassToast(context, 'Tidak dapat membuka WhatsApp', isError: true);
+    }
+  }
+
   void _showZReportDialog() {
     showModalBottomSheet(
       context: context,
@@ -306,8 +492,9 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
+                // Action buttons: Print & WhatsApp
                 Row(
                   children: [
                     Expanded(
@@ -315,34 +502,51 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
                           side: const BorderSide(color: Colors.white24),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         onPressed: () {
                           showGlassToast(context, 'Printing physical Z-Report receipt...');
                         },
-                        icon: const HugeIcon(icon: HugeIcons.strokeRoundedPrinter, color: Colors.white, size: 18),
-                        label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Print Z-Report')),
+                        icon: const HugeIcon(icon: HugeIcons.strokeRoundedPrinter, color: Colors.white, size: 16),
+                        label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Cetak Resit', style: TextStyle(fontSize: 12))),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF44CF6C),
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF25D366),
+                          side: const BorderSide(color: Color(0xFF25D366)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          showGlassToast(context, 'Shift #$_shiftNumber closed and submitted to cloud audit!');
-                        },
-                        icon: const Icon(Icons.lock_clock_rounded, size: 18),
-                        label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Close Shift', style: TextStyle(fontWeight: FontWeight.bold))),
+                        onPressed: _shareZReportWhatsApp,
+                        icon: const HugeIcon(icon: HugeIcons.strokeRoundedMessage01, color: Color(0xFF25D366), size: 16),
+                        label: const FittedBox(fit: BoxFit.scaleDown, child: Text('WhatsApp Z-Report', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+
+                // Close shift main button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF44CF6C),
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      showGlassToast(context, 'Shift #$_shiftNumber closed and submitted to cloud audit!');
+                    },
+                    icon: const Icon(Icons.lock_clock_rounded, size: 18),
+                    label: const Text('Tutup Syif & Kunci Laci', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
                 ),
               ],
             ),
@@ -574,6 +778,11 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                           decoration: InputDecoration(
                             prefixText: 'RM ',
                             prefixStyle: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.calculate_rounded, color: Color(0xFF10B981)),
+                              tooltip: 'Kira Denominasi Duit',
+                              onPressed: _openDenominationCounter,
+                            ),
                             filled: true,
                             fillColor: const Color(0xFF0F0F1B),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
