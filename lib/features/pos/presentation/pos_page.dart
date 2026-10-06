@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../pos/data/pos_service.dart';
 import '../../pos/models/product_model.dart';
 import '../../pos/models/order_model.dart';
+import 'widgets/split_payment_sheet.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/modal_sheet.dart';
 
@@ -123,19 +124,31 @@ class _PosPageState extends State<PosPage> {
   Future<void> _checkout() async {
     if (_cart.isEmpty) return;
 
-    final confirmed = await _showCheckoutConfirm();
-    if (!confirmed || !mounted) return;
+    final result = await SplitPaymentSheet.show(
+      context: context,
+      totalAmount: _cartTotal,
+      itemCount: _cartCount,
+      initialCustomerName: _customerController.text.trim(),
+    );
+
+    if (result == null || !mounted) return;
 
     try {
       await _service.submitOrder(
         items: _cart,
-        total: _cartTotal,
-        customerName: _customerController.text,
+        total: result.total,
+        customerName: result.customerName,
+        notes: result.notes,
+        paymentSplits: result.splits,
       );
       if (!mounted) return;
+
+      final summary = result.splits.map((s) => '${s.displayName}: RM ${s.amount.toStringAsFixed(2)}').join(', ');
+      final changeText = result.change > 0 ? ' • Baki Pulangan: RM ${result.change.toStringAsFixed(2)}' : '';
+
       showGlassToast(
         context,
-        'Order placed! RM ${_cartTotal.toStringAsFixed(2)}',
+        'Pesanan Selesai! ($summary$changeText)',
         customColor: const Color(0xFF44CF6C),
       );
       setState(() {
@@ -144,72 +157,11 @@ class _PosPageState extends State<PosPage> {
       });
     } catch (e) {
       if (!mounted) return;
-      showGlassToast(context, 'Failed: $e', isError: true);
+      showGlassToast(context, 'Gagal membuat pesanan: $e', isError: true);
     }
   }
 
-  Future<bool> _showCheckoutConfirm() async {
-    final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-        ),
-        title: const Text(
-          'Confirm Order',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '$_cartCount item${_cartCount == 1 ? '' : 's'}',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Total: ${fmt.format(_cartTotal)}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.5),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF42A5F5),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
-  }
+
 
   @override
   Widget build(BuildContext context) {
