@@ -1,5 +1,11 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../widgets/glass_toast.dart';
 
 // ============================================================
@@ -34,6 +40,10 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   bool _showBarcode = true;
   bool _enableWhatsappReceipt = true;
 
+  // Real Receipt Image Capture
+  final GlobalKey _receiptKey = GlobalKey();
+  bool _isDownloadingReceipt = false;
+
   @override
   void dispose() {
     _storeNameCtrl.dispose();
@@ -48,6 +58,179 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
 
   void _printTestReceipt() {
     showGlassToast(context, 'Printing test receipt to $_selectedPrinter (${_paperWidth}mm)...');
+  }
+
+  Future<void> _captureAndSaveReceipt() async {
+    if (_isDownloadingReceipt) return;
+    setState(() => _isDownloadingReceipt = true);
+
+    try {
+      await Future.delayed(const Duration(milliseconds: 100));
+      final boundary = _receiptKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) throw Exception('Kawasan paparan resit tidak dijumpai');
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('Gagal menukar grafik kepada fail imej');
+
+      final Uint8List pngBytes = byteData.buffer.asUint8List();
+      final dir = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'Ngam_Resit_${_paperWidth}mm_$timestamp.png';
+      final file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(pngBytes);
+
+      if (mounted) {
+        _showReceiptDownloadModal(file, pngBytes);
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'Ralat memuat turun resit: $e', isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isDownloadingReceipt = false);
+      }
+    }
+  }
+
+  void _showReceiptDownloadModal(File file, Uint8List pngBytes) {
+    final double fileSizeKb = file.lengthSync() / 1024.0;
+    final String sizeStr = '${fileSizeKb.toStringAsFixed(1)} KB';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: Color(0xFF141424),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(top: BorderSide(color: Colors.white24)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 36),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Resit Digital Berjaya Dimuat Turun!',
+                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Format: Thermal ${_paperWidth}mm • Resolusi Tinggi (300 DPI)',
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+
+                // Preview Box
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 220),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white12),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      pngBytes,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Path info
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Saiz Fail:', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                          Text(sizeStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Lokasi: ', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          Expanded(
+                            child: Text(
+                              file.path,
+                              style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 11),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // Buttons
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF42A5F5),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () async {
+                      final result = await OpenFilex.open(file.path);
+                      if (result.type != ResultType.done && mounted) {
+                        showGlassToast(context, 'Membuka fail: ${result.message}');
+                      }
+                    },
+                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                    label: const Text('Buka Fail Resit Sekarang', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -80,6 +263,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedDownload04, color: Color(0xFF42A5F5), size: 20),
+            tooltip: 'Muat Turun Resit Digital (HD)',
+            onPressed: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
+          ),
           IconButton(
             icon: const HugeIcon(icon: HugeIcons.strokeRoundedPrinter, color: Color(0xFF44CF6C), size: 22),
             tooltip: 'Print Test Receipt',
@@ -298,140 +486,159 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Center(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                width: _paperWidth == 58 ? 260 : double.infinity,
-                constraints: const BoxConstraints(maxWidth: 320),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFFDF5), // Warm thermal paper tint
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _storeNameCtrl.text,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'Courier',
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        letterSpacing: 0.5,
+            RepaintBoundary(
+              key: _receiptKey,
+              child: Center(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: _paperWidth == 58 ? 260 : double.infinity,
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFDF5), // Warm thermal paper tint
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _ssmCtrl.text,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Courier', color: Colors.black87, fontSize: 11),
-                    ),
-                    if (_showSst) ...[
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        _sstCtrl.text,
+                        _storeNameCtrl.text,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'Courier',
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _ssmCtrl.text,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Courier', color: Colors.black87, fontSize: 11),
+                      ),
+                      if (_showSst) ...[
+                        Text(
+                          _sstCtrl.text,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontFamily: 'Courier', color: Colors.black87, fontSize: 10),
+                        ),
+                      ],
+                      Text(
+                        _addressCtrl.text,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 10),
+                      ),
+                      Text(
+                        'Tel: ${_phoneCtrl.text}',
                         textAlign: TextAlign.center,
                         style: const TextStyle(fontFamily: 'Courier', color: Colors.black87, fontSize: 10),
                       ),
-                    ],
-                    Text(
-                      _addressCtrl.text,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 10),
-                    ),
-                    Text(
-                      'Tel: ${_phoneCtrl.text}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Courier', color: Colors.black87, fontSize: 10),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildReceiptDivider(),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text('Order: #NG-4029', style: TextStyle(fontFamily: 'Courier', color: Colors.black, fontWeight: FontWeight.bold, fontSize: 11), overflow: TextOverflow.ellipsis),
-                        ),
-                        SizedBox(width: 4),
-                        Text('30/09/2026 12:45', style: TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 10)),
-                      ],
-                    ),
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text('Table: 04 (Dine-in)', style: TextStyle(fontFamily: 'Courier', color: Colors.black, fontSize: 11), overflow: TextOverflow.ellipsis),
-                        ),
-                        SizedBox(width: 4),
-                        Text('Cashier: Ahmad', style: TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 10)),
-                      ],
-                    ),
-                    _buildReceiptDivider(),
+                      const SizedBox(height: 8),
+                      _buildReceiptDivider(),
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text('Order: #NG-4029', style: TextStyle(fontFamily: 'Courier', color: Colors.black, fontWeight: FontWeight.bold, fontSize: 11), overflow: TextOverflow.ellipsis),
+                          ),
+                          SizedBox(width: 4),
+                          Text('30/09/2026 12:45', style: TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 10)),
+                        ],
+                      ),
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text('Table: 04 (Dine-in)', style: TextStyle(fontFamily: 'Courier', color: Colors.black, fontSize: 11), overflow: TextOverflow.ellipsis),
+                          ),
+                          SizedBox(width: 4),
+                          Text('Cashier: Ahmad', style: TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 10)),
+                        ],
+                      ),
+                      _buildReceiptDivider(),
 
-                    // Sample Items
-                    _buildReceiptLine('1x Nasi Lemak Rendang Daging', '16.90'),
-                    _buildReceiptLine('  + Extra Sambal Sotong', '3.50'),
-                    _buildReceiptLine('1x Teh Tarik Kaw (Ais)', '3.80'),
-                    _buildReceiptLine('1x Roti Bakar Kaya Butter', '4.50'),
+                      // Sample Items
+                      _buildReceiptLine('1x Nasi Lemak Rendang Daging', '16.90'),
+                      _buildReceiptLine('  + Extra Sambal Sotong', '3.50'),
+                      _buildReceiptLine('1x Teh Tarik Kaw (Ais)', '3.80'),
+                      _buildReceiptLine('1x Roti Bakar Kaya Butter', '4.50'),
 
-                    _buildReceiptDivider(),
+                      _buildReceiptDivider(),
 
-                    _buildReceiptLine('Subtotal', '28.70', isBold: false),
-                    if (_showSst) _buildReceiptLine('SST (6%)', '1.72', isBold: false),
-                    _buildReceiptLine('Rounding (Bancian)', '-0.02', isBold: false),
-                    const SizedBox(height: 4),
-                    _buildReceiptLine('TOTAL PAYABLE', 'RM 30.40', isBold: true, fontSize: 14),
-                    _buildReceiptLine('PAID (DuitNow QR)', 'RM 30.40', isBold: false),
+                      _buildReceiptLine('Subtotal', '28.70', isBold: false),
+                      if (_showSst) _buildReceiptLine('SST (6%)', '1.72', isBold: false),
+                      _buildReceiptLine('Rounding (Bancian)', '-0.02', isBold: false),
+                      const SizedBox(height: 4),
+                      _buildReceiptLine('TOTAL PAYABLE', 'RM 30.40', isBold: true, fontSize: 14),
+                      _buildReceiptLine('PAID (DuitNow QR)', 'RM 30.40', isBold: false),
 
-                    _buildReceiptDivider(),
-                    const SizedBox(height: 6),
+                      _buildReceiptDivider(),
+                      const SizedBox(height: 6),
 
-                    Text(
-                      _footerMsgCtrl.text,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Courier', color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 11),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _policyCtrl.text,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 9),
-                    ),
-                    const SizedBox(height: 12),
-
-                    if (_showBarcode) ...[
-                      // Simulated barcode lines
-                      Container(
-                        height: 32,
-                        width: 180,
-                        color: Colors.black,
-                        child: Row(
-                          children: List.generate(40, (i) {
-                            return Expanded(
-                              flex: (i % 3 == 0) ? 2 : 1,
-                              child: Container(
-                                color: (i % 2 == 0) ? Colors.black : Colors.white,
-                              ),
-                            );
-                          }),
-                        ),
+                      Text(
+                        _footerMsgCtrl.text,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Courier', color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 11),
                       ),
                       const SizedBox(height: 4),
-                      const Text('*NG4029-2026*', style: TextStyle(fontFamily: 'Courier', color: Colors.black87, fontSize: 9)),
+                      Text(
+                        _policyCtrl.text,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Courier', color: Colors.black54, fontSize: 9),
+                      ),
+                      const SizedBox(height: 12),
+
+                      if (_showBarcode) ...[
+                        // Simulated barcode lines
+                        Container(
+                          height: 32,
+                          width: 180,
+                          color: Colors.black,
+                          child: Row(
+                            children: List.generate(40, (i) {
+                              return Expanded(
+                                flex: (i % 3 == 0) ? 2 : 1,
+                                child: Container(
+                                  color: (i % 2 == 0) ? Colors.black : Colors.white,
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('*NG4029-2026*', style: TextStyle(fontFamily: 'Courier', color: Colors.black87, fontSize: 9)),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 14),
+            Center(
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
+                icon: _isDownloadingReceipt
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Icon(Icons.download_rounded, size: 18, color: Color(0xFF42A5F5)),
+                label: const Text('Muat Turun & Buka Resit Digital (HD)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 30),
 
             // Form Customization Inputs
             const Text(

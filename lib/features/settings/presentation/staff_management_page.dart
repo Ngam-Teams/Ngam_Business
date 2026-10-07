@@ -379,138 +379,239 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
               : Colors.white.withValues(alpha: 0.08),
         ),
       ),
-      child: ListTile(
-        onTap: () => _showEditStaffModal(staff),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundColor: isLinked
-              ? const Color(0xFF44CF6C).withValues(alpha: 0.15)
-              : const Color(0xFF42A5F5).withValues(alpha: 0.15),
-          child: HugeIcon(
-            icon: HugeIcons.strokeRoundedUser,
-            color: isLinked ? const Color(0xFF44CF6C) : const Color(0xFF42A5F5),
-            size: 22,
-          ),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                staff['name'] ?? 'Staff Member',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                staffCode,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              '${staff['email']} • $designation',
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                // Role Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    role,
-                    style: const TextStyle(
-                      color: Color(0xFF42A5F5),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main Info Area (Tappable to Edit)
+          InkWell(
+            onTap: () => _showEditStaffModal(staff),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: isLinked
+                        ? const Color(0xFF44CF6C).withValues(alpha: 0.15)
+                        : const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                    child: HugeIcon(
+                      icon: HugeIcons.strokeRoundedUser,
+                      color: isLinked ? const Color(0xFF44CF6C) : const Color(0xFF42A5F5),
+                      size: 20,
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 12),
 
-                // Ngam Teams Link Status Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: isLinked
-                        ? const Color(0xFF44CF6C).withValues(alpha: 0.15)
-                        : const Color(0xFFF9C80E).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isLinked ? const Color(0xFF44CF6C) : const Color(0xFFF9C80E),
+                  // Staff Details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name & Code
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                staff['name'] ?? 'Staff Member',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                staffCode,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isLinked ? 'Ngam Teams Linked' : 'Pending First Login',
-                        style: TextStyle(
-                          color: isLinked ? const Color(0xFF44CF6C) : const Color(0xFFF9C80E),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(height: 3),
+                        Text(
+                          '${staff['email'] ?? '-'} • $designation',
+                          style: const TextStyle(color: Colors.white54, fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+
+                        // Badges Row
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            // Role Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                role,
+                                style: const TextStyle(
+                                  color: Color(0xFF42A5F5),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+
+                            // Ngam Teams Link Status Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: isLinked
+                                    ? const Color(0xFF44CF6C).withValues(alpha: 0.15)
+                                    : const Color(0xFFF9C80E).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isLinked ? const Color(0xFF44CF6C) : const Color(0xFFF9C80E),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isLinked ? 'Ngam Teams Linked' : 'Pending First Login',
+                                    style: TextStyle(
+                                      color: isLinked ? const Color(0xFF44CF6C) : const Color(0xFFF9C80E),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
+                ],
+              ),
+            ),
+          ),
+
+          // Divider
+          Container(
+            height: 1,
+            color: Colors.white.withValues(alpha: 0.06),
+          ),
+
+          // 4 Action Buttons Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                // 1. QR Code
+                _buildStaffActionBtn(
+                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedQrCode, color: Color(0xFFF9C80E), size: 15),
+                  label: 'QR',
+                  color: const Color(0xFFF9C80E),
+                  tooltip: 'QR Code & Fast Link',
+                  onTap: () => _showStaffQrModal(staff),
+                ),
+                const SizedBox(width: 6),
+
+                // 2. Share Invite
+                _buildStaffActionBtn(
+                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedShare01, color: Color(0xFF2DD4BF), size: 15),
+                  label: 'Share',
+                  color: const Color(0xFF2DD4BF),
+                  tooltip: 'Share Invite & Staff Code',
+                  onTap: () => _copyStaffInvite(staff),
+                ),
+                const SizedBox(width: 6),
+
+                // 3. Edit Info
+                _buildStaffActionBtn(
+                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedEdit02, color: Color(0xFF42A5F5), size: 15),
+                  label: 'Edit',
+                  color: const Color(0xFF42A5F5),
+                  tooltip: 'Edit Info',
+                  onTap: () => _showEditStaffModal(staff),
+                ),
+                const SizedBox(width: 6),
+
+                // 4. Remove / Delete
+                _buildStaffActionBtn(
+                  icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF5252), size: 16),
+                  label: 'Padam',
+                  color: const Color(0xFFFF5252),
+                  tooltip: 'Remove',
+                  onTap: () => _deleteStaff(staff['id'], staff['name'] ?? 'Staff'),
                 ),
               ],
             ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const HugeIcon(icon: HugeIcons.strokeRoundedQrCode, color: Color(0xFFF9C80E), size: 19),
-              tooltip: 'QR Code & Fast Link',
-              onPressed: () => _showStaffQrModal(staff),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStaffActionBtn({
+    required Widget icon,
+    required String label,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  icon,
+                  const SizedBox(width: 5),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            IconButton(
-              icon: const HugeIcon(icon: HugeIcons.strokeRoundedShare01, color: Color(0xFF2DD4BF), size: 18),
-              tooltip: 'Share Invite & Staff Code',
-              onPressed: () => _copyStaffInvite(staff),
-            ),
-            IconButton(
-              icon: const HugeIcon(icon: HugeIcons.strokeRoundedEdit02, color: Color(0xFF42A5F5), size: 18),
-              tooltip: 'Edit Info',
-              onPressed: () => _showEditStaffModal(staff),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: Colors.white38, size: 20),
-              tooltip: 'Remove',
-              onPressed: () => _deleteStaff(staff['id'], staff['name'] ?? 'Staff'),
-            ),
-          ],
+          ),
         ),
       ),
     );

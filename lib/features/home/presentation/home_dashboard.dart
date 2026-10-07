@@ -89,6 +89,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
         final double todayRev = (data?['todayRevenue'] as num?)?.toDouble() ?? 0.0;
         final int todayOrders = (data?['todayOrders'] as num?)?.toInt() ?? 0;
+        final int pendingOrders = (data?['pendingOrders'] as num?)?.toInt() ?? 0;
+        final double monthlyRev = (data?['monthlyRevenue'] as num?)?.toDouble() ?? 0.0;
 
         final loading = snapshot.connectionState == ConnectionState.waiting;
 
@@ -96,21 +98,38 @@ class _HomeDashboardState extends State<HomeDashboard> {
           StatCard(
             label: "Today's Revenue",
             value: loading ? '...' : fmt.format(todayRev),
-            subtitle: 'Today',
+            subtitle: '↑ Today',
+            badgeColor: const Color(0xFF44CF6C),
             icon: HugeIcons.strokeRoundedMoney01,
             accentColor: const Color(0xFF42A5F5),
+            onTap: () => context.push('/analytics'),
           ),
           StatCard(
             label: "Today's Orders",
             value: loading ? '...' : todayOrders.toString(),
+            subtitle: 'Orders',
+            badgeColor: const Color(0xFF42A5F5),
             icon: HugeIcons.strokeRoundedShoppingBag01,
-            accentColor: const Color(0xFF42A5F5),
+            accentColor: const Color(0xFF44CF6C),
+            onTap: () => context.push('/orders'),
           ),
           StatCard(
             label: 'Pending Orders',
-            value: loading ? '...' : (data?['pendingOrders'] ?? 0).toString(),
+            value: loading ? '...' : pendingOrders.toString(),
+            subtitle: pendingOrders > 0 ? '$pendingOrders Action' : 'Cleared',
+            badgeColor: pendingOrders > 0 ? const Color(0xFFF9C80E) : const Color(0xFF44CF6C),
             icon: HugeIcons.strokeRoundedTime02,
             accentColor: const Color(0xFFF9C80E),
+            onTap: () => context.push('/orders'),
+          ),
+          StatCard(
+            label: 'Monthly Revenue',
+            value: loading ? '...' : fmt.format(monthlyRev),
+            subtitle: 'This Month',
+            badgeColor: const Color(0xFF8B5CF6),
+            icon: HugeIcons.strokeRoundedChartIncrease,
+            accentColor: const Color(0xFF8B5CF6),
+            onTap: () => context.push('/analytics'),
           ),
         ];
 
@@ -381,32 +400,46 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   Widget _buildStatCards(List<Widget> cards, double width) {
-    if (width >= 900) {
-      return Row(
-        children: cards
-            .asMap()
-            .entries
-            .map(
-              (e) => Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(left: e.key == 0 ? 0 : 16),
-                  child: e.value,
-                ),
-              ),
-            )
-            .toList(),
+    if (width >= 800) {
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: cards[0]),
+            const SizedBox(width: 12),
+            Expanded(child: cards[1]),
+            const SizedBox(width: 12),
+            Expanded(child: cards[2]),
+            const SizedBox(width: 12),
+            Expanded(child: cards[3]),
+          ],
+        ),
       );
     } else {
       return Column(
-        children: cards
-            .map((c) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: c,
-                  ),
-                ))
-            .toList(),
+        children: [
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: cards[0]),
+                const SizedBox(width: 12),
+                Expanded(child: cards[1]),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: cards[2]),
+                const SizedBox(width: 12),
+                Expanded(child: cards[3]),
+              ],
+            ),
+          ),
+        ],
       );
     }
   }

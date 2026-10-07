@@ -292,108 +292,230 @@ class _InventoryPageState extends State<InventoryPage> {
                                       : Colors.white.withValues(alpha: 0.08),
                             ),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Product Thumbnail
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: SizedBox(
-                                  width: 56,
-                                  height: 56,
-                                  child: Image.network(
-                                    item['imageUrl'],
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      color: Colors.white.withValues(alpha: 0.05),
-                                      child: const Icon(Icons.image, color: Colors.white24),
+                              // Top Section: Thumbnail + Full-Width Product Info + Status Badge
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Product Thumbnail
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: SizedBox(
+                                      width: 52,
+                                      height: 52,
+                                      child: Image.network(
+                                        item['imageUrl'],
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          color: Colors.white.withValues(alpha: 0.05),
+                                          child: const Icon(Icons.image, color: Colors.white24, size: 22),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
+                                  const SizedBox(width: 12),
 
-                              // Info
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item['name'],
-                                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                  // Product Title & Price
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item['name'],
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.2,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'RM ${(item['price'] as double).toStringAsFixed(2)} · ${item['category']}',
+                                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'RM ${(item['price'] as double).toStringAsFixed(2)} · ${item['category']}',
-                                      style: const TextStyle(color: Colors.white54, fontSize: 12),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    // Stock status badge
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
+                                  ),
+                                  const SizedBox(width: 8),
+
+                                  // Stock Status Badge (Top-Right)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: isOut
+                                          ? Colors.redAccent.withValues(alpha: 0.15)
+                                          : isLow
+                                              ? const Color(0xFFF9C80E).withValues(alpha: 0.15)
+                                              : const Color(0xFF44CF6C).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
                                         color: isOut
-                                            ? Colors.redAccent.withValues(alpha: 0.15)
+                                            ? Colors.redAccent.withValues(alpha: 0.3)
                                             : isLow
-                                                ? const Color(0xFFF9C80E).withValues(alpha: 0.15)
-                                                : const Color(0xFF44CF6C).withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
+                                                ? const Color(0xFFF9C80E).withValues(alpha: 0.3)
+                                                : const Color(0xFF44CF6C).withValues(alpha: 0.3),
                                       ),
-                                      child: Text(
-                                        isOut
-                                            ? 'OUT OF STOCK'
+                                    ),
+                                    child: Text(
+                                      isOut
+                                          ? 'OUT OF STOCK'
+                                          : isLow
+                                              ? 'LOW ($stock LEFT)'
+                                              : '$stock IN STOCK',
+                                      style: TextStyle(
+                                        color: isOut
+                                            ? Colors.redAccent
                                             : isLow
-                                                ? 'LOW STOCK ($stock LEFT)'
-                                                : '$stock IN STOCK',
+                                                ? const Color(0xFFF9C80E)
+                                                : const Color(0xFF44CF6C),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 12),
+                              // Subtle divider
+                              Container(
+                                height: 1,
+                                color: Colors.white.withValues(alpha: 0.06),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Bottom Controls Row: Available Stock Label (Left) + Quick Stepper (Right)
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  // Left: Units Indicator
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.inventory_2_outlined,
+                                        size: 15,
+                                        color: isOut
+                                            ? Colors.redAccent
+                                            : isLow
+                                                ? const Color(0xFFF9C80E)
+                                                : Colors.white54,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Baki Stok: ',
+                                        style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+                                      ),
+                                      Text(
+                                        '$stock unit',
                                         style: TextStyle(
                                           color: isOut
                                               ? Colors.redAccent
                                               : isLow
                                                   ? const Color(0xFFF9C80E)
-                                                  : const Color(0xFF44CF6C),
-                                          fontSize: 10,
+                                                  : Colors.white,
+                                          fontSize: 13,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                                    ],
+                                  ),
 
-                              // Quick Stock Stepper
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, color: Colors.white54, size: 22),
-                                    onPressed: () => _adjustStock(item, -1),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '$stock',
-                                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle_outline, color: Color(0xFF42A5F5), size: 22),
-                                    onPressed: () => _adjustStock(item, 1),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Quick +10 button
-                                  GestureDetector(
-                                    onTap: () => _adjustStock(item, 10),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.08),
-                                        borderRadius: BorderRadius.circular(6),
+                                  // Right: Stepper controls [-] count [+] [+10]
+                                  Row(
+                                    children: [
+                                      // [-] Button
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => _adjustStock(item, -1),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            width: 34,
+                                            height: 34,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withValues(alpha: 0.06),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                                            ),
+                                            child: const Center(
+                                              child: Icon(Icons.remove_rounded, color: Colors.white70, size: 18),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                      child: const Text('+10', style: TextStyle(color: Color(0xFF42A5F5), fontSize: 11, fontWeight: FontWeight.bold)),
-                                    ),
+                                      const SizedBox(width: 8),
+
+                                      // Stock Number Counter
+                                      Container(
+                                        constraints: const BoxConstraints(minWidth: 32),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          '$stock',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+
+                                      // [+] Button
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => _adjustStock(item, 1),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            width: 34,
+                                            height: 34,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.4)),
+                                            ),
+                                            child: const Center(
+                                              child: Icon(Icons.add_rounded, color: Color(0xFF42A5F5), size: 18),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+
+                                      // [+10] Button
+                                      Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () => _adjustStock(item, 10),
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            height: 34,
+                                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.3)),
+                                            ),
+                                            child: const Center(
+                                              child: Text(
+                                                '+10',
+                                                style: TextStyle(
+                                                  color: Color(0xFF42A5F5),
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
