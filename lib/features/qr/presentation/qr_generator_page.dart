@@ -114,21 +114,23 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     const Color(0xFFEC4899), // Neon Pink
   ];
 
+  static const String _pwaBaseUrl = 'https://ngam.pages.dev';
+
   String get _qrPayloadUrl {
     switch (_selectedMode) {
       case QrMode.storefront:
-        return 'https://ngam.app/store/$_businessId';
+        return '$_pwaBaseUrl/store/$_businessId';
       case QrMode.table:
-        return 'https://ngam.app/store/$_businessId?table=$_tableNumber';
+        return '$_pwaBaseUrl/store/$_businessId?table=$_tableNumber';
       case QrMode.promo:
         final code = _promoCodeCtrl.text.trim().toUpperCase();
-        return 'https://ngam.app/store/$_businessId?promo=$code';
+        return '$_pwaBaseUrl/store/$_businessId?promo=$code';
       case QrMode.wifi:
         final ssid = _wifiSsidCtrl.text.trim().replaceAll(';', r'\;').replaceAll(':', r'\:');
         final pass = _wifiPasswordCtrl.text.trim().replaceAll(';', r'\;').replaceAll(':', r'\:');
         return 'WIFI:T:WPA;S:$ssid;P:$pass;;';
       case QrMode.queue:
-        return 'NGAM_QUEUE:$_businessId';
+        return '$_pwaBaseUrl/queue/$_businessId';
     }
   }
 
