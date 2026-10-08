@@ -84,7 +84,7 @@ jobs:
         shell: bash
 
       - name: Build Release APK
-        run: flutter build apk --release --no-tree-shake-icons --android-skip-build-dependency-validation
+        run: flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols --no-tree-shake-icons --android-skip-build-dependency-validation
 
       - name: Prepare Release Artifacts
         run: |
