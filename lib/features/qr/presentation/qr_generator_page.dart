@@ -114,7 +114,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     const Color(0xFFEC4899), // Neon Pink
   ];
 
-  static const String _pwaBaseUrl = 'https://ngam-app.pages.dev';
+  static const String _pwaBaseUrl = 'https://ngam-c8k.pages.dev';
 
   String get _qrPayloadUrl {
     switch (_selectedMode) {
