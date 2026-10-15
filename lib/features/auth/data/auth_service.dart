@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// AuthService — handles sign in, sign out, and session state.
@@ -28,7 +29,7 @@ class AuthService {
   Future<void> signInWithGoogle() async {
     await _client.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: 'io.supabase.ngambusiness://login-callback',
+      redirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.ngambusiness://login-callback',
     );
   }
 
@@ -36,7 +37,15 @@ class AuthService {
   Future<void> signInWithApple() async {
     await _client.auth.signInWithOAuth(
       OAuthProvider.apple,
-      redirectTo: 'io.supabase.ngambusiness://login-callback',
+      redirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.ngambusiness://login-callback',
+    );
+  }
+
+  /// Reset password for email
+  Future<void> resetPassword(String email) async {
+    await _client.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: kIsWeb ? Uri.base.origin : null,
     );
   }
 

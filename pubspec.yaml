@@ -53,6 +53,7 @@ dependencies:
   package_info_plus: ^9.0.1
   path_provider: ^2.1.5
   open_filex: ^4.7.0
+  google_fonts: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -81,6 +82,9 @@ flutter:
   assets:
     - .env
     - assets/logos/
+    - assets/app.png
+    - assets/admin_hero_bg.png
+    - assets/google_logo.png
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
