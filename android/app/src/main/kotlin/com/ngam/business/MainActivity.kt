@@ -1,4 +1,4 @@
-package com.ngam.ngam_business
+package com.ngam.business
 
 import io.flutter.embedding.android.FlutterActivity
 

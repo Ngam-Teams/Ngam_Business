@@ -1,0 +1,55 @@
+name: Deploy Ngam Business to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Build & Deploy Flutter Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Configure Environment (.env)
+        run: |
+          if [ -n "${{ secrets.ENV_FILE }}" ]; then
+            echo "${{ secrets.ENV_FILE }}" > .env
+          elif [ ! -f .env ]; then
+            echo "SUPABASE_URL=https://rsueaoglsdxhzpupjljd.supabase.co" > .env
+            echo "SUPABASE_ANON_KEY=sb_publishable_qP4whY5B6wxIasWOVGoPCw_vrhOXj_J" >> .env
+            echo "GOOGLE_WEB_CLIENT_ID=465252435780-kjcjvctogj5f2r014c4ggq2gpc5u28d2.apps.googleusercontent.com" >> .env
+          fi
+        shell: bash
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Web Release
+        run: flutter build web --release --no-tree-shake-icons
+
+      - name: Copy Cloudflare Redirects
+        run: |
+          cp web/_redirects build/web/_redirects || true
+        shell: bash
+
+      - name: Deploy to Cloudflare Pages via Wrangler
+        run: |
+          npm install -g wrangler
+          wrangler pages deploy build/web --project-name=ngam-business --branch=main --commit-dirty=true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

@@ -182,28 +182,11 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
         FlutterRingtonePlayer().playNotification();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  HugeIcon(
-                    icon: HugeIcons.strokeRoundedCalendar03,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'Tempahan Baru Diterima!',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              backgroundColor: const Color(0xFF2E7D32),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+          showGlassToast(
+            context,
+            'Tempahan Baru Diterima!',
+            type: GlassToastType.success,
+            customIcon: Icons.calendar_month_rounded,
           );
         }
       }

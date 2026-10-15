@@ -1,20 +1,27 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
-// Global glassmorphic toast helper — mirrors ngam_console/lib/widgets/glass_toast.dart
+enum GlassToastType { success, error, warning, info }
+
+/// Global glassmorphic toast helper
 void showGlassToast(
   BuildContext context,
   String message, {
   bool isError = false,
+  GlassToastType? type,
   Color? customColor,
-  IconData? customIcon,
+  Color? color,
+  dynamic customIcon,
+  dynamic icon,
   bool showIcon = true,
   Duration duration = const Duration(seconds: 3),
 }) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final color = customColor ?? (isError ? Colors.redAccent : Colors.green);
-  final icon = customIcon ??
-      (isError ? Icons.error_outline_rounded : Icons.check_circle_rounded);
+  
+  final resolvedType = type ?? (isError ? GlassToastType.error : GlassToastType.success);
+  
+  final resolvedColor = customColor ?? color ?? _colorForType(resolvedType);
+  final resolvedIcon = customIcon ?? icon ?? _iconForType(resolvedType);
 
   ScaffoldMessenger.of(context).removeCurrentSnackBar();
 
@@ -24,28 +31,38 @@ void showGlassToast(
       behavior: SnackBarBehavior.floating,
       backgroundColor: Colors.transparent,
       duration: duration,
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       content: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: isDark
-                  ? color.withValues(alpha: 0.15)
-                  : color.withValues(alpha: 0.08),
+                  ? resolvedColor.withValues(alpha: 0.18)
+                  : resolvedColor.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: color.withValues(alpha: 0.3),
+                color: resolvedColor.withValues(alpha: 0.35),
                 width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: resolvedColor.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (showIcon) ...[
-                  Icon(icon, color: color, size: 20),
+                  if (resolvedIcon is IconData)
+                    Icon(resolvedIcon, color: resolvedColor, size: 20)
+                  else
+                    Icon(Icons.info_outline_rounded, color: resolvedColor, size: 20),
                   const SizedBox(width: 12),
                 ],
                 Expanded(
@@ -65,4 +82,30 @@ void showGlassToast(
       ),
     ),
   );
+}
+
+Color _colorForType(GlassToastType type) {
+  switch (type) {
+    case GlassToastType.success:
+      return const Color(0xFF2ECC71);
+    case GlassToastType.error:
+      return Colors.redAccent;
+    case GlassToastType.warning:
+      return const Color(0xFFF39C12);
+    case GlassToastType.info:
+      return const Color(0xFF3498DB);
+  }
+}
+
+IconData _iconForType(GlassToastType type) {
+  switch (type) {
+    case GlassToastType.success:
+      return Icons.check_circle_rounded;
+    case GlassToastType.error:
+      return Icons.error_outline_rounded;
+    case GlassToastType.warning:
+      return Icons.warning_amber_rounded;
+    case GlassToastType.info:
+      return Icons.info_outline_rounded;
+  }
 }

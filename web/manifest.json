@@ -1,11 +1,11 @@
 {
-    "name": "ngam_business",
-    "short_name": "ngam_business",
+    "name": "Ngam Business",
+    "short_name": "Ngam Biz",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0A0A0A",
+    "theme_color": "#2196F3",
+    "description": "Ngam Business - Portal Peniaga Pintar",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

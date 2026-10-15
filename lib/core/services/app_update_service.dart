@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../widgets/glass_toast.dart';
 
 class AppReleaseInfo {
   final String version;
@@ -441,22 +442,12 @@ class AppUpdateService {
     String? current,
     String repo = repoName,
   }) async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    scaffoldMessenger.showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            ),
-            SizedBox(width: 12),
-            Text('Menyemak kemas kini terkini...'),
-          ],
-        ),
-        duration: Duration(seconds: 2),
-      ),
+    showGlassToast(
+      context,
+      'Menyemak kemas kini terkini...',
+      type: GlassToastType.info,
+      color: Colors.blueAccent,
+      duration: const Duration(seconds: 2),
     );
 
     final activeCurrent = current ?? await getAppVersion();
@@ -466,18 +457,11 @@ class AppUpdateService {
     if (update != null) {
       await showUpdateDialog(context, update, current: activeCurrent);
     } else {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 18),
-              const SizedBox(width: 10),
-              Text('Aplikasi $appName adalah versi terkini (v$activeCurrent).'),
-            ],
-          ),
-          backgroundColor: const Color(0xFF0F172A),
-          behavior: SnackBarBehavior.floating,
-        ),
+      showGlassToast(
+        context,
+        'Aplikasi $appName adalah versi terkini (v$activeCurrent).',
+        type: GlassToastType.success,
+        duration: const Duration(seconds: 3),
       );
     }
   }

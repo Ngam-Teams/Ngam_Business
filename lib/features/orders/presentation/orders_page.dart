@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 
 import '../data/orders_service.dart';
+import '../../../widgets/glass_toast.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -47,20 +48,11 @@ class _OrdersPageState extends State<OrdersPage> {
         FlutterRingtonePlayer().playNotification();
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(
-                children: [
-                  HugeIcon(icon: HugeIcons.strokeRoundedAlert02, color: Colors.white, size: 20),
-                  SizedBox(width: 12),
-                  Text('New online order received!', style: TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
-              backgroundColor: const Color(0xFF42A5F5),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              duration: const Duration(seconds: 4),
-            ),
+          showGlassToast(
+            context,
+            'Pesanan dalam talian baru diterima!',
+            type: GlassToastType.info,
+            color: const Color(0xFF42A5F5),
           );
         }
       }
@@ -74,20 +66,16 @@ class _OrdersPageState extends State<OrdersPage> {
     if (!mounted) return;
     
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Order marked as $newStatus'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
+      showGlassToast(
+        context,
+        'Pesanan dikemaskini kepada status: $newStatus',
+        type: GlassToastType.success,
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to update status'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+      showGlassToast(
+        context,
+        'Gagal mengemaskini status pesanan',
+        isError: true,
       );
     }
   }
