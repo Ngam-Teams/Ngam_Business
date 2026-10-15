@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../data/auth_service.dart';
 
 // =============================================================================
 // Ngam Business — Unified Auth Portal (Static Left Branding + Dynamic Right Card)
-// Ported to match Ngam aesthetic: Electric Blue (#2196F3), dark glass, zero white flash
+// Exactly matching Ngam design, formatting, and spacing ("sebijik-sebijik")
+// Single OAuth: Continue with Google
 // =============================================================================
 
 enum AuthScreenMode { login, register, forgotPassword }
@@ -53,7 +53,7 @@ class _LoginPageState extends State<LoginPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Signature Palette
+  // Signature Ngam Palette
   static const Color accentBlue = Color(0xFF2196F3);
   static const Color accentBlueGlow = Color(0xFF42A5F5);
   static const Color textPrimary = Color(0xFFFFFFFF);
@@ -203,26 +203,6 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
-  Future<void> _handleAppleLogin() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      await AuthService().signInWithApple();
-      if (mounted && AuthService().currentUser != null) {
-        context.go('/home');
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
-          _loading = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -354,7 +334,7 @@ class _LoginPageState extends State<LoginPage>
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Portal peniaga & pengurusan pintar untuk pesanan,\ninventori, sistem POS, dan analitik perniagaan.',
+                          'Satu platform perniagaan pintar untuk pengurusan pesanan,\ninventori, sistem POS dan analitik jualan tanpa had.',
                           style: GoogleFonts.inter(
                             fontSize: 13.5,
                             height: 1.6,
@@ -597,10 +577,22 @@ class _LoginPageState extends State<LoginPage>
                 validator: (value) =>
                     (value == null || value.isEmpty) ? 'Sila masukkan kata laluan' : null,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
               // Error Message
-              if (_error != null) _buildErrorMessage(_error!),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _error!,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFFFF5252),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
 
               // Sign In Button
               SizedBox(
@@ -642,8 +634,8 @@ class _LoginPageState extends State<LoginPage>
               _buildDivider(),
               const SizedBox(height: 12),
 
-              // OAuth Social Buttons (Google + Apple)
-              _buildSocialButtons(),
+              // Continue with Google Button (Single full-width button)
+              _buildGoogleButton(),
               const SizedBox(height: 18),
 
               // Footer: Switch to Register
@@ -690,7 +682,7 @@ class _LoginPageState extends State<LoginPage>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'DAFTAR PERNIAGAAN',
+                      'CREATE BUSINESS',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.outfit(
                         fontSize: 24,
@@ -701,7 +693,7 @@ class _LoginPageState extends State<LoginPage>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Sertai Ngam Business untuk menguruskan kedai & servis anda.',
+                      'Join Ngam Business and start managing your store.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 12.5,
@@ -713,7 +705,7 @@ class _LoginPageState extends State<LoginPage>
 
                     // Field 1: Business Name
                     Text(
-                      'NAMA PERNIAGAAN / KEDAI',
+                      'BUSINESS NAME',
                       style: GoogleFonts.inter(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
@@ -727,7 +719,7 @@ class _LoginPageState extends State<LoginPage>
                       style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
                       textCapitalization: TextCapitalization.words,
                       decoration: _inputDecoration(
-                        hintText: 'e.g. Kafe Santai / Restoran Ngam',
+                        hintText: 'e.g. My Awesome Shop',
                         prefixIcon: Icons.storefront_outlined,
                       ),
                       validator: (val) =>
@@ -737,7 +729,7 @@ class _LoginPageState extends State<LoginPage>
 
                     // Field 2: Business Email Address
                     Text(
-                      'EMEL PERNIAGAAN',
+                      'EMAIL ADDRESS',
                       style: GoogleFonts.inter(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
@@ -764,7 +756,7 @@ class _LoginPageState extends State<LoginPage>
 
                     // Field 3: Password
                     Text(
-                      'KATA LALUAN',
+                      'PASSWORD',
                       style: GoogleFonts.inter(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
@@ -790,10 +782,22 @@ class _LoginPageState extends State<LoginPage>
                         return null;
                       },
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
                     // Error Message
-                    if (_error != null) _buildErrorMessage(_error!),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          _error!,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFFFF5252),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
 
                     // Submit Button
                     SizedBox(
@@ -819,7 +823,7 @@ class _LoginPageState extends State<LoginPage>
                                 ),
                               )
                             : Text(
-                                'DAFTAR SEKARANG',
+                                'CREATE ACCOUNT',
                                 style: GoogleFonts.outfit(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w800,
@@ -833,7 +837,9 @@ class _LoginPageState extends State<LoginPage>
 
                     _buildDivider(),
                     const SizedBox(height: 12),
-                    _buildSocialButtons(),
+
+                    // Google Button ONLY (Single full-width button)
+                    _buildGoogleButton(),
                     const SizedBox(height: 18),
 
                     // Footer: Switch to Login
@@ -889,7 +895,7 @@ class _LoginPageState extends State<LoginPage>
         ),
         const SizedBox(height: 14),
         Text(
-          'Pendaftaran Berjaya!',
+          'Account Created!',
           textAlign: TextAlign.center,
           style: GoogleFonts.outfit(
             fontSize: 20,
@@ -899,7 +905,7 @@ class _LoginPageState extends State<LoginPage>
         ),
         const SizedBox(height: 6),
         Text(
-          'Akaun perniagaan anda telah dicipta. Sila semak emel ${_regEmailController.text.trim()} untuk pengesahan.',
+          'Your business account has been registered. Please check ${_regEmailController.text.trim()} to verify your email.',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 12.5,
@@ -921,7 +927,7 @@ class _LoginPageState extends State<LoginPage>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
             child: Text(
-              'MASUK KE AKAUN',
+              'PROCEED TO SIGN IN',
               style: GoogleFonts.outfit(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w800,
@@ -1020,10 +1026,22 @@ class _LoginPageState extends State<LoginPage>
               return null;
             },
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
           // Error Message
-          if (_error != null) _buildErrorMessage(_error!),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                _error!,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFFFF5252),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
 
           // Submit Button
           SizedBox(
@@ -1187,42 +1205,6 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  Widget _buildErrorMessage(String error) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFF5252).withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: const Color(0xFFFF5252).withValues(alpha: 0.3),
-          ),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              color: Color(0xFFFF5252),
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                error,
-                style: GoogleFonts.inter(
-                  color: const Color(0xFFFF5252),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   InputDecoration _inputDecoration({
     required String hintText,
     IconData? prefixIcon,
@@ -1286,88 +1268,43 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  Widget _buildSocialButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: SizedBox(
-            height: 46,
-            child: OutlinedButton(
-              onPressed: _loading ? null : _handleGoogleLogin,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                backgroundColor: Colors.white.withValues(alpha: 0.04),
-                side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  width: 1,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/google_logo.png',
-                    width: 18,
-                    height: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Google',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+  Widget _buildGoogleButton() {
+    return SizedBox(
+      height: 46,
+      child: OutlinedButton(
+        onPressed: _loading ? null : _handleGoogleLogin,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          backgroundColor: Colors.white.withValues(alpha: 0.04),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.15),
+            width: 1,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: SizedBox(
-            height: 46,
-            child: OutlinedButton(
-              onPressed: _loading ? null : _handleAppleLogin,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                backgroundColor: Colors.white.withValues(alpha: 0.04),
-                side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  width: 1,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgPicture.asset(
-                    'assets/logos/apple.svg',
-                    width: 18,
-                    height: 18,
-                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Apple',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: textPrimary,
-                    ),
-                  ),
-                ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/google_logo.png',
+              width: 18,
+              height: 18,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Continue with Google',
+              style: GoogleFonts.inter(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
