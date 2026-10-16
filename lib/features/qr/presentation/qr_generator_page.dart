@@ -68,6 +68,18 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     const Color(0xFFEC4899), // Neon Pink
   ];
 
+  Color _qrColor = const Color(0xFF0F172A); // Default dark / black
+  final List<Color> _qrColorOptions = [
+    const Color(0xFF0F172A), // Dark Slate
+    const Color(0xFF000000), // Pure Black
+    const Color(0xFF1E3A8A), // Deep Navy
+    const Color(0xFF065F46), // Deep Forest Green
+    const Color(0xFF581C87), // Deep Purple
+    const Color(0xFF881337), // Deep Rose / Burgundy
+    const Color(0xFF451A03), // Deep Roasted Coffee
+    const Color(0xFF2196F3), // Electric Blue
+  ];
+
   static const String _pwaBaseUrl = 'https://ngam.dev';
 
   @override
@@ -426,13 +438,20 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     );
   }
 
-  void _showCustomColorPicker() {
+  void _showColorPickerDialog({
+    required String title,
+    required String subtitle,
+    required Color initialColor,
+    required ValueChanged<Color> onSelected,
+  }) {
     final hexCtrl = TextEditingController(
-      text: _accentColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase(),
+      text: initialColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase(),
     );
-    Color tempColor = _accentColor;
+    Color tempColor = initialColor;
 
     final List<Color> extendedPalette = [
+      const Color(0xFF0F172A), // Dark Slate
+      const Color(0xFF000000), // Pure Black
       const Color(0xFF2196F3), // Ngam Blue
       const Color(0xFF6C5CE7), // Ngam Purple
       const Color(0xFF10B981), // Emerald Mint
@@ -442,13 +461,11 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       const Color(0xFF8B5CF6), // Royal Violet
       const Color(0xFF06B6D4), // Cyan
       const Color(0xFF14B8A6), // Deep Teal
-      const Color(0xFFF97316), // Sunset Orange
-      const Color(0xFFE11D48), // Crimson Rose
-      const Color(0xFF6366F1), // Indigo
-      const Color(0xFF84CC16), // Lime Green
-      const Color(0xFF0EA5E9), // Sky Blue
-      const Color(0xFFA855F7), // Purple Orchid
-      const Color(0xFFD946EF), // Fuchsia
+      const Color(0xFF1E3A8A), // Deep Navy
+      const Color(0xFF065F46), // Deep Green
+      const Color(0xFF581C87), // Deep Purple
+      const Color(0xFF881337), // Deep Rose
+      const Color(0xFF451A03), // Deep Coffee
     ];
 
     showModalBottomSheet(
@@ -487,7 +504,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Pilih Warna Aksen Standee',
+                          title,
                           style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Container(
@@ -506,7 +523,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Pilih tema jenama anda atau masukkan kod HEX.',
+                      subtitle,
                       style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
                     ),
                     const SizedBox(height: 20),
@@ -598,14 +615,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         onPressed: () {
-                          setState(() {
-                            _accentColor = tempColor;
-                            if (!_colorOptions.any((c) => c.toARGB32() == tempColor.toARGB32())) {
-                              _colorOptions.insert(0, tempColor);
-                            }
-                          });
+                          onSelected(tempColor);
                           Navigator.pop(ctx);
-                          showGlassToast(context, 'Warna tema standee dikemaskini!');
                         },
                         child: Text('Gunakan Warna Ini', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
                       ),
@@ -616,6 +627,40 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             );
           },
         );
+      },
+    );
+  }
+
+  void _showCustomColorPicker() {
+    _showColorPickerDialog(
+      title: 'Pilih Warna Aksen Standee',
+      subtitle: 'Pilih tema jenama anda atau masukkan kod HEX.',
+      initialColor: _accentColor,
+      onSelected: (color) {
+        setState(() {
+          _accentColor = color;
+          if (!_colorOptions.any((c) => c.toARGB32() == color.toARGB32())) {
+            _colorOptions.insert(0, color);
+          }
+        });
+        showGlassToast(context, 'Warna tema standee dikemaskini!');
+      },
+    );
+  }
+
+  void _showCustomQrColorPicker() {
+    _showColorPickerDialog(
+      title: 'Pilih Warna Kod QR (Petak)',
+      subtitle: 'Pilih warna untuk petak QR code (disyorkan warna berkontras tinggi).',
+      initialColor: _qrColor,
+      onSelected: (color) {
+        setState(() {
+          _qrColor = color;
+          if (!_qrColorOptions.any((c) => c.toARGB32() == color.toARGB32())) {
+            _qrColorOptions.insert(0, color);
+          }
+        });
+        showGlassToast(context, 'Warna kod QR dikemaskini!');
       },
     );
   }
@@ -842,13 +887,13 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             ),
                           ),
 
-                        // Modern QR Code Frame (Rounded circular eyes & modules)
+                        // Standard Square QR Code Frame
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 10),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(22),
+                            borderRadius: BorderRadius.circular(18),
                             border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
                           ),
                           child: QrImageView(
@@ -856,12 +901,12 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             version: QrVersions.auto,
                             size: 190.0,
                             eyeStyle: QrEyeStyle(
-                              eyeShape: QrEyeShape.circle,
-                              color: _accentColor,
+                              eyeShape: QrEyeShape.square,
+                              color: _qrColor,
                             ),
-                            dataModuleStyle: const QrDataModuleStyle(
-                              dataModuleShape: QrDataModuleShape.circle,
-                              color: Color(0xFF0F172A),
+                            dataModuleStyle: QrDataModuleStyle(
+                              dataModuleShape: QrDataModuleShape.square,
+                              color: _qrColor,
                             ),
                           ),
                         ),
@@ -1517,6 +1562,92 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
               }),
               GestureDetector(
                 onTap: _showCustomColorPicker,
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF42A5F5), width: 1.5),
+                  ),
+                  child: const Icon(Icons.add_rounded, size: 18, color: Color(0xFF42A5F5)),
+                ),
+              ),
+            ],
+          ),
+
+          const Divider(height: 32, color: Colors.white10),
+
+          // ─── 2. Warna Kod QR (Petak Standard) ───
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Warna Kod QR (Petak Standard)',
+                style: GoogleFonts.inter(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              GestureDetector(
+                onTap: _showCustomQrColorPicker,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _qrColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _qrColor.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(color: _qrColor, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '#${_qrColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.edit_rounded, size: 12, color: Colors.white54),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Pilih warna untuk petak kod QR (disyorkan warna gelap berkontras tinggi agar mudah diimbas).',
+            style: GoogleFonts.inter(color: Colors.white38, fontSize: 11.5),
+          ),
+          const SizedBox(height: 14),
+
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ..._qrColorOptions.map((c) {
+                final isSelected = c.toARGB32() == _qrColor.toARGB32();
+                return GestureDetector(
+                  onTap: () => setState(() => _qrColor = c),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: c,
+                      shape: BoxShape.circle,
+                      border: isSelected
+                          ? Border.all(color: Colors.white, width: 2.5)
+                          : Border.all(color: Colors.white24),
+                    ),
+                    child: isSelected ? const Icon(Icons.check, size: 18, color: Colors.white) : null,
+                  ),
+                );
+              }),
+              GestureDetector(
+                onTap: _showCustomQrColorPicker,
                 child: Container(
                   width: 34,
                   height: 34,
