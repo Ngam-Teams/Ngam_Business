@@ -542,16 +542,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
       icon: HugeIcons.strokeRoundedZap,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          int crossAxisCount = 6;
-          if (constraints.maxWidth < 420) {
-            crossAxisCount = 2;
-          } else if (constraints.maxWidth < 620) {
-            crossAxisCount = 3;
-          } else if (constraints.maxWidth < 800) {
-            crossAxisCount = 4;
-          } else {
-            crossAxisCount = 6;
-          }
+          final isNarrowPhone = constraints.maxWidth < 420;
+          final crossAxisCount = isNarrowPhone ? 3 : 6;
 
           return GridView.builder(
             shrinkWrap: true,
@@ -559,9 +551,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
             itemCount: actions.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: crossAxisCount == 6 ? 1.08 : 1.15,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              mainAxisExtent: 80,
             ),
             itemBuilder: (context, i) {
               final a = actions[i];
@@ -569,11 +561,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: a.onTap,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       color: Colors.white.withValues(alpha: 0.04),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.08),
@@ -584,19 +576,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          width: 28,
+                          height: 28,
                           decoration: BoxDecoration(
-                            color: a.color.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(10),
+                            color: a.color.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: HugeIcon(
-                            icon: a.icon,
-                            color: a.color,
-                            size: 19,
-                            strokeWidth: 2.1,
+                          child: Center(
+                            child: HugeIcon(
+                              icon: a.icon,
+                              color: a.color,
+                              size: 15,
+                              strokeWidth: 2.1,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 7),
+                        const SizedBox(height: 5),
                         Text(
                           a.label,
                           textAlign: TextAlign.center,
@@ -604,9 +599,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            height: 1.2,
+                            height: 1.15,
+                            letterSpacing: -0.2,
                           ),
                         ),
                       ],
