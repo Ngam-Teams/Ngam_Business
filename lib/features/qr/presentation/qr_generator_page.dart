@@ -702,18 +702,188 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Mode Selector (5 Modes)
-            _buildModeSelector(),
-            const SizedBox(height: 24),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 860;
 
-            // Standee Live Preview Card (Ultra Modern Acrylic Desk Standee Style)
-            Center(
-              child: ConstrainedBox(
+          if (isWide) {
+            // ─── LANDSCAPE / WIDE DISPLAY (2-Column Layout) ───
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left Column: All Controls & Customization Cards
+                Expanded(
+                  flex: 6,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(left: 24, right: 20, top: 20, bottom: 40),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildModeSelector(),
+                        const SizedBox(height: 20),
+                        _buildStoreNameCustomizerCard(),
+                        const SizedBox(height: 16),
+                        if (_selectedMode == QrMode.table) ...[
+                          _buildTableCustomizerCard(),
+                          const SizedBox(height: 16),
+                        ],
+                        _buildWifiCustomizerCard(),
+                        const SizedBox(height: 16),
+                        if (_selectedMode == QrMode.promo || _includePromoBadge) ...[
+                          _buildPromoCustomizerCard(),
+                          const SizedBox(height: 16),
+                        ],
+                        _buildModularTogglesCard(),
+                        const SizedBox(height: 16),
+                        _buildBrandingAndColorsCard(),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Subtle Vertical Divider
+                Container(
+                  width: 1,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+
+                // Right Column: Standee Live Preview & Action Buttons
+                Expanded(
+                  flex: 5,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _buildPreviewHeader(),
+                        const SizedBox(height: 20),
+                        _buildStandeePreview(),
+                        const SizedBox(height: 24),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 340),
+                          child: _buildActionButtons(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          } else {
+            // ─── PORTRAIT / MOBILE DISPLAY (Neat Stacked Layout) ───
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildModeSelector(),
+                  const SizedBox(height: 20),
+                  Center(child: _buildStandeePreview()),
+                  const SizedBox(height: 16),
+                  _buildActionButtons(),
+                  const SizedBox(height: 24),
+                  _buildStoreNameCustomizerCard(),
+                  const SizedBox(height: 16),
+                  if (_selectedMode == QrMode.table) ...[
+                    _buildTableCustomizerCard(),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildWifiCustomizerCard(),
+                  const SizedBox(height: 16),
+                  if (_selectedMode == QrMode.promo || _includePromoBadge) ...[
+                    _buildPromoCustomizerCard(),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildModularTogglesCard(),
+                  const SizedBox(height: 16),
+                  _buildBrandingAndColorsCard(),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildPreviewHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Color(0xFF10B981),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Pratonton Langsung Standee Meja',
+            style: GoogleFonts.outfit(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _accentColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 4,
+            ),
+            onPressed: _isDownloading ? null : _captureAndSaveStandee,
+            icon: _isDownloading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Icon(Icons.download_rounded, size: 20),
+            label: Text(
+              _isDownloading ? 'Menjana Fail...' : 'Muat Turun Standee (HD)',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: const BorderSide(color: Colors.white24),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: _qrPayloadUrl));
+            showGlassToast(context, 'Pautan QR disalin ke papan klip!');
+          },
+          icon: const Icon(Icons.copy_rounded, size: 18),
+          label: Text('Salin URL', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStandeePreview() {
+    return ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 340),
                 child: RepaintBoundary(
                   key: _standeeKey,
@@ -984,118 +1154,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 28),
-
-            // Store Name Customizer Card
-            _buildStoreNameCustomizerCard(),
-            const SizedBox(height: 18),
-
-            // Customizable Table Identifier Card (if Table Mode)
-            if (_selectedMode == QrMode.table) ...[
-              _buildTableCustomizerCard(),
-              const SizedBox(height: 18),
-            ],
-
-            // Editable WiFi Settings Section
-            _buildWifiCustomizerCard(),
-            const SizedBox(height: 18),
-
-            // Editable Promo Code Section
-            if (_selectedMode == QrMode.promo || _includePromoBadge) ...[
-              _buildPromoCustomizerCard(),
-              const SizedBox(height: 18),
-            ],
-
-            // Modular Standee Toggles Card
-            _buildModularTogglesCard(),
-            const SizedBox(height: 18),
-
-            // Standee Branding & Color Picker Card
-            _buildBrandingAndColorsCard(),
-            const SizedBox(height: 28),
-
-            // Action Buttons Bar
-            _buildActionButtons(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPreviewHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Color(0xFF10B981),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'Pratonton Langsung Standee Meja',
-            style: GoogleFonts.outfit(
-              color: Colors.white70,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _accentColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 4,
-            ),
-            onPressed: _isDownloading ? null : _captureAndSaveStandee,
-            icon: _isDownloading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Icon(Icons.download_rounded, size: 20),
-            label: Text(
-              _isDownloading ? 'Menjana Fail...' : 'Muat Turun Standee (HD)',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
-            side: const BorderSide(color: Colors.white24),
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          onPressed: () {
-            Clipboard.setData(ClipboardData(text: _qrPayloadUrl));
-            showGlassToast(context, 'Pautan QR disalin ke papan klip!');
-          },
-          icon: const Icon(Icons.copy_rounded, size: 18),
-          label: Text('Salin URL', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        ),
-      ],
-    );
+              );
   }
 
   Widget _buildModeSelector() {
