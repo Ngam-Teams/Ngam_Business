@@ -1,17 +1,19 @@
-import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
 
 // ============================================================
-// QrGeneratorPage — Storefront, Table, WiFi & Promo QR Standee Generator
+// QrGeneratorPage — Modern Storefront, Table, WiFi & Promo QR Standee Generator
+// Redesigned with Ngam Signature Modern Aesthetic & Cross-Platform Download Support
 // ============================================================
 
 enum QrMode { storefront, table, promo, wifi, queue }
@@ -25,11 +27,18 @@ class QrGeneratorPage extends StatefulWidget {
 
 class _QrGeneratorPageState extends State<QrGeneratorPage> {
   QrMode _selectedMode = QrMode.storefront;
-  int _tableNumber = 1;
-  final int _totalTables = 15;
 
-  String _storeName = 'Kedai Saya';
+  // Store Information (Fully Customizable)
+  final _storeNameCtrl = TextEditingController(text: 'Kedai Saya');
   String _businessId = 'store';
+
+  // Customizable Table Identifier (Supports any number/name e.g. 1, 12, A-01, VIP)
+  final _tableCtrl = TextEditingController(text: '1');
+
+  // Quick Preset Table Options
+  final List<String> _quickTablePresets = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '12', '15', '20', 'VIP', 'A-01', 'Bar 1'
+  ];
 
   // WiFi Settings Controllers (Editable)
   final _wifiSsidCtrl = TextEditingController(text: 'WarungNgam_Guest');
@@ -50,6 +59,17 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   final GlobalKey _standeeKey = GlobalKey();
   bool _isDownloading = false;
 
+  Color _accentColor = const Color(0xFF2196F3); // Ngam Signature Electric Blue
+  final List<Color> _colorOptions = [
+    const Color(0xFF2196F3), // Ngam Electric Blue
+    const Color(0xFF6C5CE7), // Ngam Purple
+    const Color(0xFF10B981), // Emerald Mint
+    const Color(0xFFF59E0B), // Amber Gold
+    const Color(0xFFEC4899), // Neon Pink
+  ];
+
+  static const String _pwaBaseUrl = 'https://ngam.dev';
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +78,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
 
   @override
   void dispose() {
+    _storeNameCtrl.dispose();
+    _tableCtrl.dispose();
     _wifiSsidCtrl.dispose();
     _wifiPasswordCtrl.dispose();
     _promoCodeCtrl.dispose();
@@ -71,8 +93,12 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       final profile = await BusinessService().getBusinessProfile();
       if (profile != null && mounted) {
         setState(() {
-          _storeName = profile['name'] ?? 'Kedai Saya';
-          _businessId = profile['id'] ?? 'store';
+          final profileName = profile['name']?.toString().trim();
+          if (profileName != null && profileName.isNotEmpty) {
+            _storeNameCtrl.text = profileName;
+          }
+          _businessId = profile['id']?.toString() ?? 'store';
+
           final settings = profile['settings'] as Map<String, dynamic>?;
           if (settings != null) {
             if (settings['wifi_ssid'] != null && settings['wifi_ssid'].toString().isNotEmpty) {
@@ -105,32 +131,23 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     }
   }
 
-  Color _accentColor = const Color(0xFF6C5CE7);
-  final List<Color> _colorOptions = [
-    const Color(0xFF6C5CE7), // Ngam Purple
-    const Color(0xFF42A5F5), // Electric Blue
-    const Color(0xFF10B981), // Emerald Mint
-    const Color(0xFFF59E0B), // Amber Gold
-    const Color(0xFFEC4899), // Neon Pink
-  ];
-
-  static const String _pwaBaseUrl = 'https://ngam.dev';
-
   String get _qrPayloadUrl {
+    final encodedStore = Uri.encodeComponent(_businessId);
     switch (_selectedMode) {
       case QrMode.storefront:
-        return '$_pwaBaseUrl/store/$_businessId';
+        return '$_pwaBaseUrl/store/$encodedStore';
       case QrMode.table:
-        return '$_pwaBaseUrl/store/$_businessId?table=$_tableNumber';
+        final table = _tableCtrl.text.trim().isEmpty ? '1' : _tableCtrl.text.trim();
+        return '$_pwaBaseUrl/store/$encodedStore?table=${Uri.encodeComponent(table)}';
       case QrMode.promo:
         final code = _promoCodeCtrl.text.trim().toUpperCase();
-        return '$_pwaBaseUrl/store/$_businessId?promo=$code';
+        return '$_pwaBaseUrl/store/$encodedStore?promo=${Uri.encodeComponent(code)}';
       case QrMode.wifi:
         final ssid = _wifiSsidCtrl.text.trim().replaceAll(';', r'\;').replaceAll(':', r'\:');
         final pass = _wifiPasswordCtrl.text.trim().replaceAll(';', r'\;').replaceAll(':', r'\:');
         return 'WIFI:T:WPA;S:$ssid;P:$pass;;';
       case QrMode.queue:
-        return '$_pwaBaseUrl/queue/$_businessId';
+        return '$_pwaBaseUrl/queue/$encodedStore';
     }
   }
 
@@ -139,7 +156,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     setState(() => _isDownloading = true);
 
     try {
-      await Future.delayed(const Duration(milliseconds: 120));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       final boundary = _standeeKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
@@ -153,18 +170,29 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       }
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
-      final dir = await getApplicationDocumentsDirectory();
       final modeName = _selectedMode.name.toUpperCase();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'Ngam_Standee_${modeName}_$timestamp.png';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(pngBytes);
+
+      // Cross-platform downloader (Uses Web Blob on Web, PathProvider on Mobile/Desktop)
+      final savedPath = await downloadStandeeImage(
+        bytes: pngBytes,
+        fileName: fileName,
+      );
 
       if (mounted) {
+        showGlassToast(
+          context,
+          kIsWeb
+              ? 'Standee HD berjaya dimuat turun ke folder Downloads anda!'
+              : 'Standee HD berjaya disimpan!',
+        );
+
         _showFileDownloadModal(
-          file: file,
-          title: _getModeTitle(),
           pngBytes: pngBytes,
+          title: _getModeTitle(),
+          fileName: fileName,
+          savedPath: savedPath,
         );
       }
     } catch (e) {
@@ -183,7 +211,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       case QrMode.storefront:
         return 'Standee Menu & Katalog Kedai';
       case QrMode.table:
-        return 'Standee Meja #$_tableNumber (Dine-in)';
+        final t = _tableCtrl.text.trim().isEmpty ? '1' : _tableCtrl.text.trim();
+        return 'Standee Meja #$t (Dine-in)';
       case QrMode.promo:
         return 'Standee Baucar & Diskaun Khas';
       case QrMode.wifi:
@@ -194,14 +223,19 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   }
 
   void _showFileDownloadModal({
-    required File file,
-    required String title,
     required Uint8List pngBytes,
+    required String title,
+    required String fileName,
+    String? savedPath,
   }) {
-    final double fileSizeKb = file.lengthSync() / 1024.0;
+    final double fileSizeKb = pngBytes.lengthInBytes / 1024.0;
     final String sizeStr = fileSizeKb > 1024
         ? '${(fileSizeKb / 1024).toStringAsFixed(2)} MB'
         : '${fileSizeKb.toStringAsFixed(1)} KB';
+
+    final String locationDisplay = kIsWeb
+        ? 'Tersimpan dalam folder Downloads pelayar web anda'
+        : (savedPath ?? 'Tersimpan dalam memori peranti');
 
     showModalBottomSheet(
       context: context,
@@ -245,13 +279,15 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                 const SizedBox(height: 12),
                 Text(
                   title,
-                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Fail imej resolusi tinggi sedia untuk dicetak atau dikongsi!',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                Text(
+                  kIsWeb
+                      ? 'Fail imej resolusi tinggi (HD) telah dimuat turun ke komputer / peranti anda!'
+                      : 'Fail imej resolusi tinggi sedia untuk dicetak atau dikongsi!',
+                  style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 18),
@@ -289,19 +325,19 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Saiz Fail:', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                          Text(sizeStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                          Text('Saiz Fail:', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+                          Text(sizeStr, style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Lokasi: ', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          Text('Lokasi: ', style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
                           Expanded(
                             child: Text(
-                              file.path,
-                              style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 11),
+                              locationDisplay,
+                              style: GoogleFonts.inter(color: const Color(0xFF42A5F5), fontSize: 11),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -316,27 +352,51 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                 // Action Buttons
                 Row(
                   children: [
-                    // Open File Button
-                    Expanded(
-                      flex: 3,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF42A5F5),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    if (!kIsWeb && savedPath != null) ...[
+                      // Open File Button (Mobile/Desktop)
+                      Expanded(
+                        flex: 3,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF42A5F5),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () async {
+                            final result = await OpenFilex.open(savedPath);
+                            if (result.type != ResultType.done && mounted) {
+                              showGlassToast(context, 'Membuka fail: ${result.message}');
+                            }
+                          },
+                          icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                          label: Text('Buka Fail Sekarang', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
                         ),
-                        onPressed: () async {
-                          final result = await OpenFilex.open(file.path);
-                          if (result.type != ResultType.done && mounted) {
-                            showGlassToast(context, 'Membuka fail: ${result.message}');
-                          }
-                        },
-                        icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                        label: const Text('Buka Fail Sekarang', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                    ),
-                    const SizedBox(width: 10),
+                      const SizedBox(width: 10),
+                    ] else ...[
+                      // Web Re-download Button
+                      Expanded(
+                        flex: 3,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF42A5F5),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () async {
+                            await downloadStandeeImage(bytes: pngBytes, fileName: fileName);
+                            if (mounted) {
+                              showGlassToast(context, 'Muat turun semula dimulakan!');
+                            }
+                          },
+                          icon: const Icon(Icons.download_rounded, size: 18),
+                          label: Text('Muat Turun Semula', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
 
                     // Copy URL Button
                     Expanded(
@@ -353,7 +413,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                           showGlassToast(context, 'Pautan QR disalin!');
                         },
                         icon: const Icon(Icons.copy_rounded, size: 16),
-                        label: const Text('Salin Pautan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        label: Text('Salin Pautan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12)),
                       ),
                     ),
                   ],
@@ -373,8 +433,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     Color tempColor = _accentColor;
 
     final List<Color> extendedPalette = [
+      const Color(0xFF2196F3), // Ngam Blue
       const Color(0xFF6C5CE7), // Ngam Purple
-      const Color(0xFF42A5F5), // Electric Blue
       const Color(0xFF10B981), // Emerald Mint
       const Color(0xFFF59E0B), // Amber Gold
       const Color(0xFFEC4899), // Neon Pink
@@ -426,9 +486,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Pilih Warna Aksen Standee',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Container(
                           width: 32,
@@ -447,15 +507,16 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     const SizedBox(height: 6),
                     Text(
                       'Pilih tema jenama anda atau masukkan kod HEX.',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
+                      style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
                     ),
                     const SizedBox(height: 20),
 
+                    // Extended Palette Grid
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
                       children: extendedPalette.map((c) {
-                        final isSel = c.toARGB32() == tempColor.toARGB32();
+                        final isSelected = c.toARGB32() == tempColor.toARGB32();
                         return GestureDetector(
                           onTap: () {
                             setModalState(() {
@@ -464,38 +525,37 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             });
                           },
                           child: Container(
-                            width: 36,
-                            height: 36,
+                            width: 38,
+                            height: 38,
                             decoration: BoxDecoration(
                               color: c,
                               shape: BoxShape.circle,
-                              border: isSel
+                              border: isSelected
                                   ? Border.all(color: Colors.white, width: 3)
-                                  : Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                              boxShadow: isSel
-                                  ? [BoxShadow(color: c.withValues(alpha: 0.7), blurRadius: 8, spreadRadius: 1)]
+                                  : Border.all(color: Colors.white24, width: 1),
+                              boxShadow: isSelected
+                                  ? [BoxShadow(color: c.withValues(alpha: 0.6), blurRadius: 10, spreadRadius: 2)]
                                   : null,
                             ),
-                            child: isSel ? const Icon(Icons.check, size: 20, color: Colors.white) : null,
+                            child: isSelected ? const Icon(Icons.check, size: 20, color: Colors.white) : null,
                           ),
                         );
                       }).toList(),
                     ),
                     const SizedBox(height: 24),
 
+                    // Manual HEX Input
                     Row(
                       children: [
                         Expanded(
                           child: TextField(
                             controller: hexCtrl,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                            maxLength: 6,
+                            style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.5),
                             decoration: InputDecoration(
-                              counterText: '',
+                              labelText: 'Kod Warna HEX',
+                              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
                               prefixText: '# ',
-                              prefixStyle: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 16),
-                              hintText: '6C5CE7',
-                              hintStyle: const TextStyle(color: Colors.white24),
+                              prefixStyle: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
                               filled: true,
                               fillColor: const Color(0xFF0F0F1B),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
@@ -547,7 +607,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                           Navigator.pop(ctx);
                           showGlassToast(context, 'Warna tema standee dikemaskini!');
                         },
-                        child: const Text('Gunakan Warna Ini', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        child: Text('Gunakan Warna Ini', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
                       ),
                     ),
                   ],
@@ -572,18 +632,18 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Column(
+        title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'QR & Standee Generator',
-              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+              style: GoogleFonts.outfit(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              'Menu, Meja, WiFi & Baucar Standee',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              'Menu, Meja, WiFi & Baucar Standee HD',
+              style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -603,9 +663,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Mode Selector (5 Modes)
-            const Text(
-              'Pilih Mod Kod QR',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            Text(
+              'Pilih Mod Kod QR Standee',
+              style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             SingleChildScrollView(
@@ -626,7 +686,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             ),
             const SizedBox(height: 24),
 
-            // Standee Live Preview Card (Wrapped with RepaintBoundary for REAL export)
+            // Standee Live Preview Card (Ultra Modern Acrylic Desk Standee Style)
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 340),
@@ -635,12 +695,17 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: _accentColor.withValues(alpha: 0.25),
-                          blurRadius: 30,
-                          offset: const Offset(0, 12),
+                          color: _accentColor.withValues(alpha: 0.18),
+                          blurRadius: 36,
+                          offset: const Offset(0, 14),
+                        ),
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
@@ -648,51 +713,87 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Header with Brand Color
+                        // Top Brand Accent Bar (Modern Acrylic Aesthetic)
+                        Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: _accentColor,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Header Badge with Dot Indicator
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
                             color: _accentColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            _getHeaderBadgeText(),
-                            style: TextStyle(
-                              color: _accentColor,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.1,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: _accentColor,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _getHeaderBadgeText().toUpperCase(),
+                                style: GoogleFonts.outfit(
+                                  color: _accentColor,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
 
-                        // Store Title
+                        // Store Title (Live from Controller)
                         Text(
-                          _storeName,
+                          _storeNameCtrl.text.trim().isEmpty ? 'Kedai Saya' : _storeNameCtrl.text.trim(),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFF1E293B),
-                            fontSize: 20,
+                          style: GoogleFonts.outfit(
+                            color: const Color(0xFF0F172A),
+                            fontSize: 21,
                             fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
                           ),
                         ),
                         const SizedBox(height: 4),
 
-                        // Table Badge (if table mode)
+                        // Table Badge (if table mode) — Supports Custom Table Number/Name
                         if (_selectedMode == QrMode.table)
                           Container(
                             margin: const EdgeInsets.symmetric(vertical: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                             decoration: BoxDecoration(
                               color: const Color(0xFF0F172A),
                               borderRadius: BorderRadius.circular(30),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: Text(
-                              'TABLE $_tableNumber',
-                              style: const TextStyle(
+                              _tableCtrl.text.trim().toUpperCase().startsWith('MEJA') ||
+                                      _tableCtrl.text.trim().toUpperCase().startsWith('TABLE')
+                                  ? _tableCtrl.text.trim().toUpperCase()
+                                  : 'TABLE ${_tableCtrl.text.trim().toUpperCase()}',
+                              style: GoogleFonts.outfit(
                                 color: Colors.white,
-                                fontSize: 15,
+                                fontSize: 14.5,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1.5,
                               ),
@@ -705,7 +806,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             margin: const EdgeInsets.symmetric(vertical: 6),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                              color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: const Color(0xFFF59E0B)),
                             ),
@@ -716,10 +817,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                                 const SizedBox(width: 6),
                                 Text(
                                   'KOD: ${_promoCodeCtrl.text.toUpperCase()} (${_promoDiscountCtrl.text})',
-                                  style: const TextStyle(
-                                    color: Color(0xFFB45309),
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFFB45309),
                                     fontSize: 11,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ],
@@ -732,18 +833,22 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             padding: const EdgeInsets.only(top: 4, bottom: 6),
                             child: Text(
                               _customTaglineCtrl.text,
-                              style: const TextStyle(color: Color(0xFF475569), fontSize: 12, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF475569),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ),
 
-                        // QR Code Rendering Block
+                        // Modern QR Code Frame (Rounded circular eyes & modules)
                         Container(
                           margin: const EdgeInsets.symmetric(vertical: 10),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(22),
                             border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
                           ),
                           child: QrImageView(
@@ -751,25 +856,32 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             version: QrVersions.auto,
                             size: 190.0,
                             eyeStyle: QrEyeStyle(
-                              eyeShape: QrEyeShape.square,
+                              eyeShape: QrEyeShape.circle,
                               color: _accentColor,
                             ),
                             dataModuleStyle: const QrDataModuleStyle(
-                              dataModuleShape: QrDataModuleShape.square,
+                              dataModuleShape: QrDataModuleShape.circle,
                               color: Color(0xFF0F172A),
                             ),
                           ),
                         ),
 
                         // Instructions
-                        Text(
-                          _getInstructionText(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFF64748B),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.camera_alt_outlined, size: 14, color: Color(0xFF64748B)),
+                            const SizedBox(width: 6),
+                            Text(
+                              _getInstructionText(),
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF64748B),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 12),
 
@@ -789,36 +901,57 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                                 const SizedBox(width: 6),
                                 Text(
                                   'WiFi: ${_wifiSsidCtrl.text}  |  Pass: ${_wifiPasswordCtrl.text}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF334155),
-                                    fontSize: 10,
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF334155),
+                                    fontSize: 10.5,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
 
-                        // Powered by Ngam badge
+                        // ─── Footer: Powered by Ngam with Splash Icon (Bucu Lembut) ───
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                color: _accentColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Center(
-                                child: Text('N', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(5.5),
+                              child: Image.asset(
+                                'assets/splash.png',
+                                width: 19,
+                                height: 19,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 19,
+                                  height: 19,
+                                  decoration: BoxDecoration(
+                                    color: _accentColor,
+                                    borderRadius: BorderRadius.circular(5.5),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      'N',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'Powered by Ngam App',
-                              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold),
+                            const SizedBox(width: 7),
+                            Text(
+                              'Powered by Ngam',
+                              style: GoogleFonts.outfit(
+                                color: const Color(0xFF64748B),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
                             ),
                           ],
                         ),
@@ -830,64 +963,29 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             ),
             const SizedBox(height: 28),
 
-            // Table Selection Controls (if Table Mode)
+            // Store Name Customizer Card
+            _buildStoreNameCustomizerCard(),
+            const SizedBox(height: 18),
+
+            // Customizable Table Identifier Card (if Table Mode)
             if (_selectedMode == QrMode.table) ...[
-              const Text(
-                'Pilih Nombor Meja',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 48,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _totalTables,
-                  itemBuilder: (ctx, idx) {
-                    final tNum = idx + 1;
-                    final isSel = tNum == _tableNumber;
-                    return GestureDetector(
-                      onTap: () => setState(() => _tableNumber = tNum),
-                      child: Container(
-                        width: 52,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: isSel ? _accentColor : const Color(0xFF141424),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSel ? _accentColor : Colors.white12,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '#$tNum',
-                            style: TextStyle(
-                              color: isSel ? Colors.white : Colors.white70,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 20),
+              _buildTableCustomizerCard(),
+              const SizedBox(height: 18),
             ],
 
             // Editable WiFi Settings Section
             _buildWifiCustomizerCard(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
             // Editable Promo Code Section
             if (_selectedMode == QrMode.promo || _includePromoBadge) ...[
               _buildPromoCustomizerCard(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
             ],
 
             // Modular Standee Toggles Card
             _buildModularTogglesCard(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
             // Standee Branding & Color Picker Card
             _buildBrandingAndColorsCard(),
@@ -910,7 +1008,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                         : const Icon(Icons.download_rounded, size: 20),
                     label: Text(
                       _isDownloading ? 'Menjana Fail...' : 'Muat Turun Standee (HD)',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                   ),
                 ),
@@ -927,7 +1025,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     showGlassToast(context, 'Pautan QR disalin ke papan klip!');
                   },
                   icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('Salin URL', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text('Salin URL', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -959,7 +1057,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 color: isSel ? Colors.white : Colors.white70,
                 fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
                 fontSize: 13,
@@ -971,33 +1069,178 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     );
   }
 
+  Widget _buildStoreNameCustomizerCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.storefront_rounded, color: Color(0xFF42A5F5), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Nama Kedai pada Standee (Boleh Ubah)',
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Nama ini dipaparkan terus di bahagian atas standee fizikal kedai anda.',
+            style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _storeNameCtrl,
+            onChanged: (_) => setState(() {}),
+            style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+            decoration: InputDecoration(
+              labelText: 'Nama Kedai / Jenama',
+              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
+              hintText: 'Contoh: Warung Kopi Bangi / Barber Chop',
+              hintStyle: GoogleFonts.inter(color: Colors.white30, fontSize: 13),
+              prefixIcon: const Icon(Icons.edit_note_rounded, color: Colors.white38, size: 20),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.04),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF42A5F5))),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTableCustomizerCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.table_restaurant_rounded, color: Color(0xFF42A5F5), size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Nombor & Nama Meja (Boleh Custom Sepenuhnya)',
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Taip sebarang nombor atau nama meja (contoh: 1, 12, A-04, VIP 1, Outdoor 2).',
+            style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+
+          // Custom Input Field
+          TextField(
+            controller: _tableCtrl,
+            onChanged: (_) => setState(() {}),
+            style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+            decoration: InputDecoration(
+              labelText: 'Nombor / Nama Meja',
+              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
+              hintText: 'Contoh: 1, 14, A-02, VIP',
+              hintStyle: GoogleFonts.inter(color: Colors.white30, fontSize: 13),
+              prefixIcon: const Icon(Icons.tag_rounded, color: Colors.white38, size: 20),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.04),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF42A5F5))),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Quick Presets Row
+          Text(
+            'Pilihan Pantas (Tekan untuk set):',
+            style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.5, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 38,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _quickTablePresets.length,
+              itemBuilder: (ctx, idx) {
+                final preset = _quickTablePresets[idx];
+                final isSelected = _tableCtrl.text.trim().toUpperCase() == preset.toUpperCase();
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _tableCtrl.text = preset;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: isSelected ? _accentColor : Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected ? _accentColor : Colors.white12,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        preset,
+                        style: GoogleFonts.outfit(
+                          color: isSelected ? Colors.white : Colors.white70,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _getHeaderBadgeText() {
     switch (_selectedMode) {
       case QrMode.storefront:
-        return 'SCAN TO BROWSE & ORDER';
+        return 'Scan To Browse & Order';
       case QrMode.table:
-        return 'DINE-IN ORDERING';
+        return 'Dine-In Table Order';
       case QrMode.promo:
-        return 'SCAN FOR SPECIAL PROMO';
+        return 'Special Promo Voucher';
       case QrMode.wifi:
-        return 'FREE GUEST WI-FI ACCESS';
+        return 'Free Guest Wi-Fi Access';
       case QrMode.queue:
-        return 'SMART WALK-IN QUEUE';
+        return 'Smart Walk-In Queue';
     }
   }
 
   String _getInstructionText() {
     switch (_selectedMode) {
       case QrMode.wifi:
-        return 'Halakan kamera telefon untuk sambung ke WiFi kedai';
+        return 'Halakan kamera telefon untuk sambung WiFi';
       case QrMode.promo:
-        return 'Imbas kamera untuk tebus tawaran diskaun ini';
+        return 'Imbas kamera untuk tebus tawaran ini';
       case QrMode.queue:
         return 'Imbas kamera untuk ambil giliran walk-in';
       case QrMode.table:
-        return 'Imbas untuk lihat menu & pesan terus ke meja anda';
+        return 'Imbas kamera untuk pesan terus ke meja';
       case QrMode.storefront:
-        return 'Point your phone camera to order';
+        return 'Halakan kamera telefon anda untuk memesan';
     }
   }
 
@@ -1015,19 +1258,19 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.wifi_rounded, color: Color(0xFF42A5F5), size: 20),
-                  SizedBox(width: 8),
+                  const Icon(Icons.wifi_rounded, color: Color(0xFF42A5F5), size: 20),
+                  const SizedBox(width: 8),
                   Text(
                     'Tetapan WiFi Kedai (Boleh Ubah)',
-                    style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               TextButton(
                 onPressed: _saveWifiToProfile,
-                child: const Text('Simpan', style: TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold)),
+                child: Text('Simpan', style: GoogleFonts.inter(color: const Color(0xFF42A5F5), fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -1037,10 +1280,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           TextField(
             controller: _wifiSsidCtrl,
             onChanged: (_) => setState(() {}),
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
             decoration: InputDecoration(
               labelText: 'Nama Rangkaian (SSID)',
-              labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
               prefixIcon: const Icon(Icons.router_rounded, color: Colors.white38, size: 20),
               filled: true,
               fillColor: Colors.white.withValues(alpha: 0.04),
@@ -1055,10 +1298,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             controller: _wifiPasswordCtrl,
             obscureText: _obscureWifiPassword,
             onChanged: (_) => setState(() {}),
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
             decoration: InputDecoration(
               labelText: 'Kata Laluan WiFi (Password)',
-              labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
               prefixIcon: const Icon(Icons.lock_outline_rounded, color: Colors.white38, size: 20),
               suffixIcon: IconButton(
                 icon: Icon(_obscureWifiPassword ? Icons.visibility_off : Icons.visibility, color: Colors.white38, size: 20),
@@ -1086,13 +1329,13 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.discount_rounded, color: Color(0xFFF59E0B), size: 20),
-              SizedBox(width: 8),
+              const Icon(Icons.discount_rounded, color: Color(0xFFF59E0B), size: 20),
+              const SizedBox(width: 8),
               Text(
                 'Tetapan Kod Promo & Baucar',
-                style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1102,10 +1345,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           TextField(
             controller: _promoCodeCtrl,
             onChanged: (_) => setState(() {}),
-            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2),
             decoration: InputDecoration(
               labelText: 'Kod Promosi (cth: NGAM10 / RAYA26)',
-              labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
               prefixIcon: const Icon(Icons.qr_code_rounded, color: Colors.white38, size: 20),
               filled: true,
               fillColor: Colors.white.withValues(alpha: 0.04),
@@ -1119,10 +1362,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           TextField(
             controller: _promoDiscountCtrl,
             onChanged: (_) => setState(() {}),
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
             decoration: InputDecoration(
               labelText: 'Keterangan Diskaun (cth: 10% OFF Semua Item)',
-              labelStyle: const TextStyle(color: Colors.white54, fontSize: 13),
+              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
               prefixIcon: const Icon(Icons.info_outline_rounded, color: Colors.white38, size: 20),
               filled: true,
               fillColor: Colors.white.withValues(alpha: 0.04),
@@ -1146,16 +1389,16 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Modul & Kandungan Tambahan Standee',
-            style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
 
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Papar Maklumat WiFi Tetamu', style: TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: Text('SSID: ${_wifiSsidCtrl.text}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            title: Text('Papar Maklumat WiFi Tetamu', style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
+            subtitle: Text('SSID: ${_wifiSsidCtrl.text}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
             value: _includeWifi,
             activeColor: _accentColor,
             onChanged: (val) => setState(() => _includeWifi = val),
@@ -1164,8 +1407,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
 
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Papar Banner Promosi Khas', style: TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: Text('Kod: ${_promoCodeCtrl.text}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            title: Text('Papar Banner Promosi Khas', style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
+            subtitle: Text('Kod: ${_promoCodeCtrl.text}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
             value: _includePromoBadge,
             activeColor: _accentColor,
             onChanged: (val) => setState(() => _includePromoBadge = val),
@@ -1174,8 +1417,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
 
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Papar Tagline / Mesej Khas', style: TextStyle(color: Colors.white, fontSize: 14)),
-            subtitle: Text(_customTaglineCtrl.text, style: const TextStyle(color: Colors.white54, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+            title: Text('Papar Tagline / Mesej Khas', style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
+            subtitle: Text(_customTaglineCtrl.text, style: GoogleFonts.inter(color: Colors.white54, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
             value: _includeCustomTagline,
             activeColor: _accentColor,
             onChanged: (val) => setState(() => _includeCustomTagline = val),
@@ -1186,10 +1429,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             TextField(
               controller: _customTaglineCtrl,
               onChanged: (_) => setState(() {}),
-              style: const TextStyle(color: Colors.white, fontSize: 13),
+              style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
               decoration: InputDecoration(
                 hintText: 'Tulis mesej khas anda...',
-                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                hintStyle: GoogleFonts.inter(color: Colors.white38, fontSize: 13),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.04),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white12)),
@@ -1215,9 +1458,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Warna Tema Standee',
-                style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
+                style: GoogleFonts.inter(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
               ),
               GestureDetector(
                 onTap: _showCustomColorPicker,
@@ -1239,7 +1482,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                       const SizedBox(width: 6),
                       Text(
                         '#${_accentColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
-                        style: TextStyle(color: _accentColor, fontSize: 11, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.inter(color: _accentColor, fontSize: 11, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(width: 4),
                       const Icon(Icons.edit_rounded, size: 12, color: Colors.white54),
