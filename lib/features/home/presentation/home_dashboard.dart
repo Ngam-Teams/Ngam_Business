@@ -134,13 +134,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         ];
 
         final hasLocation = _businessProfile?['latitude'] != null && _businessProfile?['longitude'] != null;
-        final businessName = _businessProfile?['business_name'] ?? 'Your Business';
 
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             return SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 120),
+              padding: EdgeInsets.fromLTRB(0, 0, 0, width >= 800 ? 36 : 100),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -148,103 +147,26 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   if (!_loadingBusiness && (!hasLocation || (_businessProfile?['address_line'] ?? '').isEmpty))
                     _buildProfileIncompleteBanner(context),
 
-                  // Welcome Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _loadingBusiness ? 'Welcome to Ngam Business' : businessName,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: -0.3,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              hasLocation
-                                  ? 'Live on Ngam Explore'
-                                  : 'Setup incomplete — Action needed',
-                              style: TextStyle(
-                                color: hasLocation
-                                    ? const Color(0xFF44CF6C)
-                                    : const Color(0xFFF9C80E),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () async {
-                          await context.push('/business-profile');
-                          _loadBusinessProfile();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.1),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              HugeIcon(
-                                icon: HugeIcons.strokeRoundedEdit02,
-                                color: Color(0xFF42A5F5),
-                                size: 16,
-                              ),
-                              SizedBox(width: 6),
-                              Text(
-                                'Alter Details',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
                   // Stat cards grid
                   _buildStatCards(cards, width),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
-                  // Lower panels
+                  // Lower panels (Recent 1:3, Quick Actions 2:3)
                   if (width >= 900)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(flex: 2, child: _buildRecentActivity()),
-                        const SizedBox(width: 24),
-                        Expanded(child: _buildQuickActions(context)),
+                        Expanded(flex: 1, child: _buildRecentActivity()),
+                        const SizedBox(width: 20),
+                        Expanded(flex: 2, child: _buildQuickActions(context)),
                       ],
                     )
                   else
                     Column(
                       children: [
-                        _buildQuickActions(context),
-                        const SizedBox(height: 24),
                         _buildRecentActivity(),
+                        const SizedBox(height: 20),
+                        _buildQuickActions(context),
                       ],
                     ),
                 ],
@@ -503,67 +425,67 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Widget _buildQuickActions(BuildContext context) {
     final actions = [
       (
-        label: 'Smart Queue & TV Display',
+        label: 'Smart Queue\n& TV Display',
         icon: HugeIcons.strokeRoundedTv01,
         color: const Color(0xFF6C5CE7),
         onTap: () => context.push('/queue'),
       ),
       (
-        label: 'Payroll & Komisen Staf',
+        label: 'Payroll &\nKomisen Staf',
         icon: HugeIcons.strokeRoundedCoins01,
         color: const Color(0xFF10B981),
         onTap: () => context.push('/payroll'),
       ),
       (
-        label: 'Kad Cop Digital (Loyalty)',
+        label: 'Kad Cop Digital\n(Loyalty)',
         icon: HugeIcons.strokeRoundedAward01,
         color: const Color(0xFFF59E0B),
         onTap: () => context.push('/loyalty'),
       ),
       (
-        label: 'Bookings & Slots',
+        label: 'Bookings &\nSlots',
         icon: HugeIcons.strokeRoundedCalendar01,
         color: const Color(0xFF42A5F5),
         onTap: () => context.push('/appointments'),
       ),
       (
-        label: 'Inventory & Stock Alerts',
+        label: 'Inventory &\nStock Alerts',
         icon: HugeIcons.strokeRoundedPackageDelivered,
         color: const Color(0xFFF9C80E),
         onTap: () => context.push('/inventory'),
       ),
       (
-        label: 'Promotions & Vouchers',
+        label: 'Promotions &\nVouchers',
         icon: HugeIcons.strokeRoundedDiscountTag02,
         color: const Color(0xFF44CF6C),
         onTap: () => context.push('/promotions'),
       ),
       (
-        label: 'Customer Reviews',
+        label: 'Customer\nReviews',
         icon: HugeIcons.strokeRoundedStar,
         color: const Color(0xFFFFA726),
         onTap: () => context.push('/customer-reviews'),
       ),
       (
-        label: 'Hours & Rush Mode',
+        label: 'Hours &\nRush Mode',
         icon: HugeIcons.strokeRoundedTime02,
         color: const Color(0xFF26C6DA),
         onTap: () => context.push('/operating-hours'),
       ),
       (
-        label: 'Customer Insights & VIPs',
+        label: 'Customer VIPs\n& Insights',
         icon: HugeIcons.strokeRoundedUserGroup,
         color: const Color(0xFFAB47BC),
         onTap: () => context.push('/customers'),
       ),
       (
-        label: 'Manage Items & Services',
+        label: 'Items &\nServices',
         icon: HugeIcons.strokeRoundedGridView,
         color: const Color(0xFF44CF6C),
         onTap: () => context.push('/product-catalogue'),
       ),
       (
-        label: 'Business Details & Map Pin',
+        label: 'Business Details\n& Map Pin',
         icon: HugeIcons.strokeRoundedStore01,
         color: const Color(0xFF42A5F5),
         onTap: () async {
@@ -572,43 +494,43 @@ class _HomeDashboardState extends State<HomeDashboard> {
         },
       ),
       (
-        label: 'Payouts & Settlement',
+        label: 'Payouts &\nSettlement',
         icon: HugeIcons.strokeRoundedMoneySend02,
         color: const Color(0xFF10B981),
         onTap: () => context.push('/payouts'),
       ),
       (
-        label: 'Kitchen Display (KDS)',
+        label: 'Kitchen Display\n(KDS)',
         icon: HugeIcons.strokeRoundedRestaurant01,
         color: const Color(0xFFF9C80E),
         onTap: () => context.push('/kds'),
       ),
       (
-        label: 'Customer Inbox & Chat',
+        label: 'Customer Inbox\n& Chat',
         icon: HugeIcons.strokeRoundedChatting01,
         color: const Color(0xFF42A5F5),
         onTap: () => context.push('/merchant-inbox'),
       ),
       (
-        label: 'QR & Standee Generator',
+        label: 'QR & Standee\nGenerator',
         icon: HugeIcons.strokeRoundedQrCode,
         color: const Color(0xFF6C5CE7),
         onTap: () => context.push('/qr-generator'),
       ),
       (
-        label: 'Cash Drawer & Z-Report',
+        label: 'Cash Drawer\n& Z-Report',
         icon: HugeIcons.strokeRoundedMoney01,
         color: const Color(0xFF26C6DA),
         onTap: () => context.push('/cash-drawer'),
       ),
       (
-        label: 'Receipts & Thermal Printer',
+        label: 'Receipts &\nPrinter',
         icon: HugeIcons.strokeRoundedPrinter,
         color: const Color(0xFFEC4899),
         onTap: () => context.push('/receipt-settings'),
       ),
       (
-        label: 'Staff Management',
+        label: 'Staff\nManagement',
         icon: HugeIcons.strokeRoundedUserGroup,
         color: const Color(0xFFE5B9FF),
         onTap: () => context.push('/staff-management'),
@@ -618,60 +540,83 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return _buildPanel(
       title: 'Quick Actions',
       icon: HugeIcons.strokeRoundedZap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: actions
-            .map(
-              (a) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: GestureDetector(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = 6;
+          if (constraints.maxWidth < 420) {
+            crossAxisCount = 2;
+          } else if (constraints.maxWidth < 620) {
+            crossAxisCount = 3;
+          } else if (constraints.maxWidth < 800) {
+            crossAxisCount = 4;
+          } else {
+            crossAxisCount = 6;
+          }
+
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: actions.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: crossAxisCount == 6 ? 1.08 : 1.15,
+            ),
+            itemBuilder: (context, i) {
+              final a = actions[i];
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
                   onTap: a.onTap,
+                  borderRadius: BorderRadius.circular(14),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 14,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(14),
+                      color: Colors.white.withValues(alpha: 0.04),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: Colors.white.withValues(alpha: 0.08),
+                        width: 1,
                       ),
                     ),
-                    child: Row(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        HugeIcon(
-                          icon: a.icon,
-                          color: a.color,
-                          size: 18,
-                          strokeWidth: 2.1,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            a.label,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: a.color.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: HugeIcon(
+                            icon: a.icon,
+                            color: a.color,
+                            size: 19,
+                            strokeWidth: 2.1,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        HugeIcon(
-                          icon: HugeIcons.strokeRoundedArrowRight01,
-                          color: Colors.white.withValues(alpha: 0.3),
-                          size: 16,
+                        const SizedBox(height: 7),
+                        Text(
+                          a.label,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              ),
-            )
-            .toList(),
+              );
+            },
+          );
+        },
       ),
     );
   }

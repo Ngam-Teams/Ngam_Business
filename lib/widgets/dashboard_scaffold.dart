@@ -4,6 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'bottom_nav.dart';
+import '../features/settings/data/business_service.dart';
 
 /// DashboardScaffold — master responsive layout for Ngam Business.
 ///
@@ -73,31 +74,25 @@ class DashboardScaffold extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
         child: Container(
-          width: 220,
+          width: 236,
           color: Colors.white.withValues(alpha: 0.04),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 48),
+              const SizedBox(height: 36),
 
-              // Logo / Wordmark
+              // Logo / Wordmark with Ngam Splash Logo
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: Row(
                   children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF42A5F5), Color(0xFF42A5F5)],
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.storefront_rounded,
-                        color: Colors.white,
-                        size: 20,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        'assets/splash.png',
+                        width: 38,
+                        height: 38,
+                        fit: BoxFit.cover,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -108,7 +103,7 @@ class DashboardScaffold extends StatelessWidget {
                           'Ngam',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 17,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -0.3,
                           ),
@@ -118,7 +113,7 @@ class DashboardScaffold extends StatelessWidget {
                           style: TextStyle(
                             color: Color(0xFF42A5F5),
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: 1.2,
                           ),
                         ),
@@ -128,7 +123,88 @@ class DashboardScaffold extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 18),
+
+              // Business Name Chip below label
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: FutureBuilder<Map<String, dynamic>?>(
+                  future: BusinessService().getBusinessProfile(),
+                  builder: (context, snapshot) {
+                    final profile = snapshot.data;
+                    final businessName = (profile?['business_name'] ??
+                            profile?['name'] ??
+                            profile?['title'] ??
+                            'Kedai Saya')
+                        .toString()
+                        .trim();
+                    final handle =
+                        (profile?['business_handle'] as String?)?.trim();
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF00E676),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  businessName.isEmpty
+                                      ? 'Kedai Saya'
+                                      : businessName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 1.5),
+                                Text(
+                                  handle != null && handle.isNotEmpty
+                                      ? '@$handle'
+                                      : 'Live on Explore',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.45),
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 24),
 
               // Nav items
               ...navItems.asMap().entries.map((entry) {
