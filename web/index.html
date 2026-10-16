@@ -61,15 +61,23 @@
   </script>
 
   <meta name="theme-color" content="#2196F3">
-  <meta name="google-signin-client_id" content="465252435780-kjcjvctogj5f2r014c4ggq2gpc5u28d2.apps.googleusercontent.com">
+  <!-- Auto-redirect from .pages.dev to official business.ngam.dev -->
+  <script>
+    if (window.location.hostname.endsWith('pages.dev')) {
+      window.location.replace('https://business.ngam.dev' + window.location.pathname + window.location.search);
+    }
+  </script>
 
-  <!-- iOS meta tags & icons -->
+  <!-- iOS / iPadOS PWA meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ngam Business">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
 
-  <!-- Favicon -->
+  <!-- Favicon & PWA Manifest -->
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
   <style>

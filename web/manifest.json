@@ -7,19 +7,22 @@
     "display": "standalone",
     "background_color": "#0A0A0A",
     "theme_color": "#2196F3",
-    "description": "Ngam Business - Portal Peniaga Pintar",
+    "description": "Ngam Business - Portal Peniaga Pintar & Pengurusan Kedai",
     "orientation": "portrait-primary",
+    "categories": ["business", "productivity", "utilities"],
     "prefer_related_applications": false,
     "icons": [
         {
             "src": "icons/Icon-192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "icons/Icon-512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "icons/Icon-maskable-192.png",
@@ -32,6 +35,29 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Urus Pesanan",
+            "short_name": "Pesanan",
+            "description": "Pantau dan proses pesanan masuk",
+            "url": "/",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Sistem Kaunter POS",
+            "short_name": "POS",
+            "description": "Kaunter jualan dan resit pantas",
+            "url": "/",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+        },
+        {
+            "name": "Standee QR & Meja",
+            "short_name": "QR Standee",
+            "description": "Jana kod QR untuk meja dan kaunter",
+            "url": "/",
+            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
         }
     ]
 }
