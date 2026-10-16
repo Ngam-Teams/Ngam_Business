@@ -26,6 +26,15 @@ void main() async {
       url: url,
       publishableKey: key,
     );
+
+    // Listen for password recovery event (bila peniaga tekan link reset emel)
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          appRouter.go('/reset-password');
+        });
+      }
+    });
   } catch (e) {
     debugPrint('Supabase init error: $e');
   }

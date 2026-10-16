@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
+import '../../features/auth/presentation/reset_password_page.dart';
 import '../../features/home/presentation/home_dashboard.dart';
 import '../../features/orders/presentation/orders_page.dart';
 import '../../features/pos/presentation/pos_page.dart';
@@ -202,7 +203,13 @@ final appRouter = GoRouter(
     final isGoingToAuth =
         state.uri.path == '/login' || 
         state.uri.path == '/signup' || 
+        state.uri.path == '/reset-password' || 
         state.uri.path == '/unauthorized';
+
+    // Password recovery: benarkan akses ke /reset-password tanpa redirect ke /home atau /login
+    if (state.uri.path == '/reset-password') {
+      return null;
+    }
 
     // Not logged in — send to login (unless already going there)
     if (user == null) {
@@ -228,6 +235,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/signup',
       builder: (context, state) => const SignupPage(),
+    ),
+    GoRoute(
+      path: '/reset-password',
+      builder: (context, state) => const ResetPasswordPage(),
     ),
     GoRoute(
       path: '/unauthorized',

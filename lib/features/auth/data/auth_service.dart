@@ -43,10 +43,18 @@ class AuthService {
 
   /// Reset password for email
   Future<void> resetPassword(String email) async {
+    final redirectUrl = kIsWeb
+        ? '${Uri.base.origin}/reset-password'
+        : 'https://business.ngam.dev/reset-password';
     await _client.auth.resetPasswordForEmail(
       email.trim(),
-      redirectTo: kIsWeb ? Uri.base.origin : null,
+      redirectTo: redirectUrl,
     );
+  }
+
+  /// Update password during recovery flow
+  Future<void> updateRecoveryPassword(String newPassword) async {
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
   }
 
   /// Sign up a new business user.
