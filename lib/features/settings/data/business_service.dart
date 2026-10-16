@@ -11,6 +11,44 @@ class BusinessService {
   BusinessService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
+  /// Generate a clean, URL-safe business handle from a business name
+  static String generateHandleFromName(String name) {
+    String clean = name.trim().toLowerCase();
+    // Replace spaces and special characters with hyphen
+    clean = clean.replaceAll(RegExp(r'[^a-z0-9_]+'), '-');
+    // Remove leading and trailing hyphens
+    clean = clean.replaceAll(RegExp(r'^-+|-+$'), '');
+    if (clean.length < 3) {
+      clean = 'kedai-${clean.isEmpty ? "ngam" : clean}';
+    }
+    if (clean.length > 30) {
+      clean = clean.substring(0, 30);
+    }
+    return clean;
+  }
+
+  /// Check if a business handle is available (unique across all businesses)
+  Future<bool> isHandleAvailable(String handle, {String? excludeBusinessId}) async {
+    final clean = handle.trim().toLowerCase().replaceAll('@', '');
+    if (clean.isEmpty) return false;
+    try {
+      var query = _client
+          .from('businesses')
+          .select('id')
+          .eq('business_handle', clean);
+
+      if (excludeBusinessId != null && excludeBusinessId.isNotEmpty) {
+        query = query.neq('id', excludeBusinessId);
+      }
+
+      final res = await query.limit(1);
+      return (res as List).isEmpty;
+    } catch (e) {
+      debugPrint('isHandleAvailable error: $e');
+      return true; // if column not yet queried or offline
+    }
+  }
+
   /// Fetch the business record for the currently logged in owner.
   /// Also loads associated business_settings and business_compliance if available.
   /// Uses mutex/in-flight caching so concurrent widget requests share one call.
@@ -71,6 +109,19 @@ class BusinessService {
           debugPrint('Error fetching business_compliance: $e');
         }
 
+        if (profile['business_handle'] == null ||
+            (profile['business_handle'] as String).trim().isEmpty) {
+          final candidate = generateHandleFromName(profile['business_name'] ?? 'kedai');
+          try {
+            final available = await isHandleAvailable(candidate, excludeBusinessId: profile['id']);
+            final finalHandle = available ? candidate : '$candidate-${profile['id'].toString().substring(0, 4)}';
+            await _client.from('businesses').update({'business_handle': finalHandle}).eq('id', profile['id']);
+            profile['business_handle'] = finalHandle;
+          } catch (_) {
+            profile['business_handle'] = candidate;
+          }
+        }
+
         return profile;
       }
 
@@ -93,9 +144,12 @@ class BusinessService {
         return Map<String, dynamic>.from(existingRecord);
       }
 
+      final initialHandle = generateHandleFromName(cleanName);
+
       final newProfile = await _client.from('businesses').insert({
         'owner_user_id': user.id,
         'business_name': cleanName,
+        'business_handle': initialHandle,
         'business_industry': 'services',
         'business_registration_number': 'PENDING-REG',
         'address_line': '',
@@ -144,6 +198,7 @@ class BusinessService {
   /// Checks for duplicates with the same name for this owner to prevent accidental duplicates.
   Future<Map<String, dynamic>> createBusinessProfile({
     required String businessName,
+    String? businessHandle,
     String businessIndustry = 'services',
     String? registrationNumber,
     String? sstNumber,
@@ -164,6 +219,9 @@ class BusinessService {
     if (user == null) throw Exception('User not logged in');
 
     final cleanName = businessName.trim();
+    final cleanHandle = (businessHandle != null && businessHandle.trim().isNotEmpty)
+        ? businessHandle.trim().toLowerCase().replaceAll('@', '')
+        : generateHandleFromName(cleanName);
 
     // Check if owner already has a business with this exact name
     final existingSameName = await _client
@@ -176,6 +234,7 @@ class BusinessService {
     final payload = <String, dynamic>{
       'owner_user_id': user.id,
       'business_name': cleanName,
+      'business_handle': cleanHandle,
       'business_industry': businessIndustry.trim(),
       'business_registration_number': registrationNumber?.trim() ?? 'PENDING-REG',
       'address_line': addressLine?.trim() ?? '',
@@ -324,6 +383,7 @@ class BusinessService {
       // Create new business profile (or update if same name already exists)
       final created = await createBusinessProfile(
         businessName: businessData['business_name'] ?? 'My Business',
+        businessHandle: businessData['business_handle'],
         businessIndustry: businessData['business_industry'] ?? 'services',
         registrationNumber: businessData['business_registration_number'],
         sstNumber: businessData['sst_number'],

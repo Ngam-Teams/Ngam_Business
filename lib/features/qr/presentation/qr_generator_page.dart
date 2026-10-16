@@ -31,6 +31,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   // Store Information (Fixed from Business Profile)
   String _storeName = 'Kedai Saya';
   String _businessId = 'store';
+  String _businessHandle = '';
 
   // Customizable Table Identifier (Supports any number/name e.g. 1, 12, A-01, VIP)
   final _tableCtrl = TextEditingController(text: '1');
@@ -109,6 +110,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             _storeName = profileName;
           }
           _businessId = profile['id']?.toString() ?? 'store';
+          _businessHandle = (profile['business_handle'] ?? '').toString().trim().replaceAll('@', '').toLowerCase();
 
           final settings = profile['settings'] as Map<String, dynamic>?;
           if (settings != null) {
@@ -143,22 +145,22 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   }
 
   String get _qrPayloadUrl {
-    final encodedStore = Uri.encodeComponent(_businessId);
+    final identifier = _businessHandle.isNotEmpty ? '@$_businessHandle' : 'store/${Uri.encodeComponent(_businessId)}';
     switch (_selectedMode) {
       case QrMode.storefront:
-        return '$_pwaBaseUrl/store/$encodedStore';
+        return '$_pwaBaseUrl/$identifier';
       case QrMode.table:
         final table = _tableCtrl.text.trim().isEmpty ? '1' : _tableCtrl.text.trim();
-        return '$_pwaBaseUrl/store/$encodedStore?table=${Uri.encodeComponent(table)}';
+        return '$_pwaBaseUrl/$identifier?table=${Uri.encodeComponent(table)}';
       case QrMode.promo:
         final code = _promoCodeCtrl.text.trim().toUpperCase();
-        return '$_pwaBaseUrl/store/$encodedStore?promo=${Uri.encodeComponent(code)}';
+        return '$_pwaBaseUrl/$identifier?promo=${Uri.encodeComponent(code)}';
       case QrMode.wifi:
         final ssid = _wifiSsidCtrl.text.trim().replaceAll(';', r'\;').replaceAll(':', r'\:');
         final pass = _wifiPasswordCtrl.text.trim().replaceAll(';', r'\;').replaceAll(':', r'\:');
         return 'WIFI:T:WPA;S:$ssid;P:$pass;;';
       case QrMode.queue:
-        return '$_pwaBaseUrl/queue/$encodedStore';
+        return '$_pwaBaseUrl/queue/${_businessHandle.isNotEmpty ? "@$_businessHandle" : Uri.encodeComponent(_businessId)}';
     }
   }
 
@@ -804,35 +806,66 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   }
 
   Widget _buildPreviewHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Color(0xFF10B981),
-              shape: BoxShape.circle,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
-          const SizedBox(width: 8),
-          Text(
-            'Pratonton Langsung Standee Meja',
-            style: GoogleFonts.outfit(
-              color: Colors.white70,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF10B981),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Pratonton Langsung Standee Meja',
+                style: GoogleFonts.outfit(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_businessHandle.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF42A5F5).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.link_rounded, color: Color(0xFF42A5F5), size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  'ngam.dev/@$_businessHandle',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFF90CAF9),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 

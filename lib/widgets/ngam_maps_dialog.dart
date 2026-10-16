@@ -27,14 +27,17 @@ class NgamMapsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF1E1E2C) : Colors.white;
+    final bgColor = isDark ? const Color(0xFF141724) : Colors.white;
     final textColor = isDark ? Colors.white : const Color(0xFF1C1C1E);
-    final linkColor = const Color(0xFF007AFF);
+    const linkColor = Color(0xFF2196F3);
 
     return Dialog(
       backgroundColor: bgColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(28),
+        side: isDark
+            ? BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1)
+            : BorderSide.none,
       ),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Container(
@@ -45,11 +48,11 @@ class NgamMapsDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // ── Vector Illustration ─────────────────────────────
-            const SizedBox(
+            SizedBox(
               width: 190,
               height: 150,
               child: CustomPaint(
-                painter: _NgamMapsHeroPainter(),
+                painter: _NgamMapsHeroPainter(isDark: isDark),
               ),
             ),
             const SizedBox(height: 20),
@@ -89,7 +92,7 @@ class NgamMapsDialog extends StatelessWidget {
             const SizedBox(height: 10),
             _buildLink(
               label: 'Terms of Service',
-              url: 'https://ngam.my',
+              url: 'https://ngam.dev',
               color: linkColor,
             ),
             const SizedBox(height: 24),
@@ -98,22 +101,34 @@ class NgamMapsDialog extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00B14F), // Vibrant Grab-green
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF2196F3).withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: const Text(
-                  'Explore NgamMaps',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.2,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2196F3), // Ngam Signature Electric Blue!
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                  ),
+                  child: const Text(
+                    'Explore NgamMaps',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.2,
+                    ),
                   ),
                 ),
               ),
@@ -182,7 +197,7 @@ class NgamMapsAttributionBadge extends StatelessWidget {
               Icon(
                 Icons.info_outline_rounded,
                 size: 13,
-                color: isDark ? Colors.white70 : const Color(0xFF4A4A4A),
+                color: isDark ? const Color(0xFF64B5F6) : const Color(0xFF2196F3),
               ),
               const SizedBox(width: 4),
               Text(
@@ -190,7 +205,7 @@ class NgamMapsAttributionBadge extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white70 : const Color(0xFF2C2C2E),
+                  color: isDark ? Colors.white : const Color(0xFF1976D2),
                   letterSpacing: -0.2,
                 ),
               ),
@@ -203,31 +218,34 @@ class NgamMapsAttributionBadge extends StatelessWidget {
 }
 
 /// CustomPainter that draws the 3D isometric city, friendly mascot helmet,
-/// road signs and glowing teal ring featured in GrabMaps' official modal.
+/// road signs and glowing ring featured in NgamMaps' official modal.
 class _NgamMapsHeroPainter extends CustomPainter {
-  const _NgamMapsHeroPainter();
+  final bool isDark;
+  const _NgamMapsHeroPainter({this.isDark = false});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height * 0.58);
 
-    // 1. Soft Teal/Mint Backdrop Halo
+    // 1. Soft Ice-Blue Backdrop Halo
     final haloPaint = Paint()
-      ..color = const Color(0xFFD7F5EC)
+      ..color = isDark ? const Color(0xFF1E2D4A) : const Color(0xFFE3F2FD)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(size.width / 2, size.height * 0.45), 65, haloPaint);
 
     final outerRing = Paint()
-      ..color = const Color(0xFFBCEBDD)
+      ..color = isDark
+          ? const Color(0xFF2196F3).withValues(alpha: 0.3)
+          : const Color(0xFFBBDEFB)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 14;
     canvas.drawCircle(Offset(size.width / 2, size.height * 0.45), 68, outerRing);
 
-    // 2. Road Signs behind the island
+    // 2. Road Signs behind the island (Ngam Blue)
     // Left: Direction Arrow Sign
-    final signPaint = Paint()..color = const Color(0xFF3CD1A4);
+    final signPaint = Paint()..color = const Color(0xFF2196F3);
     final signPole = Paint()
-      ..color = const Color(0xFF9BD9C8)
+      ..color = isDark ? const Color(0xFF475569) : const Color(0xFF90CAF9)
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke;
 
@@ -250,13 +268,14 @@ class _NgamMapsHeroPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(const Offset(138, 52), const Offset(158, 52), signBar);
 
-    // 3. Floating 3D Island Base (Green & Brown Soil)
+    // 3. Floating 3D Island Base (Lush Emerald Turf & Slate Base)
     final soilRect = Rect.fromCenter(
       center: Offset(center.dx, center.dy + 12),
       width: 140,
       height: 48,
     );
-    final soilPaint = Paint()..color = const Color(0xFFC7A88F);
+    final soilPaint = Paint()
+      ..color = isDark ? const Color(0xFF334155) : const Color(0xFF94A3B8);
     canvas.drawOval(soilRect, soilPaint);
 
     final grassRect = Rect.fromCenter(
@@ -264,13 +283,13 @@ class _NgamMapsHeroPainter extends CustomPainter {
       width: 140,
       height: 44,
     );
-    final grassPaint = Paint()..color = const Color(0xFF86D957);
+    final grassPaint = Paint()..color = const Color(0xFF10B981);
     canvas.drawOval(grassRect, grassPaint);
 
-    // 4. Mascot with Helmet hugging the city from behind
+    // 4. Mascot with Ngam Signature Blue Helmet
     final skinPaint = Paint()..color = const Color(0xFFFFCC99);
-    final helmetPaint = Paint()..color = const Color(0xFF00B14F);
-    final visorPaint = Paint()..color = const Color(0xFF8DE8BD);
+    final helmetPaint = Paint()..color = const Color(0xFF2196F3);
+    final visorPaint = Paint()..color = const Color(0xFF90CAF9);
 
     // Mascot Head
     canvas.drawCircle(Offset(center.dx, center.dy - 38), 24, skinPaint);
@@ -307,17 +326,17 @@ class _NgamMapsHeroPainter extends CustomPainter {
       smilePaint,
     );
 
-    // 5. 3D Isometric Buildings in center
+    // 5. 3D Isometric Buildings in center (Vibrant Ngam Blues)
     // Building Left (Cyan skyscraper)
-    _drawBuilding(canvas, Offset(center.dx - 28, center.dy - 22), 16, 32, const Color(0xFF55C7F2), const Color(0xFF2FB2E3));
-    // Building Center (Blue skyscraper)
-    _drawBuilding(canvas, Offset(center.dx - 10, center.dy - 30), 20, 42, const Color(0xFF388BF2), const Color(0xFF1E6FD6));
-    // Building Right (White/Teal tower)
-    _drawBuilding(canvas, Offset(center.dx + 12, center.dy - 24), 16, 34, const Color(0xFF7BE5C4), const Color(0xFF52CCA7));
+    _drawBuilding(canvas, Offset(center.dx - 28, center.dy - 22), 16, 32, const Color(0xFF40C4FF), const Color(0xFF00B0FF));
+    // Building Center (Electric Blue skyscraper)
+    _drawBuilding(canvas, Offset(center.dx - 10, center.dy - 30), 20, 42, const Color(0xFF2196F3), const Color(0xFF1565C0));
+    // Building Right (Light Sky Blue tower)
+    _drawBuilding(canvas, Offset(center.dx + 12, center.dy - 24), 16, 34, const Color(0xFF90CAF9), const Color(0xFF64B5F6));
 
     // Curving road on island
     final roadPaint = Paint()
-      ..color = const Color(0xFFE8F2F7)
+      ..color = isDark ? const Color(0xFF1E293B) : const Color(0xFFE8F4FD)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8;
     final roadPath = Path()
@@ -329,8 +348,8 @@ class _NgamMapsHeroPainter extends CustomPainter {
     final pinCenter = Offset(center.dx, center.dy - 2);
     _drawRedPin(canvas, pinCenter);
 
-    // 7. Mascot Hands hugging the island base
-    final handPaint = Paint()..color = const Color(0xFF00B14F);
+    // 7. Mascot Hands hugging the island base (Ngam Blue gloves)
+    final handPaint = Paint()..color = const Color(0xFF2196F3);
     // Left hand/glove
     canvas.drawRRect(
       RRect.fromRectAndRadius(

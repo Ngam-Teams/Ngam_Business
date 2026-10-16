@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
@@ -26,6 +27,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
   // Identity Controllers
   final _nameController = TextEditingController();
+  final _handleController = TextEditingController();
+  bool _isHandleCustomized = false;
   String _selectedIndustry = 'services';
   final _regNoController = TextEditingController();
   final _sstNoController = TextEditingController();
@@ -124,7 +127,17 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   @override
   void initState() {
     super.initState();
+    _nameController.addListener(_onNameChanged);
     _loadProfile();
+  }
+
+  void _onNameChanged() {
+    if (!_isHandleCustomized && (_businessId == null || _handleController.text.trim().isEmpty)) {
+      final generated = BusinessService.generateHandleFromName(_nameController.text);
+      if (_handleController.text != generated) {
+        _handleController.text = generated;
+      }
+    }
   }
 
   Future<void> _loadProfile() async {
@@ -135,6 +148,15 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       if (data != null) {
         _businessId = data['id'];
         _nameController.text = data['business_name'] ?? '';
+
+        final handle = (data['business_handle'] as String?)?.trim() ?? '';
+        if (handle.isNotEmpty) {
+          _handleController.text = handle.replaceAll('@', '').toLowerCase();
+          _isHandleCustomized = true;
+        } else if (_nameController.text.isNotEmpty) {
+          _handleController.text = BusinessService.generateHandleFromName(_nameController.text);
+          _isHandleCustomized = false;
+        }
 
         final industry = (data['business_industry'] as String? ?? 'services').toLowerCase();
         if (_industries.any((i) => i['id'] == industry)) {
@@ -217,10 +239,35 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       return;
     }
 
+    final cleanHandle = _handleController.text.trim().replaceAll('@', '').toLowerCase();
+    if (cleanHandle.isEmpty) {
+      showGlassToast(context, 'Sila masukkan business handle untuk kedai anda.', isError: true);
+      return;
+    }
+    if (cleanHandle.length < 3 || cleanHandle.length > 30) {
+      showGlassToast(context, 'Business handle mesti antara 3 hingga 30 aksara.', isError: true);
+      return;
+    }
+    if (!RegExp(r'^[a-z0-9_-]+$').hasMatch(cleanHandle)) {
+      showGlassToast(context, 'Business handle hanya boleh mengandungi huruf kecil, nombor, tanda tolak (-) dan garis bawah (_).', isError: true);
+      return;
+    }
+
     setState(() => _isSaving = true);
+
+    // Uniqueness validation against Supabase
+    final isAvailable = await _service.isHandleAvailable(cleanHandle, excludeBusinessId: _businessId);
+    if (!isAvailable) {
+      setState(() => _isSaving = false);
+      if (mounted) {
+        showGlassToast(context, 'Handle "@$cleanHandle" telah digunakan oleh peniaga lain. Sila pilih handle lain.', isError: true);
+      }
+      return;
+    }
 
     final businessData = {
       'business_name': _nameController.text.trim(),
+      'business_handle': cleanHandle,
       'business_industry': _selectedIndustry,
       'business_registration_number': _regNoController.text.trim().isNotEmpty
           ? _regNoController.text.trim()
@@ -358,7 +405,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
+    _handleController.dispose();
     _regNoController.dispose();
     _sstNoController.dispose();
     _phoneController.dispose();
@@ -456,6 +505,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                               return null;
                             },
                           ),
+                          const SizedBox(height: 16),
+
+                          // Business Handle (@handle for unique URL and QR standees)
+                          _buildHandleField(),
+
                           const SizedBox(height: 16),
 
                           // Industry Selector (fnb, barber, retail, services)
@@ -933,6 +987,202 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                 ],
               ),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHandleField() {
+    final rawHandle = _handleController.text.trim().replaceAll('@', '').toLowerCase();
+    final isValidLength = rawHandle.length >= 3 && rawHandle.length <= 30;
+    final isValidFormat = RegExp(r'^[a-z0-9_-]+$').hasMatch(rawHandle);
+    final isValid = isValidLength && isValidFormat;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                'Business Handle / Pautan Kedai *',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (rawHandle.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isValid
+                      ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                      : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isValid
+                        ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                        : const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isValid ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                      size: 12,
+                      color: isValid ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isValid
+                          ? 'Format Sah'
+                          : (!isValidLength ? '3-30 aksara' : 'a-z, 0-9, -, _ sahaja'),
+                      style: TextStyle(
+                        color: isValid ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        TextFormField(
+          controller: _handleController,
+          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+          onChanged: (val) {
+            _isHandleCustomized = true;
+            setState(() {});
+          },
+          validator: (val) {
+            final clean = (val ?? '').trim().replaceAll('@', '').toLowerCase();
+            if (clean.isEmpty) return 'Business handle is required';
+            if (clean.length < 3 || clean.length > 30) return 'Handle must be between 3 and 30 characters';
+            if (!RegExp(r'^[a-z0-9_-]+$').hasMatch(clean)) {
+              return 'Only lowercase letters, numbers, hyphens (-) and underscores (_) allowed';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            hintText: 'pisangkrispy',
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13),
+            prefixIcon: Container(
+              padding: const EdgeInsets.only(left: 12, right: 8),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.alternate_email_rounded,
+                    color: Color(0xFF42A5F5),
+                    size: 18,
+                  ),
+                  SizedBox(width: 4),
+                ],
+              ),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 38),
+            suffixIcon: rawHandle.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.auto_fix_high_rounded, color: Colors.white38, size: 16),
+                    tooltip: 'Jana semula dari nama kedai',
+                    onPressed: () {
+                      if (_nameController.text.trim().isNotEmpty) {
+                        setState(() {
+                          _handleController.text = BusinessService.generateHandleFromName(_nameController.text);
+                          _isHandleCustomized = false;
+                        });
+                      }
+                    },
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF42A5F5)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Colors.redAccent),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Live URL Preview Card
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF42A5F5).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.link_rounded, color: Color(0xFF42A5F5), size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    text: 'Pautan Kedai: ',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 12,
+                    ),
+                    children: [
+                      const TextSpan(
+                        text: 'https://ngam.dev/@',
+                        style: TextStyle(
+                          color: Color(0xFF90CAF9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      TextSpan(
+                        text: rawHandle.isEmpty ? 'handle' : rawHandle,
+                        style: TextStyle(
+                          color: rawHandle.isEmpty ? Colors.white30 : const Color(0xFF42A5F5),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (rawHandle.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    final url = 'https://ngam.dev/@$rawHandle';
+                    Clipboard.setData(ClipboardData(text: url));
+                    showGlassToast(context, 'Pautan kedai disalin: $url');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(Icons.copy_rounded, color: Colors.white70, size: 14),
+                  ),
+                ),
+            ],
           ),
         ),
       ],
