@@ -281,7 +281,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
       case MapLayerType.voyager:
         return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=$_cartoApiKey';
       case MapLayerType.darkMatter:
-        return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=$_cartoApiKey';
+        return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=$_cartoApiKey';
       case MapLayerType.osm:
         return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
       case MapLayerType.satelliteEsri:
@@ -611,6 +611,19 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
                   key: ValueKey(_currentLayer),
                   urlTemplate: _getTileUrl(),
                   userAgentPackageName: 'com.ngam.business',
+                  tileBuilder: _currentLayer == MapLayerType.darkMatter
+                      ? (context, tileWidget, tile) {
+                          return ColorFiltered(
+                            colorFilter: const ColorFilter.matrix([
+                               0.574, -1.430, -0.144, 0.0, 265.0,
+                              -0.426, -0.430, -0.144, 0.0, 265.0,
+                              -0.426, -1.430,  0.856, 0.0, 270.0,
+                               0.0,    0.0,    0.0,   1.0,   0.0,
+                            ]),
+                            child: tileWidget,
+                          );
+                        }
+                      : null,
                 ),
 
                 // Grab-style soft blue circular accuracy / selection halo around target
