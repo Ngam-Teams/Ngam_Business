@@ -28,8 +28,8 @@ class QrGeneratorPage extends StatefulWidget {
 class _QrGeneratorPageState extends State<QrGeneratorPage> {
   QrMode _selectedMode = QrMode.storefront;
 
-  // Store Information (Fully Customizable)
-  final _storeNameCtrl = TextEditingController(text: 'Kedai Saya');
+  // Store Information (Fixed from Business Profile)
+  String _storeName = 'Kedai Saya';
   String _businessId = 'store';
 
   // Customizable Table Identifier (Supports any number/name e.g. 1, 12, A-01, VIP)
@@ -90,7 +90,6 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
 
   @override
   void dispose() {
-    _storeNameCtrl.dispose();
     _tableCtrl.dispose();
     _wifiSsidCtrl.dispose();
     _wifiPasswordCtrl.dispose();
@@ -105,9 +104,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       final profile = await BusinessService().getBusinessProfile();
       if (profile != null && mounted) {
         setState(() {
-          final profileName = profile['name']?.toString().trim();
+          final profileName = (profile['business_name'] ?? profile['name'] ?? profile['title'])?.toString().trim();
           if (profileName != null && profileName.isNotEmpty) {
-            _storeNameCtrl.text = profileName;
+            _storeName = profileName;
           }
           _businessId = profile['id']?.toString() ?? 'store';
 
@@ -721,8 +720,6 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                       children: [
                         _buildModeSelector(),
                         const SizedBox(height: 20),
-                        _buildStoreNameCustomizerCard(),
-                        const SizedBox(height: 16),
                         if (_selectedMode == QrMode.table) ...[
                           _buildTableCustomizerCard(),
                           const SizedBox(height: 16),
@@ -783,8 +780,6 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                   const SizedBox(height: 16),
                   _buildActionButtons(),
                   const SizedBox(height: 24),
-                  _buildStoreNameCustomizerCard(),
-                  const SizedBox(height: 16),
                   if (_selectedMode == QrMode.table) ...[
                     _buildTableCustomizerCard(),
                     const SizedBox(height: 16),
@@ -952,9 +947,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Store Title (Live from Controller)
+                        // Store Title (Fixed from Business Profile)
                         Text(
-                          _storeNameCtrl.text.trim().isEmpty ? 'Kedai Saya' : _storeNameCtrl.text.trim(),
+                          _storeName.trim().isEmpty ? 'Kedai Saya' : _storeName.trim(),
                           textAlign: TextAlign.center,
                           style: GoogleFonts.outfit(
                             color: const Color(0xFF0F172A),
@@ -1371,58 +1366,6 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStoreNameCustomizerCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141424),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.storefront_rounded, color: Color(0xFF42A5F5), size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Nama Kedai pada Standee',
-                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Nama ini dipaparkan terus di bahagian atas standee fizikal kedai anda.',
-                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildInputField(
-            label: 'Nama Kedai / Jenama',
-            controller: _storeNameCtrl,
-            icon: Icons.edit_note_rounded,
-            hint: 'Contoh: Warung Kopi Bangi / Barber Chop',
-          ),
-        ],
       ),
     );
   }
