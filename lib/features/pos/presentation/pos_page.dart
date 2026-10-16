@@ -288,11 +288,11 @@ class _PosPageState extends State<PosPage> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.only(bottom: 120),
                       gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1.2,
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 175,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 1.05,
                       ),
                       itemCount: _filteredProducts.length,
                       itemBuilder: (context, i) =>
@@ -343,101 +343,239 @@ class _PosPageState extends State<PosPage> {
         .map((i) => i.quantity)
         .firstOrNull;
 
-    return GestureDetector(
-      onTap: () => _addToCart(product),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          color: inCart != null
-              ? const Color(0xFF42A5F5).withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
+    final hasImage = product.imageUrl != null && product.imageUrl!.trim().isNotEmpty;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _addToCart(product),
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
             color: inCart != null
-                ? const Color(0xFF42A5F5).withValues(alpha: 0.5)
-                : Colors.white.withValues(alpha: 0.1),
-            width: 1.2,
-          ),
-        ),
-        child: Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                ? const Color(0xFF42A5F5).withValues(alpha: 0.14)
+                : Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: inCart != null
+                  ? const Color(0xFF42A5F5)
+                  : Colors.white.withValues(alpha: 0.09),
+              width: inCart != null ? 1.5 : 1.0,
+            ),
+            boxShadow: inCart != null
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF42A5F5).withValues(alpha: 0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  ]
+                : null,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Stack(
+              children: [
+                if (hasImage) ...[
+                  // Card with Image
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (product.category != null && product.category!.trim().isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
+                      // Top Image
+                      Expanded(
+                        flex: 5,
+                        child: Container(
+                          width: double.infinity,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF42A5F5)
-                                .withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            product.category!,
-                            style: const TextStyle(
-                              color: Color(0xFF42A5F5),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                            image: DecorationImage(
+                              image: NetworkImage(product.imageUrl!),
+                              fit: BoxFit.cover,
                             ),
                           ),
                         ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'RM ${product.price.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: Color(0xFF42A5F5),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                      ),
+                      // Bottom Details
+                      Expanded(
+                        flex: 4,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                product.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'RM ${product.price.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF42A5F5),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.all(2.5),
+                                    decoration: BoxDecoration(
+                                      color: inCart != null
+                                          ? const Color(0xFF42A5F5)
+                                          : const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      inCart != null ? Icons.check_rounded : Icons.add_rounded,
+                                      size: 13,
+                                      color: inCart != null ? Colors.white : const Color(0xFF42A5F5),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            if (inCart != null)
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF42A5F5),
-                    shape: BoxShape.circle,
+                ] else ...[
+                  // Card without Image (Clean, compact POS tile)
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header row: category pill or icon
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (product.category != null && product.category!.trim().isNotEmpty)
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    product.category!,
+                                    style: const TextStyle(
+                                      color: Color(0xFF42A5F5),
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Icon(
+                                  Icons.storefront_rounded,
+                                  size: 14,
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            const SizedBox(width: 24), // Leave space for cart badge if inCart
+                          ],
+                        ),
+                        // Middle: Product Name (occupies remaining height cleanly)
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              product.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.bold,
+                                height: 1.25,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        // Bottom row: Price and Add button
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'RM ${product.price.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: Color(0xFF42A5F5),
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: inCart != null
+                                    ? const Color(0xFF42A5F5)
+                                    : Colors.white.withValues(alpha: 0.08),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                inCart != null ? Icons.check_rounded : Icons.add_rounded,
+                                size: 15,
+                                color: inCart != null ? Colors.white : Colors.white70,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Center(
-                    child: Text(
-                      '$inCart',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                ],
+
+                // In-Cart Badge at Top-Right
+                if (inCart != null)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF42A5F5),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF42A5F5).withValues(alpha: 0.5),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '$inCart',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-          ],
+              ],
+            ),
+          ),
         ),
       ),
     );

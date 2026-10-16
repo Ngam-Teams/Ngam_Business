@@ -230,11 +230,11 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
                           onRefresh: _loadProducts,
                           child: GridView.builder(
                             padding: const EdgeInsets.all(16).copyWith(bottom: 100),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 220,
                               crossAxisSpacing: 14,
                               mainAxisSpacing: 14,
-                              childAspectRatio: 0.68,
+                              childAspectRatio: 0.72,
                             ),
                             itemCount: filtered.length,
                             itemBuilder: (context, index) {
