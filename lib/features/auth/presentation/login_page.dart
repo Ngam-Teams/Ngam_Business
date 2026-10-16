@@ -48,6 +48,8 @@ class _LoginPageState extends State<LoginPage>
   // General state
   bool _loading = false;
   String? _error;
+  bool _isDark = true;
+  String _locale = 'en';
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -251,6 +253,69 @@ class _LoginPageState extends State<LoginPage>
                     child: isDesktop
                         ? _buildDesktopLayout(context)
                         : _buildMobileLayout(context),
+                  ),
+                ),
+              ),
+
+              // ─── 3. Top-Right Language & Theme Control ───
+              Positioned(
+                top: 24,
+                right: 28,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          width: 1,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Language button
+                          IconButton(
+                            tooltip: 'Language',
+                            icon: const HugeIcon(
+                              icon: HugeIcons.strokeRoundedTranslate,
+                              color: textPrimary,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _locale = _locale == 'en' ? 'ms' : 'en';
+                              });
+                            },
+                          ),
+                          Container(
+                            width: 1,
+                            height: 16,
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
+                          // Theme button
+                          IconButton(
+                            tooltip: 'Theme',
+                            icon: HugeIcon(
+                              icon: _isDark
+                                  ? HugeIcons.strokeRoundedSun01
+                                  : HugeIcons.strokeRoundedMoon02,
+                              color: textPrimary,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isDark = !_isDark;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -499,7 +564,7 @@ class _LoginPageState extends State<LoginPage>
               ),
               const SizedBox(height: 4),
               Text(
-                'Access your business dashboard and manage store orders.',
+                'Access your business dashboard and manage orders.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 12.5,
@@ -1274,6 +1339,7 @@ class _LoginPageState extends State<LoginPage>
       child: OutlinedButton(
         onPressed: _loading ? null : _handleGoogleLogin,
         style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           backgroundColor: Colors.white.withValues(alpha: 0.04),
           side: BorderSide(
