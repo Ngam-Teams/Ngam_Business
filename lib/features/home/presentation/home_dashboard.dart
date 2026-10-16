@@ -77,6 +77,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
       icon: HugeIcons.strokeRoundedShoppingBag01,
       color: Color(0xFF42A5F5),
     ),
+    (
+      time: '4h ago',
+      event: 'Customer review received: 5.0 ⭐',
+      icon: HugeIcons.strokeRoundedStar,
+      color: Color(0xFFFFA726),
+    ),
+    (
+      time: '5h ago',
+      event: 'Order #2038 completed — RM 45.00',
+      icon: HugeIcons.strokeRoundedShoppingBag01,
+      color: Color(0xFF42A5F5),
+    ),
+    (
+      time: '6h ago',
+      event: 'Payout settlement RM 380.00 processed',
+      icon: HugeIcons.strokeRoundedCoins01,
+      color: Color(0xFF10B981),
+    ),
   ];
 
   @override
@@ -138,35 +156,48 @@ class _HomeDashboardState extends State<HomeDashboard> {
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
+            final isDesktop = width >= 900;
+            final bottomPad = isDesktop ? 24.0 : 100.0;
+
+            final showBanner = !_loadingBusiness && (!hasLocation || (_businessProfile?['address_line'] ?? '').isEmpty);
+            // Approx upper section height on desktop (banner + stats + spacing)
+            final topSectionHeight = (showBanner ? 92.0 : 0.0) + 115.0 + 20.0;
+            const minPanelHeight = 350.0;
+            final availableForPanels = constraints.maxHeight - (topSectionHeight + bottomPad);
+            final panelHeight = availableForPanels > minPanelHeight ? availableForPanels : minPanelHeight;
+
             return SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(0, 0, 0, width >= 800 ? 36 : 100),
+              padding: EdgeInsets.fromLTRB(0, 0, 0, bottomPad),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Business Profile Setup Reminder if location or details missing
-                  if (!_loadingBusiness && (!hasLocation || (_businessProfile?['address_line'] ?? '').isEmpty))
+                  if (showBanner)
                     _buildProfileIncompleteBanner(context),
 
                   // Stat cards grid
                   _buildStatCards(cards, width),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   // Lower panels (Recent 1:3, Quick Actions 2:3)
-                  if (width >= 900)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 1, child: _buildRecentActivity()),
-                        const SizedBox(width: 20),
-                        Expanded(flex: 2, child: _buildQuickActions(context)),
-                      ],
+                  if (isDesktop)
+                    SizedBox(
+                      height: panelHeight,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(flex: 1, child: _buildRecentActivity(isDesktop: true)),
+                          const SizedBox(width: 20),
+                          Expanded(flex: 2, child: _buildQuickActions(context, isDesktop: true)),
+                        ],
+                      ),
                     )
                   else
                     Column(
                       children: [
-                        _buildRecentActivity(),
+                        _buildRecentActivity(isDesktop: false),
                         const SizedBox(height: 20),
-                        _buildQuickActions(context),
+                        _buildQuickActions(context, isDesktop: false),
                       ],
                     ),
                 ],
@@ -366,63 +397,110 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
   }
 
-  Widget _buildRecentActivity() {
+  Widget _buildRecentActivity({bool isDesktop = false}) {
     return _buildPanel(
       title: 'Recent Activity',
       icon: HugeIcons.strokeRoundedActivity01,
-      child: Column(
-        children: _activities
-            .map(
-              (act) => Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: act.color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: HugeIcon(
-                        icon: act.icon,
-                        color: act.color,
-                        size: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            act.event,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            act.time,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.35),
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+      expand: isDesktop,
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF44CF6C).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: const Color(0xFF44CF6C).withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: const BoxDecoration(
+                color: Color(0xFF44CF6C),
+                shape: BoxShape.circle,
               ),
-            )
-            .toList(),
+            ),
+            const SizedBox(width: 5),
+            const Text(
+              'Live Feed',
+              style: TextStyle(
+                color: Color(0xFF44CF6C),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       ),
+      child: isDesktop
+          ? ListView.separated(
+              padding: EdgeInsets.zero,
+              physics: const BouncingScrollPhysics(),
+              itemCount: _activities.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) => _buildActivityItem(_activities[i]),
+            )
+          : Column(
+              children: _activities
+                  .map(
+                    (act) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildActivityItem(act),
+                    ),
+                  )
+                  .toList(),
+            ),
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildActivityItem(({Color color, String event, dynamic icon, String time}) act) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: act.color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: HugeIcon(
+            icon: act.icon,
+            color: act.color,
+            size: 16,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                act.event,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                act.time,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.35),
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, {bool isDesktop = false}) {
     final actions = [
       (
         label: 'Smart Queue\n& TV Display',
@@ -540,6 +618,25 @@ class _HomeDashboardState extends State<HomeDashboard> {
     return _buildPanel(
       title: 'Quick Actions',
       icon: HugeIcons.strokeRoundedZap,
+      expand: isDesktop,
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
+        child: const Text(
+          '18 Tools',
+          style: TextStyle(
+            color: Colors.white60,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isNarrowPhone = constraints.maxWidth < 420;
@@ -621,12 +718,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
     required String title,
     required dynamic icon,
     required Widget child,
+    Widget? trailing,
+    bool expand = false,
   }) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
+          height: expand ? double.infinity : null,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.07),
@@ -669,10 +769,17 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (trailing != null) ...[
+                    const Spacer(),
+                    trailing,
+                  ],
                 ],
               ),
-              const SizedBox(height: 20),
-              child,
+              const SizedBox(height: 16),
+              if (expand)
+                Expanded(child: child)
+              else
+                child,
             ],
           ),
         ),
