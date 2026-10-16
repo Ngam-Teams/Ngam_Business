@@ -708,27 +708,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Mode Selector (5 Modes)
-            Text(
-              'Pilih Mod Kod QR Standee',
-              style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildModeChip(QrMode.storefront, 'Storefront', HugeIcons.strokeRoundedStore01),
-                  const SizedBox(width: 8),
-                  _buildModeChip(QrMode.table, 'Meja Dine-in', HugeIcons.strokeRoundedRestaurant01),
-                  const SizedBox(width: 8),
-                  _buildModeChip(QrMode.promo, 'Kod Promo', HugeIcons.strokeRoundedCoupon02),
-                  const SizedBox(width: 8),
-                  _buildModeChip(QrMode.wifi, 'Auto WiFi', HugeIcons.strokeRoundedWifi01),
-                  const SizedBox(width: 8),
-                  _buildModeChip(QrMode.queue, 'Giliran Walk-in', HugeIcons.strokeRoundedTicket01),
-                ],
-              ),
-            ),
+            _buildModeSelector(),
             const SizedBox(height: 24),
 
             // Standee Live Preview Card (Ultra Modern Acrylic Desk Standee Style)
@@ -1037,45 +1017,267 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             const SizedBox(height: 28),
 
             // Action Buttons Bar
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _accentColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: _isDownloading ? null : _captureAndSaveStandee,
-                    icon: _isDownloading
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Icon(Icons.download_rounded, size: 20),
-                    label: Text(
-                      _isDownloading ? 'Menjana Fail...' : 'Muat Turun Standee (HD)',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: _qrPayloadUrl));
-                    showGlassToast(context, 'Pautan QR disalin ke papan klip!');
-                  },
-                  icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: Text('Salin URL', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                ),
-              ],
+            _buildActionButtons(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Color(0xFF10B981),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Pratonton Langsung Standee Meja',
+            style: GoogleFonts.outfit(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _accentColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 4,
+            ),
+            onPressed: _isDownloading ? null : _captureAndSaveStandee,
+            icon: _isDownloading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Icon(Icons.download_rounded, size: 20),
+            label: Text(
+              _isDownloading ? 'Menjana Fail...' : 'Muat Turun Standee (HD)',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: const BorderSide(color: Colors.white24),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: _qrPayloadUrl));
+            showGlassToast(context, 'Pautan QR disalin ke papan klip!');
+          },
+          icon: const Icon(Icons.copy_rounded, size: 18),
+          label: Text('Salin URL', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 16,
+              decoration: BoxDecoration(
+                color: _accentColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Pilih Mod Kod QR Standee',
+              style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildModeChip(QrMode.storefront, 'Storefront', HugeIcons.strokeRoundedStore01),
+              const SizedBox(width: 8),
+              _buildModeChip(QrMode.table, 'Meja Dine-in', HugeIcons.strokeRoundedRestaurant01),
+              const SizedBox(width: 8),
+              _buildModeChip(QrMode.promo, 'Kod Promo', HugeIcons.strokeRoundedCoupon02),
+              const SizedBox(width: 8),
+              _buildModeChip(QrMode.wifi, 'Auto WiFi', HugeIcons.strokeRoundedWifi01),
+              const SizedBox(width: 8),
+              _buildModeChip(QrMode.queue, 'Giliran Walk-in', HugeIcons.strokeRoundedTicket01),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInputField({
+    required String label,
+    required TextEditingController controller,
+    required dynamic icon,
+    String? hint,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    TextInputType? keyboardType,
+    Color? focusColor,
+    ValueChanged<String>? onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        TextField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          onChanged: (val) {
+            setState(() {});
+            if (onChanged != null) onChanged(val);
+          },
+          style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            hintText: hint,
+            hintStyle: GoogleFonts.inter(color: Colors.white30, fontSize: 13),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: icon is IconData
+                  ? Icon(icon, color: Colors.white54, size: 20)
+                  : HugeIcon(icon: icon, color: Colors.white54, size: 20),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 44),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.04),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: focusColor ?? const Color(0xFF42A5F5), width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernSwitchTile({
+    required String title,
+    required String subtitle,
+    required dynamic icon,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    Color? activeColor,
+  }) {
+    final effectiveColor = activeColor ?? _accentColor;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: value
+            ? effectiveColor.withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: value
+              ? effectiveColor.withValues(alpha: 0.35)
+              : Colors.white.withValues(alpha: 0.06),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: value
+                  ? effectiveColor.withValues(alpha: 0.18)
+                  : Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: icon is IconData
+                ? Icon(icon, color: value ? effectiveColor : Colors.white54, size: 18)
+                : HugeIcon(icon: icon, color: value ? effectiveColor : Colors.white54, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    color: Colors.white54,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Switch.adaptive(
+            value: value,
+            activeColor: effectiveColor,
+            activeTrackColor: effectiveColor.withValues(alpha: 0.4),
+            inactiveThumbColor: Colors.white60,
+            inactiveTrackColor: Colors.white12,
+            onChanged: onChanged,
+          ),
+        ],
       ),
     );
   }
@@ -1127,35 +1329,39 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.storefront_rounded, color: Color(0xFF42A5F5), size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Nama Kedai pada Standee (Boleh Ubah)',
-                style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.storefront_rounded, color: Color(0xFF42A5F5), size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nama Kedai pada Standee',
+                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Nama ini dipaparkan terus di bahagian atas standee fizikal kedai anda.',
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Nama ini dipaparkan terus di bahagian atas standee fizikal kedai anda.',
-            style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
-          TextField(
+          const SizedBox(height: 16),
+          _buildInputField(
+            label: 'Nama Kedai / Jenama',
             controller: _storeNameCtrl,
-            onChanged: (_) => setState(() {}),
-            style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-            decoration: InputDecoration(
-              labelText: 'Nama Kedai / Jenama',
-              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
-              hintText: 'Contoh: Warung Kopi Bangi / Barber Chop',
-              hintStyle: GoogleFonts.inter(color: Colors.white30, fontSize: 13),
-              prefixIcon: const Icon(Icons.edit_note_rounded, color: Colors.white38, size: 20),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.04),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF42A5F5))),
-            ),
+            icon: Icons.edit_note_rounded,
+            hint: 'Contoh: Warung Kopi Bangi / Barber Chop',
           ),
         ],
       ),
@@ -1175,46 +1381,50 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.table_restaurant_rounded, color: Color(0xFF42A5F5), size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Nombor & Nama Meja (Boleh Custom Sepenuhnya)',
-                style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.table_restaurant_rounded, color: Color(0xFF42A5F5), size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nombor & Nama Meja',
+                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Taip sebarang nombor atau nama meja (cth: 1, 12, A-04, VIP 1).',
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Taip sebarang nombor atau nama meja (contoh: 1, 12, A-04, VIP 1, Outdoor 2).',
-            style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          // Custom Input Field
-          TextField(
+          _buildInputField(
+            label: 'Nombor / Nama Meja',
             controller: _tableCtrl,
-            onChanged: (_) => setState(() {}),
-            style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-            decoration: InputDecoration(
-              labelText: 'Nombor / Nama Meja',
-              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
-              hintText: 'Contoh: 1, 14, A-02, VIP',
-              hintStyle: GoogleFonts.inter(color: Colors.white30, fontSize: 13),
-              prefixIcon: const Icon(Icons.tag_rounded, color: Colors.white38, size: 20),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.04),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF42A5F5))),
+            icon: Icons.tag_rounded,
+            hint: 'Contoh: 1, 14, A-02, VIP',
+          ),
+          const SizedBox(height: 14),
+
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              'Pilihan Pantas (Tekan untuk set terus):',
+              style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.5, fontWeight: FontWeight.w600),
             ),
           ),
-          const SizedBox(height: 12),
-
-          // Quick Presets Row
-          Text(
-            'Pilihan Pantas (Tekan untuk set):',
-            style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.5, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
           SizedBox(
             height: 38,
             child: ListView.builder(
@@ -1305,57 +1515,47 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.wifi_rounded, color: Color(0xFF42A5F5), size: 20),
-                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.wifi_rounded, color: Color(0xFF42A5F5), size: 20),
+                  ),
+                  const SizedBox(width: 10),
                   Text(
-                    'Tetapan WiFi Kedai (Boleh Ubah)',
+                    'Tetapan WiFi Kedai',
                     style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
-              TextButton(
+              TextButton.icon(
                 onPressed: _saveWifiToProfile,
-                child: Text('Simpan', style: GoogleFonts.inter(color: const Color(0xFF42A5F5), fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.check_rounded, size: 16, color: Color(0xFF42A5F5)),
+                label: Text('Simpan', style: GoogleFonts.inter(color: const Color(0xFF42A5F5), fontWeight: FontWeight.bold, fontSize: 13)),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          // SSID Field
-          TextField(
+          _buildInputField(
+            label: 'Nama Rangkaian (SSID)',
             controller: _wifiSsidCtrl,
-            onChanged: (_) => setState(() {}),
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Nama Rangkaian (SSID)',
-              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
-              prefixIcon: const Icon(Icons.router_rounded, color: Colors.white38, size: 20),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.04),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF42A5F5))),
-            ),
+            icon: Icons.router_rounded,
+            hint: 'Contoh: Cafe_Guest_WiFi',
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
-          // Password Field
-          TextField(
+          _buildInputField(
+            label: 'Kata Laluan WiFi (Password)',
             controller: _wifiPasswordCtrl,
+            icon: Icons.lock_outline_rounded,
+            hint: 'Masukkan kata laluan WiFi',
             obscureText: _obscureWifiPassword,
-            onChanged: (_) => setState(() {}),
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Kata Laluan WiFi (Password)',
-              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
-              prefixIcon: const Icon(Icons.lock_outline_rounded, color: Colors.white38, size: 20),
-              suffixIcon: IconButton(
-                icon: Icon(_obscureWifiPassword ? Icons.visibility_off : Icons.visibility, color: Colors.white38, size: 20),
-                onPressed: () => setState(() => _obscureWifiPassword = !_obscureWifiPassword),
-              ),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.04),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF42A5F5))),
+            suffixIcon: IconButton(
+              icon: Icon(_obscureWifiPassword ? Icons.visibility_off : Icons.visibility, color: Colors.white38, size: 20),
+              onPressed: () => setState(() => _obscureWifiPassword = !_obscureWifiPassword),
             ),
           ),
         ],
@@ -1376,47 +1576,38 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.discount_rounded, color: Color(0xFFF59E0B), size: 20),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.discount_rounded, color: Color(0xFFF59E0B), size: 20),
+              ),
+              const SizedBox(width: 10),
               Text(
                 'Tetapan Kod Promo & Baucar',
                 style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          // Promo Code Field
-          TextField(
+          _buildInputField(
+            label: 'Kod Promosi',
             controller: _promoCodeCtrl,
-            onChanged: (_) => setState(() {}),
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-            decoration: InputDecoration(
-              labelText: 'Kod Promosi (cth: NGAM10 / RAYA26)',
-              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
-              prefixIcon: const Icon(Icons.qr_code_rounded, color: Colors.white38, size: 20),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.04),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFF59E0B))),
-            ),
+            icon: Icons.qr_code_rounded,
+            hint: 'Contoh: NGAM10 / RAYA26',
+            focusColor: const Color(0xFFF59E0B),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
-          // Discount Description Field
-          TextField(
+          _buildInputField(
+            label: 'Keterangan Diskaun',
             controller: _promoDiscountCtrl,
-            onChanged: (_) => setState(() {}),
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Keterangan Diskaun (cth: 10% OFF Semua Item)',
-              labelStyle: GoogleFonts.inter(color: Colors.white54, fontSize: 13),
-              prefixIcon: const Icon(Icons.info_outline_rounded, color: Colors.white38, size: 20),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.04),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFF59E0B))),
-            ),
+            icon: Icons.info_outline_rounded,
+            hint: 'Contoh: 10% OFF Semua Item',
+            focusColor: const Color(0xFFF59E0B),
           ),
         ],
       ),
@@ -1434,54 +1625,56 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Modul & Kandungan Tambahan Standee',
-            style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: HugeIcon(icon: HugeIcons.strokeRoundedToggleOn, color: _accentColor, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Modul & Kandungan Tambahan Standee',
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Papar Maklumat WiFi Tetamu', style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
-            subtitle: Text('SSID: ${_wifiSsidCtrl.text}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+          _buildModernSwitchTile(
+            title: 'Papar Maklumat WiFi Tetamu',
+            subtitle: 'SSID: ${_wifiSsidCtrl.text.isEmpty ? "Belum diisi" : _wifiSsidCtrl.text}',
+            icon: HugeIcons.strokeRoundedWifi01,
             value: _includeWifi,
-            activeColor: _accentColor,
             onChanged: (val) => setState(() => _includeWifi = val),
           ),
-          const Divider(height: 16, color: Colors.white10),
 
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Papar Banner Promosi Khas', style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
-            subtitle: Text('Kod: ${_promoCodeCtrl.text}', style: GoogleFonts.inter(color: Colors.white54, fontSize: 12)),
+          _buildModernSwitchTile(
+            title: 'Papar Banner Promosi Khas',
+            subtitle: 'Kod: ${_promoCodeCtrl.text.isEmpty ? "Tiada kod" : _promoCodeCtrl.text}',
+            icon: HugeIcons.strokeRoundedCoupon02,
             value: _includePromoBadge,
-            activeColor: _accentColor,
             onChanged: (val) => setState(() => _includePromoBadge = val),
           ),
-          const Divider(height: 16, color: Colors.white10),
 
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text('Papar Tagline / Mesej Khas', style: GoogleFonts.inter(color: Colors.white, fontSize: 14)),
-            subtitle: Text(_customTaglineCtrl.text, style: GoogleFonts.inter(color: Colors.white54, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+          _buildModernSwitchTile(
+            title: 'Papar Tagline / Mesej Khas',
+            subtitle: _customTaglineCtrl.text.isEmpty ? 'Tulis mesej atau ucapan khas' : _customTaglineCtrl.text,
+            icon: HugeIcons.strokeRoundedMessage01,
             value: _includeCustomTagline,
-            activeColor: _accentColor,
             onChanged: (val) => setState(() => _includeCustomTagline = val),
           ),
 
           if (_includeCustomTagline) ...[
-            const SizedBox(height: 10),
-            TextField(
+            const SizedBox(height: 8),
+            _buildInputField(
+              label: 'Teks Tagline / Mesej Standee',
               controller: _customTaglineCtrl,
-              onChanged: (_) => setState(() {}),
-              style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'Tulis mesej khas anda...',
-                hintStyle: GoogleFonts.inter(color: Colors.white38, fontSize: 13),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.04),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white12)),
-              ),
+              icon: Icons.chat_bubble_outline_rounded,
+              hint: 'Contoh: Selamat Menikmati Hidangan!',
             ),
           ],
         ],
@@ -1500,6 +1693,25 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.palette_rounded, color: Color(0xFF42A5F5), size: 20),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Penjenamaan & Warna',
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
