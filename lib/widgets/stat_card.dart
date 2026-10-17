@@ -38,40 +38,42 @@ class _StatCardState extends State<StatCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedScale(
-        scale: _isHovered ? 1.02 : 1.0,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(18),
-            splashColor: Colors.transparent,
-            highlightColor: Colors.white.withValues(alpha: 0.05),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(
-                  alpha: _isHovered ? 0.08 : 0.05,
-                ),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: _isHovered
-                      ? widget.accentColor.withValues(alpha: 0.45)
-                      : widget.accentColor.withValues(alpha: 0.22),
-                  width: 1.1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.accentColor.withValues(
-                      alpha: _isHovered ? 0.16 : 0.08,
-                    ),
-                    blurRadius: _isHovered ? 20 : 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(18),
+          splashColor: Colors.transparent,
+          highlightColor: Colors.white.withValues(alpha: 0.04),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(
+                alpha: _isHovered ? 0.07 : 0.045,
               ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: _isHovered
+                    ? widget.accentColor.withValues(alpha: 0.55)
+                    : Colors.white.withValues(alpha: 0.10),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: _isHovered ? 0.22 : 0.12),
+                  blurRadius: _isHovered ? 12 : 8,
+                  offset: const Offset(0, 4),
+                ),
+                if (_isHovered)
+                  BoxShadow(
+                    color: widget.accentColor.withValues(alpha: 0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+              ],
+            ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -154,7 +156,6 @@ class _StatCardState extends State<StatCard> {
             ),
           ),
         ),
-      ),
     );
   }
 }

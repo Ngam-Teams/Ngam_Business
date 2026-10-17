@@ -156,23 +156,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final isDesktop = width >= 900;
-            final bottomPad = isDesktop ? 12.0 : 100.0;
-
+            final isDesktop = width >= 750;
             final showBanner = !_loadingBusiness && (!hasLocation || (_businessProfile?['address_line'] ?? '').isEmpty);
-            // Upper section height on desktop:
-            // Banner: ~110px content + 24px bottom margin = ~134px
-            // Stats: ~136px card height + 20px bottom spacing = ~156px
-            final bannerHeight = showBanner ? 134.0 : 0.0;
-            const statsHeight = 156.0;
-            final topSectionHeight = bannerHeight + statsHeight;
-            const minPanelHeight = 340.0;
-            final availableForPanels = constraints.maxHeight - (topSectionHeight + bottomPad);
-            final panelHeight = availableForPanels > minPanelHeight ? availableForPanels : minPanelHeight;
 
-            return SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(0, 0, 0, bottomPad),
-              child: Column(
+            // On desktop/landscape screens with sufficient height, lock outer scrolling.
+            // The two lower panels expand to fill the screen, and only their internal content scrolls.
+            if (isDesktop && constraints.maxHeight >= 480) {
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Business Profile Setup Reminder if location or details missing
@@ -183,27 +173,35 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   _buildStatCards(cards, width),
                   const SizedBox(height: 20),
 
-                  // Lower panels (Recent 1:3, Quick Actions 2:3)
-                  if (isDesktop)
-                    SizedBox(
-                      height: panelHeight,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(flex: 1, child: _buildRecentActivity(isDesktop: true)),
-                          const SizedBox(width: 20),
-                          Expanded(flex: 2, child: _buildQuickActions(context, isDesktop: true)),
-                        ],
-                      ),
-                    )
-                  else
-                    Column(
+                  // Lower panels (Recent 1:3, Quick Actions 2:3) fill remaining height
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _buildRecentActivity(isDesktop: false),
-                        const SizedBox(height: 20),
-                        _buildQuickActions(context, isDesktop: false),
+                        Expanded(flex: 1, child: _buildRecentActivity(isDesktop: true)),
+                        const SizedBox(width: 20),
+                        Expanded(flex: 2, child: _buildQuickActions(context, isDesktop: true)),
                       ],
                     ),
+                  ),
+                ],
+              );
+            }
+
+            // Mobile / small window portrait layout
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 100),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showBanner)
+                    _buildProfileIncompleteBanner(context),
+                  _buildStatCards(cards, width),
+                  const SizedBox(height: 20),
+                  _buildRecentActivity(isDesktop: false),
+                  const SizedBox(height: 20),
+                  _buildQuickActions(context, isDesktop: false),
                 ],
               ),
             );
@@ -357,7 +355,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   Widget _buildStatCards(List<Widget> cards, double width) {
-    if (width >= 800) {
+    if (width >= 750) {
       return IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -617,6 +615,32 @@ class _HomeDashboardState extends State<HomeDashboard> {
         color: const Color(0xFFE5B9FF),
         onTap: () => context.push('/staff-management'),
       ),
+      (
+        label: 'Custom Tool\n(Akan Datang)',
+        icon: HugeIcons.strokeRoundedSparkles,
+        color: const Color(0xFF818CF8),
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Fungsi ini akan ditambah tidak lama lagi.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        },
+      ),
+      (
+        label: 'Custom Tool\n(Akan Datang)',
+        icon: HugeIcons.strokeRoundedAddCircleHalfDot,
+        color: const Color(0xFF38BDF8),
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Fungsi ini akan ditambah tidak lama lagi.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        },
+      ),
     ];
 
     return _buildPanel(
@@ -633,7 +657,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
         ),
         child: const Text(
-          '18 Tools',
+          '20 Tools',
           style: TextStyle(
             color: Colors.white60,
             fontSize: 10.5,
@@ -643,73 +667,53 @@ class _HomeDashboardState extends State<HomeDashboard> {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isNarrowPhone = constraints.maxWidth < 420;
-          final crossAxisCount = isNarrowPhone ? 3 : 6;
+          final availableHeight = constraints.maxHeight;
+          final availableWidth = constraints.maxWidth;
+
+          // Desktop: 5 columns x 4 rows = 20 buttons!
+          // Narrow / Mobile: 3 or 4 columns
+          final isDesktopGrid = isDesktop && availableWidth >= 440;
+          final crossAxisCount = isDesktopGrid ? 5 : (availableWidth < 380 ? 3 : 4);
+          final rowCount = (actions.length / crossAxisCount).ceil();
+
+          const crossAxisSpacing = 8.0;
+          const mainAxisSpacing = 8.0;
+          const minCardHeight = 74.0;
+
+          double cardHeight = 84.0;
+          ScrollPhysics physics = const NeverScrollableScrollPhysics();
+
+          if (isDesktop && availableHeight.isFinite && availableHeight > 0) {
+            final totalVerticalSpacing = (rowCount - 1) * mainAxisSpacing;
+            final dynamicHeight = (availableHeight - totalVerticalSpacing) / rowCount;
+
+            if (dynamicHeight >= minCardHeight) {
+              cardHeight = dynamicHeight;
+              physics = const NeverScrollableScrollPhysics();
+            } else {
+              cardHeight = minCardHeight;
+              physics = const BouncingScrollPhysics();
+            }
+          }
 
           return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            physics: physics,
             itemCount: actions.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              mainAxisExtent: 80,
+              mainAxisSpacing: mainAxisSpacing,
+              crossAxisSpacing: crossAxisSpacing,
+              mainAxisExtent: cardHeight,
             ),
             itemBuilder: (context, i) {
               final a = actions[i];
-              return Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: a.onTap,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.white.withValues(alpha: 0.04),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: a.color.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: HugeIcon(
-                              icon: a.icon,
-                              color: a.color,
-                              size: 15,
-                              strokeWidth: 2.1,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          a.label,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            height: 1.15,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              return _QuickActionButton(
+                label: a.label,
+                icon: a.icon,
+                color: a.color,
+                onTap: a.onTap,
+                cardHeight: cardHeight,
               );
             },
           );
@@ -785,6 +789,117 @@ class _HomeDashboardState extends State<HomeDashboard> {
               else
                 child,
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionButton extends StatefulWidget {
+  final String label;
+  final dynamic icon;
+  final Color color;
+  final VoidCallback onTap;
+  final double cardHeight;
+
+  const _QuickActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    required this.cardHeight,
+  });
+
+  @override
+  State<_QuickActionButton> createState() => _QuickActionButtonState();
+}
+
+class _QuickActionButtonState extends State<_QuickActionButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSpacious = widget.cardHeight >= 92;
+    final iconBoxSize = isSpacious ? 32.0 : 26.0;
+    final iconSize = isSpacious ? 17.0 : 14.0;
+    final fontSize = isSpacious ? 11.0 : (widget.cardHeight >= 82 ? 10.5 : 9.5);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: Colors.white.withValues(
+                alpha: _isHovered ? 0.08 : 0.04,
+              ),
+              border: Border.all(
+                color: _isHovered
+                    ? widget.color.withValues(alpha: 0.45)
+                    : Colors.white.withValues(alpha: 0.08),
+                width: 1,
+              ),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: widget.color.withValues(alpha: 0.10),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: iconBoxSize,
+                  height: iconBoxSize,
+                  decoration: BoxDecoration(
+                    color: widget.color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(isSpacious ? 9 : 7),
+                  ),
+                  child: Center(
+                    child: widget.icon is IconData
+                        ? Icon(
+                            widget.icon as IconData,
+                            color: widget.color,
+                            size: iconSize,
+                          )
+                        : HugeIcon(
+                            icon: widget.icon,
+                            color: widget.color,
+                            size: iconSize,
+                            strokeWidth: 2.1,
+                          ),
+                  ),
+                ),
+                SizedBox(height: isSpacious ? 6 : 4),
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w600,
+                      height: 1.15,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
