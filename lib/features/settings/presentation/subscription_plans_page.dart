@@ -366,7 +366,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
                 'Standard Thermal Receipt Printing',
               ],
               lockedFeatures: [
-                'Kitchen Display System (KDS)',
+                'Live Order Board Display',
                 'Automated Z-Report & Cash Drawer Shift Logs',
                 'Custom QR Standee Colors & PDF',
                 'Multi-Outlet & Branch Aggregator',
@@ -384,7 +384,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
               isHighlighted: true,
               features: [
                 'Unlimited Menu Items & Categories',
-                'Kitchen Display System (KDS) Integration',
+                'Live Order Board Integration',
                 'Full Cash Drawer Audits & Shift Z-Reports',
                 'Custom QR Standee Branding & Color Picker',
                 'Thermal Printer Bluetooth/LAN Integration',

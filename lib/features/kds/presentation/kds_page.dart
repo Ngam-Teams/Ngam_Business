@@ -88,10 +88,10 @@ class _KdsPageState extends State<KdsPage> {
     setState(() {
       if (ticket['stage'] == KdsStage.incoming) {
         ticket['stage'] = KdsStage.cooking;
-        showGlassToast(context, 'Ticket ${ticket['id']} moved to Cooking');
+        showGlassToast(context, 'Ticket ${ticket['id']} moved to Preparing');
       } else if (ticket['stage'] == KdsStage.cooking) {
         ticket['stage'] = KdsStage.ready;
-        showGlassToast(context, 'Ticket ${ticket['id']} marked READY FOR SERVING');
+        showGlassToast(context, 'Ticket ${ticket['id']} marked as READY');
       } else if (ticket['stage'] == KdsStage.ready) {
         ticket['stage'] = KdsStage.served;
         _tickets.remove(ticket);
@@ -124,11 +124,11 @@ class _KdsPageState extends State<KdsPage> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const HugeIcon(icon: HugeIcons.strokeRoundedRestaurant01, color: Color(0xFFF9C80E), size: 20),
+            const HugeIcon(icon: HugeIcons.strokeRoundedTv01, color: Color(0xFFF9C80E), size: 20),
             const SizedBox(width: 8),
             const Flexible(
               child: Text(
-                'Kitchen Display',
+                'Live Order Board',
                 style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -166,10 +166,10 @@ class _KdsPageState extends State<KdsPage> {
               color: _soundEnabled ? const Color(0xFF44CF6C) : Colors.white38,
               size: 22,
             ),
-            tooltip: 'Kitchen Chime Alert',
+            tooltip: 'Order Chime Alert',
             onPressed: () {
               setState(() => _soundEnabled = !_soundEnabled);
-              showGlassToast(context, _soundEnabled ? 'Kitchen chime alert enabled' : 'Kitchen chime muted');
+              showGlassToast(context, _soundEnabled ? 'Order chime alert enabled' : 'Order chime muted');
             },
           ),
         ],
@@ -184,9 +184,9 @@ class _KdsPageState extends State<KdsPage> {
               children: [
                 Expanded(child: _buildColumn('NEW ORDERS', incomingTickets, const Color(0xFF42A5F5), KdsStage.incoming)),
                 const VerticalDivider(width: 1, color: Colors.white12),
-                Expanded(child: _buildColumn('PREPARING / COOKING', cookingTickets, const Color(0xFFF9C80E), KdsStage.cooking)),
+                Expanded(child: _buildColumn('IN PREPARATION', cookingTickets, const Color(0xFFF9C80E), KdsStage.cooking)),
                 const VerticalDivider(width: 1, color: Colors.white12),
-                Expanded(child: _buildColumn('READY TO SERVE', readyTickets, const Color(0xFF10B981), KdsStage.ready)),
+                Expanded(child: _buildColumn('READY FOR PICKUP', readyTickets, const Color(0xFF10B981), KdsStage.ready)),
               ],
             );
           } else {
@@ -201,7 +201,7 @@ class _KdsPageState extends State<KdsPage> {
                     unselectedLabelColor: Colors.white54,
                     tabs: [
                       Tab(text: 'New (${incomingTickets.length})'),
-                      Tab(text: 'Cooking (${cookingTickets.length})'),
+                      Tab(text: 'Preparing (${cookingTickets.length})'),
                       Tab(text: 'Ready (${readyTickets.length})'),
                     ],
                   ),
@@ -209,7 +209,7 @@ class _KdsPageState extends State<KdsPage> {
                     child: TabBarView(
                       children: [
                         _buildColumn('NEW ORDERS', incomingTickets, const Color(0xFF42A5F5), KdsStage.incoming),
-                        _buildColumn('PREPARING', cookingTickets, const Color(0xFFF9C80E), KdsStage.cooking),
+                        _buildColumn('IN PREPARATION', cookingTickets, const Color(0xFFF9C80E), KdsStage.cooking),
                         _buildColumn('READY', readyTickets, const Color(0xFF10B981), KdsStage.ready),
                       ],
                     ),
@@ -443,10 +443,10 @@ class _KdsPageState extends State<KdsPage> {
                 onPressed: () => _progressTicket(ticket),
                 child: Text(
                   stage == KdsStage.incoming
-                      ? 'Start Cooking'
+                      ? 'Start Preparing'
                       : stage == KdsStage.cooking
                           ? 'Mark as Ready'
-                          : 'Order Served (Done)',
+                          : 'Complete Order (Done)',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
               ),

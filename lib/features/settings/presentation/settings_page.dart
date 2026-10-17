@@ -196,8 +196,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   const Divider(height: 24, color: Color(0x1AFFFFFF)),
                   _buildNavRow(
-                    label: 'Kitchen Display System (KDS)',
-                    icon: HugeIcons.strokeRoundedRestaurant01,
+                    label: 'Live Order Board',
+                    icon: HugeIcons.strokeRoundedTv01,
                     onTap: () => context.push('/kds'),
                   ),
                   const Divider(height: 24, color: Color(0x1AFFFFFF)),
@@ -809,7 +809,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Row(
                     children: [
                       Text(
-                        'View all plans, KDS, & feature comparison',
+                        'View all plans, Live Order Board, & feature comparison',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.6),
                           fontSize: 12,

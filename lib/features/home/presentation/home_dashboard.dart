@@ -580,8 +580,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onTap: () => context.push('/payouts'),
       ),
       (
-        label: 'Kitchen Display\n(KDS)',
-        icon: HugeIcons.strokeRoundedRestaurant01,
+        label: 'Live Order\nBoard',
+        icon: HugeIcons.strokeRoundedTv01,
         color: const Color(0xFFF9C80E),
         onTap: () => context.push('/kds'),
       ),

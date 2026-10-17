@@ -138,7 +138,7 @@ class _OrdersPageState extends State<OrdersPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const HugeIcon(
-                        icon: HugeIcons.strokeRoundedRestaurant01,
+                        icon: HugeIcons.strokeRoundedTv01,
                         color: Color(0xFFF9C80E),
                         size: 20,
                       ),
@@ -149,7 +149,7 @@ class _OrdersPageState extends State<OrdersPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Buka Kitchen Display System (KDS)',
+                            'Buka Live Order Board',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 14,
@@ -158,7 +158,7 @@ class _OrdersPageState extends State<OrdersPage> {
                           ),
                           SizedBox(height: 2),
                           Text(
-                            'Paparan langsung status masakan & penyediaan makanan',
+                            'Paparan langsung status penyediaan & giliran pesanan',
                             style: TextStyle(
                               color: Colors.white60,
                               fontSize: 12,
