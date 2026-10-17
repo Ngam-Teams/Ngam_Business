@@ -157,12 +157,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
           builder: (context, constraints) {
             final width = constraints.maxWidth;
             final isDesktop = width >= 900;
-            final bottomPad = isDesktop ? 24.0 : 100.0;
+            final bottomPad = isDesktop ? 12.0 : 100.0;
 
             final showBanner = !_loadingBusiness && (!hasLocation || (_businessProfile?['address_line'] ?? '').isEmpty);
-            // Approx upper section height on desktop (banner + stats + spacing)
-            final topSectionHeight = (showBanner ? 92.0 : 0.0) + 115.0 + 20.0;
-            const minPanelHeight = 350.0;
+            // Upper section height on desktop:
+            // Banner: ~110px content + 24px bottom margin = ~134px
+            // Stats: ~136px card height + 20px bottom spacing = ~156px
+            final bannerHeight = showBanner ? 134.0 : 0.0;
+            const statsHeight = 156.0;
+            final topSectionHeight = bannerHeight + statsHeight;
+            const minPanelHeight = 340.0;
             final availableForPanels = constraints.maxHeight - (topSectionHeight + bottomPad);
             final panelHeight = availableForPanels > minPanelHeight ? availableForPanels : minPanelHeight;
 

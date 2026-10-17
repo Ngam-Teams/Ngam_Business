@@ -252,7 +252,7 @@ class DashboardScaffold extends StatelessWidget {
         isDesktop ? 32 : 16,
         isDesktop ? 32 : 16,
         isDesktop ? 32 : 16,
-        0,
+        isDesktop ? 28 : 0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
