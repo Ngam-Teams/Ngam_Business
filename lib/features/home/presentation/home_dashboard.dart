@@ -698,7 +698,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
           return GridView.builder(
             padding: EdgeInsets.zero,
-            physics: physics,
+            physics: isDesktop ? physics : const NeverScrollableScrollPhysics(),
+            shrinkWrap: !isDesktop,
             itemCount: actions.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
