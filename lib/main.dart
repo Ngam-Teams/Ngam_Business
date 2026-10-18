@@ -10,6 +10,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'core/router/app_router.dart';
+import 'features/settings/data/business_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,13 @@ void main() async {
     });
   } catch (e) {
     debugPrint('Supabase init error: $e');
+  }
+
+  // Pre-load business profile from persistent local cache for instant zero-latency UI
+  try {
+    await BusinessService.loadCachedProfile();
+  } catch (e) {
+    debugPrint('loadCachedProfile error: $e');
   }
 
   runApp(const NgamBusinessApp());

@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class BusinessService {
@@ -7,6 +9,58 @@ class BusinessService {
 
   // In-flight request deduplication to prevent parallel calls creating race-condition duplicates
   static Future<Map<String, dynamic>?>? _inflightFetch;
+
+  // Persistent in-memory cache and notifier for reactive instant UI updates
+  static Map<String, dynamic>? _cachedProfile;
+  static final ValueNotifier<Map<String, dynamic>?> profileNotifier =
+      ValueNotifier<Map<String, dynamic>?>(null);
+
+  static Map<String, dynamic>? get cachedProfile => _cachedProfile;
+
+  static const String _storageKey = 'cached_business_profile_v1';
+
+  /// Synchronously or eagerly load cached profile from SharedPreferences on app start
+  static Future<Map<String, dynamic>?> loadCachedProfile() async {
+    if (_cachedProfile != null) return _cachedProfile;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_storageKey);
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          _cachedProfile = decoded;
+          profileNotifier.value = decoded;
+          return decoded;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading cached profile from prefs: $e');
+    }
+    return null;
+  }
+
+  static Future<void> _saveProfileToCache(Map<String, dynamic> profile) async {
+    _cachedProfile = Map<String, dynamic>.from(profile);
+    profileNotifier.value = _cachedProfile;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cleanMap = <String, dynamic>{};
+      profile.forEach((k, v) {
+        if (v is String || v is num || v is bool || v == null || v is List || v is Map) {
+          cleanMap[k] = v;
+        }
+      });
+      await prefs.setString(_storageKey, jsonEncode(cleanMap));
+    } catch (e) {
+      debugPrint('Error saving cached profile to prefs: $e');
+    }
+  }
+
+  static void clearCache() {
+    _cachedProfile = null;
+    profileNotifier.value = null;
+    SharedPreferences.getInstance().then((prefs) => prefs.remove(_storageKey)).catchError((_) {});
+  }
 
   BusinessService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
@@ -51,8 +105,17 @@ class BusinessService {
 
   /// Fetch the business record for the currently logged in owner.
   /// Also loads associated business_settings and business_compliance if available.
-  /// Uses mutex/in-flight caching so concurrent widget requests share one call.
-  Future<Map<String, dynamic>?> getBusinessProfile({bool autoCreate = true}) async {
+  /// Returns immediately from local cache if available, while refreshing in background.
+  Future<Map<String, dynamic>?> getBusinessProfile({bool autoCreate = true, bool forceRefresh = false}) async {
+    // If cache exists and not forcing refresh, return immediately and trigger silent refresh
+    if (!forceRefresh && _cachedProfile != null) {
+      if (_inflightFetch == null) {
+        _inflightFetch = _doGetBusinessProfile(autoCreate: autoCreate);
+        _inflightFetch!.whenComplete(() => _inflightFetch = null);
+      }
+      return _cachedProfile;
+    }
+
     if (_inflightFetch != null) return _inflightFetch!;
     _inflightFetch = _doGetBusinessProfile(autoCreate: autoCreate);
     try {
@@ -122,6 +185,7 @@ class BusinessService {
           }
         }
 
+        await _saveProfileToCache(profile);
         return profile;
       }
 
@@ -141,7 +205,9 @@ class BusinessService {
       if ((doubleCheck as List).isNotEmpty) {
         final existingId = doubleCheck.first['id'] as String;
         final existingRecord = await _client.from('businesses').select().eq('id', existingId).single();
-        return Map<String, dynamic>.from(existingRecord);
+        final record = Map<String, dynamic>.from(existingRecord);
+        await _saveProfileToCache(record);
+        return record;
       }
 
       final initialHandle = generateHandleFromName(cleanName);
@@ -165,6 +231,7 @@ class BusinessService {
         final profile = Map<String, dynamic>.from(newProfile);
         // Initialize default settings row
         await initDefaultSettings(profile['id']);
+        await _saveProfileToCache(profile);
         return profile;
       }
 
@@ -280,6 +347,7 @@ class BusinessService {
 
     // Initialize associated settings row
     await initDefaultSettings(newBusiness['id']);
+    await _saveProfileToCache(newBusiness);
 
     return newBusiness;
   }
@@ -287,6 +355,10 @@ class BusinessService {
   /// Update / alter existing business details
   Future<void> updateBusinessProfile(String businessId, Map<String, dynamic> updates) async {
     await _client.from('businesses').update(updates).eq('id', businessId);
+    if (_cachedProfile != null && _cachedProfile!['id'] == businessId) {
+      final updated = Map<String, dynamic>.from(_cachedProfile!)..addAll(updates);
+      await _saveProfileToCache(updated);
+    }
   }
 
   /// Initialize default settings row for a business

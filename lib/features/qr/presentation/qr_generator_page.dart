@@ -28,10 +28,17 @@ class QrGeneratorPage extends StatefulWidget {
 class _QrGeneratorPageState extends State<QrGeneratorPage> {
   QrMode _selectedMode = QrMode.storefront;
 
-  // Store Information (Fixed from Business Profile)
-  String _storeName = 'Kedai Saya';
-  String _businessId = 'store';
-  String _businessHandle = '';
+  // Store Information (Pre-filled instantly from cached Business Profile)
+  String _storeName = (BusinessService.cachedProfile?['business_name'] ??
+          BusinessService.cachedProfile?['name'] ??
+          BusinessService.cachedProfile?['title'] ??
+          '')
+      .toString()
+      .trim();
+  String _businessId =
+      BusinessService.cachedProfile?['id']?.toString() ?? 'store';
+  String _businessHandle =
+      BusinessService.cachedProfile?['business_handle']?.toString() ?? '';
 
   // Customizable Table Identifier (Supports any number/name e.g. 1, 12, A-01, VIP)
   final _tableCtrl = TextEditingController(text: '1');
@@ -936,17 +943,6 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Top Brand Accent Bar (Modern Acrylic Aesthetic)
-                        Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: _accentColor,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
                         // Header Badge with Dot Indicator
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -982,7 +978,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
 
                         // Store Title (Fixed from Business Profile)
                         Text(
-                          _storeName.trim().isEmpty ? 'Kedai Saya' : _storeName.trim(),
+                          _storeName.trim().isEmpty ? 'Memuatkan...' : _storeName.trim(),
                           textAlign: TextAlign.center,
                           style: GoogleFonts.outfit(
                             color: const Color(0xFF0F172A),

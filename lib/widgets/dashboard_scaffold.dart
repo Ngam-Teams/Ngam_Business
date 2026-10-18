@@ -128,18 +128,23 @@ class DashboardScaffold extends StatelessWidget {
               // Business Name Chip below label
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: FutureBuilder<Map<String, dynamic>?>(
-                  future: BusinessService().getBusinessProfile(),
-                  builder: (context, snapshot) {
-                    final profile = snapshot.data;
+                child: ValueListenableBuilder<Map<String, dynamic>?>(
+                  valueListenable: BusinessService.profileNotifier,
+                  builder: (context, liveProfile, _) {
+                    final profile = liveProfile ?? BusinessService.cachedProfile;
                     final businessName = (profile?['business_name'] ??
                             profile?['name'] ??
                             profile?['title'] ??
-                            'Kedai Saya')
+                            '')
                         .toString()
                         .trim();
                     final handle =
                         (profile?['business_handle'] as String?)?.trim();
+
+                    // If profile is not yet available, trigger fetch
+                    if (profile == null) {
+                      BusinessService().getBusinessProfile();
+                    }
 
                     return Container(
                       padding: const EdgeInsets.symmetric(
@@ -171,7 +176,7 @@ class DashboardScaffold extends StatelessWidget {
                               children: [
                                 Text(
                                   businessName.isEmpty
-                                      ? 'Kedai Saya'
+                                      ? 'Memuatkan...'
                                       : businessName,
                                   style: const TextStyle(
                                     color: Colors.white,
