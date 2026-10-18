@@ -59,7 +59,9 @@ class BusinessService {
   static void clearCache() {
     _cachedProfile = null;
     profileNotifier.value = null;
-    SharedPreferences.getInstance().then((prefs) => prefs.remove(_storageKey)).catchError((_) {});
+    SharedPreferences.getInstance()
+        .then((prefs) => prefs.remove(_storageKey))
+        .catchError((_) => false);
   }
 
   BusinessService({SupabaseClient? client})
