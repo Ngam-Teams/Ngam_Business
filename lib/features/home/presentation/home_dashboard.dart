@@ -1,11 +1,17 @@
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../widgets/glass_toast.dart';
 import '../../../widgets/stat_card.dart';
+import '../../../core/utils/file_saver/file_saver.dart';
 import '../../analytics/data/analytics_service.dart';
+import '../../orders/data/orders_service.dart';
 import '../../settings/data/business_service.dart';
 import '../../../core/services/app_update_service.dart';
 
@@ -616,30 +622,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onTap: () => context.push('/staff-management'),
       ),
       (
-        label: 'Custom Tool\n(Akan Datang)',
-        icon: HugeIcons.strokeRoundedSparkles,
-        color: const Color(0xFF818CF8),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Fungsi ini akan ditambah tidak lama lagi.'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
+        label: 'WhatsApp\nMarketing',
+        icon: HugeIcons.strokeRoundedWhatsapp,
+        color: const Color(0xFF25D366),
+        onTap: () => _openWhatsAppMarketing(context),
       ),
       (
-        label: 'Custom Tool\n(Akan Datang)',
-        icon: HugeIcons.strokeRoundedAddCircleHalfDot,
-        color: const Color(0xFF38BDF8),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Fungsi ini akan ditambah tidak lama lagi.'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
+        label: 'Eksport\nLaporan (Z)',
+        icon: HugeIcons.strokeRoundedDownload04,
+        color: const Color(0xFFF9C80E),
+        onTap: () => _openDailyReportExport(context),
       ),
     ];
 
@@ -793,6 +785,357 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTemplateChip(String label, int index, int selectedIdx, VoidCallback onTap) {
+    final isSel = index == selectedIdx;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSel ? const Color(0xFF25D366).withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isSel ? const Color(0xFF25D366) : Colors.white12),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSel ? const Color(0xFF25D366) : Colors.white70,
+            fontSize: 11,
+            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openWhatsAppMarketing(BuildContext context) {
+    final profile = _businessProfile ?? BusinessService.cachedProfile;
+    final storeName = (profile?['business_name'] ?? profile?['name'] ?? profile?['title'] ?? 'Kedai Kami').toString().trim();
+    final handle = (profile?['business_handle'] as String?)?.trim() ?? '';
+    final storeLink = handle.isNotEmpty ? 'https://ngam.dev/c/$handle' : 'https://ngam.dev';
+
+    final templates = [
+      '🎉 Promosi Istimewa Hujung Minggu!\nJom nikmati hidangan lazat di $storeName hari ini! Kumpul cop ganjaran digital untuk setiap pembelian.\n\nLihat menu & pesan terus di sini:\n$storeLink',
+      '🔥 Menu Panas & Menarik!\nAda menu istimewa menanti anda di $storeName hari ini. Disediakan segar setiap masa!\n\nPesan awal untuk elak beratur:\n$storeLink',
+      '🏷️ Baucar Ganjaran Khas!\nTerima kasih kerana setia bersama $storeName. Dapatkan tawaran diskaun menarik untuk pesanan anda!\n\nSemak promosi terkini di sini:\n$storeLink',
+    ];
+
+    int selectedIdx = 0;
+    final textCtrl = TextEditingController(text: templates[0]);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF141424),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedWhatsapp,
+                          color: Color(0xFF25D366),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'WhatsApp Marketing Broadcast',
+                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              'Hantar promosi & pautan kedai ke pelanggan dengan 1 klik',
+                              style: TextStyle(color: Colors.white54, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Pilih Templat Promosi:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildTemplateChip('Promosi', 0, selectedIdx, () {
+                        setModalState(() {
+                          selectedIdx = 0;
+                          textCtrl.text = templates[0];
+                        });
+                      }),
+                      const SizedBox(width: 8),
+                      _buildTemplateChip('Menu Baru', 1, selectedIdx, () {
+                        setModalState(() {
+                          selectedIdx = 1;
+                          textCtrl.text = templates[1];
+                        });
+                      }),
+                      const SizedBox(width: 8),
+                      _buildTemplateChip('Ganjaran Cop', 2, selectedIdx, () {
+                        setModalState(() {
+                          selectedIdx = 2;
+                          textCtrl.text = templates[2];
+                        });
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: textCtrl,
+                    maxLines: 4,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF25D366))),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white70,
+                            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          icon: const Icon(Icons.copy_rounded, size: 18),
+                          label: const Text('Salin Teks'),
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: textCtrl.text));
+                            Navigator.pop(ctx);
+                            showGlassToast(context, 'Teks promosi telah disalin!', color: const Color(0xFF25D366));
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366),
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          icon: const HugeIcon(icon: HugeIcons.strokeRoundedWhatsapp, color: Colors.black, size: 18),
+                          label: const Text('Buka WhatsApp', style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: () async {
+                            final text = Uri.encodeComponent(textCtrl.text);
+                            final url = Uri.parse('https://wa.me/?text=$text');
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _openDailyReportExport(BuildContext context) async {
+    final profile = _businessProfile ?? BusinessService.cachedProfile;
+    final storeName = (profile?['business_name'] ?? profile?['name'] ?? profile?['title'] ?? 'Kedai Kami').toString().trim();
+    final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
+    final dateStr = DateFormat('dd MMMM yyyy').format(DateTime.now());
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF141424),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return FutureBuilder<List<OrderModel>>(
+          future: OrdersService().fetchOrders(),
+          builder: (context, snapshot) {
+            final orders = snapshot.data ?? [];
+            final today = DateTime.now();
+            final todayOrders = orders.where((o) =>
+                o.createdAt.year == today.year &&
+                o.createdAt.month == today.month &&
+                o.createdAt.day == today.day).toList();
+
+            final totalRev = todayOrders
+                .where((o) => o.status != 'cancelled')
+                .fold<double>(0.0, (sum, o) => sum + o.total);
+            final completedCount = todayOrders.where((o) => o.status == 'completed').length;
+            final pendingCount = todayOrders.where((o) => o.status == 'pending').length;
+
+            return Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9C80E).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedDownload04,
+                          color: Color(0xFFF9C80E),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Ringkasan Jualan Harian (Z-Reading)',
+                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '$storeName • $dateStr',
+                              style: const TextStyle(color: Colors.white54, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Jumlah Jualan Hari Ini', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                            Text(fmt.format(totalRev), style: const TextStyle(color: Color(0xFF44CF6C), fontSize: 18, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const Divider(height: 20, color: Colors.white12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Jumlah Pesanan', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                            Text('${todayOrders.length} Pesanan', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Selesai / Menunggu', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                            Text('$completedCount Selesai • $pendingCount Menunggu', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          icon: const Icon(Icons.share_rounded, size: 18),
+                          label: const Text('Salin Ringkasan'),
+                          onPressed: () {
+                            final reportText = '''
+📊 RINGKASAN JUALAN (Z-REPORT)
+🏪 Kedai: $storeName
+📅 Tarikh: $dateStr
+💰 Jumlah Jualan: ${fmt.format(totalRev)}
+📦 Jumlah Pesanan: ${todayOrders.length}
+✅ Selesai: $completedCount
+⏳ Menunggu: $pendingCount
+— Dijana oleh Ngam Business
+''';
+                            Clipboard.setData(ClipboardData(text: reportText));
+                            Navigator.pop(ctx);
+                            showGlassToast(context, 'Ringkasan Z-Report telah disalin!');
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF9C80E),
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          icon: const Icon(Icons.download_rounded, size: 18),
+                          label: const Text('Eksport CSV', style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: () async {
+                            final buffer = StringBuffer();
+                            buffer.writeln('ID_Pesanan,Tarikh,Pelanggan,Jumlah_RM,Status,Sumber');
+                            for (final o in todayOrders) {
+                              buffer.writeln('${o.id},${o.createdAt.toIso8601String()},${o.customerName ?? "Pelanggan"},${o.total.toStringAsFixed(2)},${o.status},${o.source}');
+                            }
+                            final bytes = Uint8List.fromList(utf8.encode(buffer.toString()));
+                            final safeDate = DateFormat('yyyy-MM-dd').format(today);
+                            await downloadStandeeImage(bytes: bytes, fileName: 'Z_Report_$safeDate.csv');
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (context.mounted) {
+                              showGlassToast(context, 'Fail CSV berjaya dimuat turun!');
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

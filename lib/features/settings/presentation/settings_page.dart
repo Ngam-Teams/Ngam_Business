@@ -132,6 +132,29 @@ class _SettingsPageState extends State<SettingsPage> {
 
             const SizedBox(height: 24),
 
+            // Security & Access Control
+            _buildPanel(
+              title: 'Security & Access Control',
+              icon: HugeIcons.strokeRoundedShield01,
+              child: Column(
+                children: [
+                  _buildNavRow(
+                    label: 'Two-Factor Authentication (2FA / TOTP)',
+                    icon: HugeIcons.strokeRoundedShield02,
+                    onTap: () => context.push('/mfa-setup'),
+                  ),
+                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
+                  _buildNavRow(
+                    label: 'Audit Trails & Security Logs',
+                    icon: HugeIcons.strokeRoundedTask01,
+                    onTap: () => context.push('/audit-logs'),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
             // Business settings
             _buildPanel(
               title: 'Business Management',

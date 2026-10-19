@@ -4,6 +4,7 @@ import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/app_router.dart';
+import 'sound_service.dart';
 
 // =============================================================================
 // OrderAlertService
@@ -126,6 +127,9 @@ class OrderAlertService {
     if (_isPlayingSound) return;
     _isPlayingSound = true;
     try {
+      await SoundService.instance.playOrderChime();
+    } catch (_) {}
+    try {
       FlutterRingtonePlayer().play(
         android: AndroidSounds.ringtone,
         ios: IosSounds.electronic,
@@ -142,6 +146,7 @@ class OrderAlertService {
 
   void stopAlertSound() {
     _isPlayingSound = false;
+    SoundService.instance.stop();
     try {
       FlutterRingtonePlayer().stop();
     } catch (e) {

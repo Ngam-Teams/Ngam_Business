@@ -6,6 +6,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:go_router/go_router.dart';
+import '../../../core/services/audit_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../data/business_service.dart';
 
@@ -105,6 +106,14 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
       await _client.from('team_members').insert(payload);
 
+      AuditService.log(
+        action: 'STAFF_ADDED',
+        severity: 'warning',
+        targetType: 'staff',
+        description: 'Staf baru ditambah: ${staffData['name']} (${staffData['role']})',
+        metadata: {'email': email, 'role': staffData['role'], 'department': staffData['department']},
+      );
+
       if (mounted) {
         showGlassToast(
           context,
@@ -122,6 +131,16 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   Future<void> _updateStaff(String staffId, Map<String, dynamic> updates) async {
     try {
       await _client.from('team_members').update(updates).eq('id', staffId);
+
+      AuditService.log(
+        action: 'STAFF_UPDATED',
+        severity: 'warning',
+        targetType: 'staff',
+        targetId: staffId,
+        description: 'Maklumat staf ID $staffId telah dikemaskini',
+        metadata: updates,
+      );
+
       if (mounted) {
         showGlassToast(context, 'Staff details updated successfully!');
         _loadStaff();
@@ -162,6 +181,15 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
     try {
       await _client.from('team_members').delete().eq('id', staffId);
+
+      AuditService.log(
+        action: 'STAFF_REMOVED',
+        severity: 'critical',
+        targetType: 'staff',
+        targetId: staffId,
+        description: 'Staf "$staffName" telah dikeluarkan daripada perniagaan',
+      );
+
       if (mounted) {
         showGlassToast(context, 'Staff removed successfully.');
         _loadStaff();
@@ -218,6 +246,11 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedTask01, color: Color(0xFF42A5F5), size: 22),
+            tooltip: 'Audit Logs & Rekod Staf',
+            onPressed: () => context.push('/audit-logs'),
+          ),
           IconButton(
             icon: const HugeIcon(icon: HugeIcons.strokeRoundedCoins01, color: Color(0xFF10B981), size: 22),
             tooltip: 'Urus Gaji & Komisen Staf',
