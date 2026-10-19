@@ -228,6 +228,14 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                             });
                           });
 
+                          AuditService.log(
+                            action: type == 'in' ? 'CASH_DRAWER_IN' : 'CASH_DRAWER_OUT',
+                            severity: amt >= 100 ? 'warning' : 'info',
+                            targetType: 'cash_drawer',
+                            description: 'Pergerakan tunai RM ${amt.toStringAsFixed(2)} (${type == 'in' ? 'Masuk' : 'Keluar'}): ${reasonCtrl.text.trim()}',
+                            metadata: {'amount': amt, 'type': type, 'cashier': _cashierName},
+                          );
+
                           Navigator.pop(ctx);
                           showGlassToast(context, 'Cash drawer movement recorded successfully!');
                         },

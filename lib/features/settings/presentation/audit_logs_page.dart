@@ -45,6 +45,18 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
     }
   }
 
+  Future<void> _recordTestLog() async {
+    await AuditService.log(
+      action: 'SECURITY_AUDIT_INIT',
+      severity: 'info',
+      description: 'Sistem audit keselamatan telah disahkan dan diaktifkan.',
+    );
+    if (mounted) {
+      showGlassToast(context, 'Log audit permulaan berjaya direkodkan.');
+    }
+    _fetchLogs();
+  }
+
   Color _getSeverityColor(String? severity) {
     switch (severity?.toLowerCase()) {
       case 'critical':
@@ -362,17 +374,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: () async {
-                await AuditService.log(
-                  action: 'SECURITY_AUDIT_INIT',
-                  severity: 'info',
-                  description: 'Sistem audit keselamatan telah disahkan dan diaktifkan.',
-                );
-                if (mounted) {
-                  showGlassToast(context, 'Log audit permulaan berjaya direkodkan.');
-                }
-                _fetchLogs();
-              },
+              onPressed: _recordTestLog,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF42A5F5),
                 foregroundColor: Colors.white,
