@@ -368,7 +368,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                   severity: 'info',
                   description: 'Sistem audit keselamatan telah disahkan dan diaktifkan.',
                 );
-                if (context.mounted) {
+                if (mounted) {
                   showGlassToast(context, 'Log audit permulaan berjaya direkodkan.');
                 }
                 _fetchLogs();
