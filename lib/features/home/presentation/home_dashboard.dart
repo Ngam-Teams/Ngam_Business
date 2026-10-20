@@ -639,6 +639,24 @@ class _HomeDashboardState extends State<HomeDashboard> {
         color: const Color(0xFFF9C80E),
         onTap: () => _openDailyReportExport(context),
       ),
+      (
+        label: 'Pusat Bantuan\n(Akan Datang)',
+        icon: HugeIcons.strokeRoundedShield01,
+        color: const Color(0xFF818CF8),
+        onTap: () => showGlassToast(context, 'Pusat Bantuan akan hadir tidak lama lagi.'),
+      ),
+      (
+        label: 'Log Audit\n(Akan Datang)',
+        icon: HugeIcons.strokeRoundedClock01,
+        color: const Color(0xFF38BDF8),
+        onTap: () => showGlassToast(context, 'Log Aktiviti & Audit akan hadir tidak lama lagi.'),
+      ),
+      (
+        label: 'Custom Tool\n(Akan Datang)',
+        icon: HugeIcons.strokeRoundedSparkles,
+        color: const Color(0xFFA78BFA),
+        onTap: () => showGlassToast(context, 'Fungsi ini akan ditambah tidak lama lagi.'),
+      ),
     ];
 
     return _buildPanel(
@@ -668,10 +686,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
           final availableHeight = constraints.maxHeight;
           final availableWidth = constraints.maxWidth;
 
-          // Desktop: 5 columns x 4 rows = 20 buttons!
-          // Narrow / Mobile: 3 or 4 columns
+          // Desktop: 6 columns x 4 rows = 24 buttons!
+          // Narrow / Mobile: 3 columns (8 rows) or Tablet: 4 columns (6 rows)
           final isDesktopGrid = isDesktop && availableWidth >= 440;
-          final crossAxisCount = isDesktopGrid ? 5 : (availableWidth < 380 ? 3 : 4);
+          final crossAxisCount = isDesktopGrid ? 6 : (availableWidth < 420 ? 3 : 4);
           final rowCount = (actions.length / crossAxisCount).ceil();
 
           const crossAxisSpacing = 8.0;
