@@ -70,16 +70,33 @@ class DashboardScaffold extends StatelessWidget {
   // Navigation Rail (frosted glass sidebar — desktop only)
   // ---------------------------------------------------------------------------
   Widget _buildNavigationRail(BuildContext context) {
-    return ClipRect(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 0, 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
         child: Container(
-          width: 236,
-          color: Colors.white.withValues(alpha: 0.04),
+          width: 260,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.12),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 36),
+              const SizedBox(height: 16),
 
               // Logo / Wordmark with Ngam Splash Logo
               Padding(
@@ -209,7 +226,7 @@ class DashboardScaffold extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Nav items
               ...navItems.asMap().entries.map((entry) {
@@ -240,13 +257,14 @@ class DashboardScaffold extends StatelessWidget {
                   await Supabase.instance.client.auth.signOut();
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
             ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ---------------------------------------------------------------------------
   // Content Area
@@ -254,10 +272,10 @@ class DashboardScaffold extends StatelessWidget {
   Widget _buildContent(BuildContext context, bool isDesktop) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        isDesktop ? 32 : 16,
-        isDesktop ? 32 : 16,
-        isDesktop ? 32 : 16,
-        isDesktop ? 28 : 0,
+        isDesktop ? 20 : 16,
+        isDesktop ? 20 : 16,
+        isDesktop ? 24 : 16,
+        isDesktop ? 20 : 0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
