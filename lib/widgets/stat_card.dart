@@ -48,12 +48,12 @@ class _StatCardState extends State<StatCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOut,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white.withValues(
                 alpha: _isHovered ? 0.07 : 0.045,
               ),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(15),
               border: Border.all(
                 color: _isHovered
                     ? widget.accentColor.withValues(alpha: 0.55)
@@ -83,38 +83,38 @@ class _StatCardState extends State<StatCard> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(9),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: widget.accentColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(9),
                         ),
                         child: widget.icon is IconData
                             ? Icon(
                                 widget.icon as IconData,
                                 color: widget.accentColor,
-                                size: 20,
+                                size: 16,
                               )
                             : HugeIcon(
                                 icon: widget.icon,
                                 color: widget.accentColor,
-                                size: 20,
+                                size: 16,
                                 strokeWidth: 2.1,
                               ),
                       ),
                       if (widget.subtitle != null && widget.subtitle!.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                            horizontal: 7,
+                            vertical: 2.5,
                           ),
                           decoration: BoxDecoration(
                             color: effectiveBadgeColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             widget.subtitle!,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 9.5,
                               color: effectiveBadgeColor,
                               fontWeight: FontWeight.w700,
                             ),
@@ -122,7 +122,7 @@ class _StatCardState extends State<StatCard> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 7),
 
                   // Middle: Value
                   FittedBox(
@@ -131,14 +131,14 @@ class _StatCardState extends State<StatCard> {
                     child: Text(
                       widget.value,
                       style: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 19.5,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         letterSpacing: -0.5,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
 
                   // Bottom: Label
                   Text(
@@ -146,7 +146,7 @@ class _StatCardState extends State<StatCard> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 11.5,
                       color: Colors.white.withValues(alpha: 0.65),
                       fontWeight: FontWeight.w600,
                     ),

@@ -177,7 +177,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                   // Stat cards grid
                   _buildStatCards(cards, width),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
 
                   // Lower panels (Recent 1:3, Quick Actions 2:3) fill remaining height
                   Expanded(
