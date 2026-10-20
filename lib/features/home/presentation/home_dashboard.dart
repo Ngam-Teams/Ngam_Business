@@ -541,6 +541,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onTap: () => context.push('/inventory'),
       ),
       (
+        label: 'Feed & Post\nStudio',
+        icon: HugeIcons.strokeRoundedVideo01,
+        color: const Color(0xFFEC4899),
+        onTap: () => context.push('/feed-studio'),
+      ),
+      (
         label: 'Promotions &\nVouchers',
         icon: HugeIcons.strokeRoundedDiscountTag02,
         color: const Color(0xFF44CF6C),
@@ -648,8 +654,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
             color: Colors.white.withValues(alpha: 0.1),
           ),
         ),
-        child: const Text(
-          '20 Tools',
+        child: Text(
+          '${actions.length} Tools',
           style: TextStyle(
             color: Colors.white60,
             fontSize: 10.5,

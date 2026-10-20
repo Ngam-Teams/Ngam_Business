@@ -195,6 +195,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   const Divider(height: 24, color: Color(0x1AFFFFFF)),
                   _buildNavRow(
+                    label: 'Ngam Feed & Post Studio',
+                    icon: HugeIcons.strokeRoundedVideo01,
+                    onTap: () => context.push('/feed-studio'),
+                  ),
+                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
+                  _buildNavRow(
                     label: 'Promotions & Vouchers',
                     icon: HugeIcons.strokeRoundedDiscountTag02,
                     onTap: () => context.push('/promotions'),

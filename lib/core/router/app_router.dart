@@ -33,6 +33,7 @@ import '../../features/payroll/presentation/payroll_management_page.dart';
 import '../../features/loyalty/presentation/loyalty_stamps_page.dart';
 import '../../features/settings/presentation/mfa_setup_page.dart';
 import '../../features/settings/presentation/audit_logs_page.dart';
+import '../../features/feed/presentation/feed_management_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
 import '../services/order_alert_service.dart';
 import '../../features/settings/data/business_service.dart';
@@ -333,6 +334,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/audit-logs',
       builder: (context, state) => const AuditLogsPage(),
+    ),
+    GoRoute(
+      path: '/feed-studio',
+      builder: (context, state) => const FeedManagementPage(),
     ),
   ],
 );
