@@ -52,6 +52,24 @@ class AuthService {
     );
   }
 
+  
+
+  /// Lookup account email by phone number (if merchant forgot email)
+  Future<Map<String, dynamic>> lookupAccountByPhone(String phone) async {
+    try {
+      final res = await _client.rpc('lookup_account_by_phone', params: {
+        'phone_input': phone.trim(),
+      });
+      if (res is Map<String, dynamic>) {
+        return res;
+      }
+      return {'success': false, 'message': 'Ralat memproses carian akaun.'};
+    } catch (e) {
+      debugPrint('[AuthService] Error lookupAccountByPhone: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   /// Update password during recovery flow
   Future<void> updateRecoveryPassword(String newPassword) async {
     await _client.auth.updateUser(UserAttributes(password: newPassword));

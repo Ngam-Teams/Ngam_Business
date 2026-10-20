@@ -200,7 +200,7 @@ class _AppShellState extends State<_AppShell> {
 // ---------------------------------------------------------------------------
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
-  initialLocation: '/home',
+  initialLocation: '/',
   redirect: (context, state) {
     final user = Supabase.instance.client.auth.currentUser;
     final isGoingToAuth =
@@ -221,12 +221,16 @@ final appRouter = GoRouter(
 
     // Logged in and going to auth screen — redirect to home
     if (state.uri.path == '/login' || state.uri.path == '/signup') {
-      return '/home';
+      return '/';
     }
 
     return null;
   },
   routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const _AppShell(),
+    ),
     GoRoute(
       path: '/home',
       builder: (context, state) => const _AppShell(),
