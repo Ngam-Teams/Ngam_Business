@@ -162,51 +162,90 @@ class _HomeDashboardState extends State<HomeDashboard> {
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final isDesktop = width >= 750;
-            final showBanner = !_loadingBusiness && (!hasLocation || (_businessProfile?['address_line'] ?? '').isEmpty);
+            final height = constraints.maxHeight;
 
-            // On desktop/landscape screens with sufficient height, lock outer scrolling.
-            // The two lower panels expand to fill the screen, and only their internal content scrolls.
-            if (isDesktop && constraints.maxHeight >= 480) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Business Profile Setup Reminder if location or details missing
-                  if (showBanner)
-                    _buildProfileIncompleteBanner(context),
+            // Detect landscape or sufficiently wide window
+            final isLandscape = (width > height) ||
+                (MediaQuery.orientationOf(context) == Orientation.landscape) ||
+                (width >= 620);
 
-                  // Stat cards grid
-                  _buildStatCards(cards, width),
-                  const SizedBox(height: 12),
+            final showBanner = !_loadingBusiness &&
+                (!hasLocation || (_businessProfile?['address_line'] ?? '').isEmpty);
 
-                  // Lower panels (Recent 1:3, Quick Actions 2:3) fill remaining height
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(flex: 1, child: _buildRecentActivity(isDesktop: true)),
-                        const SizedBox(width: 20),
-                        Expanded(flex: 2, child: _buildQuickActions(context, isDesktop: true)),
-                      ],
+            // In landscape or wide screens: ALWAYS keep Recent Activity & Quick Actions SIDE-BY-SIDE!
+            if (isLandscape) {
+              // Full-viewport non-scrolling layout when height is sufficient
+              if (height >= 360) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (showBanner) _buildProfileIncompleteBanner(context),
+                    _buildStatCards(cards, width, isLandscape: true),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: width < 900 ? 5 : 2,
+                            child: _buildRecentActivity(isDesktop: true),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: width < 900 ? 7 : 3,
+                            child: _buildQuickActions(context, isDesktop: true),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                );
+              }
+
+              // Ultra-short landscape screen (< 360px height)
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 40),
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (showBanner) _buildProfileIncompleteBanner(context),
+                    _buildStatCards(cards, width, isLandscape: true),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 360,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: width < 900 ? 5 : 2,
+                            child: _buildRecentActivity(isDesktop: true),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: width < 900 ? 7 : 3,
+                            child: _buildQuickActions(context, isDesktop: true),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               );
             }
 
-            // Mobile / small window portrait layout
+            // Mobile portrait layout (vertical phone)
             return SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(0, 0, 0, 100),
               physics: const BouncingScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (showBanner)
-                    _buildProfileIncompleteBanner(context),
-                  _buildStatCards(cards, width),
-                  const SizedBox(height: 20),
+                  if (showBanner) _buildProfileIncompleteBanner(context),
+                  _buildStatCards(cards, width, isLandscape: false),
+                  const SizedBox(height: 16),
                   _buildRecentActivity(isDesktop: false),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   _buildQuickActions(context, isDesktop: false),
                 ],
               ),
@@ -360,18 +399,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  Widget _buildStatCards(List<Widget> cards, double width) {
-    if (width >= 750) {
+  Widget _buildStatCards(List<Widget> cards, double width, {bool isLandscape = false}) {
+    if (width >= 700 || isLandscape) {
       return IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(child: cards[0]),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(child: cards[1]),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(child: cards[2]),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(child: cards[3]),
           ],
         ),
@@ -384,18 +423,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: cards[0]),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(child: cards[1]),
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: cards[2]),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(child: cards[3]),
               ],
             ),
@@ -443,12 +482,15 @@ class _HomeDashboardState extends State<HomeDashboard> {
         ),
       ),
       child: isDesktop
-          ? ListView.separated(
-              padding: EdgeInsets.zero,
-              physics: const BouncingScrollPhysics(),
-              itemCount: _activities.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _buildActivityItem(_activities[i]),
+          ? Scrollbar(
+              thumbVisibility: true,
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                physics: const BouncingScrollPhysics(),
+                itemCount: _activities.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, i) => _buildActivityItem(_activities[i]),
+              ),
             )
           : Column(
               children: _activities
@@ -712,7 +754,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
             }
           }
 
-          return GridView.builder(
+          final bool canScroll = isDesktop && (physics is! NeverScrollableScrollPhysics);
+
+          final grid = GridView.builder(
             padding: EdgeInsets.zero,
             physics: isDesktop ? physics : const NeverScrollableScrollPhysics(),
             shrinkWrap: !isDesktop,
@@ -734,6 +778,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             },
           );
+
+          if (canScroll) {
+            return Scrollbar(
+              thumbVisibility: true,
+              child: grid,
+            );
+          }
+          return grid;
         },
       ),
     );
