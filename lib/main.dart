@@ -10,10 +10,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'core/router/app_router.dart';
+import 'core/router/url_strategy.dart';
 import 'features/settings/data/business_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  setCleanUrlStrategy();
 
   try {
     await dotenv.load(fileName: '.env');
