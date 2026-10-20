@@ -519,7 +519,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: QrImageView(
-              data: 'https://ngam.my/queue',
+              data: 'https://ngam.dev/queue',
               size: 40,
               version: QrVersions.auto,
             ),

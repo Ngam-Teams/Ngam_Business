@@ -952,7 +952,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
                     _buildField(
                       label: 'Email (Used to log in on Ngam Teams) *',
                       controller: _emailController,
-                      hint: 'e.g. siti@example.com or siti@ngam.my',
+                      hint: 'e.g. siti@example.com or siti@ngam.dev',
                       keyboardType: TextInputType.emailAddress,
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) return 'Email required';

@@ -562,7 +562,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                             controller: _emailController,
                             icon: HugeIcons.strokeRoundedMail01,
                             keyboardType: TextInputType.emailAddress,
-                            hint: 'e.g. hello@kedaingam.my',
+                            hint: 'e.g. hello@kedaingam.dev',
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(

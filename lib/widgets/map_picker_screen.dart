@@ -111,7 +111,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
           'https://nominatim.openstreetmap.org/reverse?lat=${target.latitude}&lon=${target.longitude}&format=json&addressdetails=1',
         );
         final res = await http.get(uri, headers: {
-          'User-Agent': 'NgamBusiness/1.0 (contact@ngam.my)',
+          'User-Agent': 'NgamBusiness/1.0 (contact@ngam.dev)',
         }).timeout(const Duration(seconds: 4));
 
         if (res.statusCode == 200 && mounted) {
@@ -182,7 +182,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
             'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(trimmed)}&format=json&addressdetails=1&limit=5&countrycodes=my',
           );
           final nomRes = await http.get(nomUri, headers: {
-            'User-Agent': 'NgamBusiness/1.0 (contact@ngam.my)',
+            'User-Agent': 'NgamBusiness/1.0 (contact@ngam.dev)',
           }).timeout(const Duration(seconds: 3));
 
           if (nomRes.statusCode == 200) {
