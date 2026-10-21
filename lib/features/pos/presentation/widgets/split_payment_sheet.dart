@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/order_model.dart';
 import '../../../../widgets/glass_toast.dart';
+import '../../../promotions/data/voucher_service.dart';
 
 class SplitPaymentResult {
   final List<PaymentSplit> splits;
@@ -11,6 +12,9 @@ class SplitPaymentResult {
   final String? notes;
   final double total;
   final double change;
+  final String? voucherCode;
+  final String? voucherId;
+  final double discountAmount;
 
   SplitPaymentResult({
     required this.splits,
@@ -18,6 +22,9 @@ class SplitPaymentResult {
     required this.change,
     this.customerName,
     this.notes,
+    this.voucherCode,
+    this.voucherId,
+    this.discountAmount = 0.0,
   });
 }
 
@@ -58,19 +65,26 @@ class SplitPaymentSheet extends StatefulWidget {
 class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
   final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
 
+  final VoucherService _voucherService = VoucherService();
   late TextEditingController _customerCtrl;
   late TextEditingController _notesCtrl;
   late TextEditingController _amountCtrl;
   late TextEditingController _cashTenderedCtrl;
+  late TextEditingController _voucherCtrl;
 
   final List<PaymentSplit> _recordedSplits = [];
   String _selectedMethod = 'cash'; // 'cash' | 'duitnow' | 'card' | 'ewallet'
+  VoucherValidationResult? _appliedVoucher;
+  double _discountAmount = 0.0;
+  bool _isValidatingVoucher = false;
+
+  double get _netTotal => (widget.totalAmount - _discountAmount).clamp(0.0, double.infinity);
 
   double get _totalAllocated =>
       _recordedSplits.fold(0.0, (sum, s) => sum + s.amount);
 
   double get _remainingDue =>
-      (widget.totalAmount - _totalAllocated).clamp(0.0, double.infinity);
+      (_netTotal - _totalAllocated).clamp(0.0, double.infinity);
 
   double get _totalChange {
     double change = 0.0;
@@ -97,6 +111,7 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
     _notesCtrl = TextEditingController();
     _amountCtrl = TextEditingController(text: widget.totalAmount.toStringAsFixed(2));
     _cashTenderedCtrl = TextEditingController(text: widget.totalAmount.toStringAsFixed(2));
+    _voucherCtrl = TextEditingController();
   }
 
   @override
@@ -105,6 +120,7 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
     _notesCtrl.dispose();
     _amountCtrl.dispose();
     _cashTenderedCtrl.dispose();
+    _voucherCtrl.dispose();
     super.dispose();
   }
 
@@ -168,7 +184,7 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
       );
 
       // Auto update next input for any remaining balance
-      final newRemaining = (widget.totalAmount - _totalAllocated).clamp(0.0, double.infinity);
+      final newRemaining = (_netTotal - _totalAllocated).clamp(0.0, double.infinity);
       _amountCtrl.text = newRemaining.toStringAsFixed(2);
       _cashTenderedCtrl.text = newRemaining.toStringAsFixed(2);
     });
@@ -177,17 +193,59 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
   void _removeSplit(int index) {
     setState(() {
       _recordedSplits.removeAt(index);
-      final newRemaining = (widget.totalAmount - _totalAllocated).clamp(0.0, double.infinity);
+      final newRemaining = (_netTotal - _totalAllocated).clamp(0.0, double.infinity);
       _amountCtrl.text = newRemaining.toStringAsFixed(2);
       _cashTenderedCtrl.text = newRemaining.toStringAsFixed(2);
     });
+  }
+
+  Future<void> _applyVoucher() async {
+    final code = _voucherCtrl.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      showGlassToast(context, 'Sila masukkan kod baucar', isError: true);
+      return;
+    }
+
+    setState(() => _isValidatingVoucher = true);
+
+    try {
+      final res = await _voucherService.validateVoucherCode(
+        code: code,
+        subtotal: widget.totalAmount,
+      );
+
+      if (!mounted) return;
+      setState(() => _isValidatingVoucher = false);
+
+      if (res.isValid) {
+        setState(() {
+          _appliedVoucher = res;
+          _discountAmount = res.discountAmount;
+          _recordedSplits.clear();
+          final newRem = (_netTotal - _totalAllocated).clamp(0.0, double.infinity);
+          _amountCtrl.text = newRem.toStringAsFixed(2);
+          _cashTenderedCtrl.text = newRem.toStringAsFixed(2);
+        });
+        showGlassToast(
+          context,
+          'Baucar "$code" berjaya ditebus! Jimat ${fmt.format(res.discountAmount)}',
+          customColor: const Color(0xFF44CF6C),
+        );
+      } else {
+        showGlassToast(context, res.message, isError: true);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isValidatingVoucher = false);
+      showGlassToast(context, 'Ralat menyemak baucar: $e', isError: true);
+    }
   }
 
   void _completeCheckout() {
     // If no splits were added manually yet, but current input covers the bill, auto-add
     if (_recordedSplits.isEmpty) {
       final inputAmt = double.tryParse(_amountCtrl.text.replaceAll(',', '')) ?? 0.0;
-      if (inputAmt >= widget.totalAmount - 0.001) {
+      if (inputAmt >= _netTotal - 0.001) {
         _addCurrentSplit();
       }
     }
@@ -205,10 +263,13 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
       context,
       SplitPaymentResult(
         splits: _recordedSplits,
-        total: widget.totalAmount,
+        total: _netTotal,
         change: _totalChange,
         customerName: _customerCtrl.text.trim(),
         notes: _notesCtrl.text.trim(),
+        voucherCode: _appliedVoucher?.code,
+        voucherId: _appliedVoucher?.voucherId,
+        discountAmount: _discountAmount,
       ),
     );
   }
@@ -262,7 +323,9 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
                       ),
                     ),
                     Text(
-                      '${widget.itemCount} item • Jumlah: ${fmt.format(widget.totalAmount)}',
+                      _discountAmount > 0
+                          ? '${widget.itemCount} item • ${fmt.format(_netTotal)} (Jimat ${fmt.format(_discountAmount)})'
+                          : '${widget.itemCount} item • Jumlah: ${fmt.format(widget.totalAmount)}',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.6),
                         fontSize: 13,
@@ -288,6 +351,10 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
                 children: [
                   // Status Banner (Remaining & Change)
                   _buildStatusBanner(),
+                  const SizedBox(height: 14),
+
+                  // Voucher / Promo Code Section
+                  _buildVoucherSection(),
                   const SizedBox(height: 16),
 
                   // Recorded Splits (if any)
@@ -334,63 +401,224 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
               : const Color(0xFFF59E0B).withValues(alpha: 0.4),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(
-                isFullyPaid ? Icons.check_circle_rounded : Icons.pending_rounded,
-                color: isFullyPaid ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-                size: 26,
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Text(
-                    isFullyPaid ? 'Bayaran Lengkap' : 'Baki Kena Bayar',
-                    style: TextStyle(
-                      color: isFullyPaid ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Icon(
+                    isFullyPaid ? Icons.check_circle_rounded : Icons.pending_rounded,
+                    color: isFullyPaid ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                    size: 26,
                   ),
-                  Text(
-                    fmt.format(_remainingDue),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isFullyPaid ? 'Bayaran Lengkap' : 'Baki Kena Bayar',
+                        style: TextStyle(
+                          color: isFullyPaid ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        fmt.format(_remainingDue),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
+
+              if (_totalChange > 0)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text(
+                      'Baki Pulangan',
+                      style: TextStyle(
+                        color: Color(0xFF34D399),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      fmt.format(_totalChange),
+                      style: const TextStyle(
+                        color: Color(0xFF34D399),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
-
-          if (_totalChange > 0)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
-                  'Baki Pulangan',
-                  style: TextStyle(
-                    color: Color(0xFF34D399),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+          if (_discountAmount > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Asal: ${fmt.format(widget.totalAmount)}  •  Diskaun: -${fmt.format(_discountAmount)}',
+                    style: const TextStyle(color: Colors.white70, fontSize: 11),
                   ),
-                ),
-                Text(
-                  fmt.format(_totalChange),
-                  style: const TextStyle(
-                    color: Color(0xFF34D399),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
+                  Text(
+                    'Jumlah Bersih: ${fmt.format(_netTotal)}',
+                    style: const TextStyle(color: Color(0xFF44CF6C), fontSize: 11, fontWeight: FontWeight.bold),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVoucherSection() {
+    if (_appliedVoucher != null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF44CF6C).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF44CF6C).withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF44CF6C).withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.confirmation_number_rounded, color: Color(0xFF44CF6C), size: 16),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        _appliedVoucher!.code ?? 'BAUCAR',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF44CF6C).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '-${fmt.format(_discountAmount)}',
+                          style: const TextStyle(
+                            color: Color(0xFF44CF6C),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    _appliedVoucher!.message,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.cancel_outlined, color: Colors.white54, size: 20),
+              tooltip: 'Buang Baucar',
+              onPressed: () {
+                setState(() {
+                  _appliedVoucher = null;
+                  _discountAmount = 0.0;
+                  _voucherCtrl.clear();
+                  final newRemaining = (_netTotal - _totalAllocated).clamp(0.0, double.infinity);
+                  _amountCtrl.text = newRemaining.toStringAsFixed(2);
+                  _cashTenderedCtrl.text = newRemaining.toStringAsFixed(2);
+                });
+                showGlassToast(context, 'Baucar dibatalkan.');
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.local_offer_outlined, color: Color(0xFF42A5F5), size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _voucherCtrl,
+              textCapitalization: TextCapitalization.characters,
+              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(
+                hintText: 'Masukkan kod baucar...',
+                hintStyle: TextStyle(color: Colors.white38, fontSize: 12),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              onSubmitted: (_) => _applyVoucher(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _isValidatingVoucher
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)),
+                )
+              : ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF42A5F5).withValues(alpha: 0.2),
+                    foregroundColor: const Color(0xFF42A5F5),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: Color(0xFF42A5F5)),
+                    ),
+                  ),
+                  onPressed: _applyVoucher,
+                  child: const Text('Tebus', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
         ],
       ),
     );
@@ -760,8 +988,8 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
                 icon: const Icon(Icons.check_circle_rounded, size: 20),
                 label: Text(
                   isFullyPaid
-                      ? 'Sahkan & Bayar (${fmt.format(widget.totalAmount)})'
-                      : 'Bayar Sekarang (${fmt.format(widget.totalAmount)})',
+                      ? 'Sahkan & Bayar (${fmt.format(_netTotal)})'
+                      : 'Bayar Sekarang (${fmt.format(_netTotal)})',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 style: ElevatedButton.styleFrom(

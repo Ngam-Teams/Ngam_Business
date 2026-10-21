@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../pos/data/pos_service.dart';
 import '../../pos/models/product_model.dart';
 import '../../pos/models/order_model.dart';
+import '../../promotions/data/voucher_service.dart';
 import 'widgets/split_payment_sheet.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/modal_sheet.dart';
@@ -124,9 +125,10 @@ class _PosPageState extends State<PosPage> {
   Future<void> _checkout() async {
     if (_cart.isEmpty) return;
 
+    final subtotal = _cartTotal;
     final result = await SplitPaymentSheet.show(
       context: context,
-      totalAmount: _cartTotal,
+      totalAmount: subtotal,
       itemCount: _cartCount,
       initialCustomerName: _customerController.text.trim(),
     );
@@ -134,21 +136,43 @@ class _PosPageState extends State<PosPage> {
     if (result == null || !mounted) return;
 
     try {
+      String? combinedNotes = result.notes;
+      if (result.voucherCode != null && result.discountAmount > 0) {
+        final voucherTag = '[Baucar: ${result.voucherCode} (-RM ${result.discountAmount.toStringAsFixed(2)})]';
+        combinedNotes = (combinedNotes == null || combinedNotes.trim().isEmpty)
+            ? voucherTag
+            : '$voucherTag | $combinedNotes';
+      }
+
       await _service.submitOrder(
         items: _cart,
         total: result.total,
         customerName: result.customerName,
-        notes: result.notes,
+        notes: combinedNotes,
         paymentSplits: result.splits,
       );
+
+      // Rekod penebusan baucar dalam Supabase jika baucar digunakan
+      if (result.voucherId != null && result.discountAmount > 0) {
+        try {
+          await VoucherService().recordVoucherUsage(
+            voucherId: result.voucherId!,
+            discountAmount: result.discountAmount,
+            orderSubtotal: subtotal,
+            customerPhone: null,
+          );
+        } catch (_) {}
+      }
+
       if (!mounted) return;
 
       final summary = result.splits.map((s) => '${s.displayName}: RM ${s.amount.toStringAsFixed(2)}').join(', ');
+      final discountText = result.discountAmount > 0 ? ' • Baucar: -RM ${result.discountAmount.toStringAsFixed(2)}' : '';
       final changeText = result.change > 0 ? ' • Baki Pulangan: RM ${result.change.toStringAsFixed(2)}' : '';
 
       showGlassToast(
         context,
-        'Pesanan Selesai! ($summary$changeText)',
+        'Pesanan Selesai! ($summary$discountText$changeText)',
         customColor: const Color(0xFF44CF6C),
       );
       setState(() {
