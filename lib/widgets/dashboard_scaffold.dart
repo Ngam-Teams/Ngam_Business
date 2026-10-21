@@ -8,9 +8,10 @@ import '../features/settings/data/business_service.dart';
 
 /// DashboardScaffold — master responsive layout for Ngam Business.
 ///
-/// Desktop (≥800px): collapsible floating rail with Expand & Shrink modes.
-/// - Shrunk mode: ultra-slim (72px) icon-only floating rail with expand icon.
-/// - Expanded mode: full (260px) labeled sidebar with collapse icon.
+/// Desktop (≥800px): collapsible floating rail with Gemini-style Expand & Shrink modes:
+/// - Shrunk mode: ultra-slim (72px) icon-only rail. Hovering over the logo transforms
+///   it into the expand icon button; clicking expands the sidebar.
+/// - Expanded mode: full (260px) labeled sidebar with collapse icon in top right.
 /// Mobile (<800px): floating glassmorphic pill BottomNav.
 class DashboardScaffold extends StatelessWidget {
   final int selectedIndex;
@@ -70,7 +71,7 @@ class DashboardScaffold extends StatelessWidget {
   }
 
   // ---------------------------------------------------------------------------
-  // Navigation Rail (collapsible: Expand and Shrink modes — desktop only)
+  // Navigation Rail (collapsible: Gemini-style Expand and Shrink modes)
   // ---------------------------------------------------------------------------
   Widget _buildNavigationRail(BuildContext context) {
     return ValueListenableBuilder<bool>(
@@ -105,7 +106,7 @@ class DashboardScaffold extends StatelessWidget {
                   children: [
                     const SizedBox(height: 16),
 
-                    // Top Bar (Logo + Expand / Shrink Toggle Button)
+                    // Top Bar (Logo & Expand / Shrink Interactions)
                     if (isExpanded)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -151,84 +152,17 @@ class DashboardScaffold extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            // Shrink icon button to collapse sidebar
-                            Tooltip(
-                              message: 'Kecilkan Sidebar',
-                              waitDuration: const Duration(milliseconds: 300),
-                              child: InkWell(
-                                onTap: () => isExpandedNotifier.value = false,
-                                borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.06),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.1),
-                                    ),
-                                  ),
-                                  child: const Center(
-                                    child: HugeIcon(
-                                      icon: HugeIcons.strokeRoundedSidebarLeft,
-                                      color: Colors.white70,
-                                      size: 17,
-                                      strokeWidth: 2.0,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                            // Collapse icon button in expanded mode
+                            _CollapseSidebarButton(
+                              onTap: () => isExpandedNotifier.value = false,
                             ),
                           ],
                         ),
                       )
                     else
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Tooltip(
-                            message: 'Ngam Business',
-                            waitDuration: const Duration(milliseconds: 300),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.asset(
-                                'assets/splash.png',
-                                width: 36,
-                                height: 36,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          // Expand icon button to expand sidebar "cam b4"
-                          Tooltip(
-                            message: 'Kembangkan Sidebar',
-                            waitDuration: const Duration(milliseconds: 300),
-                            child: InkWell(
-                              onTap: () => isExpandedNotifier.value = true,
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF42A5F5).withValues(alpha: 0.14),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
-                                  ),
-                                ),
-                                child: const Center(
-                                  child: HugeIcon(
-                                    icon: HugeIcons.strokeRoundedSidebarRight,
-                                    color: Color(0xFF42A5F5),
-                                    size: 18,
-                                    strokeWidth: 2.1,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      // Shrunk mode: Logo swaps to expand button on hover!
+                      _LogoExpandButton(
+                        onTap: () => isExpandedNotifier.value = true,
                       ),
 
                     const SizedBox(height: 14),
@@ -513,6 +447,140 @@ class DashboardScaffold extends StatelessWidget {
 
           Expanded(child: child),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Logo / Expand Button (Gemini Style: Hover over logo transforms into expand icon)
+// ---------------------------------------------------------------------------
+class _LogoExpandButton extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _LogoExpandButton({required this.onTap});
+
+  @override
+  State<_LogoExpandButton> createState() => _LogoExpandButtonState();
+}
+
+class _LogoExpandButtonState extends State<_LogoExpandButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: _isHovered ? 'Kembangkan Sidebar' : 'Ngam Business',
+      waitDuration: const Duration(milliseconds: 300),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _isHovered
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isHovered
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : Colors.transparent,
+                width: 1,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 160),
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(scale: animation, child: child),
+              ),
+              child: _isHovered
+                  ? const HugeIcon(
+                      key: ValueKey('expand_icon'),
+                      icon: HugeIcons.strokeRoundedSidebarLeft01,
+                      color: Colors.white,
+                      size: 20,
+                      strokeWidth: 2.1,
+                    )
+                  : ClipRRect(
+                      key: const ValueKey('logo_img'),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.asset(
+                        'assets/splash.png',
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Collapse Button (Gemini Style: Top right icon button to collapse sidebar)
+// ---------------------------------------------------------------------------
+class _CollapseSidebarButton extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _CollapseSidebarButton({required this.onTap});
+
+  @override
+  State<_CollapseSidebarButton> createState() => _CollapseSidebarButtonState();
+}
+
+class _CollapseSidebarButtonState extends State<_CollapseSidebarButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Kecilkan Sidebar',
+      waitDuration: const Duration(milliseconds: 300),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: _isHovered
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _isHovered
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : Colors.white.withValues(alpha: 0.08),
+                width: 1,
+              ),
+            ),
+            child: const Center(
+              child: HugeIcon(
+                icon: HugeIcons.strokeRoundedSidebarLeft,
+                color: Colors.white70,
+                size: 18,
+                strokeWidth: 2.0,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
