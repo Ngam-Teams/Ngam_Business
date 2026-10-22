@@ -9,6 +9,7 @@ import '../../pos/models/product_model.dart';
 import '../../pos/models/order_model.dart';
 import '../../promotions/data/voucher_service.dart';
 import 'widgets/split_payment_sheet.dart';
+import 'widgets/dynamic_qr_modal.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/modal_sheet.dart';
 
@@ -175,6 +176,50 @@ class _PosPageState extends State<PosPage> {
         'Pesanan Selesai! ($summary$discountText$changeText)',
         customColor: const Color(0xFF44CF6C),
       );
+      setState(() {
+        _cart = [];
+        _customerController.clear();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      showGlassToast(context, 'Gagal membuat pesanan: $e', isError: true);
+    }
+  }
+
+  Future<void> _payWithDuitNowDynamic() async {
+    if (_cart.isEmpty) return;
+    final subtotal = _cartTotal;
+    final customer = _customerController.text.trim();
+    final orderRef = 'POS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+
+    final isPaid = await DynamicQrModal.show(
+      context: context,
+      amount: subtotal,
+      orderTitle: 'Pesanan #$orderRef (${_cart.length} item)',
+      customerName: customer.isNotEmpty ? customer : 'Pelanggan Kaunter',
+    );
+
+    if (!isPaid || !mounted) return;
+
+    try {
+      await _service.submitOrder(
+        items: _cart,
+        total: subtotal,
+        customerName: customer.isNotEmpty ? customer : null,
+        notes: '[DuitNow QR Dinamik - Disahkan CHIP]',
+        paymentSplits: [
+          PaymentSplit(method: 'duitnow', amount: subtotal),
+        ],
+      );
+
+      if (!mounted) return;
+
+      showGlassToast(
+        context,
+        'Pesanan Selesai! (DuitNow QR: RM ${subtotal.toStringAsFixed(2)})',
+        customColor: const Color(0xFF44CF6C),
+      );
+
       setState(() {
         _cart = [];
         _customerController.clear();
@@ -858,6 +903,38 @@ class _PosPageState extends State<PosPage> {
             ],
           ),
           const SizedBox(height: 14),
+
+          // DuitNow Dynamic QR Quick Action Button
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton.icon(
+              onPressed: _cart.isEmpty ? null : _payWithDuitNowDynamic,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFED1164),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFED1164).withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              icon: const HugeIcon(
+                icon: HugeIcons.strokeRoundedQrCode,
+                color: Colors.white,
+                size: 18,
+                strokeWidth: 2.1,
+              ),
+              label: const Text(
+                'DuitNow QR Dinamik (CHIP)',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
 
           SizedBox(
             width: double.infinity,

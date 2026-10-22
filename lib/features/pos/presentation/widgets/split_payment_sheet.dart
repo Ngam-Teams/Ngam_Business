@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/order_model.dart';
 import '../../../../widgets/glass_toast.dart';
+import 'dynamic_qr_modal.dart';
 import '../../../promotions/data/voucher_service.dart';
 
 class SplitPaymentResult {
@@ -871,6 +872,43 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
 
           const SizedBox(height: 16),
 
+          if (_selectedMethod == 'duitnow') ...[
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final amt = double.tryParse(_amountCtrl.text) ?? _remainingDue;
+                  if (amt <= 0) return;
+                  final isPaid = await DynamicQrModal.show(
+                    context: context,
+                    amount: amt,
+                    orderTitle: 'Bayaran DuitNow',
+                    customerName: _customerCtrl.text.trim().isNotEmpty ? _customerCtrl.text.trim() : null,
+                  );
+                  if (isPaid && mounted) {
+                    _addCurrentSplit();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFED1164),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                icon: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedQrCode,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                label: const Text(
+                  '⚡ Jana DuitNow QR Dinamik (CHIP)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           // Add this split button
           SizedBox(
             width: double.infinity,
