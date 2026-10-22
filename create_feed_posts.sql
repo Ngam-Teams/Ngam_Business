@@ -89,15 +89,29 @@ CREATE POLICY "Feed posts delete policy"
     EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = auth.uid() AND ur.role = 'super_admin')
   );
 
--- 5. Kebenaran Akses SQL (Permissions)
+-- 5. Pastikan Kolum Sokongan Wujud pada Jadual businesses jika belum ada
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS business_handle TEXT;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS business_logo_url TEXT;
+
+-- Kemaskini business_handle automatik untuk kedai sedia ada jika masih kosong
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'businesses' AND column_name = 'business_handle') THEN
+    UPDATE public.businesses
+    SET business_handle = LOWER(REGEXP_REPLACE(business_name, '[^a-zA-Z0-9]+', '', 'g'))
+    WHERE business_handle IS NULL OR business_handle = '';
+  END IF;
+END $$;
+
+-- 6. Kebenaran Akses SQL (Permissions)
 GRANT SELECT ON public.feed_posts TO anon, authenticated;
 GRANT ALL ON public.feed_posts TO authenticated;
 GRANT ALL ON public.feed_posts TO service_role;
 
--- Pastikan anon boleh membaca info asas kedai untuk paparan pos suapan pelanggan
-GRANT SELECT (id, business_name, business_handle, logo_url, business_industry, business_city, state) ON public.businesses TO anon, authenticated;
+-- Beri kebenaran SELECT pada jadual businesses untuk pelawat awam & pelanggan suapan
+GRANT SELECT ON public.businesses TO anon, authenticated;
 
--- 6. Fungsi RPC Selamat untuk Kiraan Tontonan & Sukaan (Views & Likes Increment)
+-- 7. Fungsi RPC Selamat untuk Kiraan Tontonan & Sukaan (Views & Likes Increment)
 CREATE OR REPLACE FUNCTION public.increment_feed_post_views(p_post_id UUID)
 RETURNS void
 LANGUAGE plpgsql
@@ -132,7 +146,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.toggle_feed_post_like(UUID, BOOLEAN) TO anon, authenticated;
 
--- 7. Masukkan Sampel Pos Permulaan secara Automatik jika ada kedai
+-- 8. Masukkan Sampel Pos Permulaan secara Automatik jika ada kedai
 DO $$
 DECLARE
   v_biz_id UUID;
