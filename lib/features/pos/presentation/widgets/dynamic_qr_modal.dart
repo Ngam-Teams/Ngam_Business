@@ -248,6 +248,25 @@ class _DynamicQrModalState extends State<DynamicQrModal> with SingleTickerProvid
                 ],
               ),
             ),
+            if (_purchase?.isWebFallback == true) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9C80E).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFF9C80E).withValues(alpha: 0.3)),
+                ),
+                child: const Text(
+                  'Web Sandbox',
+                  style: TextStyle(
+                    color: Color(0xFFF9C80E),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
             const Spacer(),
             IconButton(
               onPressed: () => Navigator.of(context).pop(false),
