@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 
@@ -6,6 +7,9 @@ import '../data/feed_service.dart';
 import '../models/feed_post_model.dart';
 import '../../settings/data/business_service.dart';
 
+/// FeedManagementPage — Ngam Feed & Post Studio.
+/// Dioptimumkan sepenuhnya untuk responsif telefon pintar (Mobile-Friendly)
+/// dan desktop browser.
 class FeedManagementPage extends StatefulWidget {
   const FeedManagementPage({super.key});
 
@@ -209,6 +213,9 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isPhone = screenWidth < 600;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
       appBar: AppBar(
@@ -219,17 +226,21 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Row(
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            HugeIcon(
+            const HugeIcon(
               icon: HugeIcons.strokeRoundedVideo01,
               color: Color(0xFFEC4899),
-              size: 24,
+              size: 22,
             ),
-            SizedBox(width: 10),
-            Text(
-              'Ngam Feed & Post Studio',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                isPhone ? 'Feed & Post' : 'Ngam Feed & Post Studio',
+                style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -239,25 +250,41 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
             tooltip: 'Muat Semula',
             onPressed: _loadInitialData,
           ),
-          const SizedBox(width: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: ElevatedButton.icon(
-              onPressed: () => _openCreateOrEditPostDialog(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFEC4899),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
+          if (!isPhone) ...[
+            const SizedBox(width: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: ElevatedButton.icon(
+                onPressed: () => _openCreateOrEditPostDialog(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEC4899),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: const Text('Cipta Post', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               ),
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text('Cipta Post', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             ),
-          ),
-          const SizedBox(width: 16),
+            const SizedBox(width: 16),
+          ] else
+            const SizedBox(width: 8),
         ],
       ),
+      // Mobile-friendly Floating Action Button for quick thumb tap on phones
+      floatingActionButton: isPhone
+          ? FloatingActionButton.extended(
+              onPressed: () => _openCreateOrEditPostDialog(),
+              backgroundColor: const Color(0xFFEC4899),
+              elevation: 6,
+              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+              label: const Text(
+                'Cipta Post',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            )
+          : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFEC4899)))
           : RefreshIndicator(
@@ -265,10 +292,10 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
               color: const Color(0xFFEC4899),
               backgroundColor: const Color(0xFF161626),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+                padding: EdgeInsets.fromLTRB(16, 8, 16, isPhone ? 90 : 40),
                 children: [
                   _buildMetricHeader(),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
                   _buildFilterBar(),
                   const SizedBox(height: 16),
                   if (_posts.isEmpty)
@@ -283,7 +310,7 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
 
   Widget _buildMetricHeader() {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
@@ -300,21 +327,26 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
                 size: 18,
               ),
               SizedBox(width: 8),
-              Text(
-                'Prestasi Jangkauan Feed Pelanggan',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  'Prestasi Jangkauan Feed Pelanggan',
+                  style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= 600;
+              final isPhone = constraints.maxWidth < 600;
+
               final items = [
-                _buildStatItem('Jumlah Post', '${_stats['totalPosts'] ?? _posts.length}', Icons.grid_view_rounded, const Color(0xFF8B5CF6)),
-                _buildStatItem('Tontonan (Views)', '${_stats['totalViews'] ?? 0}', Icons.remove_red_eye_rounded, const Color(0xFF42A5F5)),
-                _buildStatItem('Sukaan (Likes)', '${_stats['totalLikes'] ?? 0}', Icons.favorite_rounded, const Color(0xFFEF4444)),
-                _buildStatItem('Komen Pelanggan', '${_stats['totalComments'] ?? 0}', Icons.chat_bubble_rounded, const Color(0xFFF59E0B)),
+                _buildStatItem('Jumlah Post', '${_stats['totalPosts'] ?? _posts.length}', Icons.grid_view_rounded, const Color(0xFF8B5CF6), isPhone),
+                _buildStatItem('Tontonan', '${_stats['totalViews'] ?? 0}', Icons.remove_red_eye_rounded, const Color(0xFF42A5F5), isPhone),
+                _buildStatItem('Sukaan', '${_stats['totalLikes'] ?? 0}', Icons.favorite_rounded, const Color(0xFFEF4444), isPhone),
+                _buildStatItem('Komen', '${_stats['totalComments'] ?? 0}', Icons.chat_bubble_rounded, const Color(0xFFF59E0B), isPhone),
               ];
 
               if (isWide) {
@@ -324,9 +356,9 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
               } else {
                 return Column(
                   children: [
-                    Row(children: [Expanded(child: items[0]), const SizedBox(width: 10), Expanded(child: items[1])]),
-                    const SizedBox(height: 10),
-                    Row(children: [Expanded(child: items[2]), const SizedBox(width: 10), Expanded(child: items[3])]),
+                    Row(children: [Expanded(child: items[0]), const SizedBox(width: 8), Expanded(child: items[1])]),
+                    const SizedBox(height: 8),
+                    Row(children: [Expanded(child: items[2]), const SizedBox(width: 8), Expanded(child: items[3])]),
                   ],
                 );
               }
@@ -337,10 +369,9 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+  Widget _buildStatItem(String label, String value, IconData icon, Color color, bool isPhone) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      margin: const EdgeInsets.symmetric(horizontal: 3),
+      padding: EdgeInsets.symmetric(horizontal: isPhone ? 10 : 14, vertical: isPhone ? 9 : 12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
@@ -349,14 +380,14 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(isPhone ? 6 : 8),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.18),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: color, size: isPhone ? 16 : 18),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,14 +395,22 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
               children: [
                 Text(
                   value,
-                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold, shadows: [
-                    Shadow(color: color.withValues(alpha: 0.5), blurRadius: 8),
-                  ]),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isPhone ? 15 : 17,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(color: color.withValues(alpha: 0.5), blurRadius: 8),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   label,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 11),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.55),
+                    fontSize: isPhone ? 10.5 : 11,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -386,9 +425,10 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
   Widget _buildFilterBar() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
       child: Row(
         children: [
-          _buildFilterChip('Semua Post (${_stats['totalPosts'] ?? _posts.length})', 'all', const Color(0xFFEC4899)),
+          _buildFilterChip('Semua (${_stats['totalPosts'] ?? _posts.length})', 'all', const Color(0xFFEC4899)),
           const SizedBox(width: 8),
           _buildFilterChip('Diterbitkan', 'published', const Color(0xFF10B981)),
           const SizedBox(width: 8),
@@ -408,7 +448,7 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
         style: TextStyle(
           color: isSelected ? Colors.white : Colors.white70,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          fontSize: 12.5,
+          fontSize: 12,
         ),
       ),
       selected: isSelected,
@@ -457,263 +497,280 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
   }
 
   Widget _buildPostCard(FeedPostModel post) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: post.isPinned
-              ? const Color(0xFF8B5CF6).withValues(alpha: 0.4)
-              : Colors.white.withValues(alpha: 0.12),
-          width: post.isPinned ? 1.6 : 1.1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Media Thumbnail Banner
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: SizedBox(
-                  height: 180,
-                  width: double.infinity,
-                  child: Image.network(
-                    post.mediaUrl,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (ctx, child, progress) {
-                      if (progress == null) return child;
-                      return Container(
-                        color: Colors.white.withValues(alpha: 0.05),
-                        child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFEC4899))),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => Container(
-                      color: const Color(0xFF1E1E2E),
-                      child: const Center(
-                        child: Icon(Icons.broken_image_rounded, color: Colors.white38, size: 40),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.6),
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.8),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isPhone = constraints.maxWidth < 450;
 
-              // Top Badges
-              Positioned(
-                top: 10,
-                left: 12,
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: post.isPublished
-                            ? const Color(0xFF10B981).withValues(alpha: 0.9)
-                            : const Color(0xFFF59E0B).withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        post.isPublished ? 'DITERBITKAN' : 'DRAF',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: post.isPinned
+                  ? const Color(0xFF8B5CF6).withValues(alpha: 0.4)
+                  : Colors.white.withValues(alpha: 0.12),
+              width: post.isPinned ? 1.6 : 1.1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Media Thumbnail Banner
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    child: SizedBox(
+                      height: isPhone ? 160 : 185,
+                      width: double.infinity,
+                      child: Image.network(
+                        post.mediaUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (ctx, child, progress) {
+                          if (progress == null) return child;
+                          return Container(
+                            color: Colors.white.withValues(alpha: 0.05),
+                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFEC4899))),
+                          );
+                        },
+                        errorBuilder: (_, __, ___) => Container(
+                          color: const Color(0xFF1E1E2E),
+                          child: const Center(
+                            child: Icon(Icons.broken_image_rounded, color: Colors.white38, size: 40),
+                          ),
+                        ),
                       ),
                     ),
-                    if (post.isPinned) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6).withValues(alpha: 0.95),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.push_pin_rounded, color: Colors.white, size: 12),
-                            SizedBox(width: 4),
-                            Text('PIN', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.6),
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.8),
                           ],
                         ),
                       ),
-                    ],
-                  ],
-                ),
-              ),
-
-              // Date in Top Right
-              Positioned(
-                top: 10,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    post.formattedDate,
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                ),
-              ),
-
-              // Bottom of Image: CTA Tag Badge
-              Positioned(
-                bottom: 10,
-                left: 12,
-                right: 12,
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00F2FE).withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        post.ctaText,
-                        style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900),
-                      ),
                     ),
-                    if (post.serviceTag != null && post.serviceTag!.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  ),
+
+                  // Top Badges
+                  Positioned(
+                    top: 10,
+                    left: 12,
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.7),
+                            color: post.isPublished
+                                ? const Color(0xFF10B981).withValues(alpha: 0.9)
+                                : const Color(0xFFF59E0B).withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            post.serviceTag!,
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            post.isPublished ? 'DITERBITKAN' : 'DRAF',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                           ),
                         ),
+                        if (post.isPinned) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.95),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.push_pin_rounded, color: Colors.white, size: 12),
+                                SizedBox(width: 4),
+                                Text('PIN', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // Date in Top Right
+                  Positioned(
+                    top: 10,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ],
+                      child: Text(
+                        post.formattedDate,
+                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                      ),
+                    ),
+                  ),
+
+                  // Bottom of Image: CTA Tag Badge
+                  Positioned(
+                    bottom: 10,
+                    left: 12,
+                    right: 12,
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00F2FE).withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            post.ctaText,
+                            style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                        if (post.serviceTag != null && post.serviceTag!.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.7),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                post.serviceTag!,
+                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // Content Section
+              Padding(
+                padding: EdgeInsets.all(isPhone ? 12 : 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      post.title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isPhone ? 14.5 : 15.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 5),
+                    if (post.caption != null && post.caption!.isNotEmpty)
+                      Text(
+                        post.caption!,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const SizedBox(height: 10),
+
+                    // Engagement Metrics Row
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildMetricMini(Icons.remove_red_eye_rounded, '${post.viewsCount}', const Color(0xFF42A5F5)),
+                          _buildMetricMini(Icons.favorite_rounded, '${post.likesCount}', const Color(0xFFEF4444)),
+                          _buildMetricMini(Icons.chat_bubble_rounded, '${post.commentsCount}', const Color(0xFFF59E0B)),
+                          _buildMetricMini(Icons.share_rounded, '${post.sharesCount}', const Color(0xFF10B981)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Action Buttons Bar (Responsive for Phone Screens)
+                    Row(
+                      children: [
+                        // Preview Button (Mockup Reels)
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showPhonePreview(post),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF00F2FE),
+                              side: BorderSide(color: const Color(0xFF00F2FE).withValues(alpha: 0.5)),
+                              padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.phone_iphone_rounded, size: 15),
+                            label: Text(
+                              isPhone ? 'Pratonton' : 'Pratonton Feed',
+                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+
+                        // Pin Button
+                        IconButton(
+                          padding: const EdgeInsets.all(7),
+                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          icon: Icon(
+                            post.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
+                            color: post.isPinned ? const Color(0xFF8B5CF6) : Colors.white60,
+                            size: 19,
+                          ),
+                          tooltip: post.isPinned ? 'Tanggalkan Pin' : 'Sematkan ke Atas',
+                          onPressed: () => _togglePin(post),
+                        ),
+
+                        // Edit Button
+                        IconButton(
+                          padding: const EdgeInsets.all(7),
+                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          icon: const Icon(Icons.edit_note_rounded, color: Color(0xFF42A5F5), size: 21),
+                          tooltip: 'Sunting Post',
+                          onPressed: () => _openCreateOrEditPostDialog(existing: post),
+                        ),
+
+                        // Delete Button
+                        IconButton(
+                          padding: const EdgeInsets.all(7),
+                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 19),
+                          tooltip: 'Padam Post',
+                          onPressed: () => _deletePost(post),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
             ],
           ),
-
-          // Content Section
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  post.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                if (post.caption != null && post.caption!.isNotEmpty)
-                  Text(
-                    post.caption!,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 12.5,
-                      height: 1.35,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                const SizedBox(height: 12),
-
-                // Engagement Metrics Row
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.04),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildMetricMini(Icons.remove_red_eye_rounded, '${post.viewsCount}', const Color(0xFF42A5F5)),
-                      _buildMetricMini(Icons.favorite_rounded, '${post.likesCount}', const Color(0xFFEF4444)),
-                      _buildMetricMini(Icons.chat_bubble_rounded, '${post.commentsCount}', const Color(0xFFF59E0B)),
-                      _buildMetricMini(Icons.share_rounded, '${post.sharesCount}', const Color(0xFF10B981)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Action Buttons Bar
-                Row(
-                  children: [
-                    // Preview Button (Mockup Reels)
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showPhonePreview(post),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF00F2FE),
-                          side: BorderSide(color: const Color(0xFF00F2FE).withValues(alpha: 0.5)),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.phone_iphone_rounded, size: 16),
-                        label: const Text('Pratonton', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Pin Button
-                    IconButton(
-                      icon: Icon(
-                        post.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-                        color: post.isPinned ? const Color(0xFF8B5CF6) : Colors.white60,
-                        size: 20,
-                      ),
-                      tooltip: post.isPinned ? 'Tanggalkan Pin' : 'Sematkan ke Atas',
-                      onPressed: () => _togglePin(post),
-                    ),
-
-                    // Edit Button
-                    IconButton(
-                      icon: const Icon(Icons.edit_note_rounded, color: Color(0xFF42A5F5), size: 22),
-                      tooltip: 'Sunting Post',
-                      onPressed: () => _openCreateOrEditPostDialog(existing: post),
-                    ),
-
-                    // Delete Button
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                      tooltip: 'Padam Post',
-                      onPressed: () => _deletePost(post),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -721,11 +778,11 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: color, size: 14),
-        const SizedBox(width: 5),
+        Icon(icon, color: color, size: 13),
+        const SizedBox(width: 4),
         Text(
           value,
-          style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+          style: const TextStyle(color: Colors.white70, fontSize: 11.5, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -733,8 +790,8 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
 
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-      margin: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
+      margin: const EdgeInsets.only(top: 10),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(24),
@@ -744,7 +801,7 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color: const Color(0xFFEC4899).withValues(alpha: 0.15),
               shape: BoxShape.circle,
@@ -752,36 +809,39 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
             child: const HugeIcon(
               icon: HugeIcons.strokeRoundedVideo01,
               color: Color(0xFFEC4899),
-              size: 48,
+              size: 40,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           const Text(
             'Tiada Post di Ngam Feed Lagi',
-            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            'Siarkan gambar & video hasil kerja terbaik kedai anda untuk menarik pelanggan tempatan mengambil giliran atau membuat tempahan terus dari feed gaya Reels!',
+            'Siarkan gambar & video hasil kerja terbaik kedai anda untuk menarik pelanggan mengambil giliran atau membuat tempahan terus dari feed gaya Reels!',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 13.5, height: 1.4),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 13, height: 1.4),
           ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          const SizedBox(height: 20),
+          // Wrap ensures buttons gracefully stack on small phone screens without RenderFlex overflow
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 10,
+            runSpacing: 10,
             children: [
               ElevatedButton.icon(
                 onPressed: () => _openCreateOrEditPostDialog(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFEC4899),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.add_rounded, size: 20),
                 label: const Text('Cipta Post Baharu', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
-              const SizedBox(width: 12),
               OutlinedButton.icon(
                 onPressed: _generateSamplePost,
                 style: OutlinedButton.styleFrom(
@@ -802,7 +862,7 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
 }
 
 // =============================================================================
-// Dialog: Cipta & Sunting Post Baharu
+// Dialog: Cipta & Sunting Post Baharu (Responsive Modal)
 // =============================================================================
 class _CreateEditPostDialog extends StatefulWidget {
   final FeedPostModel? existing;
@@ -941,14 +1001,24 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isPhone = screenWidth < 600;
 
     return Dialog(
       backgroundColor: const Color(0xFF131320),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isPhone ? 10 : 24,
+        vertical: isPhone ? 12 : 24,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isPhone ? 20 : 24)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 760),
+        constraints: BoxConstraints(
+          maxWidth: 620,
+          maxHeight: isPhone ? screenHeight * 0.92 : 760,
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(22),
+          padding: EdgeInsets.all(isPhone ? 16 : 22),
           child: Form(
             key: _formKey,
             child: Column(
@@ -963,20 +1033,22 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                         color: const Color(0xFFEC4899).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const HugeIcon(icon: HugeIcons.strokeRoundedVideo01, color: Color(0xFFEC4899), size: 22),
+                      child: const HugeIcon(icon: HugeIcons.strokeRoundedVideo01, color: Color(0xFFEC4899), size: 20),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isEdit ? 'Kemaskini Post Ngam Feed' : 'Cipta Post Ngam Feed Baharu',
-                            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                            isEdit ? 'Kemaskini Post' : 'Cipta Post Baharu',
+                            style: TextStyle(color: Colors.white, fontSize: isPhone ? 15.5 : 17, fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            'Kandungan ini akan dipaparkan secara langsung kepada pelanggan',
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11.5),
+                            'Dipaparkan secara langsung kepada pelanggan',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -987,27 +1059,29 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                     ),
                   ],
                 ),
-                const Divider(height: 24, color: Color(0x1AFFFFFF)),
+                Divider(height: isPhone ? 18 : 24, color: const Color(0x1AFFFFFF)),
 
                 // Form Content Scrollable
                 Expanded(
                   child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Tajuk Post
-                        const Text('Tajuk Post *', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                        const Text('Tajuk Post *', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _titleController,
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          style: const TextStyle(color: Colors.white, fontSize: 13.5),
                           decoration: _inputDecoration('Contoh: Fade Rambut Kemas / Cuci Salji Mega 🔥'),
                           validator: (v) => (v == null || v.trim().isEmpty) ? 'Sila masukkan tajuk post' : null,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
 
                         // URL Gambar & Preset
-                        const Text('Gambar / Media URL *', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                        const Text('Gambar / Media URL *', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _mediaUrlController,
@@ -1026,6 +1100,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                         // Preset chips
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
                           child: Row(
                             children: _presetImages.map((p) {
                               return Padding(
@@ -1044,10 +1119,10 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                             }).toList(),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
 
                         // Kapsyen Post
-                        const Text('Kapsyen & Penerangan', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                        const Text('Kapsyen & Penerangan', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _captionController,
@@ -1060,6 +1135,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                         // Hashtag Helpers
                         Wrap(
                           spacing: 6,
+                          runSpacing: 4,
                           children: ['#ngam', '#promosi', '#viral', '#diskaun', '#terbaik', '#bangi'].map((tag) {
                             return InkWell(
                               onTap: () => _addHashtag(tag),
@@ -1076,34 +1152,34 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                             );
                           }).toList(),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
 
                         // Tag Servis & Harga
-                        const Text('Tag Servis & Harga (Dipaparkan Atas Post)', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                        const Text('Tag Servis & Harga', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 6),
                         TextFormField(
                           controller: _serviceTagController,
                           style: const TextStyle(color: Colors.white, fontSize: 13),
                           decoration: _inputDecoration('Contoh: ✂️ Potong Rambut • RM35 · Buka Hingga 10 PM'),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
 
                         // Pilihan Butang Tindakan Khas (CTA)
-                        const Text('Butang Tindakan Pintas (CTA Button)', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
+                        const Text('Butang Tindakan Pintas (CTA)', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 8),
                         Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                          spacing: 6,
+                          runSpacing: 6,
                           children: _ctaOptions.map((opt) {
                             final selected = _ctaType == opt.type;
                             return ChoiceChip(
-                              avatar: Icon(opt.icon, size: 16, color: selected ? Colors.black : const Color(0xFF00F2FE)),
+                              avatar: Icon(opt.icon, size: 15, color: selected ? Colors.black : const Color(0xFF00F2FE)),
                               label: Text(
                                 opt.text,
                                 style: TextStyle(
                                   color: selected ? Colors.black : Colors.white,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 11.5,
+                                  fontSize: 11,
                                 ),
                               ),
                               selected: selected,
@@ -1122,14 +1198,14 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                             );
                           }).toList(),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 16),
 
-                        // Status & Pin Toggles
+                        // Status & Pin Toggles (Responsive for Phone Screens)
                         Row(
                           children: [
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.04),
                                   borderRadius: BorderRadius.circular(12),
@@ -1137,22 +1213,31 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text('Siar Segera', style: TextStyle(color: Colors.white, fontSize: 13)),
-                                    Switch(
-                                      value: _status == 'published',
-                                      activeColor: const Color(0xFF10B981),
-                                      onChanged: (val) {
-                                        setState(() => _status = val ? 'published' : 'draft');
-                                      },
+                                    const Flexible(
+                                      child: Text(
+                                        'Siar Segera',
+                                        style: TextStyle(color: Colors.white, fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Transform.scale(
+                                      scale: 0.85,
+                                      child: Switch(
+                                        value: _status == 'published',
+                                        activeColor: const Color(0xFF10B981),
+                                        onChanged: (val) {
+                                          setState(() => _status = val ? 'published' : 'draft');
+                                        },
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
                                   color: Colors.white.withValues(alpha: 0.04),
                                   borderRadius: BorderRadius.circular(12),
@@ -1160,13 +1245,22 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text('Pin ke Atas', style: TextStyle(color: Colors.white, fontSize: 13)),
-                                    Switch(
-                                      value: _isPinned,
-                                      activeColor: const Color(0xFF8B5CF6),
-                                      onChanged: (val) {
-                                        setState(() => _isPinned = val);
-                                      },
+                                    const Flexible(
+                                      child: Text(
+                                        'Pin ke Atas',
+                                        style: TextStyle(color: Colors.white, fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Transform.scale(
+                                      scale: 0.85,
+                                      child: Switch(
+                                        value: _isPinned,
+                                        activeColor: const Color(0xFF8B5CF6),
+                                        onChanged: (val) {
+                                          setState(() => _isPinned = val);
+                                        },
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -1179,7 +1273,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                   ),
                 ),
 
-                const Divider(height: 24, color: Color(0x1AFFFFFF)),
+                Divider(height: isPhone ? 16 : 24, color: const Color(0x1AFFFFFF)),
 
                 // Action Buttons
                 Row(
@@ -1189,18 +1283,18 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                       onPressed: () => Navigator.pop(context),
                       child: const Text('Batal', style: TextStyle(color: Colors.white54)),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     ElevatedButton(
                       onPressed: _saving ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFEC4899),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: _saving
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : Text(isEdit ? 'Kemaskini Post' : 'Siarkan Post', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          : Text(isEdit ? 'Kemaskini' : 'Siarkan Post', style: const TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -1215,10 +1309,10 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 12.5),
+      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.25), fontSize: 12),
       filled: true,
       fillColor: Colors.white.withValues(alpha: 0.05),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
       focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12)), borderSide: BorderSide(color: Color(0xFFEC4899), width: 1.2)),
@@ -1227,7 +1321,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
 }
 
 // =============================================================================
-// Dialog: Pratonton Gaya Skrin Telefon Pelanggan (9:16 Mockup)
+// Dialog: Pratonton Gaya Skrin Telefon Pelanggan (Adaptive 9:16 Mockup)
 // =============================================================================
 class _PhoneMockupPreviewDialog extends StatelessWidget {
   final FeedPostModel post;
@@ -1244,17 +1338,25 @@ class _PhoneMockupPreviewDialog extends StatelessWidget {
     final shopHandle = businessProfile?['handle']?.toString() ?? '@${shopName.replaceAll(' ', '').toLowerCase()}';
     final logoUrl = businessProfile?['logo_url']?.toString();
 
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isPhone = screenWidth < 600;
+
+    // Dynamically calculate mockup height and width to prevent vertical overflow on any phone screen
+    final mockupHeight = math.min(screenHeight * (isPhone ? 0.86 : 0.80), 620.0);
+    final mockupWidth = math.min(screenWidth - (isPhone ? 24 : 64), mockupHeight * (9 / 16));
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: isPhone ? 12 : 24, vertical: isPhone ? 16 : 24),
       child: Center(
         child: Container(
-          width: 340,
-          height: 620,
+          width: mockupWidth,
+          height: mockupHeight,
           decoration: BoxDecoration(
             color: Colors.black,
-            borderRadius: BorderRadius.circular(36),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 3),
+            borderRadius: BorderRadius.circular(isPhone ? 28 : 36),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2.5),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFFEC4899).withValues(alpha: 0.25),
@@ -1264,7 +1366,7 @@ class _PhoneMockupPreviewDialog extends StatelessWidget {
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(33),
+            borderRadius: BorderRadius.circular(isPhone ? 25 : 33),
             child: Stack(
               children: [
                 // Background Media Image
@@ -1297,11 +1399,11 @@ class _PhoneMockupPreviewDialog extends StatelessWidget {
                   ),
                 ),
 
-                // Top Bar Mockup (Untuk Anda & Live indicator)
+                // Top Bar Mockup
                 Positioned(
-                  top: 20,
-                  left: 16,
-                  right: 16,
+                  top: 14,
+                  left: 14,
+                  right: 14,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1312,16 +1414,22 @@ class _PhoneMockupPreviewDialog extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.visibility_rounded, color: Colors.white70, size: 14),
+                            Icon(Icons.visibility_rounded, color: Colors.white70, size: 13),
                             SizedBox(width: 4),
                             Text('Paparan Pelanggan', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
-                        onPressed: () => Navigator.pop(context),
+                      InkWell(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                        ),
                       ),
                     ],
                   ),
@@ -1329,14 +1437,14 @@ class _PhoneMockupPreviewDialog extends StatelessWidget {
 
                 // Right Action Sidebar (TikTok/Reels Style)
                 Positioned(
-                  right: 12,
-                  bottom: 120,
+                  right: 10,
+                  bottom: isPhone ? 90 : 110,
                   child: Column(
                     children: [
                       // Shop Avatar
                       Container(
-                        width: 44,
-                        height: 44,
+                        width: 38,
+                        height: 38,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
@@ -1356,30 +1464,30 @@ class _PhoneMockupPreviewDialog extends StatelessWidget {
                                 ),
                         ),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 14),
 
                       // Heart Icon
-                      const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 30),
-                      Text('${post.likesCount}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 16),
+                      const Icon(Icons.favorite_rounded, color: Color(0xFFEF4444), size: 26),
+                      Text('${post.likesCount}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
 
                       // Comments Icon
-                      const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 28),
-                      Text('${post.commentsCount}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 16),
+                      const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 24),
+                      Text('${post.commentsCount}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
 
                       // Share Icon
-                      const Icon(Icons.share_rounded, color: Colors.white, size: 28),
-                      const Text('Kongsi', style: TextStyle(color: Colors.white, fontSize: 11)),
+                      const Icon(Icons.share_rounded, color: Colors.white, size: 24),
+                      const Text('Kongsi', style: TextStyle(color: Colors.white, fontSize: 10)),
                     ],
                   ),
                 ),
 
                 // Bottom Content (Shop Info, Caption, CTA Button)
                 Positioned(
-                  left: 16,
-                  right: 70,
-                  bottom: 24,
+                  left: 14,
+                  right: 64,
+                  bottom: 16,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -1387,72 +1495,59 @@ class _PhoneMockupPreviewDialog extends StatelessWidget {
                       // Shop Handle
                       Row(
                         children: [
-                          Text(
-                            shopHandle,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          Flexible(
+                            child: Text(
+                              shopHandle,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.verified_rounded, color: Color(0xFF42A5F5), size: 15),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.verified_rounded, color: Color(0xFF42A5F5), size: 14),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
 
                       // Title & Caption
                       Text(
                         post.title,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (post.caption != null && post.caption!.isNotEmpty) ...[
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         Text(
                           post.caption!,
-                          style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                       const SizedBox(height: 8),
 
-                      // Service Tag
-                      if (post.serviceTag != null && post.serviceTag!.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          margin: const EdgeInsets.only(bottom: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.white24),
-                          ),
-                          child: Text(
-                            post.serviceTag!,
-                            style: const TextStyle(color: Color(0xFF00F2FE), fontSize: 10.5, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-
-                      // Main Bottom CTA Button
+                      // CTA Button
                       Container(
-                        width: double.infinity,
-                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF00F2FE), Color(0xFF4FACFE)],
+                            colors: [Color(0xFF00E5FF), Color(0xFF0284C7)],
                           ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF00F2FE).withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.bolt_rounded, color: Colors.black, size: 14),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                post.ctaText,
+                                style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            post.ctaText,
-                            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 12),
-                          ),
                         ),
                       ),
                     ],
