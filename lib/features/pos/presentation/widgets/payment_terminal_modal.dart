@@ -176,6 +176,14 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
 
   Future<void> _openCheckoutPage() async {
     if (_purchase == null) return;
+    if (_purchase!.isWebFallback || _purchase!.checkoutUrl.isEmpty) {
+      showGlassToast(
+        context,
+        'Pelayar Web (Chrome) menyekat CORS. Jalankan Chrome dengan "--disable-web-security" atau uji di Windows Desktop / Android untuk membuka laman CHIP.',
+        isError: true,
+      );
+      return;
+    }
     final uri = Uri.parse(_purchase!.duitNowUrl);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -727,6 +735,28 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
               );
             },
           ),
+          if (_purchase?.isWebFallback == true) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.info_outline_rounded, color: Color(0xFFF59E0B), size: 14),
+                  SizedBox(width: 6),
+                  Text(
+                    'Mod Ujian Web (CORS Aktif) • Tekan "Simulasi Lulus"',
+                    style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
 
         const SizedBox(height: 20),

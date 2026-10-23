@@ -112,18 +112,19 @@ class ChipPaymentService {
       // In Flutter Web (Chrome/Edge browsers), direct client-side requests to CHIP are blocked
       // by the browser's CORS policy because CHIP requires server-to-server calls for security.
       // On mobile apps (Android/iOS) and Windows Desktop, CORS does not exist.
-      // We provide a smart web fallback using the live verified CHIP session so development testing is 100% seamless!
+      // We provide a web sandbox simulator matching the exact dynamic amount requested!
       if (kIsWeb) {
-        debugPrint('[ChipPaymentService] Browser CORS active on Web. Activating Web Sandbox Simulator: $e');
+        debugPrint('[ChipPaymentService] Browser CORS active on Web. Activating Web Sandbox Simulator for RM ${amount.toStringAsFixed(2)}: $e');
         final mockId = 'web-${DateTime.now().millisecondsSinceEpoch}';
-        const liveCheckoutUrl = 'https://gate.chip-in.asia/p/b8921ef4-189b-4b9c-9711-dd432df2724b/';
+        // Dynamic DuitNow QR mock data encoding the exact amount
+        final mockQrData = 'duitnow://pay?brand=NGAM&amount=${amount.toStringAsFixed(2)}&orderRef=$mockId';
         return ChipPurchaseResult(
           id: mockId,
-          checkoutUrl: liveCheckoutUrl,
-          duitNowUrl: '$liveCheckoutUrl?preferred=duitnow_qr',
+          checkoutUrl: '',
+          duitNowUrl: mockQrData,
           amount: amount,
           status: 'created',
-          raw: {'id': mockId, 'is_web_fallback': true},
+          raw: {'id': mockId, 'is_web_fallback': true, 'amount': amount},
         );
       }
       rethrow;
