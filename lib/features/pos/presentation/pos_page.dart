@@ -9,7 +9,7 @@ import '../../pos/models/product_model.dart';
 import '../../pos/models/order_model.dart';
 import '../../promotions/data/voucher_service.dart';
 import 'widgets/split_payment_sheet.dart';
-import 'widgets/dynamic_qr_modal.dart';
+import 'widgets/payment_terminal_modal.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/modal_sheet.dart';
 
@@ -186,29 +186,35 @@ class _PosPageState extends State<PosPage> {
     }
   }
 
-  Future<void> _payWithDuitNowDynamic() async {
+  Future<void> _openPaymentTerminal() async {
     if (_cart.isEmpty) return;
     final subtotal = _cartTotal;
     final customer = _customerController.text.trim();
     final orderRef = 'POS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
-    final isPaid = await DynamicQrModal.show(
+    final result = await PaymentTerminalModal.show(
       context: context,
       amount: subtotal,
       orderTitle: 'Pesanan #$orderRef (${_cart.length} item)',
       customerName: customer.isNotEmpty ? customer : 'Pelanggan Kaunter',
+      initialStep: TerminalStep.chooseMethod,
     );
 
-    if (!isPaid || !mounted) return;
+    if (result == null || !result.isSuccess || !mounted) return;
 
     try {
+      String notes = '[Terminal: ${result.paymentMethod.toUpperCase()}]';
+      if (result.paymentMethod == 'cash' && result.change > 0) {
+        notes += ' (Diterima: RM ${result.cashTendered.toStringAsFixed(2)}, Baki: RM ${result.change.toStringAsFixed(2)})';
+      }
+
       await _service.submitOrder(
         items: _cart,
         total: subtotal,
         customerName: customer.isNotEmpty ? customer : null,
-        notes: '[DuitNow QR Dinamik - Disahkan CHIP]',
+        notes: notes,
         paymentSplits: [
-          PaymentSplit(method: 'duitnow', amount: subtotal),
+          PaymentSplit(method: result.paymentMethod, amount: subtotal),
         ],
       );
 
@@ -216,7 +222,7 @@ class _PosPageState extends State<PosPage> {
 
       showGlassToast(
         context,
-        'Pesanan Selesai! (DuitNow QR: RM ${subtotal.toStringAsFixed(2)})',
+        'Pesanan Selesai! (${result.paymentMethod.toUpperCase()}: RM ${subtotal.toStringAsFixed(2)})',
         customColor: const Color(0xFF44CF6C),
       );
 
@@ -229,8 +235,6 @@ class _PosPageState extends State<PosPage> {
       showGlassToast(context, 'Gagal membuat pesanan: $e', isError: true);
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -904,71 +908,63 @@ class _PosPageState extends State<PosPage> {
           ),
           const SizedBox(height: 14),
 
-          // DuitNow Dynamic QR Quick Action Button
+          // Step 1: Caj RM XX.XX (Direct 4-Step Terminal Flow)
           SizedBox(
             width: double.infinity,
-            height: 46,
-            child: ElevatedButton.icon(
-              onPressed: _cart.isEmpty ? null : _payWithDuitNowDynamic,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _cart.isEmpty ? null : _openPaymentTerminal,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFED1164),
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: const Color(0xFFED1164).withValues(alpha: 0.3),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                elevation: 0,
+                elevation: 3,
+                shadowColor: const Color(0xFFED1164).withValues(alpha: 0.35),
               ),
-              icon: const HugeIcon(
-                icon: HugeIcons.strokeRoundedQrCode,
-                color: Colors.white,
-                size: 18,
-                strokeWidth: 2.1,
-              ),
-              label: const Text(
-                'DuitNow QR Dinamik (CHIP)',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.bolt_rounded, color: Colors.white, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    _cart.isEmpty ? 'Pilih Produk Dahulu' : 'Caj ${fmt.format(_cartTotal)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           const SizedBox(height: 10),
 
+          // Secondary: Split payment & voucher options
           SizedBox(
             width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
+            height: 42,
+            child: OutlinedButton.icon(
               onPressed: _cart.isEmpty ? null : _checkout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF42A5F5),
-                foregroundColor: Colors.white,
-                disabledBackgroundColor:
-                    const Color(0xFF42A5F5).withValues(alpha: 0.3),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white70,
+                side: BorderSide(
+                  color: Colors.white.withValues(alpha: 0.15),
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                elevation: 0,
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  HugeIcon(
-                    icon: HugeIcons.strokeRoundedCheckmarkCircle01,
-                    color: Colors.white,
-                    size: 18,
-                    strokeWidth: 2.1,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Checkout',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
+              icon: const Icon(Icons.tune_rounded, size: 16),
+              label: const Text(
+                'Pecah Bayaran & Baucar (Split)',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
