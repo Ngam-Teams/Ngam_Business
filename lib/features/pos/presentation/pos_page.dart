@@ -182,7 +182,7 @@ class _PosPageState extends State<PosPage> {
   Future<void> _checkout() async {
     if (_cart.isEmpty) return;
 
-    final subtotal = _cartTotal;
+    final subtotal = _grandTotal;
     final result = await SplitPaymentSheet.show(
       context: context,
       totalAmount: subtotal,
@@ -194,11 +194,17 @@ class _PosPageState extends State<PosPage> {
 
     try {
       String? combinedNotes = result.notes;
+      final modeTag = '[Mod: ${_orderType.toUpperCase()} | Meja: $_tableNumber]';
+      combinedNotes = (combinedNotes == null || combinedNotes.trim().isEmpty)
+          ? modeTag
+          : '$modeTag | $combinedNotes';
+
       if (result.voucherCode != null && result.discountAmount > 0) {
         final voucherTag = '[Baucar: ${result.voucherCode} (-RM ${result.discountAmount.toStringAsFixed(2)})]';
-        combinedNotes = (combinedNotes == null || combinedNotes.trim().isEmpty)
-            ? voucherTag
-            : '$voucherTag | $combinedNotes';
+        combinedNotes = '$voucherTag | $combinedNotes';
+      } else if (_appliedVoucherCode != null && _voucherDiscount > 0) {
+        final voucherTag = '[Baucar: $_appliedVoucherCode (-RM ${_voucherDiscount.toStringAsFixed(2)})]';
+        combinedNotes = '$voucherTag | $combinedNotes';
       }
 
       await _service.submitOrder(
@@ -219,6 +225,15 @@ class _PosPageState extends State<PosPage> {
             customerPhone: null,
           );
         } catch (_) {}
+      } else if (_voucherId != null && _voucherDiscount > 0) {
+        try {
+          await VoucherService().recordVoucherUsage(
+            voucherId: _voucherId!,
+            discountAmount: _voucherDiscount,
+            orderSubtotal: subtotal,
+            customerPhone: null,
+          );
+        } catch (_) {}
       }
 
       if (!mounted) return;
@@ -230,11 +245,15 @@ class _PosPageState extends State<PosPage> {
       showGlassToast(
         context,
         'Pesanan Selesai! ($summary$discountText$changeText)',
-        customColor: const Color(0xFF44CF6C),
+        customColor: const Color(0xFF00C853),
       );
       setState(() {
         _cart = [];
         _customerController.clear();
+        _appliedVoucherCode = null;
+        _voucherDiscount = 0.0;
+        _voucherId = null;
+        _orderSequence++;
       });
     } catch (e) {
       if (!mounted) return;
@@ -242,55 +261,520 @@ class _PosPageState extends State<PosPage> {
     }
   }
 
-  Future<void> _openPaymentTerminal() async {
+  Future<void> _openPaymentTerminal({TerminalStep initialStep = TerminalStep.chooseMethod}) async {
     if (_cart.isEmpty) return;
-    final subtotal = _cartTotal;
+    final grandTotal = _grandTotal;
     final customer = _customerController.text.trim();
     final orderRef = 'POS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
 
     final result = await PaymentTerminalModal.show(
       context: context,
-      amount: subtotal,
+      amount: grandTotal,
       orderTitle: 'Pesanan #$orderRef (${_cart.length} item)',
       customerName: customer.isNotEmpty ? customer : 'Pelanggan Kaunter',
       itemLines: _cart.map((i) => '${i.quantity}x ${i.product.name} | RM ${i.subtotal.toStringAsFixed(2)}').toList(),
-      initialStep: TerminalStep.chooseMethod,
+      initialStep: initialStep,
     );
 
     if (result == null || !result.isSuccess || !mounted) return;
 
     try {
-      String notes = '[Terminal: ${result.paymentMethod.toUpperCase()}]';
+      String notes = '[Mod: ${_orderType.toUpperCase()} | Meja: $_tableNumber] [Terminal: ${result.paymentMethod.toUpperCase()}]';
+      if (_appliedVoucherCode != null && _voucherDiscount > 0) {
+        notes += ' [Baucar: $_appliedVoucherCode (-RM ${_voucherDiscount.toStringAsFixed(2)})]';
+      }
       if (result.paymentMethod == 'cash' && result.change > 0) {
         notes += ' (Diterima: RM ${result.cashTendered.toStringAsFixed(2)}, Baki: RM ${result.change.toStringAsFixed(2)})';
       }
 
       await _service.submitOrder(
         items: _cart,
-        total: subtotal,
+        total: grandTotal,
         customerName: customer.isNotEmpty ? customer : null,
         notes: notes,
         paymentSplits: [
-          PaymentSplit(method: result.paymentMethod, amount: subtotal),
+          PaymentSplit(method: result.paymentMethod, amount: grandTotal),
         ],
       );
+
+      if (_voucherId != null && _voucherDiscount > 0) {
+        try {
+          await VoucherService().recordVoucherUsage(
+            voucherId: _voucherId!,
+            discountAmount: _voucherDiscount,
+            orderSubtotal: _cartTotal,
+            customerPhone: null,
+          );
+        } catch (_) {}
+      }
 
       if (!mounted) return;
 
       showGlassToast(
         context,
-        'Pesanan Selesai! (${result.paymentMethod.toUpperCase()}: RM ${subtotal.toStringAsFixed(2)})',
-        customColor: const Color(0xFF44CF6C),
+        'Pesanan Selesai! (${result.paymentMethod.toUpperCase()}: RM ${grandTotal.toStringAsFixed(2)})',
+        customColor: const Color(0xFF00C853),
       );
 
       setState(() {
         _cart = [];
         _customerController.clear();
+        _appliedVoucherCode = null;
+        _voucherDiscount = 0.0;
+        _voucherId = null;
+        _orderSequence++;
       });
     } catch (e) {
       if (!mounted) return;
       showGlassToast(context, 'Gagal membuat pesanan: $e', isError: true);
     }
+  }
+
+  // Fast Cash 1-Click Tender (Square & Toast POS high-speed cashier feature)
+  Future<void> _handleQuickCash(double cashTendered) async {
+    if (_cart.isEmpty) return;
+    final grandTotal = _grandTotal;
+    final change = (cashTendered - grandTotal).clamp(0.0, double.infinity);
+    final customer = _customerController.text.trim();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF141424),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C853).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.payments_rounded, color: Color(0xFF00C853), size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Bayaran Tunai Pantas',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Jumlah Perlu Bayar:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(
+                  'RM ${grandTotal.toStringAsFixed(2)}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Tunai Diterima:', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(
+                  'RM ${cashTendered.toStringAsFixed(2)}',
+                  style: const TextStyle(color: Color(0xFF00C853), fontWeight: FontWeight.bold, fontSize: 16, fontFamily: 'monospace'),
+                ),
+              ],
+            ),
+            const Divider(color: Color(0x22FFFFFF), height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C853).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('BAKI PULANGAN:', style: TextStyle(color: Color(0xFF00C853), fontWeight: FontWeight.w800, fontSize: 13)),
+                  Text(
+                    'RM ${change.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: Color(0xFF00C853),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00C853),
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text(
+              'Selesai & Buka Laci 🖨️',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      String notes = '[Mod: ${_orderType.toUpperCase()} | Meja: $_tableNumber] [Terminal: TUNAI PANTAS] (Diterima: RM ${cashTendered.toStringAsFixed(2)}, Baki: RM ${change.toStringAsFixed(2)})';
+      if (_appliedVoucherCode != null && _voucherDiscount > 0) {
+        notes += ' [Baucar: $_appliedVoucherCode (-RM ${_voucherDiscount.toStringAsFixed(2)})]';
+      }
+
+      await _service.submitOrder(
+        items: _cart,
+        total: grandTotal,
+        customerName: customer.isNotEmpty ? customer : null,
+        notes: notes,
+        paymentSplits: [
+          PaymentSplit(method: 'cash', amount: grandTotal),
+        ],
+      );
+
+      if (_voucherId != null && _voucherDiscount > 0) {
+        try {
+          await VoucherService().recordVoucherUsage(
+            voucherId: _voucherId!,
+            discountAmount: _voucherDiscount,
+            orderSubtotal: _cartTotal,
+            customerPhone: null,
+          );
+        } catch (_) {}
+      }
+
+      if (!mounted) return;
+
+      showGlassToast(
+        context,
+        'Tunai Selesai! Baki Pulangan: RM ${change.toStringAsFixed(2)}',
+        customColor: const Color(0xFF00C853),
+      );
+
+      setState(() {
+        _cart = [];
+        _customerController.clear();
+        _appliedVoucherCode = null;
+        _voucherDiscount = 0.0;
+        _voucherId = null;
+        _orderSequence++;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      showGlassToast(context, 'Gagal membuat pesanan: $e', isError: true);
+    }
+  }
+
+  void _showCustomerDialog() {
+    final nameCtrl = TextEditingController(text: _customerController.text);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF141424),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person_rounded, color: Color(0xFF42A5F5), size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Maklumat Pelanggan',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Masukkan nama atau no. telefon pelanggan untuk rekod pesanan & poin:',
+              style: TextStyle(color: Colors.white60, fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                labelText: 'Nama / No. Telefon Pelanggan',
+                labelStyle: const TextStyle(color: Colors.white60, fontSize: 12),
+                hintText: 'Cth: En. Khairul / 012-3456789',
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.05),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (_customerController.text.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                setState(() => _customerController.clear());
+                Navigator.pop(ctx);
+              },
+              child: const Text('Padam', style: TextStyle(color: Colors.redAccent)),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _customerController.text = nameCtrl.text.trim();
+              });
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF42A5F5),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTableNumberDialog() {
+    final tableCtrl = TextEditingController(text: _tableNumber);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF141424),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.table_restaurant_rounded, color: Color(0xFF42A5F5), size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Pilih No. Meja / Token',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pilih meja pantas atau taip nombor meja/token:',
+              style: TextStyle(color: Colors.white60, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: ['01', '02', '03', '04', '05', '06', '07', '08', 'VIP 1', 'Luar'].map((t) {
+                final isSel = _tableNumber == t;
+                return ChoiceChip(
+                  label: Text(t),
+                  selected: isSel,
+                  selectedColor: const Color(0xFF42A5F5),
+                  backgroundColor: Colors.white.withValues(alpha: 0.06),
+                  labelStyle: TextStyle(
+                    color: isSel ? Colors.white : Colors.white70,
+                    fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 12,
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() => _tableNumber = t);
+                      Navigator.pop(ctx);
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: tableCtrl,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                labelText: 'Nombor / Nama Meja Kustom',
+                labelStyle: const TextStyle(color: Colors.white60, fontSize: 12),
+                hintText: 'Cth: Meja 12 / Token 99',
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.05),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (tableCtrl.text.trim().isNotEmpty) {
+                setState(() => _tableNumber = tableCtrl.text.trim());
+              }
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF42A5F5),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showVoucherDialog() {
+    final voucherCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF141424),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C853).withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.confirmation_number_rounded, color: Color(0xFF00C853), size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Tebus Baucar / Kupon',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Masukkan kod baucar atau promosi yang sah:',
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: voucherCtrl,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.characters,
+                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1),
+                  decoration: InputDecoration(
+                    labelText: 'Kod Baucar',
+                    labelStyle: const TextStyle(color: Colors.white60, fontSize: 12),
+                    hintText: 'Cth: DISKAUN10 / MERDEKA',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal', style: TextStyle(color: Colors.white60)),
+              ),
+              ElevatedButton(
+                onPressed: _isApplyingVoucher ? null : () async {
+                  final code = voucherCtrl.text.trim().toUpperCase();
+                  if (code.isEmpty) return;
+
+                  setModalState(() => _isApplyingVoucher = true);
+                  final val = await VoucherService().validateVoucher(code: code, orderAmount: _cartTotal);
+                  setModalState(() => _isApplyingVoucher = false);
+
+                  if (!ctx.mounted) return;
+
+                  if (val.isValid && val.discountAmount > 0) {
+                    setState(() {
+                      _appliedVoucherCode = code;
+                      _voucherDiscount = val.discountAmount;
+                      _voucherId = val.voucherId;
+                    });
+                    Navigator.pop(ctx);
+                    showGlassToast(
+                      context,
+                      'Baucar berjaya ditebus! Jimat RM ${val.discountAmount.toStringAsFixed(2)}',
+                      customColor: const Color(0xFF00C853),
+                    );
+                  } else {
+                    showGlassToast(
+                      context,
+                      val.errorMessage ?? 'Kod baucar tidak sah atau telah tamat.',
+                      isError: true,
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00C853),
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isApplyingVoucher
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                    : const Text('Gunakan', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -303,8 +787,11 @@ class _PosPageState extends State<PosPage> {
           return Row(
             children: [
               Expanded(flex: 3, child: _buildProductGrid()),
-              const SizedBox(width: 24),
-              SizedBox(width: 300, child: _buildCart()),
+              const SizedBox(width: 20),
+              SizedBox(
+                width: constraints.maxWidth >= 1100 ? 380 : (constraints.maxWidth >= 900 ? 350 : 330),
+                child: _buildCart(),
+              ),
             ],
           );
         }
@@ -320,9 +807,11 @@ class _PosPageState extends State<PosPage> {
                 child: GestureDetector(
                   onTap: () => ModalSheet.show(
                     context: context,
-                    initialChildSize: 0.7,
+                    initialChildSize: 0.85,
                     builder: (ctx, _) => Column(
                       children: [
+                        _buildOrderModeHeader(),
+                        _buildCustomerBar(),
                         Expanded(child: _buildCartContent()),
                         _buildCartFooter(),
                       ],
