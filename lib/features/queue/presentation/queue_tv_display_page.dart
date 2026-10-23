@@ -12,11 +12,11 @@ import '../models/queue_ticket_model.dart';
 // TvQueueLayoutMode — 4 Pilihan Susun Atur Paparan TV Papan Giliran
 // =============================================================================
 enum TvQueueLayoutMode {
-  /// 🌟 Mod Lengkap: Kiri QR (1/5) • Tengah Iklan/Promosi • Kanan Giliran (Up Next & Now Serving)
-  threeColumn,
-
   /// ⚡ Mod Giliran + QR (Cadangan): Kiri QR (1/5) • Kanan Giliran Luas Atas & Bawah (4/5)
   queueAndQr,
+
+  /// 🌟 Mod Lengkap: Kiri QR (1/5) • Tengah Iklan/Promosi • Kanan Giliran (Up Next & Now Serving)
+  threeColumn,
 
   /// 📢 Mod Iklan + Giliran: Kiri Iklan Luas • Kanan Status Giliran (Tanpa Kod QR di skrin)
   adsAndQueue,
@@ -26,7 +26,7 @@ enum TvQueueLayoutMode {
 }
 
 // =============================================================================
-// QueueTvDisplayPage — Papan Giliran Kedai Pintar & Fleksibel (Smart TV Board)
+// QueueTvDisplayPage — Papan Giliran Kedai Pintar & Responsif (Smart TV Board)
 // =============================================================================
 
 class QueueTvDisplayPage extends StatefulWidget {
@@ -47,8 +47,8 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   String _businessId = '';
   String _businessSlug = 'kedai';
 
-  // Susun atur & Tetapan TV
-  TvQueueLayoutMode _layoutMode = TvQueueLayoutMode.threeColumn;
+  // Susun atur & Tetapan TV (Default: Giliran + QR di mana QR 1/5 & Giliran 4/5 diperluas)
+  TvQueueLayoutMode _layoutMode = TvQueueLayoutMode.queueAndQr;
   bool _soundEnabled = true;
   String? _lastCalledTicketId;
 
@@ -102,7 +102,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         setState(() {
           _layoutMode = TvQueueLayoutMode.values.firstWhere(
             (e) => e.name == modeStr,
-            orElse: () => TvQueueLayoutMode.threeColumn,
+            orElse: () => TvQueueLayoutMode.queueAndQr,
           );
         });
       }
@@ -194,10 +194,10 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
 
   String _getLayoutModeShortLabel() {
     switch (_layoutMode) {
-      case TvQueueLayoutMode.threeColumn:
-        return 'Lengkap (3-Kolum)';
       case TvQueueLayoutMode.queueAndQr:
         return 'Giliran + QR';
+      case TvQueueLayoutMode.threeColumn:
+        return 'Lengkap (3-Kolum)';
       case TvQueueLayoutMode.adsAndQueue:
         return 'Iklan + Giliran';
       case TvQueueLayoutMode.queueOnly:
@@ -214,13 +214,13 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(24),
+        insetPadding: const EdgeInsets.all(20),
         child: Container(
           constraints: const BoxConstraints(maxWidth: 580),
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: const Color(0xFF101322),
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(26),
             border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.35), width: 1.5),
             boxShadow: [
               BoxShadow(
@@ -245,9 +245,9 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                           color: const Color(0xFF42A5F5).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.dashboard_customize_rounded, color: Color(0xFF42A5F5), size: 22),
+                        child: const Icon(Icons.dashboard_customize_rounded, color: Color(0xFF42A5F5), size: 20),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -256,13 +256,13 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
-                              fontSize: 15,
+                              fontSize: 14,
                               letterSpacing: 0.8,
                             ),
                           ),
                           Text(
-                            'Sesuaikan paparan mengikut kesesuaian operasi kedai anda',
-                            style: TextStyle(color: Colors.white54, fontSize: 11),
+                            'Sesuaikan paparan mengikut kesesuaian operasi kedai',
+                            style: TextStyle(color: Colors.white54, fontSize: 10.5),
                           ),
                         ],
                       ),
@@ -274,29 +274,29 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
-              // Pilihan 1: Lengkap (3-Kolum)
-              _buildLayoutOptionCard(
-                ctx,
-                mode: TvQueueLayoutMode.threeColumn,
-                icon: Icons.view_column_rounded,
-                badge: 'TERLARIS',
-                title: '🌟 Lengkap (3-Kolum: QR + Iklan + Giliran)',
-                subtitle: 'Kiri: QR Padat (1/5)  •  Tengah: Iklan & Promosi  •  Kanan: Status Giliran',
-                desc: 'Paling popular: Pelanggan boleh imbas QR, lihat promosi semasa, dan pantau senarai giliran serentak.',
-              ),
-              const SizedBox(height: 10),
-
-              // Pilihan 2: Giliran + QR (Cadangan Pengguna)
+              // Pilihan 1: Giliran + QR (Cadangan Pengguna)
               _buildLayoutOptionCard(
                 ctx,
                 mode: TvQueueLayoutMode.queueAndQr,
                 icon: Icons.splitscreen_rounded,
-                badge: 'LEGA & BESAR',
+                badge: 'DISYORKAN',
                 title: '⚡ Giliran + QR (QR 1/5 & Giliran Expand)',
                 subtitle: 'Kiri: QR Padat (1/5)  •  Kanan: Kad Giliran Atas & Bawah Diperluas (4/5)',
                 desc: 'QR di tepi padat 1/5 skrin, baki 80% skrin membesarkan kad giliran Menunggu & Sedang Dilayan agar nombor mudah dilihat dari jauh.',
+              ),
+              const SizedBox(height: 10),
+
+              // Pilihan 2: Lengkap (3-Kolum)
+              _buildLayoutOptionCard(
+                ctx,
+                mode: TvQueueLayoutMode.threeColumn,
+                icon: Icons.view_column_rounded,
+                badge: 'LENGKAP',
+                title: '🌟 Lengkap (3-Kolum: QR + Iklan + Giliran)',
+                subtitle: 'Kiri: QR Padat (1/5)  •  Tengah: Iklan & Promosi  •  Kanan: Status Giliran',
+                desc: 'Semua ada serentak: Pelanggan boleh imbas QR, lihat promosi semasa, dan pantau senarai giliran.',
               ),
               const SizedBox(height: 10),
 
@@ -356,7 +356,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
       borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFF3B82F6).withValues(alpha: 0.15)
@@ -371,20 +371,20 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: isSelected
                     ? const Color(0xFF3B82F6)
                     : Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
                 color: isSelected ? Colors.white : Colors.white70,
-                size: 22,
+                size: 20,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,7 +396,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                           title,
                           style: TextStyle(
                             color: isSelected ? const Color(0xFF60A5FA) : Colors.white,
-                            fontSize: 13,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
@@ -420,28 +420,28 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: const TextStyle(
                       color: Color(0xFF34D399),
-                      fontSize: 11,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   Text(
                     desc,
-                    style: const TextStyle(color: Colors.white60, fontSize: 11, height: 1.3),
+                    style: const TextStyle(color: Colors.white60, fontSize: 10.5, height: 1.3),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Icon(
               isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
               color: isSelected ? const Color(0xFF3B82F6) : Colors.white24,
-              size: 20,
+              size: 18,
             ),
           ],
         ),
@@ -465,10 +465,10 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         insetPadding: const EdgeInsets.all(24),
         child: Container(
           constraints: const BoxConstraints(maxWidth: 480),
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(26),
           decoration: BoxDecoration(
             color: const Color(0xFF101322),
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4), width: 1.5),
             boxShadow: [
               BoxShadow(
@@ -486,13 +486,13 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.edit_note_rounded, color: Color(0xFFF59E0B), size: 24),
-                      SizedBox(width: 10),
+                      Icon(Icons.edit_note_rounded, color: Color(0xFFF59E0B), size: 22),
+                      SizedBox(width: 8),
                       Text(
                         'UBAH TEKS IKLAN & PROMOSI',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: 13.5,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0.8,
                         ),
@@ -505,7 +505,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               const Text(
                 'Tajuk Promosi / Tawaran',
                 style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
@@ -557,15 +557,15 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                   hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFF59E0B),
                     foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () async {
                     final newTitle = titleController.text.trim();
@@ -604,13 +604,13 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(24),
+        insetPadding: const EdgeInsets.all(20),
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 480),
-          padding: const EdgeInsets.all(32),
+          constraints: const BoxConstraints(maxWidth: 440),
+          padding: const EdgeInsets.all(26),
           decoration: BoxDecoration(
             color: const Color(0xFF10131E),
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(26),
             border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.4), width: 1.5),
             boxShadow: [
               BoxShadow(
@@ -629,14 +629,14 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(7),
                         decoration: BoxDecoration(
                           color: const Color(0xFF42A5F5).withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.qr_code_2_rounded, color: Color(0xFF42A5F5), size: 22),
+                        child: const Icon(Icons.qr_code_2_rounded, color: Color(0xFF42A5F5), size: 20),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -645,13 +645,13 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,
-                              fontSize: 14,
+                              fontSize: 13,
                               letterSpacing: 0.8,
                             ),
                           ),
                           Text(
                             _businessName,
-                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                            style: const TextStyle(color: Colors.white54, fontSize: 11),
                           ),
                         ],
                       ),
@@ -663,12 +663,12 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.4),
@@ -678,15 +678,15 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 ),
                 child: QrImageView(
                   data: _qrUrl,
-                  size: 270,
+                  size: 240,
                   version: QrVersions.auto,
                   gapless: true,
                   errorCorrectionLevel: QrErrorCorrectLevel.H,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(10),
@@ -694,37 +694,37 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.language_rounded, color: Color(0xFF34D399), size: 16),
-                    const SizedBox(width: 8),
+                    const Icon(Icons.language_rounded, color: Color(0xFF34D399), size: 14),
+                    const SizedBox(width: 6),
                     Text(
                       _shortUrlDisplay,
                       style: const TextStyle(
                         color: Color(0xFF34D399),
                         fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               const Text(
                 'Buka kamera telefon pintar anda dan halakan ke kod QR di atas untuk menyertai giliran kedai secara langsung.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                style: TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.4),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF42A5F5),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () => Navigator.pop(ctx),
-                  icon: const Icon(Icons.check_rounded, size: 18),
+                  icon: const Icon(Icons.check_rounded, size: 16),
                   label: const Text('Tutup Kiosk', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -736,7 +736,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   // ===========================================================================
-  // BUILD METHOD UTAMA
+  // BUILD METHOD UTAMA (DENGAN RESPONSIVE LAYOUTBUILDER)
   // ===========================================================================
 
   @override
@@ -746,51 +746,205 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF080811),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // 1. Bar Tajuk Header TV
-              _buildTvHeader(),
-              const SizedBox(height: 12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Pengesanan mod skrin: Lebar < 768px (Telefon mudah alih / Portrait) vs Skrin TV/Desktop
+            final isMobile = constraints.maxWidth < 768;
 
-              // 2. Bahagian Paparan Utama (Dinamik mengikut Susun Atur Pilihan)
-              Expanded(
-                child: _buildLayoutBody(current),
+            return Padding(
+              padding: EdgeInsets.all(isMobile ? 10 : 16),
+              child: Column(
+                children: [
+                  // 1. Bar Tajuk Header (Disesuaikan mengikut Mobile / TV)
+                  isMobile ? _buildMobileHeader() : _buildTvHeader(),
+                  SizedBox(height: isMobile ? 8 : 12),
+
+                  // 2. Bahagian Paparan Utama (Mobile Stack vs Widescreen Columns)
+                  Expanded(
+                    child: isMobile
+                        ? _buildMobileLayoutBody(current)
+                        : _buildWidescreenLayoutBody(current),
+                  ),
+
+                  SizedBox(height: isMobile ? 8 : 12),
+                  // 3. Bar Ticker Footer TV
+                  _buildTvFooter(isMobile: isMobile),
+                ],
               ),
-
-              const SizedBox(height: 12),
-              // 3. Bar Ticker Footer TV
-              _buildTvFooter(),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
   // ===========================================================================
-  // ROUTING SUSUN ATUR UTAMA
+  // SUSUN ATUR MOD MUDAH ALIH (MOBILE PORTRAIT - BEBAS OVERFLOW)
   // ===========================================================================
 
-  Widget _buildLayoutBody(QueueTicketModel? current) {
+  Widget _buildMobileLayoutBody(QueueTicketModel? current) {
     switch (_layoutMode) {
-      case TvQueueLayoutMode.threeColumn:
-        return _buildThreeColumnLayout(current);
       case TvQueueLayoutMode.queueAndQr:
-        return _buildQueueAndQrLayout(current);
+        // Cadangan Pengguna: QR Padat 1/5 (Banner kecil atas ~105px), Baki 4/5 Skrin Expand Giliran!
+        return Column(
+          children: [
+            if (current != null) ...[
+              _buildActiveCallBanner(current, isMobile: true),
+              const SizedBox(height: 8),
+            ],
+            // QR Kod Padat 1/5 (Hanya ~105px)
+            _buildMobileCompactQrBanner(),
+            const SizedBox(height: 8),
+
+            // Baki 80% Skrin Diperluaskan Untuk Kad Giliran Atas & Bawah
+            Expanded(
+              flex: 1,
+              child: _buildUpNextPanel(isExpanded: true, isMobile: true),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              flex: 1,
+              child: _buildNowServingPanel(isExpanded: true, isMobile: true),
+            ),
+          ],
+        );
+
+      case TvQueueLayoutMode.threeColumn:
+        return Column(
+          children: [
+            if (current != null) ...[
+              _buildActiveCallBanner(current, isMobile: true),
+              const SizedBox(height: 8),
+            ],
+            // QR Ringkas
+            _buildMobileCompactQrBanner(),
+            const SizedBox(height: 8),
+            // Iklan Ringkas
+            SizedBox(
+              height: 100,
+              child: _buildPromoCarouselPanel(isMobile: true),
+            ),
+            const SizedBox(height: 8),
+            // Giliran
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(child: _buildUpNextPanel(isMobile: true)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _buildNowServingPanel(isMobile: true)),
+                ],
+              ),
+            ),
+          ],
+        );
+
       case TvQueueLayoutMode.adsAndQueue:
-        return _buildAdsAndQueueLayout(current);
+        return Column(
+          children: [
+            if (current != null) ...[
+              _buildActiveCallBanner(current, isMobile: true),
+              const SizedBox(height: 8),
+            ],
+            SizedBox(
+              height: 120,
+              child: _buildPromoCarouselPanel(isMobile: true),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Column(
+                children: [
+                  Expanded(child: _buildUpNextPanel(isMobile: true)),
+                  const SizedBox(height: 8),
+                  Expanded(child: _buildNowServingPanel(isMobile: true)),
+                ],
+              ),
+            ),
+          ],
+        );
+
       case TvQueueLayoutMode.queueOnly:
-        return _buildQueueOnlyLayout(current);
+        return Column(
+          children: [
+            if (current != null) ...[
+              _buildActiveCallBanner(current, isMobile: true),
+              const SizedBox(height: 8),
+            ],
+            Expanded(
+              child: Column(
+                children: [
+                  Expanded(child: _buildUpNextPanel(isExpanded: true, isMobile: true)),
+                  const SizedBox(height: 8),
+                  Expanded(child: _buildNowServingPanel(isExpanded: true, isMobile: true)),
+                ],
+              ),
+            ),
+          ],
+        );
+    }
+  }
+
+  // ===========================================================================
+  // SUSUN ATUR MOD SKRIN LEBAR / TV LANDSKAP (WIDESCREEN / TV)
+  // ===========================================================================
+
+  Widget _buildWidescreenLayoutBody(QueueTicketModel? current) {
+    switch (_layoutMode) {
+      case TvQueueLayoutMode.queueAndQr:
+        return _buildWidescreenQueueAndQrLayout(current);
+      case TvQueueLayoutMode.threeColumn:
+        return _buildWidescreenThreeColumnLayout(current);
+      case TvQueueLayoutMode.adsAndQueue:
+        return _buildWidescreenAdsAndQueueLayout(current);
+      case TvQueueLayoutMode.queueOnly:
+        return _buildWidescreenQueueOnlyLayout(current);
     }
   }
 
   // ---------------------------------------------------------------------------
-  // SUSUN ATUR 1: LENGKAP (3-Kolum: Kiri QR 1/5 • Tengah Iklan • Kanan Giliran)
+  // WIDESCREEN 1: GILIRAN + QR (Kiri QR 1/5 • Kanan Expand Giliran 4/5)
   // ---------------------------------------------------------------------------
 
-  Widget _buildThreeColumnLayout(QueueTicketModel? current) {
+  Widget _buildWidescreenQueueAndQrLayout(QueueTicketModel? current) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Kolum 1 (Kiri): Kod QR Padat TEPAT 1/5 (~20% skrin lebar)
+        Expanded(
+          flex: 2,
+          child: _buildCompactQrPanel(),
+        ),
+        const SizedBox(width: 16),
+
+        // Kolum 2 (Kanan): Kad Giliran Atas & Bawah Diperluas Luas (4/5 ~80% skrin)
+        Expanded(
+          flex: 8,
+          child: Column(
+            children: [
+              if (current != null) ...[
+                _buildActiveCallBanner(current),
+                const SizedBox(height: 12),
+              ],
+              Expanded(
+                flex: 1,
+                child: _buildUpNextPanel(isExpanded: true),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                flex: 1,
+                child: _buildNowServingPanel(isExpanded: true),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // WIDESCREEN 2: LENGKAP (3-Kolum: Kiri QR 1/5 • Tengah Iklan • Kanan Giliran)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildWidescreenThreeColumnLayout(QueueTicketModel? current) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -832,56 +986,10 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // SUSUN ATUR 2: GILIRAN + QR (Kiri QR 1/5 • Kanan Expand Giliran Atas Bawah 4/5)
-  // Cadangan Utama Pengguna: "qr tu 1/5 balance tu expand card atas bawah queue tu"
+  // WIDESCREEN 3: IKLAN + GILIRAN (Kiri Iklan Luas • Kanan Status Giliran)
   // ---------------------------------------------------------------------------
 
-  Widget _buildQueueAndQrLayout(QueueTicketModel? current) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Kolum 1 (Kiri): Kod QR Padat 1/5 (~20% skrin)
-        Expanded(
-          flex: 2,
-          child: _buildCompactQrPanel(),
-        ),
-        const SizedBox(width: 16),
-
-        // Kolum 2 (Kanan): Kad Giliran Atas & Bawah Diperluas Luas (~80% skrin)
-        Expanded(
-          flex: 8,
-          child: Column(
-            children: [
-              // Jika ada panggilan aktif, paparkan banner panggilan di atas
-              if (current != null) ...[
-                _buildActiveCallBanner(current),
-                const SizedBox(height: 12),
-              ],
-
-              // Kad Atas: Giliran Seterusnya (Diperluas)
-              Expanded(
-                flex: 1,
-                child: _buildUpNextPanel(isExpanded: true),
-              ),
-              const SizedBox(height: 12),
-
-              // Kad Bawah: Sedang Dilayan (Diperluas)
-              Expanded(
-                flex: 1,
-                child: _buildNowServingPanel(isExpanded: true),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // SUSUN ATUR 3: IKLAN + GILIRAN (Kiri Iklan Luas • Kanan Status Giliran)
-  // ---------------------------------------------------------------------------
-
-  Widget _buildAdsAndQueueLayout(QueueTicketModel? current) {
+  Widget _buildWidescreenAdsAndQueueLayout(QueueTicketModel? current) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -916,10 +1024,10 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // SUSUN ATUR 4: GILIRAN SAHAJA (100% Papan Giliran Penuh Skrin)
+  // WIDESCREEN 4: GILIRAN SAHAJA (100% Papan Giliran Penuh Skrin)
   // ---------------------------------------------------------------------------
 
-  Widget _buildQueueOnlyLayout(QueueTicketModel? current) {
+  Widget _buildWidescreenQueueOnlyLayout(QueueTicketModel? current) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -942,7 +1050,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   // ===========================================================================
-  // KOMPONEN: BAR HEADER TV
+  // KOMPONEN: BAR HEADER TV (DESKTOP / WIDESCREEN)
   // ===========================================================================
 
   Widget _buildTvHeader() {
@@ -1075,12 +1183,218 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   // ===========================================================================
-  // KOMPONEN: KOD QR PADAT 1/5 (Compact QR Panel)
+  // KOMPONEN: BAR HEADER MUDAH ALIH (MOBILE HEADER - TIADA OVERFLOW)
+  // ===========================================================================
+
+  Widget _buildMobileHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.all(6),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70, size: 16),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF42A5F5).withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.tv_rounded, color: Color(0xFF42A5F5), size: 16),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'PAPAN GILIRAN TV',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  _businessName,
+                  style: const TextStyle(color: Colors.white54, fontSize: 10),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+
+          // Butang Susun Atur Ringkas
+          InkWell(
+            onTap: _showLayoutDialog,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.dashboard_customize_rounded, color: Color(0xFF42A5F5), size: 13),
+                  const SizedBox(width: 5),
+                  Text(
+                    _getLayoutModeShortLabel(),
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                  const Icon(Icons.arrow_drop_down_rounded, color: Colors.white70, size: 16),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // Butang Bunyi
+          IconButton(
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.all(6),
+            icon: Icon(
+              _soundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+              color: _soundEnabled ? const Color(0xFF34D399) : Colors.white38,
+              size: 18,
+            ),
+            onPressed: _toggleSound,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // KOMPONEN: KOD QR BANNER MUDAH ALIH (1/5 TINGGI SKRIN - HANYA ~105PX)
+  // ===========================================================================
+
+  Widget _buildMobileCompactQrBanner() {
+    return Container(
+      height: 105,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.center,
+          radius: 1.5,
+          colors: [
+            const Color(0xFF1E3A8A).withValues(alpha: 0.35),
+            const Color(0xFF0F172A),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Kod QR Mini & Sharp (75px)
+          GestureDetector(
+            onTap: _openFullscreenQrModal,
+            child: Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF3B82F6), width: 1.5),
+              ),
+              child: QrImageView(
+                data: _qrUrl,
+                size: 75,
+                version: QrVersions.auto,
+                gapless: true,
+                errorCorrectionLevel: QrErrorCorrectLevel.M,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'IMBAS UNTUK AMBIL NOMBOR',
+                        style: TextStyle(
+                          color: Color(0xFF42A5F5),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 9,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    InkWell(
+                      onTap: _openFullscreenQrModal,
+                      child: const Row(
+                        children: [
+                          Icon(Icons.zoom_in_rounded, size: 12, color: Colors.white38),
+                          SizedBox(width: 2),
+                          Text('Besarkan', style: TextStyle(color: Colors.white38, fontSize: 9)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _businessName.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _shortUrlDisplay,
+                  style: const TextStyle(
+                    color: Color(0xFF34D399),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // KOMPONEN: KOD QR PADAT 1/5 WIDESCREEN (~20% SKRIN TV)
   // ===========================================================================
 
   Widget _buildCompactQrPanel() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         gradient: RadialGradient(
           center: Alignment.center,
@@ -1090,7 +1404,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
             const Color(0xFF0F172A),
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: const Color(0xFF3B82F6).withValues(alpha: 0.45),
           width: 1.5,
@@ -1098,7 +1412,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
-            blurRadius: 28,
+            blurRadius: 24,
             spreadRadius: 1,
           ),
         ],
@@ -1142,43 +1456,43 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.4,
                 ),
               ),
               const SizedBox(height: 2),
               const Text(
-                'Sertai giliran dari telefon pintar anda',
+                'Sertai giliran dari telefon anda',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white60, fontSize: 10.5),
+                style: TextStyle(color: Colors.white60, fontSize: 10),
               ),
             ],
           ),
 
-          // Compact QR Box (150px)
+          // Compact QR Box (135px, padat dan tidak melampau besar)
           GestureDetector(
             onTap: _openFullscreenQrModal,
             child: Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: const Color(0xFF3B82F6),
-                  width: 2.5,
+                  width: 2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                    blurRadius: 18,
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                    blurRadius: 16,
                     spreadRadius: 2,
                   ),
                 ],
               ),
               child: QrImageView(
                 data: _qrUrl,
-                size: 150,
+                size: 135,
                 version: QrVersions.auto,
                 gapless: true,
                 errorCorrectionLevel: QrErrorCorrectLevel.M,
@@ -1211,13 +1525,13 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
             ),
           ),
 
-          // 3 Step Guide (Vertikal / Ringkas)
+          // 3 Step Guide
           Column(
             children: [
               _buildStepMiniRow('1', 'Buka Kamera'),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               _buildStepMiniRow('2', 'Imbas Kod QR'),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               _buildStepMiniRow('3', 'Pantau di Telefon'),
             ],
           ),
@@ -1277,10 +1591,10 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   // KOMPONEN: IKLAN & PROMOSI DIGITAL SIGNAGE (Promo Carousel Panel)
   // ===========================================================================
 
-  Widget _buildPromoCarouselPanel({bool isWide = false}) {
+  Widget _buildPromoCarouselPanel({bool isWide = false, bool isMobile = false}) {
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 24),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Stack(
@@ -1289,37 +1603,34 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
             controller: _promoPageController,
             onPageChanged: (idx) => setState(() => _currentPromoPage = idx),
             children: [
-              // Slide 1: Sambutan & Info Kedai
-              _buildPromoSlide1(),
-              // Slide 2: Promosi & Ganjaran Eksklusif (Customizable)
-              _buildPromoSlide2(),
-              // Slide 3: Pembayaran & Servis Pintar
-              _buildPromoSlide3(),
+              _buildPromoSlide1(isMobile: isMobile),
+              _buildPromoSlide2(isMobile: isMobile),
+              _buildPromoSlide3(isMobile: isMobile),
             ],
           ),
 
           // Butang Ubah Iklan (Top Right)
           Positioned(
-            top: 12,
-            right: 12,
+            top: isMobile ? 8 : 12,
+            right: isMobile ? 8 : 12,
             child: InkWell(
               onTap: _showEditPromoDialog,
               borderRadius: BorderRadius.circular(10),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.black.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                 ),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.edit_note_rounded, color: Color(0xFFF59E0B), size: 14),
-                    SizedBox(width: 4),
+                    Icon(Icons.edit_note_rounded, color: Color(0xFFF59E0B), size: 13),
+                    SizedBox(width: 3),
                     Text(
                       'Ubah Iklan',
-                      style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: Colors.white70, fontSize: 9.5, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -1329,7 +1640,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
 
           // Dots Indicator (Bottom Center)
           Positioned(
-            bottom: 12,
+            bottom: isMobile ? 6 : 12,
             left: 0,
             right: 0,
             child: Row(
@@ -1338,9 +1649,9 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 final isCurrent = _currentPromoPage == idx;
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: isCurrent ? 18 : 6,
-                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: isCurrent ? 14 : 5,
+                  height: 5,
                   decoration: BoxDecoration(
                     color: isCurrent ? const Color(0xFF42A5F5) : Colors.white24,
                     borderRadius: BorderRadius.circular(3),
@@ -1355,9 +1666,9 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   // Slide 1: Selamat Datang & Profil Kedai
-  Widget _buildPromoSlide1() {
+  Widget _buildPromoSlide1({bool isMobile = false}) {
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isMobile ? 12 : 24),
       decoration: BoxDecoration(
         gradient: RadialGradient(
           center: Alignment.center,
@@ -1367,63 +1678,65 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
             const Color(0xFF0F172A),
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 24),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             decoration: BoxDecoration(
               color: const Color(0xFF6366F1).withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.4)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.stars_rounded, color: Color(0xFF818CF8), size: 15),
-                SizedBox(width: 6),
+                const Icon(Icons.stars_rounded, color: Color(0xFF818CF8), size: 13),
+                const SizedBox(width: 5),
                 Text(
                   'SELAMAT DATANG',
-                  style: TextStyle(color: Color(0xFF818CF8), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
+                  style: TextStyle(color: const Color(0xFF818CF8), fontSize: isMobile ? 9 : 10.5, fontWeight: FontWeight.w900, letterSpacing: 0.8),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: isMobile ? 6 : 12),
           Text(
             _businessName.toUpperCase(),
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 26,
+              fontSize: isMobile ? 16 : 24,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Sila perhatikan skrin atau tunggu notifikasi telefon apabila nombor giliran anda dipanggil.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
-          ),
-          const SizedBox(height: 18),
+          if (!isMobile) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Sila perhatikan skrin atau tunggu notifikasi telefon apabila nombor giliran anda dipanggil.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.3),
+            ),
+          ],
+          SizedBox(height: isMobile ? 6 : 14),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 12, vertical: isMobile ? 4 : 6),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.white12),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.wifi_rounded, color: Color(0xFF34D399), size: 16),
-                const SizedBox(width: 8),
+                Icon(Icons.wifi_rounded, color: const Color(0xFF34D399), size: isMobile ? 13 : 15),
+                const SizedBox(width: 6),
                 Text(
                   _wifiInfo,
-                  style: const TextStyle(color: Color(0xFF34D399), fontSize: 12, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: const Color(0xFF34D399), fontSize: isMobile ? 10 : 11.5, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -1434,9 +1747,9 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   // Slide 2: Promosi & Ganjaran Kedai (Customizable)
-  Widget _buildPromoSlide2() {
+  Widget _buildPromoSlide2({bool isMobile = false}) {
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isMobile ? 12 : 24),
       decoration: BoxDecoration(
         gradient: RadialGradient(
           center: Alignment.center,
@@ -1446,68 +1759,57 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
             const Color(0xFF0F172A),
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 24),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             decoration: BoxDecoration(
               color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.local_offer_rounded, color: Color(0xFFF59E0B), size: 15),
-                SizedBox(width: 6),
+                const Icon(Icons.local_offer_rounded, color: Color(0xFFF59E0B), size: 13),
+                const SizedBox(width: 5),
                 Text(
-                  'PROMOSI & TAWARAN KHAS',
-                  style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
+                  'PROMOSI & TAWARAN',
+                  style: TextStyle(color: const Color(0xFFF59E0B), fontSize: isMobile ? 9 : 10.5, fontWeight: FontWeight.w900, letterSpacing: 0.8),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: isMobile ? 6 : 12),
           Text(
             _promoTitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: isMobile ? 15 : 21,
               fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            _promoDesc,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
-          ),
-          const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(10),
+          if (!isMobile) ...[
+            const SizedBox(height: 6),
+            Text(
+              _promoDesc,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.3),
             ),
-            child: const Text(
-              'Tanya staf kami atau imbas QR untuk maklumat lanjut',
-              style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11, fontWeight: FontWeight.w600),
-            ),
-          ),
+          ],
         ],
       ),
     );
   }
 
   // Slide 3: Pembayaran & Servis Pintar Cashless
-  Widget _buildPromoSlide3() {
+  Widget _buildPromoSlide3({bool isMobile = false}) {
     return Container(
-      padding: const EdgeInsets.all(28),
+      padding: EdgeInsets.all(isMobile ? 12 : 24),
       decoration: BoxDecoration(
         gradient: RadialGradient(
           center: Alignment.center,
@@ -1517,49 +1819,40 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
             const Color(0xFF0F172A),
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 24),
       ),
-      child: const Column(
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.contactless_rounded, color: Color(0xFF34D399), size: 18),
-              SizedBox(width: 8),
+              Icon(Icons.contactless_rounded, color: const Color(0xFF34D399), size: isMobile ? 14 : 16),
+              const SizedBox(width: 6),
               Text(
-                'PEMBAYARAN PANTAS TANPA TUNAI',
-                style: TextStyle(color: Color(0xFF34D399), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
+                'PEMBAYARAN CASHLESS',
+                style: TextStyle(color: const Color(0xFF34D399), fontSize: isMobile ? 9 : 10.5, fontWeight: FontWeight.w900, letterSpacing: 0.8),
               ),
             ],
           ),
-          SizedBox(height: 14),
+          SizedBox(height: isMobile ? 6 : 12),
           Text(
             'DuitNow QR & Kad Diterima',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 24,
+              fontSize: isMobile ? 15 : 22,
               fontWeight: FontWeight.w900,
             ),
           ),
-          SizedBox(height: 8),
-          Text(
-            'Nikmati pengalaman pembayaran mudah dan pantas melalui DuitNow National QR, Kad Debit/Kredit, dan e-Dompet utama.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
-          ),
-          SizedBox(height: 18),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _FeatureChip('⚡ DuitNow QR'),
-              SizedBox(width: 8),
-              _FeatureChip('💳 Kad / PayWave'),
-              SizedBox(width: 8),
-              _FeatureChip('📱 e-Dompet'),
-            ],
-          ),
+          if (!isMobile) ...[
+            const SizedBox(height: 6),
+            const Text(
+              'Nikmati pengalaman pembayaran mudah dan pantas melalui DuitNow National QR, Kad Debit/Kredit, dan e-Dompet utama.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.3),
+            ),
+          ],
         ],
       ),
     );
@@ -1571,7 +1864,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
 
   Widget _buildActiveCallHero(QueueTicketModel current) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: RadialGradient(
           center: Alignment.center,
@@ -1599,18 +1892,18 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         children: [
           // Tag Nombor Dipanggil
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
             decoration: BoxDecoration(
               color: const Color(0xFFEF4444).withValues(alpha: 0.25),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: const Color(0xFFEF4444)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 9,
-                  height: 9,
+                  width: 8,
+                  height: 8,
                   decoration: const BoxDecoration(
                     color: Color(0xFFEF4444),
                     shape: BoxShape.circle,
@@ -1622,14 +1915,14 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                    letterSpacing: 1.1,
+                    fontSize: 11.5,
+                    letterSpacing: 1,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Giant Ticket Number
           FittedBox(
@@ -1637,7 +1930,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
               current.ticketNumber,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 96,
+                fontSize: 90,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 4,
                 shadows: [
@@ -1646,11 +1939,11 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           // Destination Station / Kaunter / Kerusi
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
               color: const Color(0xFF10B981).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(14),
@@ -1660,35 +1953,76 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
               'SILA KE: ${current.stationOrChair ?? "KAUNTER UTAMA"}',
               style: const TextStyle(
                 color: Color(0xFF34D399),
-                fontSize: 19,
+                fontSize: 18,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 1.3,
+                letterSpacing: 1.2,
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Customer Name & Service
           Text(
             current.customerName,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             'Servis: ${current.serviceName ?? "Servis Am"}',
-            style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ],
       ),
     );
   }
 
-  // Banner Panggilan Aktif (Untuk mod horizontal atas Giliran Expand)
-  Widget _buildActiveCallBanner(QueueTicketModel current) {
+  // Banner Panggilan Aktif (Horizontal)
+  Widget _buildActiveCallBanner(QueueTicketModel current, {bool isMobile = false}) {
+    if (isMobile) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Color(0xFF0F172A)]),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF3B82F6), width: 1.5),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFEF4444), borderRadius: BorderRadius.circular(6)),
+                  child: const Text('DIPANGGIL', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 9)),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  current.ticketNumber,
+                  style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFF10B981)),
+              ),
+              child: Text(
+                current.stationOrChair ?? "KAUNTER UTAMA",
+                style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 11),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
@@ -1719,7 +2053,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 current.ticketNumber,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 32,
+                  fontSize: 30,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 2,
                 ),
@@ -1756,15 +2090,15 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   // KOMPONEN: GILIRAN SETERUSNYA (UP NEXT)
   // ===========================================================================
 
-  Widget _buildUpNextPanel({bool isExpanded = false}) {
+  Widget _buildUpNextPanel({bool isExpanded = false, bool isMobile = false}) {
     final list = _upNextTickets;
     final totalWaiting = _tickets.where((t) => t.status == 'waiting').length;
 
     return Container(
-      padding: EdgeInsets.all(isExpanded ? 18 : 14),
+      padding: EdgeInsets.all(isMobile ? 10 : (isExpanded ? 18 : 14)),
       decoration: BoxDecoration(
         color: const Color(0xFF141424),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isMobile ? 14 : 20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
@@ -1772,50 +2106,49 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.hourglass_bottom_rounded, color: Color(0xFFF59E0B), size: 18),
-              const SizedBox(width: 8),
+              const Icon(Icons.hourglass_bottom_rounded, color: Color(0xFFF59E0B), size: 16),
+              const SizedBox(width: 7),
               Text(
                 'GILIRAN SETERUSNYA (UP NEXT)',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: isExpanded ? 14 : 12.5,
-                  letterSpacing: 1.1,
+                  fontSize: isMobile ? 11.5 : (isExpanded ? 13.5 : 12.5),
+                  letterSpacing: 0.8,
                 ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   '$totalWaiting menunggu',
-                  style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 11, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
-          SizedBox(height: isExpanded ? 12 : 8),
+          SizedBox(height: isMobile ? 8 : (isExpanded ? 12 : 8)),
 
           Expanded(
             child: list.isEmpty
                 ? const Center(
-                    child: Text('Tiada senarai menunggu', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    child: Text('Tiada senarai menunggu', style: TextStyle(color: Colors.white38, fontSize: 11)),
                   )
-                : isExpanded
-                    ? _buildExpandedUpNextGrid(list)
-                    : ListView.builder(
+                : isMobile
+                    ? ListView.builder(
                         itemCount: list.length,
                         itemBuilder: (ctx, idx) {
                           final t = list[idx];
                           return Container(
-                            margin: const EdgeInsets.only(bottom: 7),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            margin: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                             decoration: BoxDecoration(
                               color: const Color(0xFF1A1A2E),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: Colors.white12),
                             ),
                             child: Row(
@@ -1825,22 +2158,22 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                                   children: [
                                     Text(
                                       '#${idx + 1}',
-                                      style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold),
                                     ),
-                                    const SizedBox(width: 10),
+                                    const SizedBox(width: 8),
                                     Text(
                                       t.ticketNumber,
                                       style: const TextStyle(
                                         color: Color(0xFFF59E0B),
                                         fontWeight: FontWeight.w900,
-                                        fontSize: 16,
+                                        fontSize: 15,
                                       ),
                                     ),
                                   ],
                                 ),
                                 Text(
                                   t.customerName,
-                                  style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1848,14 +2181,59 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                             ),
                           );
                         },
-                      ),
+                      )
+                    : isExpanded
+                        ? _buildExpandedUpNextGrid(list)
+                        : ListView.builder(
+                            itemCount: list.length,
+                            itemBuilder: (ctx, idx) {
+                              final t = list[idx];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 7),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1A1A2E),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '#${idx + 1}',
+                                          style: const TextStyle(color: Colors.white38, fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          t.ticketNumber,
+                                          style: const TextStyle(
+                                            color: Color(0xFFF59E0B),
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      t.customerName,
+                                      style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
           ),
         ],
       ),
     );
   }
 
-  // Grid Luas untuk Mod Expand (Bila skrin 80% luas)
+  // Grid Luas untuk Up Next (Widescreen)
   Widget _buildExpandedUpNextGrid(List<QueueTicketModel> list) {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -1922,14 +2300,14 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   // KOMPONEN: SEDANG DILAYAN (NOW SERVING)
   // ===========================================================================
 
-  Widget _buildNowServingPanel({bool isExpanded = false}) {
+  Widget _buildNowServingPanel({bool isExpanded = false, bool isMobile = false}) {
     final list = _nowServingTickets;
 
     return Container(
-      padding: EdgeInsets.all(isExpanded ? 18 : 14),
+      padding: EdgeInsets.all(isMobile ? 10 : (isExpanded ? 18 : 14)),
       decoration: BoxDecoration(
         color: const Color(0xFF141424),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isMobile ? 14 : 20),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
@@ -1937,50 +2315,49 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.people_alt_rounded, color: Color(0xFF10B981), size: 18),
-              const SizedBox(width: 8),
+              const Icon(Icons.people_alt_rounded, color: Color(0xFF10B981), size: 16),
+              const SizedBox(width: 7),
               Text(
                 'SEDANG DILAYAN (NOW SERVING)',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: isExpanded ? 14 : 12.5,
-                  letterSpacing: 1.1,
+                  fontSize: isMobile ? 11.5 : (isExpanded ? 13.5 : 12.5),
+                  letterSpacing: 0.8,
                 ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   '${list.length} aktif',
-                  style: const TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold),
+                  style: const TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
-          SizedBox(height: isExpanded ? 12 : 8),
+          SizedBox(height: isMobile ? 8 : (isExpanded ? 12 : 8)),
 
           Expanded(
             child: list.isEmpty
                 ? const Center(
-                    child: Text('Tiada servis aktif', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    child: Text('Tiada servis aktif', style: TextStyle(color: Colors.white38, fontSize: 11)),
                   )
-                : isExpanded
-                    ? _buildExpandedNowServingGrid(list)
-                    : ListView.builder(
+                : isMobile
+                    ? ListView.builder(
                         itemCount: list.length,
                         itemBuilder: (ctx, idx) {
                           final t = list[idx];
                           return Container(
-                            margin: const EdgeInsets.only(bottom: 7),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            margin: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                             decoration: BoxDecoration(
                               color: const Color(0xFF1A1A2E),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
                             ),
                             child: Row(
@@ -1993,32 +2370,75 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                                       style: const TextStyle(
                                         color: Color(0xFF10B981),
                                         fontWeight: FontWeight.w900,
-                                        fontSize: 16,
+                                        fontSize: 15,
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
+                                    const SizedBox(width: 8),
                                     Text(
                                       t.stationOrChair ?? 'Kaunter Utama',
-                                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                      style: const TextStyle(color: Colors.white54, fontSize: 11),
                                     ),
                                   ],
                                 ),
                                 Text(
                                   t.customerName,
-                                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                                 ),
                               ],
                             ),
                           );
                         },
-                      ),
+                      )
+                    : isExpanded
+                        ? _buildExpandedNowServingGrid(list)
+                        : ListView.builder(
+                            itemCount: list.length,
+                            itemBuilder: (ctx, idx) {
+                              final t = list[idx];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 7),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1A1A2E),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          t.ticketNumber,
+                                          style: const TextStyle(
+                                            color: Color(0xFF10B981),
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          t.stationOrChair ?? 'Kaunter Utama',
+                                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      t.customerName,
+                                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
           ),
         ],
       ),
     );
   }
 
-  // Grid Luas untuk Now Serving
+  // Grid Luas untuk Now Serving (Widescreen)
   Widget _buildExpandedNowServingGrid(List<QueueTicketModel> list) {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -2082,8 +2502,54 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   // KOMPONEN: BAR TICKER FOOTER TV
   // ===========================================================================
 
-  Widget _buildTvFooter() {
+  Widget _buildTvFooter({bool isMobile = false}) {
     final waitingCount = _tickets.where((t) => t.status == 'waiting').length;
+
+    if (isMobile) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF141424),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF34D399),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '$waitingCount menunggu',
+                  style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 10.5, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            InkWell(
+              onTap: _openFullscreenQrModal,
+              child: const Row(
+                children: [
+                  Icon(Icons.fullscreen_rounded, color: Color(0xFF42A5F5), size: 14),
+                  SizedBox(width: 3),
+                  Text(
+                    'Kiosk QR',
+                    style: TextStyle(color: Color(0xFF42A5F5), fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
@@ -2129,7 +2595,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
               const Icon(Icons.info_outline_rounded, color: Colors.white38, size: 13),
               const SizedBox(width: 6),
               const Text(
-                'Sila perhatikan skrin atau notifikasi telefon anda apabila nombor dipanggil',
+                'Sila perhatikan skrin atau notifikasi telefon apabila nombor dipanggil',
                 style: TextStyle(color: Colors.white54, fontSize: 10.5),
               ),
               const SizedBox(width: 12),
@@ -2158,27 +2624,6 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FeatureChip extends StatelessWidget {
-  final String label;
-  const _FeatureChip(this.label);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
       ),
     );
   }
