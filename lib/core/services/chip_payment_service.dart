@@ -30,12 +30,9 @@ class ChipPaymentService {
 
   static const String _baseUrl = 'https://gate.chip-in.asia/api/v1';
 
-  String get _brandId =>
-      dotenv.env['CHIP_BRAND_ID'] ?? '844a8f74-4426-4285-9a90-3c39e1259e75';
+  String get _brandId => dotenv.env['CHIP_BRAND_ID'] ?? '';
 
-  String get _apiKey =>
-      dotenv.env['CHIP_API_KEY'] ??
-      'VpeNMRGKkJDFsQCjSSGgwQplE0dEPd8vMbu50lNEe6m2FGi3huxKBuh7u8kaPEO-I-i15JnwfmOr9E43BH5xyA==';
+  String get _apiKey => dotenv.env['CHIP_API_KEY'] ?? '';
 
   Map<String, String> get _headers => {
         'Authorization': 'Bearer $_apiKey',
