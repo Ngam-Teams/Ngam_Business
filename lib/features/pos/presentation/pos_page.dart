@@ -31,6 +31,17 @@ class _PosPageState extends State<PosPage> {
   bool _loading = true;
   String _selectedCategory = 'All';
 
+  // Enterprise POS State (Square, Toast & StoreHub Standard)
+  String _orderType = 'dine_in'; // 'dine_in', 'takeaway', 'delivery'
+  String _tableNumber = '01';
+  int _orderSequence = 4032;
+
+  // Voucher & Loyalty State
+  String? _appliedVoucherCode;
+  double _voucherDiscount = 0.0;
+  String? _voucherId;
+  bool _isApplyingVoucher = false;
+
   List<String> get _categories {
     final cats = _allProducts
         .map((p) => (p.category == null || p.category!.trim().isEmpty) ? 'Other' : p.category!.trim())
@@ -45,6 +56,51 @@ class _PosPageState extends State<PosPage> {
 
   int get _cartCount =>
       _cart.fold(0, (sum, item) => sum + item.quantity);
+
+  double get _discountedSubtotal =>
+      (_cartTotal - _voucherDiscount).clamp(0.0, double.infinity);
+
+  // Bank Negara Malaysia 5-sen rounding mechanism for cash & POS
+  double get _grandTotal {
+    if (_cart.isEmpty) return 0.0;
+    final sub = _discountedSubtotal;
+    return (sub * 20).round() / 20.0;
+  }
+
+  double get _roundingAmount =>
+      _cart.isEmpty ? 0.0 : _grandTotal - _discountedSubtotal;
+
+  List<double> get _quickCashOptions {
+    final total = _grandTotal;
+    if (total <= 0) return [];
+    final list = <double>[];
+    
+    // Always include exact amount as first chip
+    list.add(total);
+
+    // Malaysian notes
+    final notes = [5.0, 10.0, 20.0, 50.0, 100.0];
+    for (final note in notes) {
+      if (note > total && !list.contains(note)) {
+        list.add(note);
+      }
+    }
+
+    final nextTen = (total / 10).ceil() * 10.0;
+    if (nextTen > total && !list.contains(nextTen)) {
+      list.add(nextTen);
+    }
+    final nextFifty = (total / 50).ceil() * 50.0;
+    if (nextFifty > total && !list.contains(nextFifty)) {
+      list.add(nextFifty);
+    }
+
+    list.sort();
+    final higher = list.where((n) => n > total).toList();
+    final result = <double>[total];
+    result.addAll(higher.take(3));
+    return result;
+  }
 
   StreamSubscription<List<ProductModel>>? _productSubscription;
 

@@ -170,10 +170,10 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   String get _qrUrl => _businessId.isNotEmpty
-      ? 'https://ngam.my/q/$_businessId'
-      : 'https://ngam.my/q';
+      ? 'https://ngam.dev/q/$_businessId'
+      : 'https://ngam.dev/q';
 
-  String get _shortUrlDisplay => 'ngam.my/q/$_businessSlug';
+  String get _shortUrlDisplay => 'ngam.dev/q/$_businessSlug';
 
   QueueTicketModel? get _currentCallingTicket {
     final calling = _tickets.where((t) => t.status == 'calling').toList();
