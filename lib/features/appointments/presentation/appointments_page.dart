@@ -1,11 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
+import '../../pos/presentation/widgets/payment_terminal_modal.dart';
+import '../../pos/data/pos_service.dart';
+import '../../pos/models/product_model.dart';
+import '../../pos/models/order_model.dart';
 
 // ============================================================
 // AppointmentsPage — Merchant Booking & Schedule Management
@@ -22,7 +28,7 @@ class AppointmentsPage extends StatefulWidget {
 
 class _AppointmentsPageState extends State<AppointmentsPage> {
   int _selectedFilterIndex = 0;
-  final List<String> _filters = ['All', 'Pending', 'Confirmed', 'Completed'];
+  final List<String> _filters = ['Semua', 'Menunggu', 'Disahkan', 'Selesai'];
 
   late List<Map<String, dynamic>> _appointments;
   StreamSubscription<List<Map<String, dynamic>>>? _bookingsSub;
@@ -33,54 +39,55 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   @override
   void initState() {
     super.initState();
+    // Generalized multi-industry appointment examples
     _appointments = [
       {
         'id': 'BK-1082',
         'customerName': 'Amirul Hakim',
         'phone': '+60 17-234 5678',
-        'service': 'Premium Haircut & Beard Trim',
-        'dateTime': 'Today, 2:30 PM',
-        'staff': 'Farid (Master Barber)',
-        'price': 50.00,
-        'deposit': 15.00,
+        'service': 'Sesi Konsultasi & Khidmat Nasihat',
+        'dateTime': 'Hari Ini, 2:30 PM',
+        'staff': 'En. Farid (Perunding)',
+        'price': 80.00,
+        'deposit': 25.00,
         'status': AppointmentStatus.pending,
-        'notes': 'Prefers fade cut on sides.',
+        'notes': 'Sesi perbincangan perancangan projek perniagaan.',
       },
       {
         'id': 'BK-1081',
         'customerName': 'Sarah Lee',
         'phone': '+60 12-889 1234',
-        'service': 'Facial Rejuvenation Treatment',
-        'dateTime': 'Today, 4:00 PM',
-        'staff': 'Nurul (Therapist)',
-        'price': 85.00,
-        'deposit': 25.00,
+        'service': 'Sesi Rawatan & Terapi Kesihatan',
+        'dateTime': 'Hari Ini, 4:00 PM',
+        'staff': 'Cik Nurul (Ahli Terapi)',
+        'price': 95.00,
+        'deposit': 30.00,
         'status': AppointmentStatus.confirmed,
-        'notes': 'Sensitive skin, requested natural oils.',
+        'notes': 'Pelanggan memohon bilik rawatan 02.',
       },
       {
         'id': 'BK-1080',
         'customerName': 'Zulhilmi Rahman',
         'phone': '+60 19-334 9988',
-        'service': 'Classic Haircut',
-        'dateTime': 'Today, 11:00 AM',
-        'staff': 'Farid (Master Barber)',
-        'price': 35.00,
-        'deposit': 10.00,
+        'service': 'Servis Penyelenggaraan & Pemeriksaan',
+        'dateTime': 'Hari Ini, 11:00 AM',
+        'staff': 'Ruang Servis / Bay 01',
+        'price': 120.00,
+        'deposit': 30.00,
         'status': AppointmentStatus.completed,
-        'notes': 'Customer paid remaining in cash.',
+        'notes': 'Selesai diservis dan dibayar tunai di kaunter.',
       },
       {
         'id': 'BK-1079',
         'customerName': 'Jessica Wong',
         'phone': '+60 16-555 4321',
-        'service': 'Full Hair Coloring',
-        'dateTime': 'Tomorrow, 10:30 AM',
-        'staff': 'Alex (Senior Stylist)',
-        'price': 120.00,
-        'deposit': 30.00,
+        'service': 'Tempahan Meja Khas / Ruang Acara',
+        'dateTime': 'Esok, 12:30 PM',
+        'staff': 'Meja VIP 05',
+        'price': 150.00,
+        'deposit': 50.00,
         'status': AppointmentStatus.confirmed,
-        'notes': 'Reference photo attached in booking.',
+        'notes': 'Keluarga 6 orang. Memerlukan kerusi bayi.',
       },
     ];
 
@@ -262,119 +269,440 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     showGlassToast(context, 'Booking ${appt['id']} marked as $statusLabel');
   }
 
+  Future<void> _payAppointmentAtPos(Map<String, dynamic> appt) async {
+    final amount = (appt['price'] as num?)?.toDouble() ?? 0.0;
+    if (amount <= 0) return;
+
+    final result = await PaymentTerminalModal.show(
+      context: context,
+      amount: amount,
+      orderTitle: 'Tempahan #${appt['id']} (${appt['service']})',
+      customerName: appt['customerName'],
+      itemLines: ['1x ${appt['service']} | RM ${amount.toStringAsFixed(2)}'],
+      initialStep: TerminalStep.chooseMethod,
+    );
+
+    if (result == null || !result.isSuccess || !mounted) return;
+
+    try {
+      final dummyProduct = ProductModel(
+        id: 'svc-${appt['id']}',
+        name: appt['service'] as String,
+        price: amount,
+        isAvailable: true,
+      );
+
+      await PosService().submitOrder(
+        items: [CartItem(product: dummyProduct, quantity: 1)],
+        total: amount,
+        customerName: appt['customerName'],
+        notes: '[Bayaran Tempahan #${appt['id']}] Kaedah: ${result.paymentMethod.toUpperCase()}',
+        paymentSplits: [
+          PaymentSplit(method: result.paymentMethod, amount: amount),
+        ],
+        initialStatus: 'completed',
+      );
+
+      await _updateStatus(appt, AppointmentStatus.completed);
+
+      if (!mounted) return;
+      showGlassToast(
+        context,
+        'Bayaran Tempahan #${appt['id']} Selesai (RM ${amount.toStringAsFixed(2)})!',
+        customColor: const Color(0xFF44CF6C),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showGlassToast(context, 'Ralat merekod bayaran tempahan: $e', isError: true);
+    }
+  }
+
+  Future<void> _sendWhatsAppReminder(Map<String, dynamic> appt) async {
+    final rawPhone = appt['phone']?.toString() ?? '';
+    String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '6$cleanPhone';
+    } else if (!cleanPhone.startsWith('60') && cleanPhone.length >= 9) {
+      cleanPhone = '60$cleanPhone';
+    }
+
+    if (cleanPhone.isEmpty || cleanPhone.length < 8) {
+      showGlassToast(context, 'Nombor telefon pelanggan tidak sah untuk WhatsApp', isError: true);
+      return;
+    }
+
+    final message = '''
+Salam sejahtera ${appt['customerName']},
+Peringatan tempahan anda bersama kami:
+📅 Tarikh & Masa: ${appt['dateTime']}
+🔖 Perkhidmatan / Meja: ${appt['service']}
+👤 Kakitangan / Ruang: ${appt['staff']}
+💰 Jumlah: RM ${(appt['price'] as double).toStringAsFixed(2)}
+
+Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
+''';
+
+    final waUri = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
+    if (await canLaunchUrl(waUri)) {
+      await launchUrl(waUri, mode: LaunchMode.externalApplication);
+    } else {
+      Clipboard.setData(ClipboardData(text: message));
+      if (mounted) showGlassToast(context, 'Teks peringatan telah disalin ke papan keratan!');
+    }
+  }
+
   void _openNewAppointmentModal() {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
-    final serviceCtrl = TextEditingController(text: 'Walk-in Haircut');
+    final serviceCtrl = TextEditingController();
+    final staffCtrl = TextEditingController();
+    final priceCtrl = TextEditingController(text: '50.00');
+    final depositCtrl = TextEditingController(text: '0.00');
+    final notesCtrl = TextEditingController();
+
+    String selectedDateText = 'Hari Ini';
+    String selectedTimeText = '02:30 PM';
+
+    final sampleServices = [
+      'Konsultasi / Khidmat',
+      'Servis / Rawatan',
+      'Tempahan Meja / Bilik',
+      'Penyelenggaraan / Baik Pulih',
+    ];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        decoration: const BoxDecoration(
-          color: Color(0xFF14171F),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.88),
+            decoration: const BoxDecoration(
+              color: Color(0xFF141724),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Cipta Tempahan / Temu Janji Baharu',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Sesuai untuk sebarang khidmat, konsultasi, meja, ruang atau slot servis',
+                    style: TextStyle(fontSize: 12, color: Colors.white54),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 1. Nama Pelanggan
+                  TextField(
+                    controller: nameCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: 'Nama Pelanggan *',
+                      hintText: 'Cth: Amirul Hakim / Siti Nurhaliza / Syarikat ABC',
+                      hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 2. Nombor Telefon (WhatsApp)
+                  TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: 'Nombor Telefon (WhatsApp) *',
+                      hintText: 'Cth: 01115892468',
+                      hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      prefixIcon: const Icon(Icons.phone_rounded, color: Color(0xFF25D366), size: 18),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 3. Nama Servis / Perkhidmatan / Meja
+                  TextField(
+                    controller: serviceCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: 'Servis / Perkhidmatan / Meja *',
+                      hintText: 'Cth: Konsultasi / Servis Kereta / Gunting Rambut / Meja VIP',
+                      hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Quick service suggestions chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: sampleServices.map((sample) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ActionChip(
+                            label: Text(sample, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                            backgroundColor: Colors.white.withValues(alpha: 0.06),
+                            side: const BorderSide(color: Colors.white12),
+                            onPressed: () {
+                              setModalState(() {
+                                serviceCtrl.text = sample;
+                              });
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 4. Staf / Meja / Bilik
+                  TextField(
+                    controller: staffCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: 'Penyedia Khidmat / Meja / Bilik (Pilihan)',
+                      hintText: 'Cth: En. Farid / Meja 04 / Bilik 2 / Mana-mana staf sedia ada',
+                      hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 5. Tarikh & Masa Row
+                  const Text('Tarikh & Masa Slot', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['Hari Ini', 'Esok', 'Lusa'].map((d) {
+                        final isSel = selectedDateText == d;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Text(d, style: TextStyle(color: isSel ? Colors.black : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                            selected: isSel,
+                            selectedColor: const Color(0xFF42A5F5),
+                            backgroundColor: Colors.white.withValues(alpha: 0.05),
+                            onSelected: (_) => setModalState(() => selectedDateText = d),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Time Slots
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: ['10:00 AM', '11:30 AM', '02:30 PM', '04:00 PM', '05:30 PM', '08:00 PM'].map((t) {
+                        final isSel = selectedTimeText == t;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Text(t, style: TextStyle(color: isSel ? Colors.black : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                            selected: isSel,
+                            selectedColor: const Color(0xFF10B981),
+                            backgroundColor: Colors.white.withValues(alpha: 0.05),
+                            onSelected: (_) => setModalState(() => selectedTimeText = t),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 6. Harga Penuh & Deposit Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: priceCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          decoration: InputDecoration(
+                            labelText: 'Harga Servis (RM) *',
+                            labelStyle: const TextStyle(color: Colors.white70),
+                            prefixText: 'RM ',
+                            prefixStyle: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.05),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: depositCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(color: Colors.white, fontSize: 14),
+                          decoration: InputDecoration(
+                            labelText: 'Deposit Diterima (RM)',
+                            labelStyle: const TextStyle(color: Colors.white70),
+                            prefixText: 'RM ',
+                            prefixStyle: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold),
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.05),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 7. Catatan
+                  TextField(
+                    controller: notesCtrl,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: 'Catatan Tambahan (Pilihan)',
+                      hintText: 'Cth: Permintaan khas pelanggan / sebarang butiran penting',
+                      hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
+                      labelStyle: const TextStyle(color: Colors.white54),
+                      filled: true,
+                      fillColor: Colors.white.withValues(alpha: 0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Submit Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF42A5F5),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 2,
+                      ),
+                      onPressed: () async {
+                        final name = nameCtrl.text.trim();
+                        final phone = phoneCtrl.text.trim();
+                        final service = serviceCtrl.text.trim();
+                        final staff = staffCtrl.text.trim().isEmpty ? 'Kakitangan Bertugas' : staffCtrl.text.trim();
+                        final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
+                        final deposit = double.tryParse(depositCtrl.text.trim()) ?? 0.0;
+                        final notes = notesCtrl.text.trim();
+
+                        if (name.isEmpty) {
+                          showGlassToast(context, 'Sila masukkan nama pelanggan', isError: true);
+                          return;
+                        }
+                        if (service.isEmpty) {
+                          showGlassToast(context, 'Sila masukkan jenis servis / perkhidmatan / meja', isError: true);
+                          return;
+                        }
+
+                        final bookingId = 'BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+                        final dateTimeStr = '$selectedDateText, $selectedTimeText';
+
+                        final newBookingMap = {
+                          'id': bookingId,
+                          'customerName': name,
+                          'phone': phone.isEmpty ? 'Walk-in' : phone,
+                          'service': service,
+                          'dateTime': dateTimeStr,
+                          'staff': staff,
+                          'price': price,
+                          'deposit': deposit,
+                          'status': AppointmentStatus.confirmed,
+                          'notes': notes,
+                        };
+
+                        // 1. Try to persist to Supabase bookings table
+                        try {
+                          final profile = await BusinessService().getBusinessProfile();
+                          final bId = profile?['id'];
+                          await Supabase.instance.client.from('bookings').insert({
+                            if (bId != null) 'business_id': bId,
+                            'customer_name': name,
+                            'service_name': service,
+                            'booking_date': selectedDateText == 'Hari Ini' ? DateFormat('yyyy-MM-dd').format(DateTime.now()) : DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 1))),
+                            'booking_time': selectedTimeText,
+                            'status': 'confirmed',
+                            'booking_metadata': {
+                              'booking_id': bookingId,
+                              'phone': phone,
+                              'provider_name': staff,
+                              'total_price': price,
+                              'deposit': deposit,
+                              'notes': notes,
+                            },
+                          });
+                        } catch (e) {
+                          debugPrint('[Appointments] Offline/local fallback: $e');
+                        }
+
+                        // 2. Update local state
+                        setState(() {
+                          _appointments.insert(0, newBookingMap);
+                        });
+
+                        Navigator.pop(ctx);
+                        showGlassToast(context, 'Tempahan #$bookingId berjaya didaftarkan!', customColor: const Color(0xFF10B981));
+                      },
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_outline_rounded, size: 18),
+                          SizedBox(width: 8),
+                          Text('Sahkan Tempahan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 18),
-            const Text(
-              'Add Walk-in Appointment',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                labelText: 'Customer Name',
-                labelStyle: const TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.05),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: phoneCtrl,
-              keyboardType: TextInputType.phone,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                labelText: 'Phone Number',
-                labelStyle: const TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.05),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: serviceCtrl,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: InputDecoration(
-                labelText: 'Service Name',
-                labelStyle: const TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.05),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF42A5F5),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: () {
-                  if (nameCtrl.text.trim().isEmpty) {
-                    showGlassToast(context, 'Please enter customer name', isError: true);
-                    return;
-                  }
-                  setState(() {
-                    _appointments.insert(0, {
-                      'id': 'WK-${DateTime.now().millisecondsSinceEpoch % 10000}',
-                      'customerName': nameCtrl.text.trim(),
-                      'phone': phoneCtrl.text.trim().isEmpty ? 'Walk-in' : phoneCtrl.text.trim(),
-                      'service': serviceCtrl.text.trim(),
-                      'dateTime': 'Today (Immediate)',
-                      'staff': 'Any Available Staff',
-                      'price': 35.00,
-                      'deposit': 0.00,
-                      'status': AppointmentStatus.confirmed,
-                      'notes': 'Walk-in customer entry',
-                    });
-                  });
-                  Navigator.pop(ctx);
-                  showGlassToast(context, 'Walk-in appointment recorded!');
-                },
-                child: const Text('Confirm Appointment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

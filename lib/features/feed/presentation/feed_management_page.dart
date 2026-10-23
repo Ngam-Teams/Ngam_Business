@@ -1,8 +1,12 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../widgets/glass_toast.dart';
+import '../../../core/services/r2_storage_service.dart';
 import '../data/feed_service.dart';
 import '../models/feed_post_model.dart';
 import '../../settings/data/business_service.dart';
@@ -882,6 +886,8 @@ class _CreateEditPostDialog extends StatefulWidget {
 class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
   final _formKey = GlobalKey<FormState>();
   final FeedService _feedService = FeedService();
+  final ImagePicker _picker = ImagePicker();
+  final R2StorageService _r2Storage = R2StorageService();
 
   late TextEditingController _titleController;
   late TextEditingController _captionController;
@@ -893,6 +899,16 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
   String _status = 'published';
   bool _isPinned = false;
   bool _saving = false;
+
+  // Media Upload & Video Preview State
+  String _mediaType = 'image'; // 'video' or 'image'
+  XFile? _selectedFile;
+  Uint8List? _selectedFileBytes;
+  String? _selectedFileName;
+  int? _selectedFileSize;
+  VideoPlayerController? _videoPreviewController;
+  bool _isUploadingToR2 = false;
+  double _uploadProgress = 0.0;
 
   static const _presetImages = [
     (label: 'Rambut Fade', url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=800'),
@@ -926,16 +942,102 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
       _ctaText = p.ctaText;
       _status = p.status;
       _isPinned = p.isPinned;
+      _mediaType = p.mediaType;
     }
   }
 
   @override
   void dispose() {
+    _videoPreviewController?.dispose();
     _titleController.dispose();
     _captionController.dispose();
     _mediaUrlController.dispose();
     _serviceTagController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickVideo() async {
+    try {
+      final XFile? video = await _picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(seconds: 60),
+      );
+      if (video == null) return;
+
+      final bytes = await video.readAsBytes();
+      final size = bytes.lengthInBytes;
+
+      await _videoPreviewController?.dispose();
+      _videoPreviewController = null;
+
+      VideoPlayerController controller;
+      if (kIsWeb) {
+        controller = VideoPlayerController.networkUrl(Uri.parse(video.path));
+      } else {
+        controller = VideoPlayerController.networkUrl(Uri.file(video.path));
+      }
+
+      await controller.initialize();
+      controller.setLooping(true);
+
+      setState(() {
+        _selectedFile = video;
+        _selectedFileBytes = bytes;
+        _selectedFileName = video.name;
+        _selectedFileSize = size;
+        _mediaType = 'video';
+        _videoPreviewController = controller;
+        _mediaUrlController.text = video.name;
+      });
+    } catch (e) {
+      debugPrint('[FeedManagement] Error picking video: $e');
+      if (mounted) {
+        showGlassToast(context, 'Ralat memilih video: $e', isError: true);
+      }
+    }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (image == null) return;
+
+      final bytes = await image.readAsBytes();
+      final size = bytes.lengthInBytes;
+
+      await _videoPreviewController?.dispose();
+      _videoPreviewController = null;
+
+      setState(() {
+        _selectedFile = image;
+        _selectedFileBytes = bytes;
+        _selectedFileName = image.name;
+        _selectedFileSize = size;
+        _mediaType = 'image';
+        _mediaUrlController.text = image.name;
+      });
+    } catch (e) {
+      debugPrint('[FeedManagement] Error picking image: $e');
+      if (mounted) {
+        showGlassToast(context, 'Ralat memilih gambar: $e', isError: true);
+      }
+    }
+  }
+
+  void _clearSelectedMedia() {
+    _videoPreviewController?.dispose();
+    setState(() {
+      _selectedFile = null;
+      _selectedFileBytes = null;
+      _selectedFileName = null;
+      _selectedFileSize = null;
+      _videoPreviewController = null;
+      _mediaType = 'image';
+      _mediaUrlController.text = _presetImages[0].url;
+    });
   }
 
   void _addHashtag(String tag) {
@@ -954,12 +1056,36 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
 
     setState(() => _saving = true);
     try {
+      String finalMediaUrl = _mediaUrlController.text.trim();
+
+      // Jika fail tempatan dipilih, muat naik ke Cloudflare R2!
+      if (_selectedFileBytes != null && _selectedFileName != null) {
+        setState(() {
+          _isUploadingToR2 = true;
+          _uploadProgress = 0.05;
+        });
+
+        final mimeType = _mediaType == 'video' ? 'video/mp4' : 'image/jpeg';
+        finalMediaUrl = await _r2Storage.uploadMedia(
+          bytes: _selectedFileBytes!,
+          fileName: _selectedFileName!,
+          folder: _mediaType == 'video' ? 'feed_videos' : 'feed_images',
+          mimeType: mimeType,
+          onProgress: (p) {
+            if (mounted) {
+              setState(() => _uploadProgress = p);
+            }
+          },
+        );
+      }
+
       if (widget.existing != null) {
         await _feedService.updatePost(
           postId: widget.existing!.id,
           title: _titleController.text.trim(),
           caption: _captionController.text.trim(),
-          mediaUrl: _mediaUrlController.text.trim(),
+          mediaUrl: finalMediaUrl,
+          mediaType: _mediaType,
           category: widget.businessCategory,
           serviceTag: _serviceTagController.text.trim(),
           ctaType: _ctaType,
@@ -971,7 +1097,8 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
         await _feedService.createPost(
           title: _titleController.text.trim(),
           caption: _captionController.text.trim(),
-          mediaUrl: _mediaUrlController.text.trim(),
+          mediaUrl: finalMediaUrl,
+          mediaType: _mediaType,
           category: widget.businessCategory,
           serviceTag: _serviceTagController.text.trim(),
           ctaType: _ctaType,
@@ -984,7 +1111,9 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
       if (mounted) {
         showGlassToast(
           context,
-          widget.existing != null ? 'Post berjaya dikemaskini!' : 'Post berjaya diterbitkan di Ngam Feed!',
+          widget.existing != null
+              ? 'Post berjaya dikemaskini!'
+              : 'Post berjaya dimuat naik & diterbitkan di Ngam Feed!',
           customColor: const Color(0xFF10B981),
         );
         widget.onSaved();
@@ -993,7 +1122,10 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
     } catch (e) {
       if (mounted) {
         showGlassToast(context, 'Ralat: $e', isError: true);
-        setState(() => _saving = false);
+        setState(() {
+          _saving = false;
+          _isUploadingToR2 = false;
+        });
       }
     }
   }
@@ -1080,46 +1212,299 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                         ),
                         const SizedBox(height: 14),
 
-                        // URL Gambar & Preset
-                        const Text('Gambar / Media URL *', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _mediaUrlController,
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
-                          decoration: _inputDecoration('https://...').copyWith(
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.clear_rounded, color: Colors.white38, size: 18),
-                              onPressed: () => _mediaUrlController.clear(),
+                        // SEKSYEN MEDIA: VIDEO ATAU GAMBAR
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Media Suapan (Video / Gambar) *',
+                              style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600),
                             ),
-                          ),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Sila masukkan URL media' : null,
-                          onChanged: (_) => setState(() {}),
+                            if (_selectedFile != null)
+                              GestureDetector(
+                                onTap: _clearSelectedMedia,
+                                child: const Text(
+                                  'Buang & Tukar',
+                                  style: TextStyle(
+                                      color: Colors.redAccent,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 8),
 
-                        // Preset chips
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          child: Row(
-                            children: _presetImages.map((p) {
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: ActionChip(
-                                  label: Text(p.label, style: const TextStyle(fontSize: 11, color: Colors.white70)),
-                                  backgroundColor: Colors.white.withValues(alpha: 0.06),
-                                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  onPressed: () {
-                                    _mediaUrlController.text = p.url;
-                                    setState(() {});
-                                  },
+                        // BUTANG PILIHAN MUAT NAIK CEPAT
+                        Row(
+                          children: [
+                            // 1. Pilih Fail Video
+                            Expanded(
+                              child: InkWell(
+                                onTap: _pickVideo,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: _mediaType == 'video' &&
+                                            _selectedFile != null
+                                        ? const Color(0xFFEC4899)
+                                            .withValues(alpha: 0.25)
+                                        : Colors.white.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _mediaType == 'video' &&
+                                              _selectedFile != null
+                                          ? const Color(0xFFEC4899)
+                                          : Colors.white12,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.videocam_rounded,
+                                          color: Color(0xFFEC4899), size: 18),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          'Muat Naik Video',
+                                          style: TextStyle(
+                                            color: _mediaType == 'video' &&
+                                                    _selectedFile != null
+                                                ? const Color(0xFFEC4899)
+                                                : Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              );
-                            }).toList(),
-                          ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // 2. Pilih Gambar
+                            Expanded(
+                              child: InkWell(
+                                onTap: _pickImage,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 10, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: _mediaType == 'image' &&
+                                            _selectedFile != null
+                                        ? const Color(0xFF00F2FE)
+                                            .withValues(alpha: 0.2)
+                                        : Colors.white.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _mediaType == 'image' &&
+                                              _selectedFile != null
+                                          ? const Color(0xFF00F2FE)
+                                          : Colors.white12,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.photo_library_rounded,
+                                          color: Color(0xFF00F2FE), size: 18),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          'Pilih Gambar',
+                                          style: TextStyle(
+                                            color: _mediaType == 'image' &&
+                                                    _selectedFile != null
+                                                ? const Color(0xFF00F2FE)
+                                                : Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
+
+                        // PRATONTON MEDIA TERPILIH ATAU INPUT URL
+                        if (_selectedFileBytes != null) ...[
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.black45,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: _mediaType == 'video'
+                                    ? const Color(0xFFEC4899)
+                                    : const Color(0xFF00F2FE),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (_mediaType == 'video' &&
+                                    _videoPreviewController != null &&
+                                    _videoPreviewController!.value.isInitialized)
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(12)),
+                                    child: AspectRatio(
+                                      aspectRatio: _videoPreviewController!
+                                          .value.aspectRatio,
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          VideoPlayer(_videoPreviewController!),
+                                          IconButton(
+                                            icon: Icon(
+                                              _videoPreviewController!
+                                                      .value.isPlaying
+                                                  ? Icons.pause_circle_filled_rounded
+                                                  : Icons.play_circle_fill_rounded,
+                                              color: Colors.white70,
+                                              size: 48,
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                _videoPreviewController!
+                                                        .value.isPlaying
+                                                    ? _videoPreviewController!
+                                                        .pause()
+                                                    : _videoPreviewController!
+                                                        .play();
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                else if (_mediaType == 'image')
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(12)),
+                                    child: Container(
+                                      height: 140,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        image: DecorationImage(
+                                          image: MemoryImage(_selectedFileBytes!),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _mediaType == 'video'
+                                            ? Icons.videocam_rounded
+                                            : Icons.image_rounded,
+                                        color: _mediaType == 'video'
+                                            ? const Color(0xFFEC4899)
+                                            : const Color(0xFF00F2FE),
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          '${_selectedFileName ?? "Fail Media"} • ${((_selectedFileSize ?? 0) / (1024 * 1024)).toStringAsFixed(1)} MB',
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF10B981)
+                                              .withValues(alpha: 0.15),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'Sedia ke Cloudflare R2',
+                                          style: TextStyle(
+                                              color: Color(0xFF10B981),
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ] else ...[
+                          // Input URL alternatif & Preset
+                          TextFormField(
+                            controller: _mediaUrlController,
+                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            decoration: _inputDecoration('Atau masukkan URL terus (https://...)').copyWith(
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.clear_rounded, color: Colors.white38, size: 18),
+                                onPressed: () => _mediaUrlController.clear(),
+                              ),
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Sila muat naik media atau masukkan URL' : null,
+                            onChanged: (_) => setState(() {}),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Preset chips
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: Row(
+                              children: _presetImages.map((p) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 6),
+                                  child: ActionChip(
+                                    label: Text(p.label, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                                    backgroundColor: Colors.white.withValues(alpha: 0.06),
+                                    side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    onPressed: () {
+                                      _mediaUrlController.text = p.url;
+                                      setState(() {
+                                        _mediaType = 'image';
+                                      });
+                                    },
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
 
                         // Kapsyen Post
                         const Text('Kapsyen & Penerangan', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
@@ -1272,6 +1657,56 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                     ),
                   ),
                 ),
+
+                // Penunjuk Kemajuan Muat Naik ke Cloudflare R2
+                if (_isUploadingToR2)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10, bottom: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFFEC4899)),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Memuat naik ke Cloudflare R2...',
+                                  style: TextStyle(
+                                      color: Color(0xFFEC4899),
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '${(_uploadProgress * 100).toInt()}%',
+                              style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        LinearProgressIndicator(
+                          value: _uploadProgress > 0 ? _uploadProgress : null,
+                          backgroundColor: Colors.white12,
+                          color: const Color(0xFFEC4899),
+                          borderRadius: BorderRadius.circular(4),
+                          minHeight: 4,
+                        ),
+                      ],
+                    ),
+                  ),
 
                 Divider(height: isPhone ? 16 : 24, color: const Color(0x1AFFFFFF)),
 
