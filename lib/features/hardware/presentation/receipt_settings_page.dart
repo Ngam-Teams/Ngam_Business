@@ -13,9 +13,13 @@ import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
 
 // =============================================================================
-// ReceiptSettingsPage — Thermal Printer & Dynamic Receipt Studio
-// Modul Pengurusan Resit & Pencetak Terma (58mm / 80mm)
+// ReceiptSettingsPage — Thermal Printer & Dynamic Receipt Customizer Studio
+// Modul Pengurusan Resit & Penyesuaian Penuh Resit Terma (58mm / 80mm)
 // =============================================================================
+
+enum DividerStyle { dashed, dotted, solidDouble, stars }
+enum BottomCodeType { qrReceipt, qrPromo, qrWifi, barcode, none }
+enum LogoSize { small, medium, large }
 
 class ReceiptSettingsPage extends StatefulWidget {
   const ReceiptSettingsPage({super.key});
@@ -32,6 +36,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   bool _autoCutPaper = true;
   int _paperWidth = 80; // 58mm or 80mm
 
+  // Layout & Alignment Customization
+  TextAlign _headerAlign = TextAlign.center;
+  DividerStyle _dividerStyle = DividerStyle.dashed;
+  LogoSize _logoSize = LogoSize.medium;
+
   // Logo & Branding
   bool _includeLogo = true;
   String _logoUrl = '';
@@ -39,15 +48,34 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
 
   // Receipt Content Controllers
   final _storeNameCtrl = TextEditingController(text: 'WARUNG NGAM MELAKA');
+  final _taglineCtrl = TextEditingController(text: 'Port Santai Makanan & Kopi Padu');
   final _ssmCtrl = TextEditingController(text: 'SSM: 202401039821 (1560944-X)');
   final _sstCtrl = TextEditingController(text: 'SST ID: W10-1808-32000456');
   final _addressCtrl = TextEditingController(text: 'No 45, Jalan Hang Tuah, Bandar Hilir, Melaka');
   final _phoneCtrl = TextEditingController(text: '+60 17-234 5678');
+  final _socialCtrl = TextEditingController(text: 'IG/TikTok: @warungngam');
   final _footerMsgCtrl = TextEditingController(text: 'Terima kasih daun keladi, sudilah datang lagi!');
   final _policyCtrl = TextEditingController(text: 'Sah untuk pertukaran dalam 3 hari bersama resit asal.');
 
+  // Info Visibility Toggles
+  bool _showTagline = true;
+  bool _showSsm = true;
   bool _showSst = true;
-  bool _showQrCode = true;
+  bool _showAddress = true;
+  bool _showPhone = true;
+  bool _showSocial = true;
+
+  // Transaction & Finance Toggles
+  bool _showTableNo = true;
+  bool _showCashier = true;
+  bool _showDateTime = true;
+  bool _showSstTax = true;
+  bool _showServiceCharge = false;
+  bool _showRounding = true;
+  bool _showPaymentMethod = true;
+
+  // Bottom Code Selector
+  BottomCodeType _bottomCode = BottomCodeType.qrReceipt;
   bool _enableWhatsappReceipt = true;
 
   // Real Receipt Image Capture
@@ -118,16 +146,18 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   @override
   void dispose() {
     _storeNameCtrl.dispose();
+    _taglineCtrl.dispose();
     _ssmCtrl.dispose();
     _sstCtrl.dispose();
     _addressCtrl.dispose();
     _phoneCtrl.dispose();
+    _socialCtrl.dispose();
     _footerMsgCtrl.dispose();
     _policyCtrl.dispose();
     super.dispose();
   }
 
-  void _printTestReceipt() async {
+  void _printTestReceipt() {
     showGlassToast(context, 'Menghantar cetakan ujian ke $_selectedPrinter (${_paperWidth}mm)...');
   }
 
@@ -283,7 +313,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               overflow: TextOverflow.ellipsis,
             ),
             Text(
-              'Susun atur resit 58mm/80mm, logo kedai & sambungan printer',
+              'Kustomisasi penuh susun atur, logo kedai & garisan pemisah dinamik',
               style: TextStyle(color: Colors.white54, fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -349,7 +379,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'Pratonton Resit Terma Fizikal (${_paperWidth}mm)',
+                                'Pratonton Resit Fizikal (${_paperWidth}mm)',
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 13,
@@ -361,8 +391,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                           const SizedBox(height: 6),
                           Text(
                             _paperWidth == 58
-                                ? 'Mod 58mm: Baris dot-dot & harga jatuh ke bawah secara dinamik.'
-                                : 'Mod 80mm: Baris lebar selari untuk F&B & e-dompet.',
+                                ? 'Mod 58mm: Garisan pemisah dinamik 32-kolum (muat penuh tanpa turun line kedua).'
+                                : 'Mod 80mm: Garisan pemisah lebar 46-kolum standard F&B.',
                             style: const TextStyle(color: Colors.white38, fontSize: 11),
                             textAlign: TextAlign.center,
                           ),
@@ -414,7 +444,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               child: _buildPaperWidthTab(
                 width: 58,
                 title: '58mm (2-Inci)',
-                desc: 'Kompak, Bluetooth Mobile & Kiosk (Harga Jatuh Bawah)',
+                desc: 'Kompak, Bluetooth Mobile & Kiosk (32 Kolum Dinamik)',
                 icon: Icons.receipt_long_rounded,
               ),
             ),
@@ -423,7 +453,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               child: _buildPaperWidthTab(
                 width: 80,
                 title: '80mm (3-Inci)',
-                desc: 'Standard F&B, Kaunter POS & Resit Penuh',
+                desc: 'Standard F&B, Kaunter POS & Resit Penuh (46 Kolum)',
                 icon: Icons.receipt_rounded,
               ),
             ),
@@ -431,47 +461,69 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         ),
         const SizedBox(height: 24),
 
-        // 2. Printer Hardware Connection Status
-        _buildSectionHeader('2. Sambungan Perkakasan Pencetak', HugeIcons.strokeRoundedPrinter),
+        // 2. Divider Style Customization (Dashed, Dotted, Solid Double, Stars)
+        _buildSectionHeader('2. Gaya Garisan Pemisah (Divider Bars)', HugeIcons.strokeRoundedSlidersHorizontal),
         const SizedBox(height: 10),
-        _buildPrinterStatusCard(),
+        _buildDividerStyleSelector(),
         const SizedBox(height: 24),
 
-        // 3. Logo & Store Branding
+        // 3. Logo & Store Branding Customization
         _buildSectionHeader('3. Logo & Penjenamaan Resit', HugeIcons.strokeRoundedImage01),
         const SizedBox(height: 10),
         _buildLogoCustomizerCard(),
         const SizedBox(height: 24),
 
-        // 4. Store Info & Legal Details
-        _buildSectionHeader('4. Maklumat Rasmi Kedai & Cukai', HugeIcons.strokeRoundedBuilding02),
+        // 4. Alignment & Header Style
+        _buildSectionHeader('4. Penjajaran Teks Kepala Resit', HugeIcons.strokeRoundedTextAlignCenter),
+        const SizedBox(height: 10),
+        _buildAlignmentSelector(),
+        const SizedBox(height: 24),
+
+        // 5. Store Info & Legal Details
+        _buildSectionHeader('5. Maklumat Rasmi Kedai & Cukai', HugeIcons.strokeRoundedBuilding02),
         const SizedBox(height: 12),
         _buildTextField(controller: _storeNameCtrl, label: 'Nama Kedai / Syarikat (Kepala Resit)'),
         const SizedBox(height: 10),
-        _buildTextField(controller: _ssmCtrl, label: 'No. Pendaftaran Syarikat (SSM)'),
+        _buildTextFieldWithToggle(controller: _taglineCtrl, label: 'Slogan / Tagline Kedai', value: _showTagline, onChanged: (v) => setState(() => _showTagline = v)),
         const SizedBox(height: 10),
-        _buildTextField(controller: _sstCtrl, label: 'No. Cukai SST (Jika Berdaftar)'),
+        _buildTextFieldWithToggle(controller: _ssmCtrl, label: 'No. Pendaftaran Syarikat (SSM)', value: _showSsm, onChanged: (v) => setState(() => _showSsm = v)),
         const SizedBox(height: 10),
-        _buildTextField(controller: _addressCtrl, label: 'Alamat Cawangan Kedai'),
+        _buildTextFieldWithToggle(controller: _sstCtrl, label: 'No. Cukai SST (Jika Berdaftar)', value: _showSst, onChanged: (v) => setState(() => _showSst = v)),
         const SizedBox(height: 10),
-        _buildTextField(controller: _phoneCtrl, label: 'No. Telefon Hubungi / WhatsApp'),
+        _buildTextFieldWithToggle(controller: _addressCtrl, label: 'Alamat Cawangan Kedai', value: _showAddress, onChanged: (v) => setState(() => _showAddress = v)),
+        const SizedBox(height: 10),
+        _buildTextFieldWithToggle(controller: _phoneCtrl, label: 'No. Telefon Hubungi / WhatsApp', value: _showPhone, onChanged: (v) => setState(() => _showPhone = v)),
+        const SizedBox(height: 10),
+        _buildTextFieldWithToggle(controller: _socialCtrl, label: 'Akaun Media Sosial (IG / TikTok)', value: _showSocial, onChanged: (v) => setState(() => _showSocial = v)),
         const SizedBox(height: 24),
 
-        // 5. Receipt Elements & Toggles
-        _buildSectionHeader('5. Elemen & Ciri Tambahan', HugeIcons.strokeRoundedSlidersHorizontal),
+        // 6. Transaction & Pricing Toggles
+        _buildSectionHeader('6. Butiran Transaksi & Pengiraan Cukai', HugeIcons.strokeRoundedInvoice),
         const SizedBox(height: 10),
-        _buildTogglesCard(),
+        _buildTransactionTogglesCard(),
         const SizedBox(height: 24),
 
-        // 6. Footer Notes & Return Policy
-        _buildSectionHeader('6. Mesej Bawah & Dasar Pulangan', HugeIcons.strokeRoundedNote01),
+        // 7. Bottom Code Customization (QR Receipt, Promo, WiFi, Barcode, None)
+        _buildSectionHeader('7. Kod Interaktif Bawah Resit (Bottom Code)', HugeIcons.strokeRoundedQrCode),
+        const SizedBox(height: 10),
+        _buildBottomCodeSelector(),
+        const SizedBox(height: 24),
+
+        // 8. Footer Notes & Return Policy
+        _buildSectionHeader('8. Mesej Bawah & Dasar Pulangan', HugeIcons.strokeRoundedNote01),
         const SizedBox(height: 12),
         _buildTextField(controller: _footerMsgCtrl, label: 'Ucapan Terima Kasih (Footer Note)'),
         const SizedBox(height: 10),
         _buildTextField(controller: _policyCtrl, label: 'Syarat & Dasar Pertukaran / Bayaran Balik'),
+        const SizedBox(height: 24),
+
+        // 9. Hardware Connection Status
+        _buildSectionHeader('9. Sambungan Pencetak Terma', HugeIcons.strokeRoundedPrinter),
+        const SizedBox(height: 10),
+        _buildPrinterStatusCard(),
         const SizedBox(height: 28),
 
-        // 7. Save Template Button
+        // 10. Save Template Button
         SizedBox(
           width: double.infinity,
           height: 52,
@@ -483,7 +535,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               elevation: 4,
             ),
             onPressed: () {
-              showGlassToast(context, 'Tetapan & templat resit berjaya disimpan!');
+              showGlassToast(context, 'Tetapan templat resit berjaya disimpan!');
             },
             icon: const Icon(Icons.check_circle_rounded, size: 20),
             label: const Text(
@@ -508,7 +560,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           title,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 15,
+            fontSize: 14.5,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -572,6 +624,371 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           ],
         ),
       ),
+    );
+  }
+
+  // ===========================================================================
+  // DIVIDER STYLE SELECTOR
+  // ===========================================================================
+  Widget _buildDividerStyleSelector() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Pilih Corak Garisan Pemisah Seksyen:',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildDividerOptionChip(DividerStyle.dashed, '- - - - (Putus-putus)'),
+              _buildDividerOptionChip(DividerStyle.dotted, '. . . . (Titik Dot)'),
+              _buildDividerOptionChip(DividerStyle.solidDouble, '════ (Garis Berganda)'),
+              _buildDividerOptionChip(DividerStyle.stars, '* * * * (Bintang)'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDividerOptionChip(DividerStyle style, String label) {
+    final isSelected = _dividerStyle == style;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _dividerStyle = style),
+      selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
+      backgroundColor: const Color(0xFF0A0A14),
+      labelStyle: TextStyle(
+        color: isSelected ? const Color(0xFF42A5F5) : Colors.white70,
+        fontSize: 11.5,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      side: BorderSide(
+        color: isSelected ? const Color(0xFF42A5F5) : Colors.white12,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    );
+  }
+
+  // ===========================================================================
+  // ALIGNMENT SELECTOR
+  // ===========================================================================
+  Widget _buildAlignmentSelector() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildAlignButton(TextAlign.center, 'Tengah (Center)', Icons.format_align_center_rounded),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _buildAlignButton(TextAlign.left, 'Rapat Kiri (Left)', Icons.format_align_left_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlignButton(TextAlign align, String label, IconData icon) {
+    final isSelected = _headerAlign == align;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => setState(() => _headerAlign = align),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF2196F3).withValues(alpha: 0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF2196F3) : Colors.white12,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: isSelected ? const Color(0xFF42A5F5) : Colors.white54),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white70,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // LOGO CUSTOMIZER CARD
+  // ===========================================================================
+  Widget _buildLogoCustomizerCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: ClipOval(
+                  child: _customLogoBytes != null
+                      ? Image.memory(_customLogoBytes!, fit: BoxFit.cover)
+                      : _logoUrl.isNotEmpty
+                          ? Image.network(
+                              _logoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.storefront_rounded, color: Colors.white70, size: 24),
+                            )
+                          : const Icon(Icons.storefront_rounded, color: Colors.white70, size: 24),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Sertakan Logo Kedai di Atas Resit',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _includeLogo ? 'Logo aktif pada kepala resit' : 'Logo disembunyikan',
+                      style: TextStyle(color: _includeLogo ? const Color(0xFF10B981) : Colors.white38, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _includeLogo,
+                activeColor: const Color(0xFF42A5F5),
+                onChanged: (val) => setState(() => _includeLogo = val),
+              ),
+            ],
+          ),
+          if (_includeLogo) ...[
+            const Divider(height: 20, color: Colors.white10),
+            Row(
+              children: [
+                const Text('Saiz Logo:', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                const SizedBox(width: 10),
+                ChoiceChip(
+                  label: const Text('Kecil (36px)'),
+                  selected: _logoSize == LogoSize.small,
+                  onSelected: (_) => setState(() => _logoSize = LogoSize.small),
+                  selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
+                  backgroundColor: const Color(0xFF0A0A14),
+                  labelStyle: TextStyle(color: _logoSize == LogoSize.small ? const Color(0xFF42A5F5) : Colors.white60, fontSize: 10.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: const Text('Sedang (48px)'),
+                  selected: _logoSize == LogoSize.medium,
+                  onSelected: (_) => setState(() => _logoSize = LogoSize.medium),
+                  selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
+                  backgroundColor: const Color(0xFF0A0A14),
+                  labelStyle: TextStyle(color: _logoSize == LogoSize.medium ? const Color(0xFF42A5F5) : Colors.white60, fontSize: 10.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: const Text('Besar (60px)'),
+                  selected: _logoSize == LogoSize.large,
+                  onSelected: (_) => setState(() => _logoSize = LogoSize.large),
+                  selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
+                  backgroundColor: const Color(0xFF0A0A14),
+                  labelStyle: TextStyle(color: _logoSize == LogoSize.large ? const Color(0xFF42A5F5) : Colors.white60, fontSize: 10.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: _pickCustomLogo,
+                    icon: const Icon(Icons.upload_rounded, size: 16, color: Color(0xFF42A5F5)),
+                    label: const Text('Muat Naik Logo Resit Baharu', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+                if (_customLogoBytes != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.redAccent, size: 18),
+                    tooltip: 'Gunakan logo asal profil kedai',
+                    onPressed: () {
+                      setState(() => _customLogoBytes = null);
+                      showGlassToast(context, 'Kembali ke logo asal profil kedai.');
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // TRANSACTION TOGGLES CARD
+  // ===========================================================================
+  Widget _buildTransactionTogglesCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        children: [
+          _buildCompactSwitchTile('Papar No. Meja / Dine-in Status', _showTableNo, (v) => setState(() => _showTableNo = v)),
+          const Divider(color: Colors.white10, height: 1),
+          _buildCompactSwitchTile('Papar Nama Kasir / Staf', _showCashier, (v) => setState(() => _showCashier = v)),
+          const Divider(color: Colors.white10, height: 1),
+          _buildCompactSwitchTile('Papar Tarikh & Waktu Cetakan', _showDateTime, (v) => setState(() => _showDateTime = v)),
+          const Divider(color: Colors.white10, height: 1),
+          _buildCompactSwitchTile('Pecahan Cukai SST (6%)', _showSstTax, (v) => setState(() => _showSstTax = v)),
+          const Divider(color: Colors.white10, height: 1),
+          _buildCompactSwitchTile('Caj Servis (Service Charge 10%)', _showServiceCharge, (v) => setState(() => _showServiceCharge = v)),
+          const Divider(color: Colors.white10, height: 1),
+          _buildCompactSwitchTile('Penyelarasan 5 Sen (Rounding Bancian)', _showRounding, (v) => setState(() => _showRounding = v)),
+          const Divider(color: Colors.white10, height: 1),
+          _buildCompactSwitchTile('Papar Kaedah Bayaran (DuitNow/Tunai/Kad)', _showPaymentMethod, (v) => setState(() => _showPaymentMethod = v)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactSwitchTile(String title, bool val, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(title, style: const TextStyle(color: Colors.white70, fontSize: 12.5))),
+          Switch(
+            value: val,
+            activeColor: const Color(0xFF42A5F5),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // BOTTOM CODE SELECTOR
+  // ===========================================================================
+  Widget _buildBottomCodeSelector() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Pilih Jenis Kod di Bahagian Bawah Resit:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildCodeOptionChip(BottomCodeType.qrReceipt, '📱 QR e-Resit (Pelanggan)'),
+              _buildCodeOptionChip(BottomCodeType.qrPromo, '🎟️ QR Baucar / Promosi'),
+              _buildCodeOptionChip(BottomCodeType.qrWifi, '📶 QR WiFi Tetamu Kedai'),
+              _buildCodeOptionChip(BottomCodeType.barcode, '📊 Kod Bar (Barcode)'),
+              _buildCodeOptionChip(BottomCodeType.none, '❌ Tiada Kod (Kompak)'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(color: Colors.white10, height: 1),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Pilihan Hantar e-Resit WhatsApp', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    Text('Boleh kongsi pautan PDF digital terus ke telefon', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _enableWhatsappReceipt,
+                activeColor: const Color(0xFF44CF6C),
+                onChanged: (v) => setState(() => _enableWhatsappReceipt = v),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCodeOptionChip(BottomCodeType type, String label) {
+    final isSelected = _bottomCode == type;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _bottomCode = type),
+      selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
+      backgroundColor: const Color(0xFF0A0A14),
+      labelStyle: TextStyle(
+        color: isSelected ? const Color(0xFF42A5F5) : Colors.white70,
+        fontSize: 11.5,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      side: BorderSide(
+        color: isSelected ? const Color(0xFF42A5F5) : Colors.white12,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 
@@ -644,7 +1061,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     const SizedBox(height: 4),
                     Text(
                       kIsWeb
-                          ? 'Mod Web: Boleh terus guna dialog cetak browser (USB/WiFi) & PDF'
+                          ? 'Mod Web: Boleh terus cetak ke USB/WiFi Thermal Printer & PDF'
                           : 'Bluetooth Serial (SPP) / USB ESC-POS Protocol',
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11),
                     ),
@@ -694,151 +1111,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   }
 
   // ===========================================================================
-  // LOGO CUSTOMIZER CARD
-  // ===========================================================================
-  Widget _buildLogoCustomizerCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141424),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              // Logo Preview Avatar
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.06),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: ClipOval(
-                  child: _customLogoBytes != null
-                      ? Image.memory(_customLogoBytes!, fit: BoxFit.cover)
-                      : _logoUrl.isNotEmpty
-                          ? Image.network(
-                              _logoUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.storefront_rounded, color: Colors.white70, size: 24),
-                            )
-                          : const Icon(Icons.storefront_rounded, color: Colors.white70, size: 24),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Sertakan Logo Kedai di Atas Resit',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _includeLogo ? 'Logo aktif pada kepala resit' : 'Logo disembunyikan',
-                      style: TextStyle(color: _includeLogo ? const Color(0xFF10B981) : Colors.white38, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value: _includeLogo,
-                activeColor: const Color(0xFF42A5F5),
-                onChanged: (val) => setState(() => _includeLogo = val),
-              ),
-            ],
-          ),
-          if (_includeLogo) ...[
-            const Divider(height: 20, color: Colors.white10),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white70,
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: _pickCustomLogo,
-                    icon: const Icon(Icons.upload_rounded, size: 16, color: Color(0xFF42A5F5)),
-                    label: const Text('Tukar Logo Resit', style: TextStyle(fontSize: 12)),
-                  ),
-                ),
-                if (_customLogoBytes != null) ...[
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.refresh_rounded, color: Colors.redAccent, size: 18),
-                    tooltip: 'Gunakan logo asal profil',
-                    onPressed: () {
-                      setState(() => _customLogoBytes = null);
-                      showGlassToast(context, 'Kembali ke logo asal profil kedai.');
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  // ===========================================================================
-  // TOGGLES CARD
-  // ===========================================================================
-  Widget _buildTogglesCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141424),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        children: [
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Pecahan Cukai SST (6%)', style: TextStyle(color: Colors.white, fontSize: 13.5)),
-            subtitle: const Text('Papar amaun cukai SST & bancian perpuluhan', style: TextStyle(color: Colors.white38, fontSize: 11)),
-            value: _showSst,
-            activeColor: const Color(0xFF42A5F5),
-            onChanged: (val) => setState(() => _showSst = val),
-          ),
-          const Divider(color: Colors.white10, height: 1),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Kod QR e-Resit & Ganjaran Ngam', style: TextStyle(color: Colors.white, fontSize: 13.5)),
-            subtitle: const Text('Pelanggan boleh imbas resit untuk pasport ganjaran', style: TextStyle(color: Colors.white38, fontSize: 11)),
-            value: _showQrCode,
-            activeColor: const Color(0xFF42A5F5),
-            onChanged: (val) => setState(() => _showQrCode = val),
-          ),
-          const Divider(color: Colors.white10, height: 1),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Pilihan Hantar e-Resit WhatsApp', style: TextStyle(color: Colors.white, fontSize: 13.5)),
-            subtitle: const Text('Boleh kongsi resit digital terus ke nombor pelanggan', style: TextStyle(color: Colors.white38, fontSize: 11)),
-            value: _enableWhatsappReceipt,
-            activeColor: const Color(0xFF44CF6C),
-            onChanged: (val) => setState(() => _enableWhatsappReceipt = val),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===========================================================================
   // LIVE THERMAL RECEIPT PAPER (DYNAMIC 58MM VS 80MM)
   // ===========================================================================
   Widget _buildReceiptPaper() {
     // Dynamic Width: 58mm -> ~255px, 80mm -> ~335px
     final double targetWidth = _paperWidth == 58 ? 255.0 : 335.0;
+    final double logoDim = _logoSize == LogoSize.small ? 36.0 : _logoSize == LogoSize.medium ? 48.0 : 60.0;
 
     return RepaintBoundary(
       key: _receiptKey,
@@ -848,17 +1126,18 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         width: targetWidth,
         decoration: BoxDecoration(
           color: const Color(0xFFFFFDF8), // Natural warm thermal paper tint
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(4),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
+              color: Colors.black.withValues(alpha: 0.55),
               blurRadius: 28,
-              offset: const Offset(0, 12),
+              offset: const Offset(0, 14),
             ),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Top Serrated Paper Cut Edge (Zigzag teeth)
             _buildSerratedCutEdge(isTop: true),
@@ -867,104 +1146,106 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: _headerAlign == TextAlign.center
+                    ? CrossAxisAlignment.center
+                    : CrossAxisAlignment.start,
                 children: [
                   // Optional Store Logo
                   if (_includeLogo) ...[
-                    if (_customLogoBytes != null)
-                      Container(
-                        width: _paperWidth == 58 ? 44 : 50,
-                        height: _paperWidth == 58 ? 44 : 50,
+                    Align(
+                      alignment: _headerAlign == TextAlign.center ? Alignment.center : Alignment.centerLeft,
+                      child: Container(
+                        width: logoDim,
+                        height: logoDim,
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.black26, width: 1.5),
                         ),
                         child: ClipOval(
-                          child: Image.memory(_customLogoBytes!, fit: BoxFit.cover),
+                          child: _customLogoBytes != null
+                              ? Image.memory(_customLogoBytes!, fit: BoxFit.cover)
+                              : _logoUrl.isNotEmpty
+                                  ? Image.network(
+                                      _logoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.storefront_rounded, color: Colors.black87, size: 24),
+                                    )
+                                  : const Icon(Icons.storefront_rounded, color: Colors.black87, size: 24),
                         ),
-                      )
-                    else if (_logoUrl.isNotEmpty)
-                      Container(
-                        width: _paperWidth == 58 ? 44 : 50,
-                        height: _paperWidth == 58 ? 44 : 50,
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.black26, width: 1.5),
-                        ),
-                        child: ClipOval(
-                          child: Image.network(
-                            _logoUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.storefront_rounded, color: Colors.black87, size: 24),
-                          ),
-                        ),
-                      )
-                    else
-                      Container(
-                        width: _paperWidth == 58 ? 42 : 48,
-                        height: _paperWidth == 58 ? 42 : 48,
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.black12),
-                        ),
-                        child: const Icon(Icons.storefront_rounded, color: Colors.black87, size: 22),
                       ),
+                    ),
                   ],
 
                   // Store Name Header
                   Text(
                     _storeNameCtrl.text.isNotEmpty ? _storeNameCtrl.text : 'KEDAI NGAM',
-                    textAlign: TextAlign.center,
+                    textAlign: _headerAlign,
                     style: GoogleFonts.spaceMono(
                       color: Colors.black,
                       fontWeight: FontWeight.w900,
-                      fontSize: _paperWidth == 58 ? 13.5 : 15.0,
-                      letterSpacing: 0.4,
+                      fontSize: _paperWidth == 58 ? 13.0 : 15.0,
+                      letterSpacing: 0.3,
                     ),
                   ),
-                  const SizedBox(height: 2),
 
-                  // SSM
-                  if (_ssmCtrl.text.isNotEmpty)
+                  // Tagline
+                  if (_showTagline && _taglineCtrl.text.isNotEmpty) ...[
+                    const SizedBox(height: 1),
                     Text(
-                      _ssmCtrl.text,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.5),
-                    ),
-
-                  // SST
-                  if (_showSst && _sstCtrl.text.isNotEmpty) ...[
-                    Text(
-                      _sstCtrl.text,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.5),
+                      _taglineCtrl.text,
+                      textAlign: _headerAlign,
+                      style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 8.5, fontStyle: FontStyle.italic),
                     ),
                   ],
 
+                  const SizedBox(height: 2),
+
+                  // SSM
+                  if (_showSsm && _ssmCtrl.text.isNotEmpty)
+                    Text(
+                      _ssmCtrl.text,
+                      textAlign: _headerAlign,
+                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.0),
+                    ),
+
+                  // SST
+                  if (_showSst && _sstCtrl.text.isNotEmpty)
+                    Text(
+                      _sstCtrl.text,
+                      textAlign: _headerAlign,
+                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.0),
+                    ),
+
                   // Address
-                  if (_addressCtrl.text.isNotEmpty)
+                  if (_showAddress && _addressCtrl.text.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      padding: const EdgeInsets.symmetric(vertical: 1),
                       child: Text(
                         _addressCtrl.text,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 9.0),
+                        textAlign: _headerAlign,
+                        style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 8.5),
                       ),
                     ),
 
                   // Phone
-                  if (_phoneCtrl.text.isNotEmpty)
+                  if (_showPhone && _phoneCtrl.text.isNotEmpty)
                     Text(
                       'Tel: ${_phoneCtrl.text}',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.5),
+                      textAlign: _headerAlign,
+                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.0),
                     ),
 
-                  const SizedBox(height: 6),
-                  _buildDynamicDottedDivider(),
+                  // Social Media
+                  if (_showSocial && _socialCtrl.text.isNotEmpty)
+                    Text(
+                      _socialCtrl.text,
+                      textAlign: _headerAlign,
+                      style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 8.5),
+                    ),
+
+                  const SizedBox(height: 4),
+                  _buildDynamicDivider(),
 
                   // Meta Row (Order No & Date)
                   Row(
@@ -972,54 +1253,55 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     children: [
                       Text(
                         'Pesanan: #NG-4029',
-                        style: GoogleFonts.spaceMono(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
+                        style: GoogleFonts.spaceMono(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 9.5),
+                      ),
+                      if (_showDateTime)
+                        Text(
+                          '30/09/2026 12:45',
+                          style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 9.0),
                         ),
-                      ),
-                      Text(
-                        '30/09/2026 12:45',
-                        style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 9.5),
-                      ),
                     ],
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Meja: 04 (Makan Sini)',
-                        style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.5),
-                      ),
-                      Text(
-                        'Kasir: Ahmad',
-                        style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 9.5),
-                      ),
-                    ],
-                  ),
+                  if (_showTableNo || _showCashier)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (_showTableNo)
+                          Text('Meja: 04 (Makan Sini)', style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.0))
+                        else
+                          const SizedBox.shrink(),
+                        if (_showCashier)
+                          Text('Kasir: Ahmad', style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 9.0))
+                        else
+                          const SizedBox.shrink(),
+                      ],
+                    ),
 
-                  _buildDynamicDottedDivider(),
+                  _buildDynamicDivider(),
 
-                  // Dynamic Items List (Adapts between 58mm and 80mm!)
-                  _buildDynamicReceiptItem('1x Nasi Lemak Rendang Daging', '16.90'),
-                  _buildDynamicReceiptItem('  + Sambal Sotong Extra', '3.50', isSub: true),
-                  _buildDynamicReceiptItem('1x Teh Tarik Kaw Ais', '3.80'),
-                  _buildDynamicReceiptItem('1x Roti Bakar Kaya Butter', '4.50'),
+                  // Items List (Clean Row with Exact Padding)
+                  _buildReceiptItemRow('1x', 'Nasi Lemak Rendang Daging', '16.90'),
+                  _buildReceiptItemRow('', '  + Sambal Sotong Extra', '3.50', isSub: true),
+                  _buildReceiptItemRow('1x', 'Teh Tarik Kaw Ais', '3.80'),
+                  _buildReceiptItemRow('1x', 'Roti Bakar Kaya Butter', '4.50'),
 
-                  _buildDynamicDottedDivider(),
+                  _buildDynamicDivider(),
 
                   // Subtotal & Calculations
                   _buildReceiptSummaryRow('Jumlah Bersih (Subtotal)', 'RM 28.70'),
-                  if (_showSst)
+                  if (_showSstTax)
                     _buildReceiptSummaryRow('Cukai SST (6%)', 'RM 1.72'),
-                  _buildReceiptSummaryRow('Penyelarasan (Rounding)', '-RM 0.02'),
+                  if (_showServiceCharge)
+                    _buildReceiptSummaryRow('Caj Servis (10%)', 'RM 2.87'),
+                  if (_showRounding)
+                    _buildReceiptSummaryRow('Penyelarasan (Rounding)', '-RM 0.02'),
 
-                  const SizedBox(height: 3),
-                  _buildDynamicDottedDivider(),
+                  const SizedBox(height: 2),
+                  _buildDynamicDivider(),
 
                   // TOTAL PAYABLE (Grand Total)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 3),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -1028,75 +1310,55 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                           style: GoogleFonts.spaceMono(
                             color: Colors.black,
                             fontWeight: FontWeight.w900,
-                            fontSize: _paperWidth == 58 ? 12.0 : 13.5,
+                            fontSize: _paperWidth == 58 ? 11.5 : 13.0,
                           ),
                         ),
                         Text(
-                          'RM 30.40',
+                          _showServiceCharge ? 'RM 33.25' : 'RM 30.40',
                           style: GoogleFonts.spaceMono(
                             color: Colors.black,
                             fontWeight: FontWeight.w900,
-                            fontSize: _paperWidth == 58 ? 13.0 : 15.0,
+                            fontSize: _paperWidth == 58 ? 12.5 : 14.5,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  _buildReceiptSummaryRow('BAYARAN (DuitNow QR)', 'RM 30.40', isBold: false),
-                  _buildReceiptSummaryRow('BAKI (Change)', 'RM 0.00', isBold: false),
+                  if (_showPaymentMethod) ...[
+                    _buildReceiptSummaryRow('BAYARAN (DuitNow QR)', _showServiceCharge ? 'RM 33.25' : 'RM 30.40', isBold: false),
+                    _buildReceiptSummaryRow('BAKI (Change)', 'RM 0.00', isBold: false),
+                  ],
 
-                  _buildDynamicDottedDivider(),
-                  const SizedBox(height: 6),
+                  _buildDynamicDivider(),
+                  const SizedBox(height: 4),
 
                   // Greeting & Exchange Policy
                   if (_footerMsgCtrl.text.isNotEmpty)
-                    Text(
-                      _footerMsgCtrl.text,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 9.5,
+                    Center(
+                      child: Text(
+                        _footerMsgCtrl.text,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.spaceMono(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 9.0,
+                        ),
                       ),
                     ),
                   if (_policyCtrl.text.isNotEmpty) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      _policyCtrl.text,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceMono(color: Colors.black45, fontSize: 8.5),
+                    const SizedBox(height: 2),
+                    Center(
+                      child: Text(
+                        _policyCtrl.text,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.spaceMono(color: Colors.black45, fontSize: 8.0),
+                      ),
                     ),
                   ],
 
-                  // QR Code & Barcode
-                  if (_showQrCode) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.black12),
-                      ),
-                      child: QrImageView(
-                        data: 'https://ngam.dev/receipt/NG4029',
-                        version: QrVersions.auto,
-                        size: _paperWidth == 58 ? 72 : 88,
-                        eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
-                        dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Imbas Untuk e-Resit & Poin Ngam',
-                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 8.0, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'ngam.dev/receipt/NG4029',
-                      style: GoogleFonts.spaceMono(color: Colors.black38, fontSize: 7.5),
-                    ),
-                  ],
+                  // Dynamic Bottom Interactive Code
+                  _buildBottomCodeSection(),
                 ],
               ),
             ),
@@ -1110,128 +1372,106 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   }
 
   // ===========================================================================
-  // DYNAMIC RECEIPT ITEM (58MM DROPS DOTS/PRICE BELOW, 80MM STAYS INLINE!)
+  // DYNAMIC DIVIDER (EXACT COLUMN WIDTH — NEVER SPILLS TO 2ND LINE!)
   // ===========================================================================
-  Widget _buildDynamicReceiptItem(String name, String price, {bool isSub = false}) {
-    if (_paperWidth == 58) {
-      // 58mm Compact Layout:
-      // Item name on row 1, Dotted line & Price drop below (dot dot die jatuh bawah!)
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2.5),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              name,
-              style: GoogleFonts.spaceMono(
-                color: isSub ? Colors.black54 : Colors.black,
-                fontSize: isSub ? 9.5 : 10.5,
-                fontWeight: isSub ? FontWeight.normal : FontWeight.w600,
-                height: 1.2,
-              ),
-            ),
-            const SizedBox(height: 1.5),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '. . . . . . . . . . . . . . . . . .',
-                    maxLines: 1,
-                    overflow: TextOverflow.clip,
-                    style: GoogleFonts.spaceMono(
-                      color: Colors.black26,
-                      fontSize: 9.0,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  price,
-                  style: GoogleFonts.spaceMono(
-                    color: Colors.black,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    } else {
-      // 80mm Wide Layout:
-      // Item name on left, clean dotted line in middle, price on right in one row!
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2.5),
-        child: Row(
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 190),
-              child: Text(
-                name,
-                style: GoogleFonts.spaceMono(
-                  color: isSub ? Colors.black54 : Colors.black,
-                  fontSize: isSub ? 10.0 : 11.0,
-                  fontWeight: isSub ? FontWeight.normal : FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                '. . . . . . . . . . . . . . . . . . . . . .',
-                maxLines: 1,
-                overflow: TextOverflow.clip,
-                style: GoogleFonts.spaceMono(
-                  color: Colors.black26,
-                  fontSize: 9.5,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              price,
-              style: GoogleFonts.spaceMono(
-                color: Colors.black,
-                fontSize: 11.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      );
+  Widget _buildDynamicDivider() {
+    String pattern;
+    switch (_dividerStyle) {
+      case DividerStyle.dashed:
+        pattern = _paperWidth == 58
+            ? '- - - - - - - - - - - - - - - -' // 32 chars
+            : '- - - - - - - - - - - - - - - - - - - - - - -'; // 47 chars
+        break;
+      case DividerStyle.dotted:
+        pattern = _paperWidth == 58
+            ? '. . . . . . . . . . . . . . . .'
+            : '. . . . . . . . . . . . . . . . . . . . . . .';
+        break;
+      case DividerStyle.solidDouble:
+        pattern = _paperWidth == 58
+            ? '════════════════════════════════'
+            : '══════════════════════════════════════════════';
+        break;
+      case DividerStyle.stars:
+        pattern = _paperWidth == 58
+            ? '* * * * * * * * * * * * * * * *'
+            : '* * * * * * * * * * * * * * * * * * * * * * *';
+        break;
     }
-  }
 
-  // ===========================================================================
-  // DYNAMIC DOTTED DIVIDER
-  // ===========================================================================
-  Widget _buildDynamicDottedDivider() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Text(
-        _paperWidth == 58
-            ? '- - - - - - - - - - - - - - - - - - - -'
-            : '- - - - - - - - - - - - - - - - - - - - - - - - - - -',
-        maxLines: 1,
-        overflow: TextOverflow.clip,
-        softWrap: false,
-        textAlign: TextAlign.center,
-        style: GoogleFonts.spaceMono(color: Colors.black26, fontSize: 9.5),
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Center(
+        child: Text(
+          pattern,
+          maxLines: 1,
+          overflow: TextOverflow.clip,
+          softWrap: false,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.spaceMono(
+            color: Colors.black38,
+            fontSize: _dividerStyle == DividerStyle.solidDouble ? 8.5 : 9.0,
+            letterSpacing: _dividerStyle == DividerStyle.solidDouble ? -0.3 : 1.2,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
 
   // ===========================================================================
-  // SUMMARY LINE
+  // RECEIPT ITEM ROW (PINNED PRICE ON RIGHT, ADAPTS TO COLUMN WIDTH)
+  // ===========================================================================
+  Widget _buildReceiptItemRow(String qty, String name, String price, {bool isSub = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1.5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (qty.isNotEmpty) ...[
+            Text(
+              qty,
+              style: GoogleFonts.spaceMono(
+                color: Colors.black,
+                fontSize: _paperWidth == 58 ? 9.0 : 10.0,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+          Expanded(
+            child: Text(
+              name,
+              style: GoogleFonts.spaceMono(
+                color: isSub ? Colors.black54 : Colors.black,
+                fontSize: _paperWidth == 58 ? 9.0 : 10.0,
+                fontWeight: isSub ? FontWeight.normal : FontWeight.w600,
+                height: 1.15,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            price,
+            style: GoogleFonts.spaceMono(
+              color: Colors.black,
+              fontSize: _paperWidth == 58 ? 9.0 : 10.0,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // SUMMARY ROW
   // ===========================================================================
   Widget _buildReceiptSummaryRow(String label, String value, {bool isBold = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1.5),
+      padding: const EdgeInsets.symmetric(vertical: 1.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1239,7 +1479,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             label,
             style: GoogleFonts.spaceMono(
               color: isBold ? Colors.black : Colors.black87,
-              fontSize: _paperWidth == 58 ? 9.5 : 10.5,
+              fontSize: _paperWidth == 58 ? 8.5 : 9.5,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -1247,13 +1487,151 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             value,
             style: GoogleFonts.spaceMono(
               color: Colors.black,
-              fontSize: _paperWidth == 58 ? 9.5 : 10.5,
+              fontSize: _paperWidth == 58 ? 8.5 : 9.5,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
             ),
           ),
         ],
       ),
     );
+  }
+
+  // ===========================================================================
+  // BOTTOM CODE SECTION (QR e-Receipt, Promo, WiFi, Barcode, None)
+  // ===========================================================================
+  Widget _buildBottomCodeSection() {
+    switch (_bottomCode) {
+      case BottomCodeType.qrReceipt:
+        return Center(
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.black12),
+                ),
+                child: QrImageView(
+                  data: 'https://ngam.dev/receipt/NG4029',
+                  version: QrVersions.auto,
+                  size: _paperWidth == 58 ? 68 : 80,
+                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
+                  dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Imbas Simpan e-Resit & Poin Ngam',
+                style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'ngam.dev/receipt/NG4029',
+                style: GoogleFonts.spaceMono(color: Colors.black38, fontSize: 7.0),
+              ),
+            ],
+          ),
+        );
+
+      case BottomCodeType.qrPromo:
+        return Center(
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.black12),
+                ),
+                child: QrImageView(
+                  data: 'https://ngam.dev/@warungngam?promo=NGAM10',
+                  version: QrVersions.auto,
+                  size: _paperWidth == 58 ? 68 : 80,
+                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
+                  dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '🎁 10% OFF Lawatan Seterusnya! (KOD: NGAM10)',
+                style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'Tunjuk atau imbas resit ini untuk tebus',
+                style: GoogleFonts.spaceMono(color: Colors.black38, fontSize: 7.0),
+              ),
+            ],
+          ),
+        );
+
+      case BottomCodeType.qrWifi:
+        return Center(
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.black12),
+                ),
+                child: QrImageView(
+                  data: 'WIFI:T:WPA;S:WarungNgam_Guest;P:ngamsedap2026;;',
+                  version: QrVersions.auto,
+                  size: _paperWidth == 58 ? 68 : 80,
+                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
+                  dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '📶 Imbas Untuk Sambung WiFi Tetamu Kedai',
+                style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'SSID: WarungNgam_Guest',
+                style: GoogleFonts.spaceMono(color: Colors.black45, fontSize: 7.0),
+              ),
+            ],
+          ),
+        );
+
+      case BottomCodeType.barcode:
+        return Center(
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                height: 30,
+                width: _paperWidth == 58 ? 160 : 200,
+                color: Colors.black,
+                child: Row(
+                  children: List.generate(42, (i) {
+                    return Expanded(
+                      flex: (i % 3 == 0) ? 2 : 1,
+                      child: Container(
+                        color: (i % 2 == 0) ? Colors.black : Colors.white,
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '*NG-4029-2026*',
+                style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 8.0, letterSpacing: 1.5),
+              ),
+            ],
+          ),
+        );
+
+      case BottomCodeType.none:
+        return const SizedBox(height: 6);
+    }
   }
 
   // ===========================================================================
@@ -1289,23 +1667,47 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   }
 
   // ===========================================================================
-  // TEXT FIELD HELPER
+  // TEXT FIELD HELPERS
   // ===========================================================================
   Widget _buildTextField({required TextEditingController controller, required String label}) {
     return TextField(
       controller: controller,
       onChanged: (_) => setState(() {}),
-      style: const TextStyle(color: Colors.white, fontSize: 13.5),
+      style: const TextStyle(color: Colors.white, fontSize: 13.0),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12.5),
+        labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12.0),
         filled: true,
         fillColor: const Color(0xFF141424),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.white12)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF42A5F5))),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white12)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white12)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF42A5F5))),
       ),
+    );
+  }
+
+  Widget _buildTextFieldWithToggle({
+    required TextEditingController controller,
+    required String label,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildTextField(controller: controller, label: label),
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: value ? 'Papar pada resit' : 'Sembunyi daripada resit',
+          child: Switch(
+            value: value,
+            activeColor: const Color(0xFF42A5F5),
+            onChanged: onChanged,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1329,7 +1731,7 @@ class _SerratedPainter extends CustomPainter {
     final teeth = (size.width / toothWidth).ceil();
 
     if (isTop) {
-      path.moveTo(0, size.height);
+      path.moveTo(0.0, size.height);
       for (int i = 0; i < teeth; i++) {
         final x1 = i * toothWidth + (toothWidth / 2);
         final y1 = size.height - toothHeight;
