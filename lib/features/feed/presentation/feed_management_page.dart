@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../widgets/glass_toast.dart';
 import '../../../core/services/r2_storage_service.dart';
+import '../../../core/services/video_compression_service.dart';
 import '../data/feed_service.dart';
 import '../models/feed_post_model.dart';
 import '../../settings/data/business_service.dart';
@@ -888,6 +889,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
   final FeedService _feedService = FeedService();
   final ImagePicker _picker = ImagePicker();
   final R2StorageService _r2Storage = R2StorageService();
+  final VideoCompressionService _compressor = VideoCompressionService();
 
   late TextEditingController _titleController;
   late TextEditingController _captionController;
@@ -900,13 +902,15 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
   bool _isPinned = false;
   bool _saving = false;
 
-  // Media Upload & Video Preview State
+  // Media Upload, Compression & Video Preview State
   String _mediaType = 'image'; // 'video' or 'image'
   XFile? _selectedFile;
   Uint8List? _selectedFileBytes;
   String? _selectedFileName;
   int? _selectedFileSize;
   VideoPlayerController? _videoPreviewController;
+  bool _isCompressing = false;
+  double _compressProgress = 0.0;
   bool _isUploadingToR2 = false;
   double _uploadProgress = 0.0;
 
@@ -1058,8 +1062,37 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
     try {
       String finalMediaUrl = _mediaUrlController.text.trim();
 
-      // Jika fail tempatan dipilih, muat naik ke Cloudflare R2!
+      // Jika fail tempatan dipilih, mampatkan dahulu (jika video) kemudian muat naik ke Cloudflare R2!
       if (_selectedFileBytes != null && _selectedFileName != null) {
+        Uint8List bytesToUpload = _selectedFileBytes!;
+        String fileNameToUpload = _selectedFileName!;
+
+        // 1. Pemampatan Video Pintar (720p H.264)
+        if (_mediaType == 'video' && _selectedFile != null) {
+          setState(() {
+            _isCompressing = true;
+            _compressProgress = 0.1;
+          });
+
+          final compressResult = await _compressor.compressVideo(
+            filePath: _selectedFile!.path,
+            originalBytes: _selectedFileBytes!,
+            onProgress: (p) {
+              if (mounted) {
+                setState(() => _compressProgress = p);
+              }
+            },
+          );
+
+          bytesToUpload = compressResult.bytes;
+          if (mounted) {
+            setState(() {
+              _isCompressing = false;
+            });
+          }
+        }
+
+        // 2. Muat Naik ke Cloudflare R2
         setState(() {
           _isUploadingToR2 = true;
           _uploadProgress = 0.05;
@@ -1067,8 +1100,8 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
 
         final mimeType = _mediaType == 'video' ? 'video/mp4' : 'image/jpeg';
         finalMediaUrl = await _r2Storage.uploadMedia(
-          bytes: _selectedFileBytes!,
-          fileName: _selectedFileName!,
+          bytes: bytesToUpload,
+          fileName: fileNameToUpload,
           folder: _mediaType == 'video' ? 'feed_videos' : 'feed_images',
           mimeType: mimeType,
           onProgress: (p) {
@@ -1077,6 +1110,9 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
             }
           },
         );
+
+        // Bersihkan cache sementara
+        await _compressor.disposeCache();
       }
 
       if (widget.existing != null) {
@@ -1657,6 +1693,56 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                     ),
                   ),
                 ),
+
+                // Penunjuk Kemajuan Pemampatan Video
+                if (_isCompressing)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10, bottom: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Color(0xFF8B5CF6)),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Memampatkan video (720p H.264)...',
+                                  style: TextStyle(
+                                      color: Color(0xFF8B5CF6),
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '${(_compressProgress * 100).toInt()}%',
+                              style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        LinearProgressIndicator(
+                          value: _compressProgress > 0 ? _compressProgress : null,
+                          backgroundColor: Colors.white12,
+                          color: const Color(0xFF8B5CF6),
+                          borderRadius: BorderRadius.circular(4),
+                          minHeight: 4,
+                        ),
+                      ],
+                    ),
+                  ),
 
                 // Penunjuk Kemajuan Muat Naik ke Cloudflare R2
                 if (_isUploadingToR2)
