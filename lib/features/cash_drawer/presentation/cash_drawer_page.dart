@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/audit_service.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../settings/data/business_service.dart';
 
 // ============================================================
 // CashDrawerPage — Shift Management, Petty Cash & Z-Report
@@ -18,16 +20,17 @@ class CashDrawerPage extends StatefulWidget {
 
 class _CashDrawerPageState extends State<CashDrawerPage> {
   final int _shiftNumber = 108;
-  final String _cashierName = 'Ahmad Syafii';
-  final String _shiftStartTime = 'Today, 08:30 AM';
+  String _cashierName = 'Juruwang';
+  final String _shiftStartTime = 'Hari Ini, 08:30 AM';
 
   final double _openingFloat = 200.00;
-  final double _cashSales = 1450.00;
-  final double _qrSales = 2890.00;
-  final double _cardSales = 1120.00;
+  double _cashSales = 0.00;
+  double _qrSales = 0.00;
+  double _cardSales = 0.00;
+  bool _isLoadingSales = true;
 
   late List<Map<String, dynamic>> _pettyCashEntries;
-  final TextEditingController _countedCashCtrl = TextEditingController(text: '1593.00');
+  final TextEditingController _countedCashCtrl = TextEditingController(text: '200.00');
 
   @override
   void initState() {
@@ -39,7 +42,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
         'reason': 'Beli Ais Batu Tambahan (Kedai Runcit)',
         'amount': 15.00,
         'time': '10:45 AM',
-        'author': 'Ahmad',
+        'author': 'Staf Kaunter',
       },
       {
         'id': 'PC-02',
@@ -47,9 +50,83 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
         'reason': 'Tong Gas Memasak Petroleum (Ganti)',
         'amount': 42.00,
         'time': '01:15 PM',
-        'author': 'Ahmad',
+        'author': 'Staf Kaunter',
       },
     ];
+    _loadLiveShiftSales();
+  }
+
+  Future<void> _loadLiveShiftSales() async {
+    setState(() => _isLoadingSales = true);
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user?.userMetadata?['full_name'] != null) {
+        _cashierName = user!.userMetadata!['full_name'];
+      }
+
+      final profile = await BusinessService().getBusinessProfile();
+      final businessId = profile?['id'];
+      if (businessId == null) {
+        if (mounted) setState(() => _isLoadingSales = false);
+        return;
+      }
+
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day).toIso8601String();
+
+      final orders = await Supabase.instance.client
+          .from('orders')
+          .select('id, total, payment_method, payment_splits, status, created_at')
+          .eq('business_id', businessId)
+          .gte('created_at', todayStart);
+
+      double cash = 0.0;
+      double qr = 0.0;
+      double card = 0.0;
+
+      for (final order in orders) {
+        final total = (order['total'] as num?)?.toDouble() ?? 0.0;
+        final method = (order['payment_method'] as String?)?.toLowerCase() ?? 'cash';
+        final splits = order['payment_splits'] as List<dynamic>?;
+
+        if (splits != null && splits.isNotEmpty) {
+          for (final s in splits) {
+            final splitMethod = (s['method'] as String?)?.toLowerCase() ?? 'cash';
+            final splitAmt = (s['amount'] as num?)?.toDouble() ?? 0.0;
+            if (splitMethod == 'duitnow' || splitMethod == 'qr' || splitMethod == 'ewallet') {
+              qr += splitAmt;
+            } else if (splitMethod == 'card') {
+              card += splitAmt;
+            } else {
+              cash += splitAmt;
+            }
+          }
+        } else {
+          if (method == 'duitnow' || method == 'qr' || method == 'ewallet') {
+            qr += total;
+          } else if (method == 'card') {
+            card += total;
+          } else {
+            cash += total;
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _cashSales = cash;
+          _qrSales = qr;
+          _cardSales = card;
+          _isLoadingSales = false;
+          _countedCashCtrl.text = _expectedCashInDrawer.toStringAsFixed(2);
+        });
+      }
+    } catch (e) {
+      debugPrint('[CashDrawer] Error loading live sales: $e');
+      if (mounted) {
+        setState(() => _isLoadingSales = false);
+      }
+    }
   }
 
   @override
@@ -621,6 +698,25 @@ Status: Syif Ditutup & Disahkan ke Cloud
           ],
         ),
         actions: [
+          _isLoadingSales
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Center(
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)),
+                    ),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                  tooltip: 'Kemas Kini Jualan',
+                  onPressed: () {
+                    _loadLiveShiftSales();
+                    showGlassToast(context, 'Mengemas kini data jualan syif terkini...');
+                  },
+                ),
           IconButton(
             icon: const HugeIcon(icon: HugeIcons.strokeRoundedMoneyAdd02, color: Color(0xFF42A5F5), size: 22),
             tooltip: 'Add Petty Cash',

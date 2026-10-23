@@ -38,6 +38,7 @@ class PaymentTerminalModal extends StatefulWidget {
   final double amount;
   final String orderTitle;
   final String? customerName;
+  final List<String>? itemLines;
   final TerminalStep initialStep;
 
   const PaymentTerminalModal({
@@ -45,6 +46,7 @@ class PaymentTerminalModal extends StatefulWidget {
     required this.amount,
     required this.orderTitle,
     this.customerName,
+    this.itemLines,
     this.initialStep = TerminalStep.chooseMethod,
   });
 
@@ -53,6 +55,7 @@ class PaymentTerminalModal extends StatefulWidget {
     required double amount,
     required String orderTitle,
     String? customerName,
+    List<String>? itemLines,
     TerminalStep initialStep = TerminalStep.chooseMethod,
   }) async {
     return await showDialog<PaymentTerminalResult>(
@@ -62,6 +65,7 @@ class PaymentTerminalModal extends StatefulWidget {
         amount: amount,
         orderTitle: orderTitle,
         customerName: customerName,
+        itemLines: itemLines,
         initialStep: initialStep,
       ),
     );
@@ -1083,30 +1087,19 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
               ListTile(
                 leading: const Icon(Icons.print_rounded, color: Color(0xFF42A5F5), size: 20),
                 title: const Text('Cetak Resit Terminal', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                subtitle: const Text('Format kertas thermal 58mm / 80mm', style: TextStyle(color: Colors.white38, fontSize: 11)),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white30, size: 13),
                 dense: true,
-                onTap: () {
-                  showGlassToast(context, 'Mencetak resit ke pencetak Bluetooth...');
-                },
+                onTap: () => _showThermalReceiptDialog(fmt, methodLabel),
               ),
               const Divider(height: 1, color: Colors.white12),
               ListTile(
                 leading: const Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 20),
                 title: const Text('Hantar Resit e-WhatsApp', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                subtitle: const Text('Hantar slip digital terus ke telefon pelanggan', style: TextStyle(color: Colors.white38, fontSize: 11)),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white30, size: 13),
                 dense: true,
-                onTap: () {
-                  final text = '''
-🧾 RESIT BAYARAN — NGAM
-📅 Tarikh: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}
-💰 Jumlah: ${fmt.format(widget.amount)}
-💳 Kaedah: $methodLabel
-✅ Status: LULUS
-Terima kasih kerana berniaga bersama kami!
-''';
-                  Clipboard.setData(ClipboardData(text: text));
-                  showGlassToast(context, 'Teks resit telah disalin untuk WhatsApp!');
-                },
+                onTap: () => _openWhatsAppDialog(fmt, methodLabel),
               ),
             ],
           ),
@@ -1152,6 +1145,332 @@ Terima kasih kerana berniaga bersama kami!
           ],
         ),
       ],
+    );
+  }
+
+  // ===========================================================================
+  // 1. THERMAL PRINTER RECEIPT DIALOG (ESC/POS 58mm / 80mm Preview)
+  // ===========================================================================
+  void _showThermalReceiptDialog(NumberFormat fmt, String methodLabel) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Container(
+            width: 350,
+            constraints: const BoxConstraints(maxHeight: 620),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF181829),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.print_rounded, color: Color(0xFF42A5F5), size: 20),
+                        SizedBox(width: 8),
+                        Text('Pratonton Resit Thermal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Physical Thermal Receipt Paper (Monospace Black on Off-White)
+                Flexible(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFBFBFB),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Text('WARUNG NGAM', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 16, fontFamily: 'monospace')),
+                          const Text('SSM: 202401039821 (1560944-X)', style: TextStyle(color: Colors.black87, fontSize: 10, fontFamily: 'monospace')),
+                          const Text('No 45, Jalan Hang Tuah, Melaka', style: TextStyle(color: Colors.black87, fontSize: 10, fontFamily: 'monospace')),
+                          const Text('Tel: +60 17-234 5678', style: TextStyle(color: Colors.black87, fontSize: 10, fontFamily: 'monospace')),
+                          const SizedBox(height: 8),
+                          const Text('------------------------------------------', style: TextStyle(color: Colors.black54, fontSize: 10, fontFamily: 'monospace')),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(DateFormat('dd/MM/yyyy').format(DateTime.now()), style: const TextStyle(color: Colors.black87, fontSize: 10.5, fontFamily: 'monospace')),
+                              Text(DateFormat('hh:mm a').format(DateTime.now()), style: const TextStyle(color: Colors.black87, fontSize: 10.5, fontFamily: 'monospace')),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('No: ${widget.orderTitle.split(' ').first}', style: const TextStyle(color: Colors.black87, fontSize: 10.5, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                              Text('Kaunter: 01', style: const TextStyle(color: Colors.black87, fontSize: 10.5, fontFamily: 'monospace')),
+                            ],
+                          ),
+                          if (widget.customerName != null && widget.customerName!.isNotEmpty)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text('Pelanggan: ${widget.customerName}', style: const TextStyle(color: Colors.black87, fontSize: 10.5, fontFamily: 'monospace')),
+                            ),
+                          const Text('------------------------------------------', style: TextStyle(color: Colors.black54, fontSize: 10, fontFamily: 'monospace')),
+                          const SizedBox(height: 4),
+
+                          // Items List
+                          if (widget.itemLines != null && widget.itemLines!.isNotEmpty)
+                            ...widget.itemLines!.map((line) => Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          line.split('|').first.trim(),
+                                          style: const TextStyle(color: Colors.black, fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                      if (line.contains('|'))
+                                        Text(
+                                          line.split('|').last.trim(),
+                                          style: const TextStyle(color: Colors.black, fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold),
+                                        ),
+                                    ],
+                                  ),
+                                ))
+                          else
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('1x Jualan POS', style: TextStyle(color: Colors.black, fontSize: 11, fontFamily: 'monospace')),
+                                Text(fmt.format(widget.amount), style: const TextStyle(color: Colors.black, fontSize: 11, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+
+                          const SizedBox(height: 4),
+                          const Text('------------------------------------------', style: TextStyle(color: Colors.black54, fontSize: 10, fontFamily: 'monospace')),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('JUMLAH BESAR:', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w900, fontFamily: 'monospace')),
+                              Text(fmt.format(widget.amount), style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w900, fontFamily: 'monospace')),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('BAYARAN (${methodLabel.toUpperCase()}):', style: const TextStyle(color: Colors.black87, fontSize: 10, fontFamily: 'monospace')),
+                              Text(fmt.format(widget.amount), style: const TextStyle(color: Colors.black87, fontSize: 10, fontFamily: 'monospace')),
+                            ],
+                          ),
+                          if (_selectedMethod == 'cash' && _change > 0)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('BAKI PULANGAN:', style: TextStyle(color: Colors.black87, fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                                Text(fmt.format(_change), style: const TextStyle(color: Colors.black, fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          const Text('------------------------------------------', style: TextStyle(color: Colors.black54, fontSize: 10, fontFamily: 'monospace')),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(border: Border.all(color: Colors.black87)),
+                            child: const Text('*** BAYARAN LULUS & DISAHKAN ***', style: TextStyle(color: Colors.black, fontSize: 9.5, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text('Terima kasih daun keladi,\nsudilah datang lagi!', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87, fontSize: 9.5, fontFamily: 'monospace')),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          showGlassToast(context, 'Menghantar perintah cetakan ke pencetak thermal (58mm/80mm)...', customColor: const Color(0xFF10B981));
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF42A5F5),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.print_rounded, size: 18),
+                        label: const Text('Cetak Sekarang', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ===========================================================================
+  // 2. WHATSAPP E-RECEIPT LAUNCHER
+  // ===========================================================================
+  void _openWhatsAppDialog(NumberFormat fmt, String methodLabel) {
+    final phoneCtrl = TextEditingController(text: widget.customerName != null && RegExp(r'^\d+$').hasMatch(widget.customerName!) ? widget.customerName : '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            width: 360,
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: const Color(0xFF161626),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(color: Color(0xFF25D366), shape: BoxShape.circle),
+                      child: const Center(child: Icon(Icons.send_rounded, color: Colors.white, size: 18)),
+                    ),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text('Hantar e-Resit WhatsApp', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text('Nombor WhatsApp Pelanggan', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: phoneCtrl,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: 01115892468',
+                    hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
+                    prefixIcon: const Icon(Icons.phone_iphone_rounded, color: Color(0xFF25D366), size: 18),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final input = phoneCtrl.text.trim();
+                      if (input.isEmpty) {
+                        showGlassToast(context, 'Sila masukkan nombor telefon WhatsApp', isError: true);
+                        return;
+                      }
+
+                      String cleanPhone = input.replaceAll(RegExp(r'[^0-9]'), '');
+                      if (cleanPhone.startsWith('0')) {
+                        cleanPhone = '6$cleanPhone';
+                      } else if (!cleanPhone.startsWith('60') && cleanPhone.length >= 9) {
+                        cleanPhone = '60$cleanPhone';
+                      }
+
+                      final itemSummary = (widget.itemLines != null && widget.itemLines!.isNotEmpty)
+                          ? widget.itemLines!.map((l) => '• $l').join('\n')
+                          : '• 1x Jualan POS (${fmt.format(widget.amount)})';
+
+                      final receiptText = '''
+🧾 *RESIT PEMBAYARAN — WARUNG NGAM*
+SSM: 202401039821 (1560944-X)
+----------------------------------
+📅 Tarikh: ${DateFormat('dd/MM/yyyy hh:mm a').format(DateTime.now())}
+🔢 Rujukan: ${widget.orderTitle}
+👤 Pelanggan: ${widget.customerName ?? 'Pelanggan Kaunter'}
+
+*ITEM PESANAN:*
+$itemSummary
+
+----------------------------------
+💰 *JUMLAH DIBAYAR: ${fmt.format(widget.amount)}*
+💳 Kaedah: $methodLabel
+✅ Status: LULUS (Disahkan)
+----------------------------------
+Terima kasih daun keladi, sudilah datang lagi!
+''';
+
+                      Navigator.of(ctx).pop();
+
+                      // Copy to clipboard
+                      Clipboard.setData(ClipboardData(text: receiptText));
+
+                      // Launch WhatsApp URL
+                      final waUri = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(receiptText)}');
+                      if (await canLaunchUrl(waUri)) {
+                        await launchUrl(waUri, mode: LaunchMode.externalApplication);
+                      } else if (mounted) {
+                        showGlassToast(context, 'Teks resit telah disalin ke papan keratan!');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.send_rounded, size: 16),
+                        SizedBox(width: 8),
+                        Text('Buka WhatsApp & Hantar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

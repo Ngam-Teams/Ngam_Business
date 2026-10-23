@@ -71,6 +71,7 @@ class PosService {
     String? customerName,
     String? notes,
     List<PaymentSplit>? paymentSplits,
+    String initialStatus = 'pending',
   }) async {
     try {
       final businessId = await _getShopId();
@@ -106,7 +107,7 @@ class PosService {
 
       final baseOrderData = {
         'total': total,
-        'status': 'completed',
+        'status': initialStatus,
         'source': 'pos',
         'business_id': businessId,
         if (user != null) 'owner_user_id': user.id,

@@ -197,6 +197,7 @@ class _PosPageState extends State<PosPage> {
       amount: subtotal,
       orderTitle: 'Pesanan #$orderRef (${_cart.length} item)',
       customerName: customer.isNotEmpty ? customer : 'Pelanggan Kaunter',
+      itemLines: _cart.map((i) => '${i.quantity}x ${i.product.name} | RM ${i.subtotal.toStringAsFixed(2)}').toList(),
       initialStep: TerminalStep.chooseMethod,
     );
 
