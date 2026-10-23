@@ -909,6 +909,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
   String? _selectedFileName;
   int? _selectedFileSize;
   VideoPlayerController? _videoPreviewController;
+  bool _isVideoInitializing = false;
   bool _isCompressing = false;
   double _compressProgress = 0.0;
   bool _isUploadingToR2 = false;
@@ -974,25 +975,43 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
       await _videoPreviewController?.dispose();
       _videoPreviewController = null;
 
-      VideoPlayerController controller;
-      if (kIsWeb) {
-        controller = VideoPlayerController.networkUrl(Uri.parse(video.path));
-      } else {
-        controller = VideoPlayerController.networkUrl(Uri.file(video.path));
-      }
-
-      await controller.initialize();
-      controller.setLooping(true);
-
+      // 1. Simpan fail serta-merta supaya sentiasa sedia untuk dimuat naik
       setState(() {
         _selectedFile = video;
         _selectedFileBytes = bytes;
         _selectedFileName = video.name;
         _selectedFileSize = size;
         _mediaType = 'video';
-        _videoPreviewController = controller;
         _mediaUrlController.text = video.name;
+        _isVideoInitializing = true;
       });
+
+      // 2. Pasang pemain video jika disokong oleh pelayar web (muted untuk elak autoplay restriction)
+      try {
+        final VideoPlayerController controller = kIsWeb
+            ? VideoPlayerController.networkUrl(Uri.parse(video.path))
+            : VideoPlayerController.networkUrl(Uri.file(video.path));
+
+        await controller.initialize();
+        await controller.setVolume(0.0);
+        await controller.setLooping(true);
+        await controller.play();
+
+        if (mounted) {
+          setState(() {
+            _videoPreviewController = controller;
+            _isVideoInitializing = false;
+          });
+        }
+      } catch (err) {
+        debugPrint('[FeedManagement] Video preview player init fallback: $err');
+        if (mounted) {
+          setState(() {
+            _videoPreviewController = null;
+            _isVideoInitializing = false;
+          });
+        }
+      }
     } catch (e) {
       debugPrint('[FeedManagement] Error picking video: $e');
       if (mounted) {
@@ -1039,6 +1058,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
       _selectedFileName = null;
       _selectedFileSize = null;
       _videoPreviewController = null;
+      _isVideoInitializing = false;
       _mediaType = 'image';
       _mediaUrlController.text = _presetImages[0].url;
     });
@@ -1156,11 +1176,19 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
         Navigator.pop(context);
       }
     } catch (e) {
+      final errStr = e.toString();
+      String friendlyMsg = 'Ralat: $errStr';
+      if (errStr.contains('XMLHttpRequest') || errStr.contains('CORS')) {
+        friendlyMsg = 'Ralat CORS Cloudflare R2: Sila pastikan CORS Policy telah disimpan di dashboard Cloudflare R2.';
+      } else if (errStr.contains('42501') || errStr.contains('permission denied')) {
+        friendlyMsg = 'Ralat Kebenaran Supabase: Sila kemaskini SQL RLS feed_posts dalam Supabase SQL Editor.';
+      }
       if (mounted) {
-        showGlassToast(context, 'Ralat: $e', isError: true);
+        showGlassToast(context, friendlyMsg, isError: true);
         setState(() {
           _saving = false;
           _isUploadingToR2 = false;
+          _isCompressing = false;
         });
       }
     }
@@ -1398,44 +1426,135 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (_mediaType == 'video' &&
-                                    _videoPreviewController != null &&
-                                    _videoPreviewController!.value.isInitialized)
-                                  ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(12)),
-                                    child: AspectRatio(
-                                      aspectRatio: _videoPreviewController!
-                                          .value.aspectRatio,
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          VideoPlayer(_videoPreviewController!),
-                                          IconButton(
-                                            icon: Icon(
-                                              _videoPreviewController!
-                                                      .value.isPlaying
-                                                  ? Icons.pause_circle_filled_rounded
-                                                  : Icons.play_circle_fill_rounded,
-                                              color: Colors.white70,
-                                              size: 48,
+                                if (_mediaType == 'video') ...[
+                                  if (_isVideoInitializing)
+                                    Container(
+                                      height: 180,
+                                      width: double.infinity,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black38,
+                                        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                                      ),
+                                      child: const Center(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            SizedBox(
+                                              width: 28,
+                                              height: 28,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: Color(0xFF818CF8),
+                                              ),
                                             ),
-                                            onPressed: () {
-                                              setState(() {
+                                            SizedBox(height: 12),
+                                            Text(
+                                              'Menyediakan pratonton video...',
+                                              style: TextStyle(color: Colors.white70, fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  else if (_videoPreviewController != null &&
+                                      _videoPreviewController!.value.isInitialized)
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                          top: Radius.circular(12)),
+                                      child: AspectRatio(
+                                        aspectRatio: _videoPreviewController!
+                                                    .value.aspectRatio >
+                                                0
+                                            ? _videoPreviewController!
+                                                .value.aspectRatio
+                                            : 16 / 9,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            VideoPlayer(_videoPreviewController!),
+                                            IconButton(
+                                              icon: Icon(
                                                 _videoPreviewController!
                                                         .value.isPlaying
-                                                    ? _videoPreviewController!
-                                                        .pause()
-                                                    : _videoPreviewController!
-                                                        .play();
-                                              });
-                                            },
-                                          ),
-                                        ],
+                                                    ? Icons.pause_circle_filled_rounded
+                                                    : Icons.play_circle_fill_rounded,
+                                                color: Colors.white70,
+                                                size: 48,
+                                              ),
+                                              onPressed: () {
+                                                setState(() {
+                                                  _videoPreviewController!
+                                                          .value.isPlaying
+                                                      ? _videoPreviewController!
+                                                          .pause()
+                                                      : _videoPreviewController!
+                                                          .play();
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    Container(
+                                      height: 160,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            const Color(0xFF1E1B4B).withValues(alpha: 0.6),
+                                            const Color(0xFF0F172A),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                      ),
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.play_circle_outline_rounded,
+                                                color: Color(0xFF818CF8),
+                                                size: 38,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 10),
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                                              child: Text(
+                                                _selectedFileName ?? 'Video Dipilih',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '${(_selectedFileSize != null ? (_selectedFileSize! / (1024 * 1024)).toStringAsFixed(1) : "0")} MB • Sedia untuk dimuat naik & dimampat',
+                                              style: const TextStyle(
+                                                color: Color(0xFF10B981),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  )
-                                else if (_mediaType == 'image')
+                                ] else if (_mediaType == 'image') ...[
                                   ClipRRect(
                                     borderRadius: const BorderRadius.vertical(
                                         top: Radius.circular(12)),
@@ -1450,6 +1569,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                                       ),
                                     ),
                                   ),
+                                ],
                                 Padding(
                                   padding: const EdgeInsets.all(10),
                                   child: Row(

@@ -41,16 +41,21 @@ ALTER TABLE public.feed_posts ENABLE ROW LEVEL SECURITY;
 -- A. Polisi BACA (SELECT):
 -- Awam & Pelanggan (anon & authenticated) boleh membaca pos bertaraf 'published'
 DROP POLICY IF EXISTS "Feed posts select policy" ON public.feed_posts;
-CREATE POLICY "Feed posts select policy"
+DROP POLICY IF EXISTS "Feed posts public read published" ON public.feed_posts;
+DROP POLICY IF EXISTS "Feed posts owner read own" ON public.feed_posts;
+
+-- Polisi 1: Awam (Anon & Customer) boleh baca pos bertaraf 'published' terus tanpa sekatan
+CREATE POLICY "Feed posts public read published"
   ON public.feed_posts FOR SELECT
+  USING (status = 'published');
+
+-- Polisi 2: Peniaga & staf kedai boleh baca semua pos kedai sendiri (termasuk draft & unlisted)
+CREATE POLICY "Feed posts owner read own"
+  ON public.feed_posts FOR SELECT TO authenticated
   USING (
-    status = 'published' OR (
-      auth.uid() IS NOT NULL AND (
-        EXISTS (SELECT 1 FROM public.businesses b WHERE b.id = feed_posts.business_id AND b.owner_user_id = auth.uid()) OR
-        EXISTS (SELECT 1 FROM public.team_members tm WHERE tm.business_id = feed_posts.business_id AND tm.user_id = auth.uid() AND tm.status = 'active') OR
-        EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = auth.uid() AND ur.role = 'super_admin')
-      )
-    )
+    EXISTS (SELECT 1 FROM public.businesses b WHERE b.id = feed_posts.business_id AND b.owner_user_id = auth.uid()) OR
+    EXISTS (SELECT 1 FROM public.team_members tm WHERE tm.business_id = feed_posts.business_id AND tm.user_id = auth.uid() AND tm.status = 'active') OR
+    EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = auth.uid() AND ur.role = 'super_admin')
   );
 
 -- B. Polisi CIPTA (INSERT):
@@ -110,6 +115,7 @@ GRANT ALL ON public.feed_posts TO service_role;
 
 -- Beri kebenaran SELECT pada jadual businesses untuk pelawat awam & pelanggan suapan
 GRANT SELECT ON public.businesses TO anon, authenticated;
+GRANT SELECT ON public.team_members TO authenticated;
 
 -- 7. Fungsi RPC Selamat untuk Kiraan Tontonan & Sukaan (Views & Likes Increment)
 CREATE OR REPLACE FUNCTION public.increment_feed_post_views(p_post_id UUID)
