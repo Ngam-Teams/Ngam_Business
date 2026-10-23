@@ -303,7 +303,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
         initialStatus: 'completed',
       );
 
-      await _updateStatus(appt, AppointmentStatus.completed);
+      _updateStatus(appt, AppointmentStatus.completed);
 
       if (!mounted) return;
       showGlassToast(
@@ -685,8 +685,12 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           _appointments.insert(0, newBookingMap);
                         });
 
-                        Navigator.pop(ctx);
-                        showGlassToast(context, 'Tempahan #$bookingId berjaya didaftarkan!', customColor: const Color(0xFF10B981));
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (mounted) {
+                          showGlassToast(context, 'Tempahan #$bookingId berjaya didaftarkan!', customColor: const Color(0xFF10B981));
+                        }
                       },
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -725,15 +729,15 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
   String _statusLabel(AppointmentStatus status) {
     switch (status) {
       case AppointmentStatus.pending:
-        return 'Pending Approval';
+        return 'Menunggu';
       case AppointmentStatus.confirmed:
-        return 'Confirmed';
+        return 'Disahkan';
       case AppointmentStatus.inProgress:
-        return 'In Progress';
+        return 'Sedang Berjalan';
       case AppointmentStatus.completed:
-        return 'Completed';
+        return 'Selesai';
       case AppointmentStatus.cancelled:
-        return 'Cancelled';
+        return 'Dibatalkan';
     }
   }
 
@@ -746,7 +750,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
         foregroundColor: Colors.white,
         onPressed: _openNewAppointmentModal,
         icon: const Icon(Icons.add_rounded, size: 20),
-        label: const Text('New Walk-in', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('Tempahan Baharu', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: SafeArea(
         child: Column(
@@ -781,7 +785,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Bookings & Appointments',
+                          'Pengurusan Tempahan & Temu Janji',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -789,7 +793,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           ),
                         ),
                         Text(
-                          'Manage salon, spa, clinic & table slots',
+                          'Khidmat, slot temu janji, meja & servis perniagaan',
                           style: TextStyle(
                             color: Colors.white54,
                             fontSize: 12,
@@ -854,12 +858,12 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           Icon(Icons.calendar_today_outlined, size: 48, color: Colors.white.withValues(alpha: 0.3)),
                           const SizedBox(height: 14),
                           const Text(
-                            'No appointments found',
+                            'Tiada tempahan dijumpai',
                             style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 6),
                           const Text(
-                            'Upcoming customer bookings will appear here.',
+                            'Tempahan pelanggan baharu akan dipaparkan di sini.',
                             style: TextStyle(color: Colors.white38, fontSize: 13),
                           ),
                         ],
@@ -930,7 +934,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  const Icon(Icons.content_cut_rounded, size: 14, color: Colors.white54),
+                                  const Icon(Icons.bookmark_border_rounded, size: 15, color: Color(0xFF42A5F5)),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
@@ -968,7 +972,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    'Note: ${appt['notes']}',
+                                    'Catatan: ${appt['notes']}',
                                     style: const TextStyle(color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic),
                                   ),
                                 ),
@@ -990,7 +994,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                                         style: const TextStyle(color: Color(0xFF44CF6C), fontSize: 12, fontWeight: FontWeight.bold),
                                       ),
                                       Text(
-                                        'Total: RM ${(appt['price'] as double).toStringAsFixed(2)}',
+                                        'Jumlah: RM ${(appt['price'] as double).toStringAsFixed(2)}',
                                         style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900),
                                       ),
                                     ],
@@ -998,9 +1002,14 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                                   Row(
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.phone_outlined, color: Colors.blueAccent, size: 20),
+                                        icon: const Icon(Icons.phone_outlined, color: Colors.blueAccent, size: 19),
                                         onPressed: () => _callCustomer(appt['phone']),
-                                        tooltip: 'Call Customer',
+                                        tooltip: 'Panggil Telefon',
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 19),
+                                        onPressed: () => _sendWhatsAppReminder(appt),
+                                        tooltip: 'Hantar WhatsApp Peringatan',
                                       ),
                                       if (status == AppointmentStatus.pending) ...[
                                         ElevatedButton(
@@ -1011,18 +1020,31 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                           ),
                                           onPressed: () => _updateStatus(appt, AppointmentStatus.confirmed),
-                                          child: const Text('Accept', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                          child: const Text('Terima', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                                         ),
-                                      ] else if (status == AppointmentStatus.confirmed) ...[
+                                      ] else if (status == AppointmentStatus.confirmed || status == AppointmentStatus.inProgress) ...[
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(0xFFED1164),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                            elevation: 0,
+                                          ),
+                                          onPressed: () => _payAppointmentAtPos(appt),
+                                          icon: const Icon(Icons.bolt_rounded, size: 15),
+                                          label: const Text('Bayar POS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
+                                        ),
+                                        const SizedBox(width: 6),
                                         ElevatedButton(
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(0xFF44CF6C),
                                             foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                           ),
                                           onPressed: () => _updateStatus(appt, AppointmentStatus.completed),
-                                          child: const Text('Complete', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                          child: const Text('Selesai', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
                                         ),
                                       ],
                                     ],
