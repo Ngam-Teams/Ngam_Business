@@ -736,7 +736,7 @@ class _PosPageState extends State<PosPage> {
                   if (code.isEmpty) return;
 
                   setModalState(() => _isApplyingVoucher = true);
-                  final val = await VoucherService().validateVoucher(code: code, orderAmount: _cartTotal);
+                  final val = await VoucherService().validateVoucherCode(code: code, subtotal: _cartTotal);
                   setModalState(() => _isApplyingVoucher = false);
 
                   if (!ctx.mounted) return;
@@ -756,7 +756,7 @@ class _PosPageState extends State<PosPage> {
                   } else {
                     showGlassToast(
                       context,
-                      val.errorMessage ?? 'Kod baucar tidak sah atau telah tamat.',
+                      val.message.isNotEmpty ? val.message : 'Kod baucar tidak sah atau telah tamat.',
                       isError: true,
                     );
                   }
@@ -1207,59 +1207,37 @@ class _PosPageState extends State<PosPage> {
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.07),
+            color: const Color(0xFF141424),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.12),
               width: 1.2,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 25,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
           child: Column(
             children: [
-              // Cart header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-                child: Row(
-                  children: [
-                    const HugeIcon(
-                      icon: HugeIcons.strokeRoundedShoppingCart01,
-                      color: Color(0xFF42A5F5),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'Cart',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (_cart.isNotEmpty)
-                      GestureDetector(
-                        onTap: () =>
-                            setState(() => _cart = []),
-                        child: Text(
-                          'Clear',
-                          style: TextStyle(
-                            color: Colors.redAccent.withValues(alpha: 0.7),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              // 1. Order Type Switcher & Ticket Header
+              _buildOrderModeHeader(),
+
+              // 2. Customer VIP / Walk-in Bar
+              _buildCustomerBar(),
+
               const Divider(
                 height: 1,
                 color: Color(0x1AFFFFFF),
               ),
 
-              // Cart items
+              // 3. Cart Items (Scrollable)
               Expanded(child: _buildCartContent()),
 
-              // Total + checkout
+              // 4. Enterprise Breakdown, Fast Cash Chips & Emerald Pay Button
               _buildCartFooter(),
             ],
           ),
@@ -1268,32 +1246,300 @@ class _PosPageState extends State<PosPage> {
     );
   }
 
+  Widget _buildOrderModeHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Segmented order type switcher
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Row(
+              children: [
+                _orderTypeChip('dine_in', 'Makan Sini', Icons.restaurant_rounded),
+                _orderTypeChip('takeaway', 'Bungkus', Icons.takeout_dining_rounded),
+                _orderTypeChip('delivery', 'Hantar', Icons.delivery_dining_rounded),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Sub-bar: Ticket No, Table / Mode Pill, Clear
+          Row(
+            children: [
+              // Ticket Tag
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '#NG-$_orderSequence',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Table or Delivery Pill
+              if (_orderType == 'dine_in')
+                GestureDetector(
+                  onTap: _showTableNumberDialog,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.table_restaurant_rounded, color: Color(0xFF42A5F5), size: 13),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Meja $_tableNumber',
+                          style: const TextStyle(
+                            color: Color(0xFF42A5F5),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        const Icon(Icons.edit_rounded, color: Color(0xFF42A5F5), size: 10),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    _orderType == 'takeaway' ? 'Bawa Pulang 🛍️' : 'Penghantaran 🛵',
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+              const Spacer(),
+
+              // Clear button
+              if (_cart.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _cart = [];
+                      _appliedVoucherCode = null;
+                      _voucherDiscount = 0.0;
+                      _voucherId = null;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'Padam Troli',
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _orderTypeChip(String type, String label, IconData icon) {
+    final isSel = _orderType == type;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _orderType = type),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isSel ? const Color(0xFF42A5F5) : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 13,
+                color: isSel ? Colors.white : Colors.white60,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSel ? Colors.white : Colors.white60,
+                  fontSize: 11.5,
+                  fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomerBar() {
+    final hasCustomer = _customerController.text.trim().isNotEmpty;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: hasCustomer
+            ? const Color(0xFF00C853).withValues(alpha: 0.08)
+            : Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasCustomer
+              ? const Color(0xFF00C853).withValues(alpha: 0.25)
+              : Colors.white.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: hasCustomer
+                  ? const Color(0xFF00C853).withValues(alpha: 0.2)
+                  : Colors.white.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              hasCustomer ? Icons.person_rounded : Icons.person_outline_rounded,
+              size: 14,
+              color: hasCustomer ? const Color(0xFF00C853) : Colors.white60,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GestureDetector(
+              onTap: _showCustomerDialog,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    hasCustomer
+                        ? _customerController.text.trim()
+                        : 'Pelanggan Tetamu (Walk-in)',
+                    style: TextStyle(
+                      color: hasCustomer ? Colors.white : Colors.white70,
+                      fontSize: 12,
+                      fontWeight: hasCustomer ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    hasCustomer ? 'Rekod Pesanan / Ahli' : '+ Tekan untuk tambah nama/ahli',
+                    style: TextStyle(
+                      color: hasCustomer ? const Color(0xFF00C853) : const Color(0xFF42A5F5),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (hasCustomer)
+            GestureDetector(
+              onTap: () => setState(() => _customerController.clear()),
+              child: const Icon(Icons.close_rounded, size: 16, color: Colors.white38),
+            )
+          else
+            GestureDetector(
+              onTap: _showCustomerDialog,
+              child: const Icon(Icons.add_circle_outline_rounded, size: 16, color: Color(0xFF42A5F5)),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCartContent() {
     if (_cart.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            HugeIcon(
-              icon: HugeIcons.strokeRoundedShoppingCart01,
-              color: Colors.white.withValues(alpha: 0.2),
-              size: 48,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Cart is empty',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.4),
-                fontSize: 14,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  shape: BoxShape.circle,
+                ),
+                child: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedShoppingCart01,
+                  color: Colors.white30,
+                  size: 36,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              const Text(
+                'Troli Kosong',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Tekan produk di sebelah kiri untuk mula menambah pesanan.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 11.5,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       itemCount: _cart.length,
       separatorBuilder: (_, __) =>
           Divider(color: Colors.white.withValues(alpha: 0.07), height: 1),
@@ -1303,9 +1549,11 @@ class _PosPageState extends State<PosPage> {
 
   Widget _buildCartRow(CartItem item) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Product name and unit price
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1314,33 +1562,42 @@ class _PosPageState extends State<PosPage> {
                   item.product.name,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 13,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  'RM ${item.product.price.toStringAsFixed(2)} × ${item.quantity}',
+                  'RM ${item.product.price.toStringAsFixed(2)} / unit',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 11,
+                    fontFamily: 'monospace',
                   ),
                 ),
               ],
             ),
           ),
+
+          // Stepper [-] count [+]
           Row(
             children: [
               _cartBtn(
                 Icons.remove_rounded,
                 () => _removeFromCart(item),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+              Container(
+                constraints: const BoxConstraints(minWidth: 26),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
                   '${item.quantity}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
+                    fontSize: 13,
                   ),
                 ),
               ),
@@ -1350,14 +1607,27 @@ class _PosPageState extends State<PosPage> {
               ),
             ],
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
+
+          // Line subtotal
+          Text(
+            'RM ${item.subtotal.toStringAsFixed(2)}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 12.5,
+              fontFamily: 'monospace',
+            ),
+          ),
+
+          const SizedBox(width: 6),
+          // Delete icon
           GestureDetector(
             onTap: () => _deleteFromCart(item),
-            child: HugeIcon(
-              icon: HugeIcons.strokeRoundedDelete01,
-              color: Colors.redAccent.withValues(alpha: 0.7),
-              size: 18,
-              strokeWidth: 2.1,
+            child: Icon(
+              Icons.close_rounded,
+              color: Colors.white.withValues(alpha: 0.3),
+              size: 16,
             ),
           ),
         ],
@@ -1369,16 +1639,16 @@ class _PosPageState extends State<PosPage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 28,
-        height: 28,
+        width: 26,
+        height: 26,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(7),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.12),
           ),
         ),
-        child: Icon(icon, color: Colors.white, size: 16),
+        child: Icon(icon, color: Colors.white, size: 15),
       ),
     );
   }
@@ -1386,8 +1656,10 @@ class _PosPageState extends State<PosPage> {
   Widget _buildCartFooter() {
     final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
         border: Border(
           top: BorderSide(
             color: Colors.white.withValues(alpha: 0.08),
@@ -1395,126 +1667,351 @@ class _PosPageState extends State<PosPage> {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Customer name
-          TextField(
-            controller: _customerController,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-            decoration: InputDecoration(
-              hintText: 'Customer name (optional)',
-              hintStyle: TextStyle(
-                color: Colors.white.withValues(alpha: 0.3),
-                fontSize: 13,
-              ),
-              filled: true,
-              fillColor: Colors.white.withValues(alpha: 0.05),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1),
+          // 1. Financial Breakdown (Subtotal, Voucher, Rounding, Grand Total)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+            ),
+            child: Column(
+              children: [
+                // Subtotal
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Subtotal ($_cartCount ${_cartCount == 1 ? 'item' : 'items'})',
+                      style: const TextStyle(color: Colors.white60, fontSize: 11.5),
+                    ),
+                    Text(
+                      fmt.format(_cartTotal),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontFamily: 'monospace'),
+                    ),
+                  ],
                 ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.1),
+                const SizedBox(height: 5),
+
+                // Voucher Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Baucar / Promosi',
+                      style: TextStyle(color: Colors.white60, fontSize: 11.5),
+                    ),
+                    if (_appliedVoucherCode != null && _voucherDiscount > 0)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '-RM ${_voucherDiscount.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: Color(0xFF00C853),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _appliedVoucherCode = null;
+                                _voucherDiscount = 0.0;
+                                _voucherId = null;
+                              });
+                            },
+                            child: const Icon(Icons.cancel_rounded, size: 14, color: Colors.redAccent),
+                          ),
+                        ],
+                      )
+                    else
+                      GestureDetector(
+                        onTap: _showVoucherDialog,
+                        child: const Text(
+                          '+ Tebus Kod',
+                          style: TextStyle(
+                            color: Color(0xFF42A5F5),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFF42A5F5)),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 10,
-                horizontal: 14,
-              ),
+
+                // Rounding row (if non-zero)
+                if (_roundingAmount.abs() > 0.001) ...[
+                  const SizedBox(height: 5),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Penyelarasan (5-Sen)',
+                        style: TextStyle(color: Colors.white54, fontSize: 11),
+                      ),
+                      Text(
+                        '${_roundingAmount >= 0 ? '+' : ''}RM ${_roundingAmount.toStringAsFixed(2)}',
+                        style: const TextStyle(color: Colors.white54, fontSize: 11, fontFamily: 'monospace'),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const Divider(color: Color(0x1AFFFFFF), height: 16),
+
+                // Grand Total
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'JUMLAH BESAR',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          'Termasuk Cukai SST',
+                          style: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 9.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      fmt.format(_grandTotal),
+                      style: const TextStyle(
+                        color: Color(0xFF00C853),
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Total',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
+          // 2. Fast Cash Tender Chips (1-Click Drawer Open)
+          if (_cart.isNotEmpty) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '💵 TUNAI PANTAS:',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  Text(
+                    '1-Klik Selesai',
+                    style: TextStyle(
+                      color: const Color(0xFF00C853).withValues(alpha: 0.8),
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                fmt.format(_cartTotal),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 32,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _quickCashOptions.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                itemBuilder: (_, i) {
+                  final opt = _quickCashOptions[i];
+                  final isExact = (opt - _grandTotal).abs() < 0.01;
+                  return InkWell(
+                    onTap: () => _handleQuickCash(opt),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isExact
+                            ? const Color(0xFF00C853).withValues(alpha: 0.18)
+                            : Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isExact
+                              ? const Color(0xFF00C853).withValues(alpha: 0.45)
+                              : Colors.white.withValues(alpha: 0.1),
+                        ),
+                      ),
+                      child: Text(
+                        isExact ? 'Tepat (${opt.toStringAsFixed(2)})' : 'RM ${opt.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          color: isExact ? const Color(0xFF00C853) : Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
-            ],
-          ),
-          const SizedBox(height: 14),
+            ),
+            const SizedBox(height: 10),
+          ],
 
-          // Step 1: Caj RM XX.XX (Direct 4-Step Terminal Flow)
+          // 3. Primary Pay Button (Emerald Green #00C853 Corporate)
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 48,
             child: ElevatedButton(
-              onPressed: _cart.isEmpty ? null : _openPaymentTerminal,
+              onPressed: _cart.isEmpty
+                  ? null
+                  : () => _openPaymentTerminal(initialStep: TerminalStep.chooseMethod),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFED1164),
+                backgroundColor: const Color(0xFF00C853),
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: const Color(0xFFED1164).withValues(alpha: 0.3),
+                disabledBackgroundColor: const Color(0xFF00C853).withValues(alpha: 0.2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
                 elevation: 3,
-                shadowColor: const Color(0xFFED1164).withValues(alpha: 0.35),
+                shadowColor: const Color(0xFF00C853).withValues(alpha: 0.35),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.bolt_rounded, color: Colors.white, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    _cart.isEmpty ? 'Pilih Produk Dahulu' : 'Caj ${fmt.format(_cartTotal)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.3,
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.payment_rounded, color: Colors.white, size: 16),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'BAYAR SEKARANG',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          _cart.isEmpty ? 'Pilih Produk Dahulu' : 'Pilih Kaedah Bayaran',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      fmt.format(_grandTotal),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: 'monospace',
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
-          // Secondary: Split payment & voucher options
-          SizedBox(
-            width: double.infinity,
-            height: 42,
-            child: OutlinedButton.icon(
-              onPressed: _cart.isEmpty ? null : _checkout,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white70,
-                side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.15),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+          // 4. Bar Pintasan Kaedah Bayaran (Quick Payment Methods Bar)
+          Row(
+            children: [
+              _quickMethodBtn(
+                'DuitNow',
+                Icons.qr_code_rounded,
+                _cart.isEmpty ? null : () => _openPaymentTerminal(initialStep: TerminalStep.showQr),
               ),
-              icon: const Icon(Icons.tune_rounded, size: 16),
-              label: const Text(
-                'Pecah Bayaran & Baucar (Split)',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                ),
+              const SizedBox(width: 6),
+              _quickMethodBtn(
+                'Tunai',
+                Icons.payments_rounded,
+                _cart.isEmpty ? null : () => _openPaymentTerminal(initialStep: TerminalStep.cashTender),
               ),
-            ),
+              const SizedBox(width: 6),
+              _quickMethodBtn(
+                'Kad/EDC',
+                Icons.credit_card_rounded,
+                _cart.isEmpty ? null : () => _openPaymentTerminal(initialStep: TerminalStep.cardPayment),
+              ),
+              const SizedBox(width: 6),
+              _quickMethodBtn(
+                'Pecah Bil',
+                Icons.alt_route_rounded,
+                _cart.isEmpty ? null : _checkout,
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _quickMethodBtn(String label, IconData icon, VoidCallback? onTap) {
+    return Expanded(
+      child: SizedBox(
+        height: 36,
+        child: OutlinedButton(
+          onPressed: onTap,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            foregroundColor: Colors.white70,
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            backgroundColor: Colors.white.withValues(alpha: 0.03),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 12, color: const Color(0xFF42A5F5)),
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1528,11 +2025,11 @@ class _PosPageState extends State<PosPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFF42A5F5).withValues(alpha: 0.85),
+            color: const Color(0xFF00C853).withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF42A5F5).withValues(alpha: 0.4),
+                color: const Color(0xFF00C853).withValues(alpha: 0.4),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -1540,15 +2037,11 @@ class _PosPageState extends State<PosPage> {
           ),
           child: Row(
             children: [
-              const HugeIcon(
-                icon: HugeIcons.strokeRoundedShoppingCart01,
-                color: Colors.white,
-                size: 20,
-              ),
+              const Icon(Icons.shopping_cart_rounded, color: Colors.white, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  '$_cartCount item${_cartCount == 1 ? '' : 's'}',
+                  '$_cartCount ${_cartCount == 1 ? 'item' : 'items'} • ${_orderType.toUpperCase()}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -1556,11 +2049,12 @@ class _PosPageState extends State<PosPage> {
                 ),
               ),
               Text(
-                fmt.format(_cartTotal),
+                fmt.format(_grandTotal),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                   fontSize: 16,
+                  fontFamily: 'monospace',
                 ),
               ),
               const SizedBox(width: 8),
