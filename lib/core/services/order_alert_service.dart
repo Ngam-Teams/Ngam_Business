@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/app_router.dart';
@@ -185,205 +186,219 @@ class OrderAlertService {
           child: Dialog(
             backgroundColor: Colors.transparent,
             insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: const Color(0xFF141424),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: isPreOrder
-                      ? Colors.purpleAccent.withValues(alpha: 0.6)
-                      : const Color(0xFF42A5F5).withValues(alpha: 0.6),
-                  width: 1.5,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 440,
+                  minWidth: 280,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isPreOrder
-                        ? Colors.purpleAccent.withValues(alpha: 0.25)
-                        : const Color(0xFF42A5F5).withValues(alpha: 0.25),
-                    blurRadius: 30,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Top Animated / Pulsing Icon
-                  Container(
-                    width: 68,
-                    height: 68,
-                    decoration: BoxDecoration(
-                      color: (isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5))
-                          .withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF141424),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: isPreOrder
+                          ? Colors.purpleAccent.withValues(alpha: 0.6)
+                          : const Color(0xFF42A5F5).withValues(alpha: 0.6),
+                      width: 1.5,
                     ),
-                    child: Center(
-                      child: HugeIcon(
-                        icon: isPreOrder
-                            ? HugeIcons.strokeRoundedCalendar03
-                            : HugeIcons.strokeRoundedNotification03,
-                        color: isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5),
-                        size: 36,
-                        strokeWidth: 2.2,
+                    boxShadow: [
+                      BoxShadow(
+                        color: isPreOrder
+                            ? Colors.purpleAccent.withValues(alpha: 0.25)
+                            : const Color(0xFF42A5F5).withValues(alpha: 0.25),
+                        blurRadius: 30,
+                        spreadRadius: 2,
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Title Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: (isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5))
-                          .withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      isPreOrder ? '📅 PESANAN AWAL (PRE-ORDER)' : '🔔 PESANAN ONLINE BARU',
-                      style: TextStyle(
-                        color: isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Text(
-                    'RM ${total.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  Text(
-                    'Daripada: $customerName',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  if (notes != null && notes.trim().isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white12),
-                      ),
-                      child: Text(
-                        'Nota: $notes',
-                        style: const TextStyle(
-                          color: Colors.white60,
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 24),
-
-                  // Action Buttons
-                  Row(
-                    children: [
-                      // Accept Button
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Top Animated / Pulsing Icon
+                        Container(
+                          width: 68,
+                          height: 68,
+                          decoration: BoxDecoration(
+                            color: (isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5))
+                                .withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: HugeIcon(
+                              icon: isPreOrder
+                                  ? HugeIcons.strokeRoundedCalendar03
+                                  : HugeIcons.strokeRoundedNotification03,
+                              color: isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5),
+                              size: 36,
+                              strokeWidth: 2.2,
                             ),
                           ),
-                          onPressed: () async {
-                            stopAlertSound();
-                            _isModalShowing = false;
-                            Navigator.of(ctx, rootNavigator: true).pop();
+                        ),
+                        const SizedBox(height: 16),
 
-                            // Mark as completed/accepted in Supabase
-                            try {
-                              await Supabase.instance.client
-                                  .from('orders')
-                                  .update({'status': 'completed'})
-                                  .eq('id', orderId);
-                            } catch (e) {
-                              debugPrint('[OrderAlertService] Error accepting order: $e');
-                            }
-                          },
-                          icon: const HugeIcon(
-                            icon: HugeIcons.strokeRoundedCheckmarkBadge01,
+                        // Title Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: (isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5))
+                                .withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            isPreOrder ? '📅 PESANAN AWAL (PRE-ORDER)' : '🔔 PESANAN ONLINE BARU',
+                            style: TextStyle(
+                              color: isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        Text(
+                          'RM ${total.toStringAsFixed(2)}',
+                          style: const TextStyle(
                             color: Colors.white,
-                            size: 18,
-                          ),
-                          label: const Text(
-                            'Terima',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
+                        const SizedBox(height: 4),
 
-                      // View Orders Tab Button
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF42A5F5),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                        Text(
+                          'Daripada: $customerName',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+
+                        if (notes != null && notes.trim().isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white12),
+                            ),
+                            child: Text(
+                              'Nota: $notes',
+                              style: const TextStyle(
+                                color: Colors.white60,
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                        ],
+
+                        const SizedBox(height: 24),
+
+                        // Action Buttons
+                        Row(
+                          children: [
+                            // Accept Button
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  stopAlertSound();
+                                  _isModalShowing = false;
+                                  Navigator.of(ctx, rootNavigator: true).pop();
+
+                                  // Mark as completed/accepted in Supabase
+                                  try {
+                                    await Supabase.instance.client
+                                        .from('orders')
+                                        .update({'status': 'completed'})
+                                        .eq('id', orderId);
+                                  } catch (e) {
+                                    debugPrint('[OrderAlertService] Error accepting order: $e');
+                                  }
+                                },
+                                icon: const HugeIcon(
+                                  icon: HugeIcons.strokeRoundedCheckmarkBadge01,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                                label: const Text(
+                                  'Terima',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+
+                            // View Orders Tab Button
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF42A5F5),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  stopAlertSound();
+                                  _isModalShowing = false;
+                                  Navigator.of(ctx, rootNavigator: true).pop();
+                                  try {
+                                    navContext.go('/');
+                                  } catch (_) {}
+                                  onSwitchTab?.call(1); // Navigate to Orders Tab
+                                },
+                                icon: const HugeIcon(
+                                  icon: HugeIcons.strokeRoundedInvoice01,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                                label: const Text(
+                                  'Buka Order',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Dismiss / Silence button
+                        TextButton(
                           onPressed: () {
                             stopAlertSound();
                             _isModalShowing = false;
                             Navigator.of(ctx, rootNavigator: true).pop();
-                            onSwitchTab?.call(1); // Navigate to Orders Tab
                           },
-                          icon: const HugeIcon(
-                            icon: HugeIcons.strokeRoundedInvoice01,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                          label: const Text(
-                            'Buka Order',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          child: const Text(
+                            'Senyapkan / Tutup',
+                            style: TextStyle(color: Colors.white54, fontSize: 13),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Dismiss / Silence button
-                  TextButton(
-                    onPressed: () {
-                      stopAlertSound();
-                      _isModalShowing = false;
-                      Navigator.of(ctx, rootNavigator: true).pop();
-                    },
-                    child: const Text(
-                      'Senyapkan / Tutup',
-                      style: TextStyle(color: Colors.white54, fontSize: 13),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
