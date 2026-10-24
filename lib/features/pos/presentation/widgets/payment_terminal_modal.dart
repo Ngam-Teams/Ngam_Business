@@ -1009,7 +1009,39 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const SizedBox(height: 10),
+        // Top Header with Status Pill and Close (X) button
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 13),
+                  SizedBox(width: 5),
+                  Text(
+                    'Status: Selesai',
+                    style: TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: _finishAndClose,
+              icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              tooltip: 'Tutup & Selesai',
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
 
         // Green Success Circle (Exact match with Step 4 screenshot)
         Container(
