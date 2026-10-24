@@ -45,21 +45,40 @@ class FeedPostModel {
   bool get isDraft => status == 'draft';
   bool get isArchived => status == 'archived';
 
+  static DateTime _parseDateTime(dynamic val) {
+    if (val == null) return DateTime.now();
+    final str = val.toString().trim();
+    if (str.isEmpty) return DateTime.now();
+
+    // If string has no timezone indicator ('Z' or '+'), treat as UTC
+    final normalized = (!str.endsWith('Z') && !str.contains('+') && str.contains('T'))
+        ? '${str}Z'
+        : (!str.endsWith('Z') && !str.contains('+') && !str.contains('T'))
+            ? '${str.replaceAll(' ', 'T')}Z'
+            : str;
+
+    final parsed = DateTime.tryParse(normalized) ?? DateTime.tryParse(str) ?? DateTime.now();
+    return parsed.toLocal();
+  }
+
   String get formattedDate {
     try {
       final now = DateTime.now();
-      final difference = now.difference(createdAt);
+      final localCreated = createdAt.toLocal();
+      final difference = now.difference(localCreated);
 
-      if (difference.inMinutes < 60) {
+      if (difference.isNegative || difference.inSeconds < 60) {
+        return 'Baru saja';
+      } else if (difference.inMinutes < 60) {
         return '${difference.inMinutes} min lepas';
       } else if (difference.inHours < 24) {
         return '${difference.inHours} jam lepas';
       } else if (difference.inDays < 7) {
         return '${difference.inDays} hari lepas';
       }
-      return DateFormat('dd MMM yyyy').format(createdAt);
+      return DateFormat('dd MMM yyyy, h:mm a').format(localCreated);
     } catch (_) {
-      return '';
+      return 'Baru saja';
     }
   }
 
@@ -81,12 +100,8 @@ class FeedPostModel {
       commentsCount: (json['comments_count'] as num?)?.toInt() ?? 0,
       sharesCount: (json['shares_count'] as num?)?.toInt() ?? 0,
       viewsCount: (json['views_count'] as num?)?.toInt() ?? 0,
-      createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
-          : DateTime.now(),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'].toString()) ?? DateTime.now()
-          : DateTime.now(),
+      createdAt: _parseDateTime(json['created_at']),
+      updatedAt: _parseDateTime(json['updated_at']),
     );
   }
 

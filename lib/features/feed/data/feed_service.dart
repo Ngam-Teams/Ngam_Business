@@ -72,8 +72,8 @@ class FeedService {
       'cta_text': ctaText,
       'status': status,
       'is_pinned': isPinned,
-      'created_at': DateTime.now().toIso8601String(),
-      'updated_at': DateTime.now().toIso8601String(),
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
 
     final res = await _client.from('feed_posts').insert(payload).select().single();
@@ -116,7 +116,7 @@ class FeedService {
       'cta_type': ctaType,
       'cta_text': ctaText,
       'status': status,
-      'updated_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
 
     if (isPinned != null) {
