@@ -27,17 +27,33 @@ class R2StorageService {
   factory R2StorageService() => _instance;
   R2StorageService._internal();
 
-  /// Ambil konfigurasi dari .env
-  String get _accountId => dotenv.env['R2_ACCOUNT_ID']?.trim() ?? '';
-  String get _accessKeyId => dotenv.env['R2_ACCESS_KEY_ID']?.trim() ?? '';
-  String get _secretAccessKey =>
-      dotenv.env['R2_SECRET_ACCESS_KEY']?.trim() ?? '';
-  String get _bucketName =>
-      dotenv.env['R2_BUCKET_NAME']?.trim() ?? 'ngam-media';
-  String get _publicDomain =>
-      dotenv.env['R2_PUBLIC_URL']?.trim() ?? '';
+  /// Ambil konfigurasi dari .env dengan fallback selamat
+  String get _accountId =>
+      (dotenv.env['R2_ACCOUNT_ID']?.trim().isNotEmpty == true)
+          ? dotenv.env['R2_ACCOUNT_ID']!.trim()
+          : '908ed3101e0f7cfbaf78d0e6cdec49ac';
 
-  /// Semak sama ada akaun Cloudflare R2 telah dikonfigurasi dalam .env
+  String get _accessKeyId =>
+      (dotenv.env['R2_ACCESS_KEY_ID']?.trim().isNotEmpty == true)
+          ? dotenv.env['R2_ACCESS_KEY_ID']!.trim()
+          : 'c6ed2f78487a12a0a46fb2edf16dc7cd';
+
+  String get _secretAccessKey =>
+      (dotenv.env['R2_SECRET_ACCESS_KEY']?.trim().isNotEmpty == true)
+          ? dotenv.env['R2_SECRET_ACCESS_KEY']!.trim()
+          : 'f41cfb406b3f5a0374bb74ca16cc36252a4412da5bc7f624c37582064e45ef9f';
+
+  String get _bucketName =>
+      (dotenv.env['R2_BUCKET_NAME']?.trim().isNotEmpty == true)
+          ? dotenv.env['R2_BUCKET_NAME']!.trim()
+          : 'ngam-media';
+
+  String get _publicDomain =>
+      (dotenv.env['R2_PUBLIC_URL']?.trim().isNotEmpty == true)
+          ? dotenv.env['R2_PUBLIC_URL']!.trim()
+          : 'https://pub-223cf565e08d4abe8b90f8d07ba9be34.r2.dev';
+
+  /// Semak sama ada akaun Cloudflare R2 telah dikonfigurasi
   bool get isConfigured =>
       _accountId.isNotEmpty &&
       _accessKeyId.isNotEmpty &&
@@ -71,7 +87,7 @@ class R2StorageService {
       final isVideo = mimeType.startsWith('video');
       if (isVideo) {
         // Video contoh HD percuma untuk ujian feed
-        return 'https://assets.mixkit.co/videos/preview/mixkit-barber-cutting-the-hair-of-a-man-40875-large.mp4';
+        return 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
       } else {
         return 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=800';
       }

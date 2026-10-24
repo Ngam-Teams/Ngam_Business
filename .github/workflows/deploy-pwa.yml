@@ -32,6 +32,11 @@ jobs:
             echo "SUPABASE_URL=https://rsueaoglsdxhzpupjljd.supabase.co" > .env
             echo "SUPABASE_ANON_KEY=sb_publishable_qP4whY5B6wxIasWOVGoPCw_vrhOXj_J" >> .env
             echo "GOOGLE_WEB_CLIENT_ID=465252435780-kjcjvctogj5f2r014c4ggq2gpc5u28d2.apps.googleusercontent.com" >> .env
+            echo "R2_ACCOUNT_ID=908ed3101e0f7cfbaf78d0e6cdec49ac" >> .env
+            echo "R2_ACCESS_KEY_ID=c6ed2f78487a12a0a46fb2edf16dc7cd" >> .env
+            echo "R2_SECRET_ACCESS_KEY=f41cfb406b3f5a0374bb74ca16cc36252a4412da5bc7f624c37582064e45ef9f" >> .env
+            echo "R2_BUCKET_NAME=ngam-media" >> .env
+            echo "R2_PUBLIC_URL=https://pub-223cf565e08d4abe8b90f8d07ba9be34.r2.dev" >> .env
           fi
         shell: bash
 
