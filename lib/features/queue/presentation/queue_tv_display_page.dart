@@ -152,10 +152,16 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
       final profile = await BusinessService().getBusinessProfile();
       if (profile != null && mounted) {
         setState(() {
-          _businessName = profile['name']?.toString() ?? 'KEDAI ANDA';
+          _businessName = (profile['business_name'] ?? profile['name'] ?? profile['title'])?.toString().trim() ?? 'KEDAI ANDA';
           _businessId = profile['id']?.toString() ?? '';
+
+          final handleRaw = profile['business_handle'] ?? profile['handle'] ?? profile['username'];
+          final handle = handleRaw?.toString().trim().replaceAll('@', '').toLowerCase();
+
           final rawSlug = _businessName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '-');
-          _businessSlug = profile['slug']?.toString() ?? rawSlug;
+          _businessSlug = (handle != null && handle.isNotEmpty)
+              ? handle
+              : (profile['slug']?.toString() ?? rawSlug);
         });
       }
     } catch (_) {}
@@ -170,9 +176,13 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
     super.dispose();
   }
 
-  String get _qrUrl => _businessId.isNotEmpty
-      ? 'https://ngam.dev/q/$_businessId'
-      : 'https://ngam.dev/q';
+  // Gunakan username/slug kedai (bukan ID sulit / UUID) untuk privasi & pautan mesra pelanggan
+  String get _qrUrl {
+    final identifier = _businessSlug.isNotEmpty ? _businessSlug : _businessId;
+    return identifier.isNotEmpty
+        ? 'https://ngam.dev/q/$identifier'
+        : 'https://ngam.dev/q';
+  }
 
   String get _shortUrlDisplay => 'ngam.dev/q/$_businessSlug';
 
@@ -949,9 +959,9 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Kolum 1 (Kiri): Kod QR Padat 1/5 (~20% skrin)
+        // Kolum 1 (Kiri): Kod QR Jelas & Mudah Imbas (~27% skrin)
         Expanded(
-          flex: 2,
+          flex: 3,
           child: _buildCompactQrPanel(),
         ),
         const SizedBox(width: 14),
@@ -1484,9 +1494,9 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 final availableHeight = constraints.maxHeight;
                 // Ambil dimensi segiempat sama terbesar yang muat dalam container
                 final maxSide = math.min(availableWidth, availableHeight);
-                // Had saiz dinamik: fleksibel antara 140px hingga 360px
-                final qrBoxSize = (maxSide - 6).clamp(130.0, 360.0);
-                final qrCodeSize = (qrBoxSize - 14).clamp(116.0, 346.0);
+                // Had saiz dinamik: fleksibel & lebih besar untuk imbasan jauh
+                final qrBoxSize = (maxSide - 4).clamp(150.0, 480.0);
+                final qrCodeSize = (qrBoxSize - 12).clamp(138.0, 468.0);
 
                 return Center(
                   child: GestureDetector(
@@ -1494,7 +1504,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                     child: Container(
                       width: qrBoxSize,
                       height: qrBoxSize,
-                      padding: const EdgeInsets.all(7), // Padding kecil ikut permintaan
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
