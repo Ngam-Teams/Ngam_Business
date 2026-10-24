@@ -60,12 +60,21 @@ class FeedService {
       throw Exception('Profil perniagaan tidak dijumpai.');
     }
 
+    final cleanMedia = mediaUrl.trim().toLowerCase();
+    final isVideo = cleanMedia.endsWith('.mp4') ||
+        cleanMedia.endsWith('.mov') ||
+        cleanMedia.endsWith('.webm') ||
+        cleanMedia.contains('/video/') ||
+        cleanMedia.contains('.mp4?') ||
+        mediaType == 'video';
+    final effectiveMediaType = isVideo ? 'video' : mediaType;
+
     final payload = {
       'business_id': businessId,
       'title': title,
       'caption': caption,
       'media_url': mediaUrl,
-      'media_type': mediaType,
+      'media_type': effectiveMediaType,
       'category': category,
       'service_tag': serviceTag,
       'cta_type': ctaType,
