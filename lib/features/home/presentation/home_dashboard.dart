@@ -891,7 +891,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final profile = _businessProfile ?? BusinessService.cachedProfile;
     final storeName = (profile?['business_name'] ?? profile?['name'] ?? profile?['title'] ?? 'Kedai Kami').toString().trim();
     final handle = (profile?['business_handle'] as String?)?.trim() ?? '';
-    final storeLink = handle.isNotEmpty ? 'https://ngam.dev/c/$handle' : 'https://ngam.dev';
+    final storeLink = handle.isNotEmpty ? 'https://ngam.dev/@$handle' : 'https://ngam.dev';
 
     final templates = [
       '🎉 Promosi Istimewa Hujung Minggu!\nJom nikmati hidangan lazat di $storeName hari ini! Kumpul cop ganjaran digital untuk setiap pembelian.\n\nLihat menu & pesan terus di sini:\n$storeLink',
