@@ -572,19 +572,19 @@ class _PromotionsPageState extends State<PromotionsPage> {
               : Colors.white.withValues(alpha: 0.06),
         ),
       ),
-      child: Stack(
-        children: [
-          Row(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: IntrinsicHeight(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Left Ticket Notch & Discount Stub
               Container(
-                width: 86,
+                width: 90,
                 decoration: BoxDecoration(
                   color: voucher.isPercentage
                       ? const Color(0xFF42A5F5).withValues(alpha: 0.12)
                       : const Color(0xFF44CF6C).withValues(alpha: 0.12),
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
                   border: Border(
                     right: BorderSide(
                       color: Colors.white.withValues(alpha: 0.1),
@@ -599,7 +599,7 @@ class _PromotionsPageState extends State<PromotionsPage> {
                   children: [
                     Icon(
                       voucher.isPercentage ? Icons.percent_rounded : Icons.monetization_on_outlined,
-                      size: 20,
+                      size: 22,
                       color: voucher.isPercentage ? const Color(0xFF42A5F5) : const Color(0xFF44CF6C),
                     ),
                     const SizedBox(height: 6),
@@ -608,11 +608,12 @@ class _PromotionsPageState extends State<PromotionsPage> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: voucher.isPercentage ? const Color(0xFF42A5F5) : const Color(0xFF44CF6C),
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       'POTONGAN',
                       style: TextStyle(
@@ -633,66 +634,73 @@ class _PromotionsPageState extends State<PromotionsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header Row: Code Chip + Status + Switch
+                      // Header Row: Code Chip + Status + Switch + More (Responsive Wrap)
                       Row(
                         children: [
-                          // Copyable Code Chip
-                          GestureDetector(
-                            onTap: () {
-                              Clipboard.setData(ClipboardData(text: voucher.code));
-                              showGlassToast(context, 'Kod "${voucher.code}" disalin!');
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: const Color(0xFF42A5F5).withValues(alpha: 0.4),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.copy_rounded, color: Color(0xFF42A5F5), size: 12),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    voucher.code,
-                                    style: const TextStyle(
-                                      color: Color(0xFF42A5F5),
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.8,
-                                      fontSize: 12,
+                          Flexible(
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                // Copyable Code Chip
+                                GestureDetector(
+                                  onTap: () {
+                                    Clipboard.setData(ClipboardData(text: voucher.code));
+                                    showGlassToast(context, 'Kod "${voucher.code}" disalin!');
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFF42A5F5).withValues(alpha: 0.4),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.copy_rounded, color: Color(0xFF42A5F5), size: 12),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          voucher.code,
+                                          style: const TextStyle(
+                                            color: Color(0xFF42A5F5),
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.8,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+
+                                // Status Pill
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    voucher.statusLabel,
+                                    style: TextStyle(
+                                      color: statusColor,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-
-                          // Status Pill
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              voucher.statusLabel,
-                              style: TextStyle(
-                                color: statusColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-
-                          const Spacer(),
+                          const SizedBox(width: 4),
 
                           // Quick Toggle Switch
-                          SizedBox(
-                            height: 28,
+                          Transform.scale(
+                            scale: 0.85,
                             child: Switch(
                               value: voucher.isActive,
                               activeColor: const Color(0xFF42A5F5),
@@ -703,6 +711,8 @@ class _PromotionsPageState extends State<PromotionsPage> {
                           // More Popup
                           PopupMenuButton<String>(
                             icon: const Icon(Icons.more_vert_rounded, color: Colors.white54, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                             color: const Color(0xFF1E2230),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             onSelected: (val) {
@@ -839,7 +849,7 @@ class _PromotionsPageState extends State<PromotionsPage> {
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
