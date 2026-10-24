@@ -2286,13 +2286,12 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                 // Media Layer: Video atau Gambar
                 Positioned.fill(
                   child: _isVideo
-                      ? GestureDetector(
-                          onTap: _togglePlayPause,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              if (_isVideoInitialized && _videoController != null)
-                                SizedBox.expand(
+                      ? Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            if (_isVideoInitialized && _videoController != null)
+                              IgnorePointer(
+                                child: SizedBox.expand(
                                   child: FittedBox(
                                     fit: BoxFit.cover,
                                     clipBehavior: Clip.hardEdge,
@@ -2306,7 +2305,8 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                                       child: VideoPlayer(_videoController!),
                                     ),
                                   ),
-                                )
+                                ),
+                              )
                               else if (_hasVideoError)
                                 Container(
                                   color: const Color(0xFF1E1B4B),
@@ -2329,20 +2329,29 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                                   ),
                                 ),
 
+                              // Interactive tap capture overlay
+                              Positioned.fill(
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: _togglePlayPause,
+                                ),
+                              ),
+
                               // Animated pause indicator
                               if (_isVideoInitialized && _videoController != null && !_videoController!.value.isPlaying)
-                                Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white38),
+                                IgnorePointer(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white38),
+                                    ),
+                                    child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 42),
                                   ),
-                                  child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 42),
                                 ),
                             ],
-                          ),
-                        )
+                          )
                       : Image.network(
                           widget.post.mediaUrl,
                           fit: BoxFit.cover,
