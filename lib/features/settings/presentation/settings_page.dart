@@ -97,7 +97,7 @@ class _SettingsPageState extends State<SettingsPage> {
         final isWide = constraints.maxWidth >= 900;
 
         if (isWide) {
-          final leftWidth = (constraints.maxWidth * 0.35).clamp(340.0, 420.0);
+          final leftWidth = (constraints.maxWidth * 0.32).clamp(340.0, 440.0);
 
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,25 +127,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.only(bottom: 120),
                   physics: const BouncingScrollPhysics(),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 820),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildSecurityPanel(),
-                          const SizedBox(height: 24),
-                          _buildBusinessManagementPanel(),
-                          const SizedBox(height: 24),
-                          _buildSubscriptionCard(),
-                          const SizedBox(height: 24),
-                          _buildAppInfoPanel(),
-                          const SizedBox(height: 32),
-                          _buildSignOutButton(),
-                        ],
-                      ),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildSecurityPanel(),
+                      const SizedBox(height: 24),
+                      _buildBusinessManagementPanel(),
+                      const SizedBox(height: 24),
+                      _buildSubscriptionCard(),
+                      const SizedBox(height: 24),
+                      _buildAppInfoPanel(),
+                      const SizedBox(height: 32),
+                      _buildSignOutButton(),
+                    ],
                   ),
                 ),
               ),
@@ -156,26 +150,23 @@ class _SettingsPageState extends State<SettingsPage> {
         // Mobile / Portrait Single-column scrollable
         return SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: 120),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                profileHeroCard,
-                const SizedBox(height: 24),
-                _buildAccountPanel(),
-                const SizedBox(height: 24),
-                _buildSecurityPanel(),
-                const SizedBox(height: 24),
-                _buildBusinessManagementPanel(),
-                const SizedBox(height: 24),
-                _buildSubscriptionCard(),
-                const SizedBox(height: 24),
-                _buildAppInfoPanel(),
-                const SizedBox(height: 32),
-                _buildSignOutButton(),
-              ],
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              profileHeroCard,
+              const SizedBox(height: 24),
+              _buildAccountPanel(),
+              const SizedBox(height: 24),
+              _buildSecurityPanel(),
+              const SizedBox(height: 24),
+              _buildBusinessManagementPanel(),
+              const SizedBox(height: 24),
+              _buildSubscriptionCard(),
+              const SizedBox(height: 24),
+              _buildAppInfoPanel(),
+              const SizedBox(height: 32),
+              _buildSignOutButton(),
+            ],
           ),
         );
       },
