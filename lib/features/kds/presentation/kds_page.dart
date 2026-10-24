@@ -32,6 +32,7 @@ class _KdsPageState extends State<KdsPage> {
   final Map<String, List<Map<String, dynamic>>> _orderItemsCache = {};
   final Set<String> _knownOrderIds = {};
   final Set<String> _checkedItemKeys = {};
+  final Map<String, KdsStage> _ticketStagesOverride = {};
 
   final OrdersService _ordersService = OrdersService();
 
@@ -207,6 +208,11 @@ class _KdsPageState extends State<KdsPage> {
         stage = KdsStage.ready;
       }
 
+      // Check if local operator stage override exists
+      if (_ticketStagesOverride.containsKey(id)) {
+        stage = _ticketStagesOverride[id]!;
+      }
+
       final rawItems = _orderItemsCache[id] ?? [];
       final List<Map<String, dynamic>> itemsList = rawItems.isEmpty
           ? [
@@ -271,42 +277,44 @@ class _KdsPageState extends State<KdsPage> {
   Future<void> _progressTicket(Map<String, dynamic> ticket) async {
     final stage = ticket['stage'] as KdsStage;
     final isDemo = _useDemoData || ticket['rawId'].toString().startsWith('demo-');
+    final rawId = ticket['rawId']?.toString();
+    final ticketId = ticket['id']?.toString() ?? '#';
 
-    if (isDemo) {
-      setState(() {
-        if (stage == KdsStage.incoming) {
-          ticket['stage'] = KdsStage.cooking;
-          showGlassToast(context, 'Tiket ${ticket['id']} beralih ke Sedang Disediakan');
-        } else if (stage == KdsStage.cooking) {
-          ticket['stage'] = KdsStage.ready;
-          showGlassToast(context, 'Tiket ${ticket['id']} ditandakan SIAP');
-        } else if (stage == KdsStage.ready) {
-          ticket['stage'] = KdsStage.served;
+    // 1. Optimistic instant UI transition so kitchen button responds immediately
+    setState(() {
+      if (stage == KdsStage.incoming) {
+        ticket['stage'] = KdsStage.cooking;
+        if (rawId != null) _ticketStagesOverride[rawId] = KdsStage.cooking;
+        showGlassToast(context, 'Tiket $ticketId beralih ke Sedang Disediakan');
+      } else if (stage == KdsStage.cooking) {
+        ticket['stage'] = KdsStage.ready;
+        if (rawId != null) _ticketStagesOverride[rawId] = KdsStage.ready;
+        showGlassToast(context, 'Tiket $ticketId ditandakan SIAP');
+      } else if (stage == KdsStage.ready) {
+        ticket['stage'] = KdsStage.served;
+        if (rawId != null) _ticketStagesOverride.remove(rawId);
+        if (isDemo) {
           _demoTickets.remove(ticket);
-          showGlassToast(context, 'Tiket ${ticket['id']} selesai!');
+        } else {
+          _liveTickets.remove(ticket);
         }
-      });
-      return;
+        showGlassToast(context, 'Tiket $ticketId selesai!');
+      }
+    });
+
+    if (isDemo || rawId == null) return;
+
+    // 2. Persist order status change to Supabase
+    String targetStatus = 'preparing';
+    if (stage == KdsStage.cooking) {
+      targetStatus = 'ready';
+    } else if (stage == KdsStage.ready) {
+      targetStatus = 'completed';
     }
 
-    final rawId = ticket['rawId']?.toString();
-    if (rawId == null) return;
-
-    if (stage == KdsStage.incoming) {
-      final success = await _ordersService.updateOrderStatus(rawId, 'preparing');
-      if (mounted && success) {
-        showGlassToast(context, 'Tiket ${ticket['id']} sedang dimasak / disediakan');
-      }
-    } else if (stage == KdsStage.cooking) {
-      final success = await _ordersService.updateOrderStatus(rawId, 'ready');
-      if (mounted && success) {
-        showGlassToast(context, 'Tiket ${ticket['id']} SIAP untuk diambil / dihidang');
-      }
-    } else if (stage == KdsStage.ready) {
-      final success = await _ordersService.updateOrderStatus(rawId, 'completed');
-      if (mounted && success) {
-        showGlassToast(context, 'Tiket ${ticket['id']} selesai & dibersihkan dari papan');
-      }
+    final success = await _ordersService.updateOrderStatus(rawId, targetStatus);
+    if (!success) {
+      debugPrint('[KDS] Note: Order status update for $rawId ($targetStatus) failed. Running with local stage override.');
     }
   }
 

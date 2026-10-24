@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../settings/data/business_service.dart';
@@ -86,6 +87,7 @@ class OrdersService {
           .eq('id', orderId);
       return true;
     } catch (e) {
+      debugPrint('[OrdersService] updateOrderStatus error ($orderId -> $newStatus): $e');
       return false;
     }
   }
