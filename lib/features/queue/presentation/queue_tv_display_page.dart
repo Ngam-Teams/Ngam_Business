@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -665,20 +666,20 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
               ),
               const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.4),
-                      blurRadius: 20,
+                      blurRadius: 24,
                     ),
                   ],
                 ),
                 child: QrImageView(
                   data: _qrUrl,
-                  size: 240,
+                  size: 280,
                   version: QrVersions.auto,
                   gapless: true,
                   errorCorrectionLevel: QrErrorCorrectLevel.H,
@@ -1284,7 +1285,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
 
   Widget _buildMobileCompactQrBanner() {
     return Container(
-      height: 105,
+      height: 125,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         gradient: RadialGradient(
@@ -1295,27 +1296,35 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
             const Color(0xFF0F172A),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
+          color: const Color(0xFF3B82F6).withValues(alpha: 0.45),
           width: 1.5,
         ),
       ),
       child: Row(
         children: [
-          // Kod QR Mini & Sharp (75px)
+          // Kod QR Diperbesar & Ikut Ketinggian Banner (100px)
           GestureDetector(
             onTap: _openFullscreenQrModal,
             child: Container(
+              width: 104,
+              height: 104,
               padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF3B82F6), width: 1.5),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF3B82F6), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                    blurRadius: 12,
+                  ),
+                ],
               ),
               child: QrImageView(
                 data: _qrUrl,
-                size: 75,
+                size: 94,
                 version: QrVersions.auto,
                 gapless: true,
                 errorCorrectionLevel: QrErrorCorrectLevel.M,
@@ -1367,7 +1376,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -1376,7 +1385,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                   _shortUrlDisplay,
                   style: const TextStyle(
                     color: Color(0xFF34D399),
-                    fontSize: 11,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1389,12 +1398,12 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   // ===========================================================================
-  // KOMPONEN: KOD QR PADAT 1/5 WIDESCREEN (~20% SKRIN TV)
+  // KOMPONEN: KOD QR PADAT 1/5 WIDESCREEN (IKUT CONTAINER & SAIZ DINAMIK)
   // ===========================================================================
 
   Widget _buildCompactQrPanel() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         gradient: RadialGradient(
           center: Alignment.center,
@@ -1418,11 +1427,10 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         ],
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           // Header Badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
             decoration: BoxDecoration(
               color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(16),
@@ -1445,62 +1453,79 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
               ],
             ),
           ),
+          const SizedBox(height: 6),
 
           // Business Name & Tagline
-          Column(
-            children: [
-              Text(
-                _businessName.toUpperCase(),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.4,
-                ),
-              ),
-              const SizedBox(height: 2),
-              const Text(
-                'Sertai giliran dari telefon anda',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white60, fontSize: 10),
-              ),
-            ],
-          ),
-
-          // Compact QR Box (135px, padat dan tidak melampau besar)
-          GestureDetector(
-            onTap: _openFullscreenQrModal,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF3B82F6),
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
-                    blurRadius: 16,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: QrImageView(
-                data: _qrUrl,
-                size: 135,
-                version: QrVersions.auto,
-                gapless: true,
-                errorCorrectionLevel: QrErrorCorrectLevel.M,
-              ),
+          Text(
+            _businessName.toUpperCase(),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.4,
             ),
           ),
+          const SizedBox(height: 2),
+          const Text(
+            'Sertai giliran dari telefon anda',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white60, fontSize: 10),
+          ),
+          const SizedBox(height: 6),
 
-          // Short URL Pill
+          // 🟢 KOD QR DINAMIK: Mengisi ruang container dengan padding kecil kemas
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth;
+                final availableHeight = constraints.maxHeight;
+                // Ambil dimensi segiempat sama terbesar yang muat dalam container
+                final maxSide = math.min(availableWidth, availableHeight);
+                // Had saiz dinamik: fleksibel antara 140px hingga 360px
+                final qrBoxSize = (maxSide - 6).clamp(130.0, 360.0);
+                final qrCodeSize = (qrBoxSize - 14).clamp(116.0, 346.0);
+
+                return Center(
+                  child: GestureDetector(
+                    onTap: _openFullscreenQrModal,
+                    child: Container(
+                      width: qrBoxSize,
+                      height: qrBoxSize,
+                      padding: const EdgeInsets.all(7), // Padding kecil ikut permintaan
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF3B82F6),
+                          width: 2.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.35),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: QrImageView(
+                        data: _qrUrl,
+                        size: qrCodeSize,
+                        version: QrVersions.auto,
+                        gapless: true,
+                        errorCorrectionLevel: QrErrorCorrectLevel.M,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Short URL Pill (ngam.dev)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
@@ -1524,17 +1549,20 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
               ],
             ),
           ),
+          const SizedBox(height: 6),
 
-          // 3 Step Guide
-          Column(
+          // 3 Step Guide (Horizontal Row untuk jimat ruang menegak)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildStepMiniRow('1', 'Buka Kamera'),
-              const SizedBox(height: 3),
-              _buildStepMiniRow('2', 'Imbas Kod QR'),
-              const SizedBox(height: 3),
-              _buildStepMiniRow('3', 'Pantau di Telefon'),
+              _buildStepMiniRow('1', 'Kamera'),
+              const SizedBox(width: 8),
+              _buildStepMiniRow('2', 'Imbas'),
+              const SizedBox(width: 8),
+              _buildStepMiniRow('3', 'Telefon'),
             ],
           ),
+          const SizedBox(height: 4),
 
           // Tap to Enlarge Hint
           InkWell(

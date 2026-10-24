@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -184,68 +185,82 @@ class DashboardScaffold extends StatelessWidget {
                                 .trim();
                             final handle =
                                 (profile?['business_handle'] as String?)?.trim();
+                            final logoUrl = (profile?['business_logo_url'] ??
+                                    profile?['logo_url']) as String?;
 
                             if (profile == null) {
                               BusinessService().getBusinessProfile();
                             }
 
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 9,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
+                            return Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              child: InkWell(
+                                onTap: () => context.push('/business-profile'),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.08),
+                                hoverColor: Colors.white.withValues(alpha: 0.08),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.08),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      _StoreAvatar(
+                                        size: 34,
+                                        logoUrl: logoUrl,
+                                        businessName: businessName,
+                                        showStatusDot: true,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              businessName.isEmpty
+                                                  ? 'Memuatkan...'
+                                                  : businessName,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 1.5),
+                                            Text(
+                                              handle != null && handle.isNotEmpty
+                                                  ? '@$handle'
+                                                  : 'Live on Explore',
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(alpha: 0.45),
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 16,
+                                        color: Colors.white.withValues(alpha: 0.3),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF00E676),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          businessName.isEmpty
-                                              ? 'Memuatkan...'
-                                              : businessName,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 1.5),
-                                        Text(
-                                          handle != null && handle.isNotEmpty
-                                              ? '@$handle'
-                                              : 'Live on Explore',
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(alpha: 0.45),
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
                               ),
                             );
                           },
@@ -265,65 +280,28 @@ class DashboardScaffold extends StatelessWidget {
                               .trim();
                           final handle =
                               (profile?['business_handle'] as String?)?.trim();
+                          final logoUrl = (profile?['business_logo_url'] ??
+                                  profile?['logo_url']) as String?;
 
                           if (profile == null) {
                             BusinessService().getBusinessProfile();
                           }
 
-                          final initial = businessName.isNotEmpty
-                              ? businessName[0].toUpperCase()
-                              : 'B';
-
                           final tooltipText = businessName.isEmpty
-                              ? 'Memuatkan profil...'
+                              ? 'Profil Kedai'
                               : (handle != null && handle.isNotEmpty
                                   ? '$businessName (@$handle)'
                                   : businessName);
 
                           return Tooltip(
-                            message: tooltipText,
-                            waitDuration: const Duration(milliseconds: 300),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.08),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.16),
-                                      width: 1.2,
-                                    ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    initial,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    width: 9,
-                                    height: 9,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF00E676),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFF0A0A14),
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            message: '$tooltipText\n(Klik untuk profil)',
+                            waitDuration: const Duration(milliseconds: 250),
+                            child: _StoreAvatar(
+                              size: 38,
+                              logoUrl: logoUrl,
+                              businessName: businessName,
+                              showStatusDot: true,
+                              onTap: () => context.push('/business-profile'),
                             ),
                           );
                         },
@@ -710,21 +688,184 @@ class _TopBarActions extends StatelessWidget {
             size: 20,
             strokeWidth: 2.1,
           ),
-          onPressed: () {},
+          tooltip: 'Pemberitahuan',
+          onPressed: () => context.push('/merchant-inbox'),
         ),
         const SizedBox(width: 8),
-        CircleAvatar(
-          radius: 18,
-          backgroundColor:
-              const Color(0xFF42A5F5).withValues(alpha: 0.3),
-          child: const HugeIcon(
-            icon: HugeIcons.strokeRoundedUser,
-            color: Color(0xFF42A5F5),
-            size: 18,
-            strokeWidth: 2.1,
-          ),
+        ValueListenableBuilder<Map<String, dynamic>?>(
+          valueListenable: BusinessService.profileNotifier,
+          builder: (context, liveProfile, _) {
+            final profile = liveProfile ?? BusinessService.cachedProfile;
+            final businessName = (profile?['business_name'] ??
+                    profile?['name'] ??
+                    profile?['title'] ??
+                    '')
+                .toString()
+                .trim();
+            final logoUrl = (profile?['business_logo_url'] ??
+                    profile?['logo_url']) as String?;
+
+            return Tooltip(
+              message: 'Profil Kedai',
+              child: _StoreAvatar(
+                size: 34,
+                logoUrl: logoUrl,
+                businessName: businessName,
+                showStatusDot: false,
+                onTap: () => context.push('/business-profile'),
+              ),
+            );
+          },
         ),
       ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Store Avatar (Displays business logo with graceful initial-fallback)
+// ---------------------------------------------------------------------------
+class _StoreAvatar extends StatelessWidget {
+  final double size;
+  final String? logoUrl;
+  final String businessName;
+  final bool showStatusDot;
+  final VoidCallback? onTap;
+
+  const _StoreAvatar({
+    this.size = 36,
+    this.logoUrl,
+    required this.businessName,
+    this.showStatusDot = true,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = businessName.trim().isNotEmpty
+        ? businessName.trim()[0].toUpperCase()
+        : 'N';
+
+    final hasLogo = logoUrl != null && logoUrl!.trim().isNotEmpty;
+
+    final avatarContent = ClipOval(
+      child: hasLogo
+          ? Image.network(
+              logoUrl!.trim(),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return _buildFallback(initial);
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: size,
+                  height: size,
+                  color: Colors.white.withValues(alpha: 0.05),
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: size * 0.4,
+                    height: size * 0.4,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF42A5F5),
+                    ),
+                  ),
+                );
+              },
+            )
+          : _buildFallback(initial),
+    );
+
+    final avatarCircle = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFF161622),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.16),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: avatarContent,
+    );
+
+    Widget result = avatarCircle;
+
+    if (showStatusDot) {
+      final dotSize = (size * 0.26).clamp(8.0, 11.0);
+      result = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          avatarCircle,
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: dotSize,
+              height: dotSize,
+              decoration: BoxDecoration(
+                color: const Color(0xFF00E676),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFF0A0A14),
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (onTap != null) {
+      result = MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: result,
+        ),
+      );
+    }
+
+    return result;
+  }
+
+  Widget _buildFallback(String initial) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF2A2B3D),
+            Color(0xFF161622),
+          ],
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: size * 0.42,
+        ),
+      ),
     );
   }
 }
