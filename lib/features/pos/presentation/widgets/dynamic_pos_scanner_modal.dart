@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../../core/services/sound_service.dart';
 import '../../../customers/data/membership_service.dart';
@@ -115,6 +117,19 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
   bool _isResolving = false;
   String? _statusError;
 
+  // Camera Scanner on Tablet / Phone
+  MobileScannerController? _cameraController;
+  bool _isCameraActive = true;
+  bool _torchOn = false;
+  String? _lastScannedCode;
+  DateTime? _lastScannedTime;
+
+  bool get _isCameraSupported =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
   // New walk-in member registration controllers
   final TextEditingController _newNameCtrl = TextEditingController();
   final TextEditingController _newPhoneCtrl = TextEditingController();
@@ -130,6 +145,14 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
       duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
 
+    if (_isCameraSupported) {
+      _cameraController = MobileScannerController(
+        detectionSpeed: DetectionSpeed.noDuplicates,
+        facing: CameraFacing.back,
+        torchEnabled: false,
+      );
+    }
+
     _loadActiveVouchers();
 
     // Auto-focus the input field so physical scanner guns immediately work!
@@ -140,12 +163,61 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
 
   @override
   void dispose() {
+    _cameraController?.dispose();
     _laserAnim.dispose();
     _inputCtrl.dispose();
     _inputFocus.dispose();
     _newNameCtrl.dispose();
     _newPhoneCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleTorch() async {
+    if (_cameraController == null) return;
+    try {
+      await _cameraController!.toggleTorch();
+      if (mounted) setState(() => _torchOn = !_torchOn);
+    } catch (_) {}
+  }
+
+  Future<void> _switchCamera() async {
+    if (_cameraController == null) return;
+    try {
+      await _cameraController!.switchCamera();
+    } catch (_) {}
+  }
+
+  void _toggleCameraPower() {
+    setState(() {
+      _isCameraActive = !_isCameraActive;
+      if (_isCameraActive) {
+        _cameraController?.start();
+      } else {
+        _cameraController?.stop();
+      }
+    });
+  }
+
+  void _onBarcodeDetected(BarcodeCapture capture) {
+    if (_isResolving) return;
+    final now = DateTime.now();
+    for (final barcode in capture.barcodes) {
+      final code = barcode.rawValue;
+      if (code != null && code.trim().isNotEmpty) {
+        final trimmed = code.trim();
+        // Debounce if the same code was scanned within 2 seconds
+        if (_lastScannedCode == trimmed &&
+            _lastScannedTime != null &&
+            now.difference(_lastScannedTime!).inMilliseconds < 2000) {
+          return;
+        }
+        _lastScannedCode = trimmed;
+        _lastScannedTime = now;
+        _inputCtrl.text = trimmed;
+        _resolveCode(trimmed);
+        break;
+      }
+    }
   }
 
   Future<void> _loadActiveVouchers() async {
@@ -331,9 +403,7 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF00C853), Color(0xFF42A5F5)],
-              ),
+              color: const Color(0xFF00C853),
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
@@ -464,102 +534,240 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
   Widget _buildAutoScannerTab() {
     return Column(
       children: [
-        // Viewfinder HUD with Animated Laser
+        // Viewfinder HUD with Live Camera or Animated Laser & Scanner Gun HUD
         Container(
-          height: 180,
+          height: 200,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.4),
+            color: Colors.black.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
           ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Reticle Corners
-              Positioned(
-                top: 16,
-                left: 16,
-                child: _hudCorner(top: true, left: true),
-              ),
-              Positioned(
-                top: 16,
-                right: 16,
-                child: _hudCorner(top: true, left: false),
-              ),
-              Positioned(
-                bottom: 16,
-                left: 16,
-                child: _hudCorner(top: false, left: true),
-              ),
-              Positioned(
-                bottom: 16,
-                right: 16,
-                child: _hudCorner(top: false, left: false),
-              ),
-
-              // Animated Scanning Laser Line
-              AnimatedBuilder(
-                animation: _laserAnim,
-                builder: (context, _) {
-                  return Positioned(
-                    top: 24 + (_laserAnim.value * 128),
-                    left: 28,
-                    right: 28,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (_isCameraSupported && _isCameraActive) ...[
+                  // Live Camera View
+                  Positioned.fill(
+                    child: MobileScanner(
+                      controller: _cameraController,
+                      fit: BoxFit.cover,
+                      onDetect: _onBarcodeDetected,
+                      errorBuilder: (context, error) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.videocam_off_rounded, color: Colors.amber, size: 30),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Akses kamera tidak aktif / peranti tidak menyokong.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // Slight vignette overlay for reticle and laser contrast
+                  Positioned.fill(
                     child: Container(
-                      height: 2.5,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                        gradient: RadialGradient(
+                          center: Alignment.center,
+                          radius: 0.9,
                           colors: [
                             Colors.transparent,
-                            Color(0xFF00C853),
-                            Color(0xFF69F0AE),
-                            Color(0xFF00C853),
-                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.35),
                           ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF00C853).withValues(alpha: 0.9),
-                            blurRadius: 12,
-                            spreadRadius: 2,
-                          ),
-                        ],
                       ),
                     ),
-                  );
-                },
-              ),
-
-              // Center Guidance Text
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.barcode_reader,
-                    color: Colors.white.withValues(alpha: 0.35),
-                    size: 38,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Halakan Pengimbas Kod Bar / QR Pelanggan',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Sistem akan kesan secara dinamik: Ahli, Baucar, atau Hadiah',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      fontSize: 10,
-                    ),
+                ] else ...[
+                  // Desktop / Manual Barcode Gun Guidance
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00C853).withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.barcode_reader,
+                          color: const Color(0xFF00C853).withValues(alpha: 0.85),
+                          size: 34,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _isCameraSupported
+                            ? 'Kamera Dimatikan (Mod Imbasan Teks / Gun)'
+                            : 'Mod Desktop POS — Halakan Barcode Scanner Gun',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _isCameraSupported
+                            ? 'Tekan ikon kamera di atas untuk hidupkan kamera peranti'
+                            : '📱 Kamera langsung aktif automatik apabila dibuka di tablet atau telefon',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 10,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ],
+
+                // Reticle Corners
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  child: _hudCorner(top: true, left: true),
+                ),
+                Positioned(
+                  top: 14,
+                  right: 14,
+                  child: _hudCorner(top: true, left: false),
+                ),
+                Positioned(
+                  bottom: 14,
+                  left: 14,
+                  child: _hudCorner(top: false, left: true),
+                ),
+                Positioned(
+                  bottom: 14,
+                  right: 14,
+                  child: _hudCorner(top: false, left: false),
+                ),
+
+                // Animated Scanning Laser Line
+                AnimatedBuilder(
+                  animation: _laserAnim,
+                  builder: (context, _) {
+                    return Positioned(
+                      top: 18 + (_laserAnim.value * 156),
+                      left: 24,
+                      right: 24,
+                      child: Container(
+                        height: 2.5,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Color(0xFF00C853),
+                              Color(0xFF69F0AE),
+                              Color(0xFF00C853),
+                              Colors.transparent,
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF00C853).withValues(alpha: 0.9),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                // Top HUD Bar (Badge + Controls)
+                Positioned(
+                  top: 10,
+                  left: 20,
+                  right: 20,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: (_isCameraSupported && _isCameraActive)
+                                ? const Color(0xFF00C853).withValues(alpha: 0.6)
+                                : Colors.white24,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: (_isCameraSupported && _isCameraActive)
+                                    ? const Color(0xFF00C853)
+                                    : Colors.white54,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              (_isCameraSupported && _isCameraActive)
+                                  ? 'KAMERA AKTIF'
+                                  : 'SCANNER GUN / INPUT',
+                              style: TextStyle(
+                                color: (_isCameraSupported && _isCameraActive)
+                                    ? const Color(0xFF00C853)
+                                    : Colors.white70,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      if (_isCameraSupported) ...[
+                        _hudIconButton(
+                          icon: _torchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                          color: _torchOn ? const Color(0xFFFFD600) : Colors.white70,
+                          onPressed: _toggleTorch,
+                          tooltip: 'Lampu Suluh',
+                        ),
+                        const SizedBox(width: 6),
+                        _hudIconButton(
+                          icon: Icons.cameraswitch_rounded,
+                          color: Colors.white70,
+                          onPressed: _switchCamera,
+                          tooltip: 'Tukar Kamera',
+                        ),
+                        const SizedBox(width: 6),
+                        _hudIconButton(
+                          icon: _isCameraActive ? Icons.videocam_rounded : Icons.videocam_off_rounded,
+                          color: _isCameraActive ? const Color(0xFF00C853) : Colors.white38,
+                          onPressed: _toggleCameraPower,
+                          tooltip: _isCameraActive ? 'Matikan Kamera' : 'Hidupkan Kamera',
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
@@ -721,6 +929,35 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
         ),
       ),
     );
+  }
+
+  Widget _hudIconButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+    String? tooltip,
+  }) {
+    final button = Material(
+      color: Colors.black.withValues(alpha: 0.6),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+          ),
+          child: Icon(icon, size: 15, color: color),
+        ),
+      ),
+    );
+
+    if (tooltip != null) {
+      return Tooltip(message: tooltip, child: button);
+    }
+    return button;
   }
 
   Widget _quickChip({

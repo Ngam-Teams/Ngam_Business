@@ -1492,9 +1492,7 @@ class _PosPageState extends State<PosPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF00C853), Color(0xFF42A5F5)],
-                ),
+                color: const Color(0xFF00C853),
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(

@@ -45,6 +45,8 @@
 		<true/>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
+		<key>NSCameraUsageDescription</key>
+		<string>Aplikasi memerlukan akses kamera untuk mengimbas kod QR dan kod bar pelanggan serta baucar.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>
