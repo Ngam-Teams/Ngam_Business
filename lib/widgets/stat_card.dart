@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import 'skeleton_box.dart';
+
 /// StatCard — frosted glass metric card styled like Pusat Kawalan / Pusat Operasi.
 /// Features a compact 2x2 grid form-factor, smooth micro-interactions,
 /// glowing accent borders, and status badge pill.
@@ -12,6 +14,7 @@ class StatCard extends StatefulWidget {
   final Color accentColor;
   final Color? badgeColor;
   final VoidCallback? onTap;
+  final bool isLoading;
 
   const StatCard({
     super.key,
@@ -22,6 +25,7 @@ class StatCard extends StatefulWidget {
     this.accentColor = const Color(0xFF42A5F5),
     this.badgeColor,
     this.onTap,
+    this.isLoading = false,
   });
 
   @override
@@ -125,19 +129,29 @@ class _StatCardState extends State<StatCard> {
                   const SizedBox(height: 7),
 
                   // Middle: Value
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      widget.value,
-                      style: const TextStyle(
-                        fontSize: 19.5,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
+                  if (widget.isLoading || widget.value == '...')
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 2),
+                      child: SkeletonBox(
+                        width: 75,
+                        height: 20,
+                        borderRadius: BorderRadius.all(Radius.circular(6)),
+                      ),
+                    )
+                  else
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        widget.value,
+                        style: const TextStyle(
+                          fontSize: 19.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
                       ),
                     ),
-                  ),
                   const SizedBox(height: 2),
 
                   // Bottom: Label

@@ -121,7 +121,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
         final cards = [
           StatCard(
             label: "Today's Revenue",
-            value: loading ? '...' : fmt.format(todayRev),
+            value: fmt.format(todayRev),
+            isLoading: loading,
             subtitle: '↑ Today',
             badgeColor: const Color(0xFF44CF6C),
             icon: HugeIcons.strokeRoundedMoney01,
@@ -130,7 +131,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
           StatCard(
             label: "Today's Orders",
-            value: loading ? '...' : todayOrders.toString(),
+            value: todayOrders.toString(),
+            isLoading: loading,
             subtitle: 'Orders',
             badgeColor: const Color(0xFF42A5F5),
             icon: HugeIcons.strokeRoundedShoppingBag01,
@@ -139,7 +141,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
           StatCard(
             label: 'Pending Orders',
-            value: loading ? '...' : pendingOrders.toString(),
+            value: pendingOrders.toString(),
+            isLoading: loading,
             subtitle: pendingOrders > 0 ? '$pendingOrders Action' : 'Cleared',
             badgeColor: pendingOrders > 0 ? const Color(0xFFF9C80E) : const Color(0xFF44CF6C),
             icon: HugeIcons.strokeRoundedTime02,
@@ -148,7 +151,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
           StatCard(
             label: 'Monthly Revenue',
-            value: loading ? '...' : fmt.format(monthlyRev),
+            value: fmt.format(monthlyRev),
+            isLoading: loading,
             subtitle: 'This Month',
             badgeColor: const Color(0xFF8B5CF6),
             icon: HugeIcons.strokeRoundedChartIncrease,

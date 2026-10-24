@@ -4,6 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 
 import '../../../widgets/glass_toast.dart';
+import '../../../widgets/skeleton_box.dart';
 import '../data/analytics_service.dart';
 
 enum AnalyticsPeriod {
@@ -193,19 +194,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   final summaryCards = [
                     _SummaryCard(
                       label: '${_getPeriodLabel()} Revenue',
-                      value: loading ? '...' : fmt.format(displayedRevenue),
+                      value: fmt.format(displayedRevenue),
+                      isLoading: loading,
                       color: const Color(0xFF42A5F5),
                       icon: HugeIcons.strokeRoundedMoney01,
                     ),
                     _SummaryCard(
                       label: '${_getPeriodLabel()} Orders',
-                      value: loading ? '...' : displayedOrders.toString(),
+                      value: displayedOrders.toString(),
+                      isLoading: loading,
                       color: const Color(0xFF44CF6C),
                       icon: HugeIcons.strokeRoundedShoppingBag01,
                     ),
                     _SummaryCard(
                       label: 'Avg Order Value',
-                      value: loading ? '...' : fmt.format(avgOrder),
+                      value: fmt.format(avgOrder),
+                      isLoading: loading,
                       color: const Color(0xFFF9C80E),
                       icon: HugeIcons.strokeRoundedReceiptText,
                     ),
@@ -784,12 +788,14 @@ class _SummaryCard extends StatelessWidget {
   final String value;
   final Color color;
   final dynamic icon;
+  final bool isLoading;
 
   const _SummaryCard({
     required this.label,
     required this.value,
     required this.color,
     required this.icon,
+    this.isLoading = false,
   });
 
   @override
@@ -809,19 +815,29 @@ class _SummaryCard extends StatelessWidget {
         children: [
           HugeIcon(icon: icon, color: color, size: 20, strokeWidth: 2.1),
           const SizedBox(height: 10),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
+          if (isLoading || value == '...')
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 2),
+              child: SkeletonBox(
+                width: 80,
+                height: 20,
+                borderRadius: BorderRadius.all(Radius.circular(6)),
+              ),
+            )
+          else
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
-          ),
           const SizedBox(height: 4),
           Text(
             label,
