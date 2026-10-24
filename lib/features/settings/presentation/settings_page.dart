@@ -83,297 +83,364 @@ class _SettingsPageState extends State<SettingsPage> {
 
     final locationText = [city, state].where((s) => s.isNotEmpty).join(', ');
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 120),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Business Profile Highlight Card (Twitter banner style with centered logo & Ngam design)
-            _buildProfileHeroCard(
-              businessName: businessName,
-              industry: industry,
-              locationText: locationText,
-              hasLocation: hasLocation,
-              logoUrl: logoUrl,
-              coverUrl: coverUrl,
-            ),
+    final profileHeroCard = _buildProfileHeroCard(
+      businessName: businessName,
+      industry: industry,
+      locationText: locationText,
+      hasLocation: hasLocation,
+      logoUrl: logoUrl,
+      coverUrl: coverUrl,
+    );
 
-            const SizedBox(height: 24),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 900;
 
-            // Profile card
-            _buildPanel(
-              title: 'Account',
-              icon: HugeIcons.strokeRoundedUser,
-              child: Column(
-                children: [
-                  _buildInfoRow(
-                    label: 'Email',
-                    value: _userEmail,
-                    icon: HugeIcons.strokeRoundedMail01,
+        if (isWide) {
+          final leftWidth = (constraints.maxWidth * 0.35).clamp(340.0, 420.0);
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Fixed Left Column: Profile Hero Card + Account Card
+              SizedBox(
+                width: leftWidth,
+                height: constraints.maxHeight,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      profileHeroCard,
+                      const SizedBox(height: 20),
+                      _buildAccountPanel(),
+                    ],
                   ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildInfoRow(
-                    label: 'User ID',
-                    value: '$_userId...',
-                    icon: HugeIcons.strokeRoundedIdentification,
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildInfoRow(
-                    label: 'Role',
-                    value: 'Tenant Admin',
-                    icon: HugeIcons.strokeRoundedShield01,
-                    valueColor: const Color(0xFF42A5F5),
-                  ),
-                ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 24),
+              const SizedBox(width: 24),
 
-            // Security & Access Control
-            _buildPanel(
-              title: 'Security & Access Control',
-              icon: HugeIcons.strokeRoundedShield01,
-              child: Column(
-                children: [
-                  _buildNavRow(
-                    label: 'Two-Factor Authentication (2FA / TOTP)',
-                    icon: HugeIcons.strokeRoundedShield02,
-                    onTap: () => context.push('/mfa-setup'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Audit Trails & Security Logs',
-                    icon: HugeIcons.strokeRoundedTask01,
-                    onTap: () => context.push('/audit-logs'),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Business settings
-            _buildPanel(
-              title: 'Business Management',
-              icon: HugeIcons.strokeRoundedBuilding03,
-              child: Column(
-                children: [
-                  _buildNavRow(
-                    label: 'Business Profile & Details',
-                    icon: HugeIcons.strokeRoundedNote01,
-                    onTap: () async {
-                      await context.push('/business-profile');
-                      _loadBusiness();
-                    },
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Staff Management',
-                    icon: HugeIcons.strokeRoundedUserGroup,
-                    onTap: () => context.push('/staff-management'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Items & Services',
-                    icon: HugeIcons.strokeRoundedGridView,
-                    onTap: () => context.push('/product-catalogue'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Operating Hours & Rush Mode',
-                    icon: HugeIcons.strokeRoundedTime02,
-                    onTap: () => context.push('/operating-hours'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Inventory & Stock Alerts',
-                    icon: HugeIcons.strokeRoundedPackageDelivered,
-                    onTap: () => context.push('/inventory'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Ngam Feed & Post Studio',
-                    icon: HugeIcons.strokeRoundedVideo01,
-                    onTap: () => context.push('/feed-studio'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Promotions & Vouchers',
-                    icon: HugeIcons.strokeRoundedDiscountTag02,
-                    onTap: () => context.push('/promotions'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Customer Reviews',
-                    icon: HugeIcons.strokeRoundedStar,
-                    onTap: () => context.push('/customer-reviews'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Customer Insights & VIPs',
-                    icon: HugeIcons.strokeRoundedUserGroup,
-                    onTap: () => context.push('/customers'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Payouts & Bank Settlement',
-                    icon: HugeIcons.strokeRoundedMoneySend02,
-                    onTap: () => context.push('/payouts'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Live Order Board',
-                    icon: HugeIcons.strokeRoundedTv01,
-                    onTap: () => context.push('/kds'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Customer Messaging Inbox',
-                    icon: HugeIcons.strokeRoundedChatting01,
-                    onTap: () => context.push('/merchant-inbox'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'QR & Standee Generator',
-                    icon: HugeIcons.strokeRoundedQrCode,
-                    onTap: () => context.push('/qr-generator'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Cash Drawer & Z-Report',
-                    icon: HugeIcons.strokeRoundedMoney01,
-                    onTap: () => context.push('/cash-drawer'),
-                  ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildNavRow(
-                    label: 'Receipts & Thermal Printer',
-                    icon: HugeIcons.strokeRoundedPrinter,
-                    onTap: () => context.push('/receipt-settings'),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Subscription Tier & Plan Card (Perkemas & premium modern card)
-            _buildSubscriptionCard(),
-
-            const SizedBox(height: 24),
-
-            // App info
-            _buildPanel(
-              title: 'App',
-              icon: HugeIcons.strokeRoundedInformationCircle,
-              child: Column(
-                children: [
-                  InkWell(
-                    onTap: () => AppUpdateService.checkManually(context),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
+              // Scrollable Right Column: All other settings
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 120),
+                  physics: const BouncingScrollPhysics(),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 820),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: _buildInfoRow(
-                              label: 'Version',
-                              value: 'v${AppUpdateService.currentVersion}',
-                              icon: HugeIcons.strokeRoundedCode,
-                              valueColor: const Color(0xFF44CF6C),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF44CF6C).withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Semak Kemas Kini',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF44CF6C),
-                              ),
-                            ),
-                          ),
+                          _buildSecurityPanel(),
+                          const SizedBox(height: 24),
+                          _buildBusinessManagementPanel(),
+                          const SizedBox(height: 24),
+                          _buildSubscriptionCard(),
+                          const SizedBox(height: 24),
+                          _buildAppInfoPanel(),
+                          const SizedBox(height: 32),
+                          _buildSignOutButton(),
                         ],
                       ),
                     ),
                   ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildInfoRow(
-                    label: 'Build',
-                    value: 'Oct 1 (Clean Rebuild)',
-                    icon: HugeIcons.strokeRoundedCalendar03,
-                    valueColor: const Color(0xFF42A5F5),
+                ),
+              ),
+            ],
+          );
+        }
+
+        // Mobile / Portrait Single-column scrollable
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 120),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                profileHeroCard,
+                const SizedBox(height: 24),
+                _buildAccountPanel(),
+                const SizedBox(height: 24),
+                _buildSecurityPanel(),
+                const SizedBox(height: 24),
+                _buildBusinessManagementPanel(),
+                const SizedBox(height: 24),
+                _buildSubscriptionCard(),
+                const SizedBox(height: 24),
+                _buildAppInfoPanel(),
+                const SizedBox(height: 32),
+                _buildSignOutButton(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAccountPanel() {
+    return _buildPanel(
+      title: 'Account',
+      icon: HugeIcons.strokeRoundedUser,
+      child: Column(
+        children: [
+          _buildInfoRow(
+            label: 'Email',
+            value: _userEmail,
+            icon: HugeIcons.strokeRoundedMail01,
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildInfoRow(
+            label: 'User ID',
+            value: '$_userId...',
+            icon: HugeIcons.strokeRoundedIdentification,
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildInfoRow(
+            label: 'Role',
+            value: 'Tenant Admin',
+            icon: HugeIcons.strokeRoundedShield01,
+            valueColor: const Color(0xFF42A5F5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSecurityPanel() {
+    return _buildPanel(
+      title: 'Security & Access Control',
+      icon: HugeIcons.strokeRoundedShield01,
+      child: Column(
+        children: [
+          _buildNavRow(
+            label: 'Two-Factor Authentication (2FA / TOTP)',
+            icon: HugeIcons.strokeRoundedShield02,
+            onTap: () => context.push('/mfa-setup'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Audit Trails & Security Logs',
+            icon: HugeIcons.strokeRoundedTask01,
+            onTap: () => context.push('/audit-logs'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessManagementPanel() {
+    return _buildPanel(
+      title: 'Business Management',
+      icon: HugeIcons.strokeRoundedBuilding03,
+      child: Column(
+        children: [
+          _buildNavRow(
+            label: 'Business Profile & Details',
+            icon: HugeIcons.strokeRoundedNote01,
+            onTap: () async {
+              await context.push('/business-profile');
+              _loadBusiness();
+            },
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Staff Management',
+            icon: HugeIcons.strokeRoundedUserGroup,
+            onTap: () => context.push('/staff-management'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Items & Services',
+            icon: HugeIcons.strokeRoundedGridView,
+            onTap: () => context.push('/product-catalogue'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Operating Hours & Rush Mode',
+            icon: HugeIcons.strokeRoundedTime02,
+            onTap: () => context.push('/operating-hours'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Inventory & Stock Alerts',
+            icon: HugeIcons.strokeRoundedPackageDelivered,
+            onTap: () => context.push('/inventory'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Ngam Feed & Post Studio',
+            icon: HugeIcons.strokeRoundedVideo01,
+            onTap: () => context.push('/feed-studio'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Promotions & Vouchers',
+            icon: HugeIcons.strokeRoundedDiscountTag02,
+            onTap: () => context.push('/promotions'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Customer Reviews',
+            icon: HugeIcons.strokeRoundedStar,
+            onTap: () => context.push('/customer-reviews'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Customer Insights & VIPs',
+            icon: HugeIcons.strokeRoundedUserGroup,
+            onTap: () => context.push('/customers'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Payouts & Bank Settlement',
+            icon: HugeIcons.strokeRoundedMoneySend02,
+            onTap: () => context.push('/payouts'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Live Order Board',
+            icon: HugeIcons.strokeRoundedTv01,
+            onTap: () => context.push('/kds'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Customer Messaging Inbox',
+            icon: HugeIcons.strokeRoundedChatting01,
+            onTap: () => context.push('/merchant-inbox'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'QR & Standee Generator',
+            icon: HugeIcons.strokeRoundedQrCode,
+            onTap: () => context.push('/qr-generator'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Cash Drawer & Z-Report',
+            icon: HugeIcons.strokeRoundedMoney01,
+            onTap: () => context.push('/cash-drawer'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'Receipts & Thermal Printer',
+            icon: HugeIcons.strokeRoundedPrinter,
+            onTap: () => context.push('/receipt-settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppInfoPanel() {
+    return _buildPanel(
+      title: 'App',
+      icon: HugeIcons.strokeRoundedInformationCircle,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => AppUpdateService.checkManually(context),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildInfoRow(
+                      label: 'Version',
+                      value: 'v${AppUpdateService.currentVersion}',
+                      icon: HugeIcons.strokeRoundedCode,
+                      valueColor: const Color(0xFF44CF6C),
+                    ),
                   ),
-                  const Divider(height: 24, color: Color(0x1AFFFFFF)),
-                  _buildInfoRow(
-                    label: 'Platform',
-                    value: 'Ngam Business',
-                    icon: HugeIcons.strokeRoundedBuilding03,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF44CF6C).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'Semak Kemas Kini',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF44CF6C),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildInfoRow(
+            label: 'Build',
+            value: 'Oct 1 (Clean Rebuild)',
+            icon: HugeIcons.strokeRoundedCalendar03,
+            valueColor: const Color(0xFF42A5F5),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildInfoRow(
+            label: 'Platform',
+            value: 'Ngam Business',
+            icon: HugeIcons.strokeRoundedBuilding03,
+          ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 32),
-
-            // Sign out button
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _signingOut ? null : _signOut,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent.withValues(alpha: 0.15),
-                  foregroundColor: Colors.redAccent,
-                  disabledBackgroundColor:
-                      Colors.redAccent.withValues(alpha: 0.08),
-                  side: BorderSide(
-                    color: Colors.redAccent.withValues(alpha: 0.3),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
-                child: _signingOut
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.redAccent,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          HugeIcon(
-                            icon: HugeIcons.strokeRoundedLogout02,
-                            color: Colors.redAccent,
-                            size: 18,
-                            strokeWidth: 2.1,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Sign Out',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
-          ],
+  Widget _buildSignOutButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        onPressed: _signingOut ? null : _signOut,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.redAccent.withValues(alpha: 0.15),
+          foregroundColor: Colors.redAccent,
+          disabledBackgroundColor:
+              Colors.redAccent.withValues(alpha: 0.08),
+          side: BorderSide(
+            color: Colors.redAccent.withValues(alpha: 0.3),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          elevation: 0,
         ),
+        child: _signingOut
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  color: Colors.redAccent,
+                  strokeWidth: 2,
+                ),
+              )
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  HugeIcon(
+                    icon: HugeIcons.strokeRoundedLogout02,
+                    color: Colors.redAccent,
+                    size: 18,
+                    strokeWidth: 2.1,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Sign Out',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
