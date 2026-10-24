@@ -8,8 +8,10 @@ import '../../pos/data/pos_service.dart';
 import '../../pos/models/product_model.dart';
 import '../../pos/models/order_model.dart';
 import '../../promotions/data/voucher_service.dart';
+import '../../customers/data/membership_service.dart';
 import 'widgets/split_payment_sheet.dart';
 import 'widgets/payment_terminal_modal.dart';
+import 'widgets/dynamic_pos_scanner_modal.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/modal_sheet.dart';
 
@@ -40,7 +42,7 @@ class _PosPageState extends State<PosPage> {
   String? _appliedVoucherCode;
   double _voucherDiscount = 0.0;
   String? _voucherId;
-  bool _isApplyingVoucher = false;
+  CustomerMember? _selectedMember;
 
   List<String> get _categories {
     final cats = _allProducts
@@ -247,9 +249,19 @@ class _PosPageState extends State<PosPage> {
         'Pesanan Selesai! ($summary$discountText$changeText)',
         customColor: const Color(0xFF00C853),
       );
+      if (_selectedMember != null) {
+        try {
+          await MembershipService().recordVisit(
+            phone: _selectedMember!.phone,
+            amountSpent: subtotal,
+          );
+        } catch (_) {}
+      }
+
       setState(() {
         _cart = [];
         _customerController.clear();
+        _selectedMember = null;
         _appliedVoucherCode = null;
         _voucherDiscount = 0.0;
         _voucherId = null;
@@ -271,8 +283,10 @@ class _PosPageState extends State<PosPage> {
       context: context,
       amount: grandTotal,
       orderTitle: 'Pesanan #$orderRef (${_cart.length} item)',
-      customerName: customer.isNotEmpty ? customer : 'Pelanggan Kaunter',
-      itemLines: _cart.map((i) => '${i.quantity}x ${i.product.name} | RM ${i.subtotal.toStringAsFixed(2)}').toList(),
+      customerName: _selectedMember != null
+          ? '${_selectedMember!.name} (${_selectedMember!.phone})'
+          : (customer.isNotEmpty ? customer : 'Pelanggan Kaunter'),
+      itemLines: _cart.map((i) => '${i.quantity}x ${i.product.name}${i.isReward ? " (🎁 Ganjaran)" : ""} | RM ${i.subtotal.toStringAsFixed(2)}').toList(),
       initialStep: initialStep,
     );
 
@@ -316,9 +330,19 @@ class _PosPageState extends State<PosPage> {
         customColor: const Color(0xFF00C853),
       );
 
+      if (_selectedMember != null) {
+        try {
+          await MembershipService().recordVisit(
+            phone: _selectedMember!.phone,
+            amountSpent: result.amount,
+          );
+        } catch (_) {}
+      }
+
       setState(() {
         _cart = [];
         _customerController.clear();
+        _selectedMember = null;
         _appliedVoucherCode = null;
         _voucherDiscount = 0.0;
         _voucherId = null;
@@ -472,9 +496,19 @@ class _PosPageState extends State<PosPage> {
         customColor: const Color(0xFF00C853),
       );
 
+      if (_selectedMember != null) {
+        try {
+          await MembershipService().recordVisit(
+            phone: _selectedMember!.phone,
+            amountSpent: grandTotal,
+          );
+        } catch (_) {}
+      }
+
       setState(() {
         _cart = [];
         _customerController.clear();
+        _selectedMember = null;
         _appliedVoucherCode = null;
         _voucherDiscount = 0.0;
         _voucherId = null;
@@ -670,112 +704,69 @@ class _PosPageState extends State<PosPage> {
     );
   }
 
-  void _showVoucherDialog() {
-    final voucherCtrl = TextEditingController();
-    showDialog(
+  Future<void> _showDynamicScanner() async {
+    final result = await DynamicPosScannerModal.show(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return AlertDialog(
-            backgroundColor: const Color(0xFF141424),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-            ),
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00C853).withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.confirmation_number_rounded, color: Color(0xFF00C853), size: 22),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Tebus Baucar / Kupon',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Masukkan kod baucar atau promosi yang sah:',
-                  style: TextStyle(color: Colors.white60, fontSize: 12),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: voucherCtrl,
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.characters,
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1),
-                  decoration: InputDecoration(
-                    labelText: 'Kod Baucar',
-                    labelStyle: const TextStyle(color: Colors.white60, fontSize: 12),
-                    hintText: 'Cth: DISKAUN10 / MERDEKA',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Batal', style: TextStyle(color: Colors.white60)),
-              ),
-              ElevatedButton(
-                onPressed: _isApplyingVoucher ? null : () async {
-                  final code = voucherCtrl.text.trim().toUpperCase();
-                  if (code.isEmpty) return;
-
-                  setModalState(() => _isApplyingVoucher = true);
-                  final val = await VoucherService().validateVoucherCode(code: code, subtotal: _cartTotal);
-                  setModalState(() => _isApplyingVoucher = false);
-
-                  if (!ctx.mounted) return;
-
-                  if (val.isValid && val.discountAmount > 0) {
-                    setState(() {
-                      _appliedVoucherCode = code;
-                      _voucherDiscount = val.discountAmount;
-                      _voucherId = val.voucherId;
-                    });
-                    Navigator.pop(ctx);
-                    showGlassToast(
-                      context,
-                      'Baucar berjaya ditebus! Jimat RM ${val.discountAmount.toStringAsFixed(2)}',
-                      customColor: const Color(0xFF00C853),
-                    );
-                  } else {
-                    showGlassToast(
-                      context,
-                      val.message.isNotEmpty ? val.message : 'Kod baucar tidak sah atau telah tamat.',
-                      isError: true,
-                    );
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00C853),
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isApplyingVoucher
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                    : const Text('Gunakan', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
-          );
-        },
-      ),
+      currentSubtotal: _cartTotal,
+      availableProducts: _allProducts,
+      currentMember: _selectedMember,
     );
+
+    if (result == null || !mounted) return;
+
+    switch (result.type) {
+      case DynamicScanType.member:
+        setState(() {
+          _selectedMember = result.member;
+          _customerController.text = '${result.member!.name} (${result.member!.phone})';
+        });
+        showGlassToast(
+          context,
+          'Ahli Dipautkan: ${result.member!.name} [${result.member!.tierBadge}]',
+          customColor: const Color(0xFF00C853),
+        );
+        break;
+
+      case DynamicScanType.freeRewardItem:
+        final rewardProd = result.rewardProduct ??
+            ProductModel(
+              id: 'reward-${DateTime.now().millisecondsSinceEpoch}',
+              name: result.rewardItemName ?? 'Ganjaran Percuma',
+              itemType: 'product',
+              price: 0.0,
+            );
+
+        setState(() {
+          _cart.add(CartItem(
+            product: rewardProd,
+            quantity: 1,
+            isReward: true,
+            rewardDescription: 'Penebusan Ganjaran: ${result.rewardItemName}',
+          ));
+        });
+        showGlassToast(
+          context,
+          result.message,
+          customColor: const Color(0xFFFF9800),
+        );
+        break;
+
+      case DynamicScanType.voucherDiscount:
+        setState(() {
+          _appliedVoucherCode = result.voucherCode;
+          _voucherDiscount = result.discountAmount;
+          _voucherId = result.voucherId;
+        });
+        showGlassToast(
+          context,
+          result.message,
+          customColor: const Color(0xFF00C853),
+        );
+        break;
+    }
   }
+
+  void _showVoucherDialog() => _showDynamicScanner();
 
   @override
   Widget build(BuildContext context) {
@@ -1416,35 +1407,49 @@ class _PosPageState extends State<PosPage> {
   }
 
   Widget _buildCustomerBar() {
-    final hasCustomer = _customerController.text.trim().isNotEmpty;
+    final hasCustomer = _customerController.text.trim().isNotEmpty || _selectedMember != null;
+    final displayName = _selectedMember != null
+        ? _selectedMember!.name
+        : (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : 'Pelanggan Tetamu (Walk-in)');
+
+    final subtitle = _selectedMember != null
+        ? '${_selectedMember!.tierBadge} • ${_selectedMember!.stamps}/${_selectedMember!.totalStampsRequired} Cop • ${_selectedMember!.points} Mata'
+        : (hasCustomer ? 'Rekod Pesanan Pelanggan' : '+ Tekan atau imbas untuk kenalpasti ahli');
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: hasCustomer
-            ? const Color(0xFF00C853).withValues(alpha: 0.08)
-            : Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(12),
+        color: _selectedMember != null
+            ? (_selectedMember!.isVip
+                ? Colors.amber.withValues(alpha: 0.1)
+                : const Color(0xFF00C853).withValues(alpha: 0.08))
+            : (hasCustomer
+                ? const Color(0xFF42A5F5).withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.04)),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: hasCustomer
-              ? const Color(0xFF00C853).withValues(alpha: 0.25)
-              : Colors.white.withValues(alpha: 0.08),
+          color: _selectedMember != null
+              ? (_selectedMember!.isVip ? Colors.amber.withValues(alpha: 0.35) : const Color(0xFF00C853).withValues(alpha: 0.3))
+              : (hasCustomer ? const Color(0xFF42A5F5).withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.08)),
         ),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(5),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: hasCustomer
-                  ? const Color(0xFF00C853).withValues(alpha: 0.2)
-                  : Colors.white.withValues(alpha: 0.08),
+              color: _selectedMember != null
+                  ? (_selectedMember!.isVip ? Colors.amber.withValues(alpha: 0.2) : const Color(0xFF00C853).withValues(alpha: 0.2))
+                  : (hasCustomer ? const Color(0xFF42A5F5).withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.08)),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              hasCustomer ? Icons.person_rounded : Icons.person_outline_rounded,
-              size: 14,
-              color: hasCustomer ? const Color(0xFF00C853) : Colors.white60,
+              _selectedMember != null ? Icons.stars_rounded : (hasCustomer ? Icons.person_rounded : Icons.person_outline_rounded),
+              size: 15,
+              color: _selectedMember != null
+                  ? (_selectedMember!.isVip ? Colors.amber : const Color(0xFF00C853))
+                  : (hasCustomer ? const Color(0xFF42A5F5) : Colors.white60),
             ),
           ),
           const SizedBox(width: 10),
@@ -1456,39 +1461,76 @@ class _PosPageState extends State<PosPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    hasCustomer
-                        ? _customerController.text.trim()
-                        : 'Pelanggan Tetamu (Walk-in)',
+                    displayName,
                     style: TextStyle(
-                      color: hasCustomer ? Colors.white : Colors.white70,
+                      color: Colors.white,
                       fontSize: 12,
                       fontWeight: hasCustomer ? FontWeight.bold : FontWeight.normal,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 1),
                   Text(
-                    hasCustomer ? 'Rekod Pesanan / Ahli' : '+ Tekan untuk tambah nama/ahli',
+                    subtitle,
                     style: TextStyle(
-                      color: hasCustomer ? const Color(0xFF00C853) : const Color(0xFF42A5F5),
+                      color: _selectedMember != null
+                          ? (_selectedMember!.isVip ? Colors.amber : const Color(0xFF00C853))
+                          : (hasCustomer ? const Color(0xFF42A5F5) : Colors.white.withValues(alpha: 0.45)),
                       fontSize: 10,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          if (hasCustomer)
-            GestureDetector(
-              onTap: () => setState(() => _customerController.clear()),
-              child: const Icon(Icons.close_rounded, size: 16, color: Colors.white38),
-            )
-          else
-            GestureDetector(
-              onTap: _showCustomerDialog,
-              child: const Icon(Icons.add_circle_outline_rounded, size: 16, color: Color(0xFF42A5F5)),
+
+          // Dynamic Scanner Quick Action
+          GestureDetector(
+            onTap: _showDynamicScanner,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF00C853), Color(0xFF42A5F5)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF00C853).withValues(alpha: 0.25),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.qr_code_scanner_rounded, size: 13, color: Colors.black),
+                  SizedBox(width: 4),
+                  Text(
+                    'Imbas Pintar',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ),
+
+          if (hasCustomer) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => setState(() {
+                _customerController.clear();
+                _selectedMember = null;
+              }),
+              child: const Icon(Icons.close_rounded, size: 16, color: Colors.white38),
+            ),
+          ],
         ],
       ),
     );
@@ -1558,23 +1600,51 @@ class _PosPageState extends State<PosPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.product.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    if (item.isReward) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        margin: const EdgeInsets.only(right: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF9800).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFFF9800).withValues(alpha: 0.4)),
+                        ),
+                        child: const Text(
+                          '🎁 GANJARAN',
+                          style: TextStyle(
+                            color: Color(0xFFFF9800),
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                    Expanded(
+                      child: Text(
+                        item.product.name,
+                        style: TextStyle(
+                          color: item.isReward ? const Color(0xFFFFB74D) : Colors.white,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'RM ${item.product.price.toStringAsFixed(2)} / unit',
+                  item.isReward
+                      ? 'Penebusan Ganjaran • Percuma (RM 0.00)'
+                      : 'RM ${item.product.price.toStringAsFixed(2)} / unit',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.45),
+                    color: item.isReward ? const Color(0xFFFF9800) : Colors.white.withValues(alpha: 0.45),
                     fontSize: 11,
-                    fontFamily: 'monospace',
+                    fontFamily: item.isReward ? null : 'monospace',
+                    fontWeight: item.isReward ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
@@ -1611,9 +1681,9 @@ class _PosPageState extends State<PosPage> {
 
           // Line subtotal
           Text(
-            'RM ${item.subtotal.toStringAsFixed(2)}',
-            style: const TextStyle(
-              color: Colors.white,
+            item.isReward ? 'RM 0.00' : 'RM ${item.subtotal.toStringAsFixed(2)}',
+            style: TextStyle(
+              color: item.isReward ? const Color(0xFFFF9800) : Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 12.5,
               fontFamily: 'monospace',

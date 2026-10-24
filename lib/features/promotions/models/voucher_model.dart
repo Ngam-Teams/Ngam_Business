@@ -23,6 +23,8 @@ class VoucherModel {
   final List<String> applicableIds;
   final String customerEligibility; // 'all' | 'new_customers' | 'members_only'
   final bool isActive;
+  final String? rewardItemName; // E.g. 'Kopi Latte Ais' or 'Servis Potong Rambut'
+  final String? rewardItemId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -45,12 +47,18 @@ class VoucherModel {
     this.applicableIds = const [],
     this.customerEligibility = 'all',
     this.isActive = true,
+    this.rewardItemName,
+    this.rewardItemId,
     this.createdAt,
     this.updatedAt,
   });
 
   bool get isPercentage => discountType == 'percentage';
   bool get isFixedAmount => discountType == 'fixed_amount';
+  bool get isFreeItem => discountType == 'free_item';
+  bool get isBuyXGetY => discountType == 'buy_x_get_y';
+  bool get isPointsMultiplier => discountType == 'points_multiplier';
+  bool get isFreeShipping => discountType == 'free_shipping';
 
   bool get isExpired {
     if (endDate == null) return false;
@@ -104,6 +112,16 @@ class VoucherModel {
         return '$pctStr (Maks ${currencyFmt.format(maxDiscountAmount)})';
       }
       return pctStr;
+    } else if (isFixedAmount) {
+      return '${currencyFmt.format(discountValue)} OFF';
+    } else if (isFreeItem) {
+      return '🎁 Percuma: ${rewardItemName ?? title}';
+    } else if (isBuyXGetY) {
+      return '🛍️ Beli 2 Percuma 1 (BOGO)';
+    } else if (isPointsMultiplier) {
+      return '⭐ ${discountValue % 1 == 0 ? discountValue.toInt() : discountValue.toStringAsFixed(1)}x Poin Ganjaran';
+    } else if (isFreeShipping) {
+      return '🚚 Percuma Caj Servis';
     } else {
       return '${currencyFmt.format(discountValue)} OFF';
     }
@@ -114,8 +132,18 @@ class VoucherModel {
       return discountValue % 1 == 0
           ? '${discountValue.toInt()}%'
           : '${discountValue.toStringAsFixed(1)}%';
-    } else {
+    } else if (isFixedAmount) {
       return 'RM ${discountValue % 1 == 0 ? discountValue.toInt() : discountValue.toStringAsFixed(2)}';
+    } else if (isFreeItem) {
+      return 'HADIAH';
+    } else if (isBuyXGetY) {
+      return 'BOGO';
+    } else if (isPointsMultiplier) {
+      return '${discountValue.toInt()}X POIN';
+    } else if (isFreeShipping) {
+      return 'PERCUMA';
+    } else {
+      return 'RM ${discountValue.toStringAsFixed(0)}';
     }
   }
 
@@ -171,6 +199,13 @@ class VoucherModel {
       } else {
         calculated = raw;
       }
+    } else if (isFixedAmount) {
+      calculated = discountValue;
+    } else if (isFreeItem) {
+      // Free item is inserted into cart with price RM 0.00 directly
+      calculated = 0.0;
+    } else if (isFreeShipping) {
+      calculated = discountValue > 0 ? discountValue : 0.0;
     } else {
       calculated = discountValue;
     }
@@ -185,6 +220,15 @@ class VoucherModel {
         return val.map((e) => e.toString()).toList();
       }
       return const [];
+    }
+
+    String? rewardName = json['reward_item_name']?.toString();
+    if (rewardName == null || rewardName.isEmpty) {
+      final desc = json['description']?.toString() ?? '';
+      final match = RegExp(r'\[Reward:\s*(.+?)\]').firstMatch(desc);
+      if (match != null) {
+        rewardName = match.group(1)?.trim();
+      }
     }
 
     return VoucherModel(
@@ -210,6 +254,8 @@ class VoucherModel {
       applicableIds: parseApplicableIds(json['applicable_ids']),
       customerEligibility: json['customer_eligibility']?.toString() ?? 'all',
       isActive: json['is_active'] as bool? ?? true,
+      rewardItemName: rewardName,
+      rewardItemId: json['reward_item_id']?.toString(),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())
           : null,
@@ -220,11 +266,21 @@ class VoucherModel {
   }
 
   Map<String, dynamic> toJson() {
+    String? effectiveDesc = description?.trim();
+    if (rewardItemName != null && rewardItemName!.isNotEmpty) {
+      final tag = '[Reward: ${rewardItemName!.trim()}]';
+      if (effectiveDesc == null || effectiveDesc.isEmpty) {
+        effectiveDesc = tag;
+      } else if (!effectiveDesc.contains('[Reward:')) {
+        effectiveDesc = '$tag $effectiveDesc';
+      }
+    }
+
     return {
       'business_id': businessId,
       'code': code.toUpperCase().trim(),
       'title': title.trim(),
-      'description': description?.trim(),
+      'description': effectiveDesc,
       'discount_type': discountType,
       'discount_value': discountValue,
       'max_discount_amount': maxDiscountAmount,
@@ -260,6 +316,8 @@ class VoucherModel {
     List<String>? applicableIds,
     String? customerEligibility,
     bool? isActive,
+    String? rewardItemName,
+    String? rewardItemId,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -282,6 +340,8 @@ class VoucherModel {
       applicableIds: applicableIds ?? this.applicableIds,
       customerEligibility: customerEligibility ?? this.customerEligibility,
       isActive: isActive ?? this.isActive,
+      rewardItemName: rewardItemName ?? this.rewardItemName,
+      rewardItemId: rewardItemId ?? this.rewardItemId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

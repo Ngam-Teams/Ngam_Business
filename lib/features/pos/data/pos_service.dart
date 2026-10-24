@@ -133,9 +133,9 @@ class PosService {
       final orderItems = items.map((item) => {
             'order_id': order['id'],
             'product_id': item.product.id,
-            'product_name': item.product.name,
+            'product_name': item.isReward ? '${item.product.name} (Ganjaran Percuma)' : item.product.name,
             'quantity': item.quantity,
-            'unit_price': item.product.price,
+            'unit_price': item.isReward ? 0.0 : item.product.price,
             'subtotal': item.subtotal,
           }).toList();
 

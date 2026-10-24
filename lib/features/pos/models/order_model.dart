@@ -7,10 +7,17 @@ import 'product_model.dart';
 class CartItem {
   final ProductModel product;
   int quantity;
+  final bool isReward;
+  final String? rewardDescription;
 
-  CartItem({required this.product, this.quantity = 1});
+  CartItem({
+    required this.product,
+    this.quantity = 1,
+    this.isReward = false,
+    this.rewardDescription,
+  });
 
-  double get subtotal => product.price * quantity;
+  double get subtotal => isReward ? 0.0 : product.price * quantity;
 }
 
 class PaymentSplit {

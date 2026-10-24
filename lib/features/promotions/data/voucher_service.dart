@@ -13,6 +13,9 @@ class VoucherValidationResult {
   final double discountAmount;
   final double finalTotal;
   final String message;
+  final bool isFreeItem;
+  final String? rewardItemName;
+  final VoucherModel? voucher;
 
   VoucherValidationResult({
     required this.isValid,
@@ -23,22 +26,29 @@ class VoucherValidationResult {
     this.discountAmount = 0.0,
     this.finalTotal = 0.0,
     required this.message,
+    this.isFreeItem = false,
+    this.rewardItemName,
+    this.voucher,
   });
 
   factory VoucherValidationResult.fromRpc(Map<String, dynamic> map, double fallbackSubtotal) {
     final valid = map['valid'] as bool? ?? false;
     final discount = (map['discount_amount'] as num?)?.toDouble() ?? 0.0;
     final finalTot = (map['final_total'] as num?)?.toDouble() ?? (fallbackSubtotal - discount);
+    final discType = map['discount_type']?.toString();
+    final isFree = discType == 'free_item' || map['is_free_item'] == true;
 
     return VoucherValidationResult(
       isValid: valid,
       voucherId: map['voucher_id']?.toString(),
       code: map['code']?.toString(),
       title: map['title']?.toString(),
-      discountType: map['discount_type']?.toString(),
+      discountType: discType,
       discountAmount: discount,
       finalTotal: finalTot < 0 ? 0 : finalTot,
-      message: map['message']?.toString() ?? (valid ? 'Baucar sah!' : 'Baucar tidak sah.'),
+      isFreeItem: isFree,
+      rewardItemName: map['reward_item_name']?.toString(),
+      message: map['message']?.toString() ?? (valid ? (isFree ? 'Ganjaran percuma sah!' : 'Baucar sah!') : 'Baucar tidak sah.'),
     );
   }
 }
@@ -112,7 +122,7 @@ class VoucherService {
     required String code,
     required String title,
     String? description,
-    required String discountType, // 'percentage' | 'fixed_amount'
+    required String discountType, // 'percentage' | 'fixed_amount' | 'free_item' | 'buy_x_get_y' | 'points_multiplier' | 'free_shipping'
     required double discountValue,
     double? maxDiscountAmount,
     double minSpend = 0.0,
@@ -124,6 +134,8 @@ class VoucherService {
     List<String> applicableIds = const [],
     String customerEligibility = 'all',
     bool isActive = true,
+    String? rewardItemName,
+    String? rewardItemId,
   }) async {
     final businessId = await _getBusinessId();
     if (businessId == null) {
@@ -144,11 +156,21 @@ class VoucherService {
       throw Exception('Kod baucar "$cleanCode" sudah wujud. Sila gunakan kod lain.');
     }
 
+    String? effectiveDesc = description?.trim();
+    if (rewardItemName != null && rewardItemName.isNotEmpty) {
+      final tag = '[Reward: ${rewardItemName.trim()}]';
+      if (effectiveDesc == null || effectiveDesc.isEmpty) {
+        effectiveDesc = tag;
+      } else if (!effectiveDesc.contains('[Reward:')) {
+        effectiveDesc = '$tag $effectiveDesc';
+      }
+    }
+
     final insertPayload = {
       'business_id': businessId,
       'code': cleanCode,
       'title': title.trim(),
-      'description': description?.trim(),
+      'description': effectiveDesc,
       'discount_type': discountType,
       'discount_value': discountValue,
       'max_discount_amount': maxDiscountAmount,
@@ -338,6 +360,22 @@ class VoucherService {
         );
       }
 
+      if (voucher.isFreeItem) {
+        return VoucherValidationResult(
+          isValid: true,
+          voucherId: voucher.id,
+          code: voucher.code,
+          title: voucher.title,
+          discountType: voucher.discountType,
+          discountAmount: 0.0,
+          finalTotal: subtotal,
+          isFreeItem: true,
+          rewardItemName: voucher.rewardItemName ?? voucher.title,
+          voucher: voucher,
+          message: 'Ganjaran Penebusan: Percuma 1x ${voucher.rewardItemName ?? voucher.title}!',
+        );
+      }
+
       final discount = voucher.calculateDiscount(subtotal);
       final finalTotal = (subtotal - discount).clamp(0.0, double.infinity);
 
@@ -349,6 +387,7 @@ class VoucherService {
         discountType: voucher.discountType,
         discountAmount: discount,
         finalTotal: finalTotal,
+        voucher: voucher,
         message: 'Baucar ${voucher.code} berjaya digunakan! Jimat RM ${discount.toStringAsFixed(2)}',
       );
     } catch (err) {

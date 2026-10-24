@@ -584,7 +584,13 @@ class _PromotionsPageState extends State<PromotionsPage> {
                 decoration: BoxDecoration(
                   color: voucher.isPercentage
                       ? const Color(0xFF42A5F5).withValues(alpha: 0.12)
-                      : const Color(0xFF44CF6C).withValues(alpha: 0.12),
+                      : (voucher.isFreeItem
+                          ? const Color(0xFFFF9800).withValues(alpha: 0.15)
+                          : (voucher.isBuyXGetY
+                              ? const Color(0xFFAB47BC).withValues(alpha: 0.15)
+                              : (voucher.isPointsMultiplier
+                                  ? Colors.amber.withValues(alpha: 0.15)
+                                  : const Color(0xFF44CF6C).withValues(alpha: 0.12)))),
                   border: Border(
                     right: BorderSide(
                       color: Colors.white.withValues(alpha: 0.1),
@@ -598,24 +604,54 @@ class _PromotionsPageState extends State<PromotionsPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      voucher.isPercentage ? Icons.percent_rounded : Icons.monetization_on_outlined,
+                      voucher.isPercentage
+                          ? Icons.percent_rounded
+                          : (voucher.isFreeItem
+                              ? Icons.card_giftcard_rounded
+                              : (voucher.isBuyXGetY
+                                  ? Icons.shopping_bag_outlined
+                                  : (voucher.isPointsMultiplier
+                                      ? Icons.stars_rounded
+                                      : (voucher.isFreeShipping
+                                          ? Icons.local_shipping_rounded
+                                          : Icons.monetization_on_outlined)))),
                       size: 22,
-                      color: voucher.isPercentage ? const Color(0xFF42A5F5) : const Color(0xFF44CF6C),
+                      color: voucher.isPercentage
+                          ? const Color(0xFF42A5F5)
+                          : (voucher.isFreeItem
+                              ? const Color(0xFFFF9800)
+                              : (voucher.isBuyXGetY
+                                  ? const Color(0xFFAB47BC)
+                                  : (voucher.isPointsMultiplier
+                                      ? Colors.amber
+                                      : const Color(0xFF44CF6C)))),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       voucher.shortDiscountBadge,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: voucher.isPercentage ? const Color(0xFF42A5F5) : const Color(0xFF44CF6C),
-                        fontSize: 15,
+                        color: voucher.isPercentage
+                            ? const Color(0xFF42A5F5)
+                            : (voucher.isFreeItem
+                                ? const Color(0xFFFF9800)
+                                : (voucher.isBuyXGetY
+                                    ? const Color(0xFFAB47BC)
+                                    : (voucher.isPointsMultiplier
+                                        ? Colors.amber
+                                        : const Color(0xFF44CF6C)))),
+                        fontSize: voucher.isFreeItem ? 11 : 14,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.5,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'POTONGAN',
+                      voucher.isFreeItem
+                          ? 'HADIAH'
+                          : (voucher.isPointsMultiplier
+                              ? 'POIN'
+                              : (voucher.isBuyXGetY ? 'BOGO' : 'POTONGAN')),
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.4),
                         fontSize: 9,
@@ -906,8 +942,9 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
   late TextEditingController _minSpendCtrl;
   late TextEditingController _totalQuotaCtrl;
   late TextEditingController _limitPerUserCtrl;
+  late TextEditingController _rewardItemCtrl;
 
-  String _discountType = 'percentage'; // 'percentage' | 'fixed_amount'
+  String _discountType = 'percentage'; // 'percentage' | 'fixed_amount' | 'free_item' | 'buy_x_get_y' | 'points_multiplier' | 'free_shipping'
   bool _hasMaxCap = false;
   bool _hasTotalQuota = false;
   bool _hasExpiry = true;
@@ -925,6 +962,7 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
     _codeCtrl = TextEditingController(text: v?.code ?? _generateAutoCode());
     _titleCtrl = TextEditingController(text: v?.title ?? '');
     _descriptionCtrl = TextEditingController(text: v?.description ?? '');
+    _rewardItemCtrl = TextEditingController(text: v?.rewardItemName ?? '');
     _discountValCtrl = TextEditingController(
       text: v != null ? (v.discountValue % 1 == 0 ? v.discountValue.toInt().toString() : v.discountValue.toString()) : '10',
     );
@@ -957,6 +995,7 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
     _titleCtrl.addListener(() => setState(() {}));
     _minSpendCtrl.addListener(() => setState(() {}));
     _maxCapCtrl.addListener(() => setState(() {}));
+    _rewardItemCtrl.addListener(() => setState(() {}));
   }
 
   @override
@@ -969,6 +1008,7 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
     _minSpendCtrl.dispose();
     _totalQuotaCtrl.dispose();
     _limitPerUserCtrl.dispose();
+    _rewardItemCtrl.dispose();
     super.dispose();
   }
 
@@ -1026,6 +1066,13 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
     final totalQuota = _hasTotalQuota ? int.tryParse(_totalQuotaCtrl.text.trim()) : null;
     final limitPerUser = int.tryParse(_limitPerUserCtrl.text.trim()) ?? 1;
 
+    final rewardName = _discountType == 'free_item' ? _rewardItemCtrl.text.trim() : null;
+    String? descToSave = _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim();
+    if (rewardName != null && rewardName.isNotEmpty) {
+      final tag = '[Reward: $rewardName]';
+      descToSave = (descToSave == null || descToSave.isEmpty) ? tag : '$tag $descToSave';
+    }
+
     setState(() => _isSaving = true);
 
     try {
@@ -1033,9 +1080,9 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
         await _voucherService.createVoucher(
           code: code,
           title: title,
-          description: _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim(),
+          description: descToSave,
           discountType: _discountType,
-          discountValue: discountVal,
+          discountValue: _discountType == 'free_item' ? 0.0 : discountVal,
           maxDiscountAmount: maxCap,
           minSpend: minSpend,
           totalUsageLimit: totalQuota,
@@ -1044,6 +1091,7 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
           endDate: _hasExpiry ? _endDate : null,
           customerEligibility: _customerEligibility,
           isActive: _isActive,
+          rewardItemName: rewardName,
         );
         if (!mounted) return;
         showGlassToast(context, 'Baucar "$code" berjaya dicipta!');
@@ -1051,9 +1099,9 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
         await _voucherService.updateVoucher(widget.initialVoucher!.id, {
           'code': code,
           'title': title,
-          'description': _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim(),
+          'description': descToSave,
           'discount_type': _discountType,
-          'discount_value': discountVal,
+          'discount_value': _discountType == 'free_item' ? 0.0 : discountVal,
           'max_discount_amount': maxCap,
           'min_spend': minSpend,
           'total_usage_limit': totalQuota,
@@ -1230,126 +1278,110 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
 
                     const SizedBox(height: 22),
 
-                    // SECTION 2: PERATURAN DISKAUN
-                    _buildSectionHeader('2. Peraturan & Nilai Diskaun', Icons.percent_rounded),
+                    // SECTION 2: PERATURAN & JENIS PROMOSI
+                    _buildSectionHeader('2. Jenis Promosi & Ganjaran', Icons.card_giftcard_rounded),
                     const SizedBox(height: 12),
 
-                    // Toggle Percentage vs Fixed
-                    Row(
+                    // Multi-Type Selector Wrap
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _discountType = 'percentage'),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: _discountType == 'percentage'
-                                    ? const Color(0xFF42A5F5).withValues(alpha: 0.2)
-                                    : Colors.white.withValues(alpha: 0.04),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _discountType == 'percentage'
-                                      ? const Color(0xFF42A5F5)
-                                      : Colors.white.withValues(alpha: 0.08),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.percent_rounded,
-                                    size: 16,
-                                    color: _discountType == 'percentage' ? const Color(0xFF42A5F5) : Colors.white54,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Peratusan (%)',
-                                    style: TextStyle(
-                                      color: _discountType == 'percentage' ? Colors.white : Colors.white70,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => setState(() => _discountType = 'fixed_amount'),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              decoration: BoxDecoration(
-                                color: _discountType == 'fixed_amount'
-                                    ? const Color(0xFF44CF6C).withValues(alpha: 0.2)
-                                    : Colors.white.withValues(alpha: 0.04),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _discountType == 'fixed_amount'
-                                      ? const Color(0xFF44CF6C)
-                                      : Colors.white.withValues(alpha: 0.08),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.monetization_on_outlined,
-                                    size: 16,
-                                    color: _discountType == 'fixed_amount' ? const Color(0xFF44CF6C) : Colors.white54,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Jumlah Tetap (RM)',
-                                    style: TextStyle(
-                                      color: _discountType == 'fixed_amount' ? Colors.white : Colors.white70,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                        _buildTypeChip('percentage', 'Diskaun %', Icons.percent_rounded, const Color(0xFF42A5F5)),
+                        _buildTypeChip('fixed_amount', 'Potongan Tunai (RM)', Icons.monetization_on_outlined, const Color(0xFF44CF6C)),
+                        _buildTypeChip('free_item', '🎁 Item / Servis Percuma', Icons.card_giftcard_rounded, const Color(0xFFFF9800)),
+                        _buildTypeChip('buy_x_get_y', '🛍️ Beli 2 Percuma 1 (BOGO)', Icons.shopping_bag_outlined, const Color(0xFFAB47BC)),
+                        _buildTypeChip('points_multiplier', '⭐ Poin Ahli (2x / 3x)', Icons.stars_rounded, Colors.amber),
                       ],
                     ),
 
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
+
+                    // If Free Item / Service reward is selected
+                    if (_discountType == 'free_item') ...[
+                      TextFormField(
+                        controller: _rewardItemCtrl,
+                        style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          labelText: 'Nama Item / Servis Ganjaran *',
+                          labelStyle: const TextStyle(color: Color(0xFFFF9800), fontSize: 12),
+                          hintText: 'Cth: Kopi Latte Percuma / Potong Rambut Percuma',
+                          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                          prefixIcon: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFFF9800), size: 18),
+                          filled: true,
+                          fillColor: const Color(0xFFFF9800).withValues(alpha: 0.08),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                        validator: (val) {
+                          if (_discountType == 'free_item' && (val == null || val.trim().isEmpty)) {
+                            return 'Sila masukkan nama item atau servis ganjaran';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          'Kopi Latte',
+                          'Dessert / Kek',
+                          'Minuman Percuma',
+                          'Servis Cuci Kereta',
+                          'Servis Potong Rambut',
+                        ].map((sample) => GestureDetector(
+                          onTap: () => setState(() => _rewardItemCtrl.text = sample),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '+ $sample',
+                              style: const TextStyle(color: Color(0xFFFFB74D), fontSize: 10.5, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        )).toList(),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
 
                     // Discount value and Min Spend in Row
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _discountValCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                            decoration: InputDecoration(
-                              labelText: _discountType == 'percentage' ? 'Nilai Diskaun (%)' : 'Potongan (RM)',
-                              labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
-                              prefixText: _discountType == 'fixed_amount' ? 'RM ' : null,
-                              suffixText: _discountType == 'percentage' ? '%' : null,
-                              prefixStyle: const TextStyle(color: Color(0xFF44CF6C), fontWeight: FontWeight.bold),
-                              suffixStyle: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
-                              filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.05),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        if (_discountType != 'free_item') ...[
+                          Expanded(
+                            child: TextFormField(
+                              controller: _discountValCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                              decoration: InputDecoration(
+                                labelText: _discountType == 'percentage'
+                                    ? 'Nilai Diskaun (%)'
+                                    : (_discountType == 'points_multiplier' ? 'Gandaan Poin (cth: 2x)' : 'Potongan (RM)'),
+                                labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
+                                prefixText: _discountType == 'fixed_amount' ? 'RM ' : null,
+                                suffixText: _discountType == 'percentage'
+                                    ? '%'
+                                    : (_discountType == 'points_multiplier' ? 'x' : null),
+                                prefixStyle: const TextStyle(color: Color(0xFF44CF6C), fontWeight: FontWeight.bold),
+                                suffixStyle: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
+                                filled: true,
+                                fillColor: Colors.white.withValues(alpha: 0.05),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              ),
+                              validator: (val) {
+                                final num = double.tryParse(val ?? '');
+                                if (num == null || num <= 0) return 'Masukkan nilai > 0';
+                                if (_discountType == 'percentage' && num > 100) return 'Maksimum 100%';
+                                return null;
+                              },
                             ),
-                            validator: (val) {
-                              final num = double.tryParse(val ?? '');
-                              if (num == null || num <= 0) return 'Masukkan nilai > 0';
-                              if (_discountType == 'percentage' && num > 100) return 'Maksimum 100%';
-                              return null;
-                            },
                           ),
-                        ),
-                        const SizedBox(width: 12),
+                          const SizedBox(width: 12),
+                        ],
                         Expanded(
                           child: TextFormField(
                             controller: _minSpendCtrl,
@@ -1716,6 +1748,47 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
     );
   }
 
+  Widget _buildTypeChip(String type, String label, IconData icon, Color color) {
+    final isSel = _discountType == type;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _discountType = type;
+          if (type == 'free_item' && _discountValCtrl.text.isEmpty) {
+            _discountValCtrl.text = '1';
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: isSel ? color.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSel ? color : Colors.white.withValues(alpha: 0.08),
+            width: isSel ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: isSel ? color : Colors.white60),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSel ? Colors.white : Colors.white70,
+                fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLivePreviewCard() {
     final code = _codeCtrl.text.trim().isEmpty ? 'CONTOH20' : _codeCtrl.text.trim().toUpperCase();
     final title = _titleCtrl.text.trim().isEmpty ? 'Baucar Diskaun Hebat' : _titleCtrl.text.trim();
@@ -1724,13 +1797,37 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
     final maxCap = double.tryParse(_maxCapCtrl.text.trim());
 
     String discountText;
+    String badgeText;
+    Color badgeColor;
+
     if (_discountType == 'percentage') {
       discountText = '${discountVal % 1 == 0 ? discountVal.toInt() : discountVal.toStringAsFixed(1)}% OFF';
       if (_hasMaxCap && maxCap != null && maxCap > 0) {
         discountText += ' (Maks RM ${maxCap.toStringAsFixed(2)})';
       }
+      badgeText = '${discountVal % 1 == 0 ? discountVal.toInt() : discountVal.toStringAsFixed(1)}%';
+      badgeColor = const Color(0xFF42A5F5);
+    } else if (_discountType == 'fixed_amount') {
+      discountText = 'RM ${discountVal.toStringAsFixed(2)} OFF';
+      badgeText = 'RM ${discountVal.toStringAsFixed(0)}';
+      badgeColor = const Color(0xFF44CF6C);
+    } else if (_discountType == 'free_item') {
+      final reward = _rewardItemCtrl.text.trim().isEmpty ? 'Item Ganjaran' : _rewardItemCtrl.text.trim();
+      discountText = '🎁 Percuma: $reward';
+      badgeText = 'HADIAH';
+      badgeColor = const Color(0xFFFF9800);
+    } else if (_discountType == 'buy_x_get_y') {
+      discountText = '🛍️ Beli 2 Percuma 1 (BOGO)';
+      badgeText = 'BOGO';
+      badgeColor = const Color(0xFFAB47BC);
+    } else if (_discountType == 'points_multiplier') {
+      discountText = '⭐ ${discountVal.toInt()}x Poin Ganjaran Ahli';
+      badgeText = '${discountVal.toInt()}X POIN';
+      badgeColor = Colors.amber;
     } else {
       discountText = 'RM ${discountVal.toStringAsFixed(2)} OFF';
+      badgeText = 'PROMO';
+      badgeColor = const Color(0xFF42A5F5);
     }
 
     final minSpendText = minSpend > 0 ? 'Min. Belanja RM ${minSpend.toStringAsFixed(2)}' : 'Tanpa Belanja Min.';
@@ -1740,19 +1837,19 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
       decoration: BoxDecoration(
         color: const Color(0xFF141722),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.35)),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.remove_red_eye_outlined, size: 14, color: Color(0xFF42A5F5)),
+              Icon(Icons.remove_red_eye_outlined, size: 14, color: badgeColor),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'PREVIEW TIKET BAUCAR PELANGGAN (LIVE)',
                 style: TextStyle(
-                  color: Color(0xFF42A5F5),
+                  color: badgeColor,
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.8,
@@ -1785,17 +1882,15 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                    color: badgeColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    _discountType == 'percentage'
-                        ? '${discountVal % 1 == 0 ? discountVal.toInt() : discountVal.toStringAsFixed(1)}%'
-                        : 'RM ${discountVal.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      color: Color(0xFF42A5F5),
+                    badgeText,
+                    style: TextStyle(
+                      color: badgeColor,
                       fontWeight: FontWeight.w900,
-                      fontSize: 16,
+                      fontSize: badgeText.length > 4 ? 12 : 16,
                     ),
                   ),
                 ),

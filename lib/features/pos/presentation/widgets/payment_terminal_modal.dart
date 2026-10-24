@@ -321,6 +321,32 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
             fontWeight: FontWeight.w500,
           ),
         ),
+        if (widget.customerName != null && widget.customerName!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00C853).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.stars_rounded, color: Color(0xFF00C853), size: 14),
+                const SizedBox(width: 5),
+                Text(
+                  'Ahli / Pelanggan: ${widget.customerName!}',
+                  style: const TextStyle(
+                    color: Color(0xFF00C853),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
 
         // Option 1: DuitNow QR (Recommended & Highlighted)
