@@ -129,7 +129,21 @@ CREATE POLICY "Voucher usages insert policy"
   ON public.voucher_usages FOR INSERT
   WITH CHECK (true);
 
--- 4. Fungsi Validasi & Pengiraan Baucar Standard E-Commerce (RPC)
+-- 4. Hak Akses (Table Grants) - WAJIB untuk PostgREST Supabase
+-- Menghalang ralat PostgrestException 42501 (permission denied for table vouchers)
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.vouchers TO authenticated;
+GRANT SELECT ON public.vouchers TO anon;
+GRANT ALL ON public.vouchers TO service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.voucher_usages TO authenticated;
+GRANT SELECT, INSERT ON public.voucher_usages TO anon;
+GRANT ALL ON public.voucher_usages TO service_role;
+
+GRANT SELECT ON public.businesses TO anon, authenticated;
+GRANT SELECT ON public.team_members TO authenticated;
+GRANT SELECT ON public.user_roles TO authenticated;
+
+-- 5. Fungsi Validasi & Pengiraan Baucar Standard E-Commerce (RPC)
 CREATE OR REPLACE FUNCTION public.validate_voucher_discount(
   p_business_id   UUID,
   p_code          TEXT,

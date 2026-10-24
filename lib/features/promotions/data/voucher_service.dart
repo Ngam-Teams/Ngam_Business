@@ -75,25 +75,18 @@ class VoucherService {
   // ---------------------------------------------------------------------------
 
   Future<List<VoucherModel>> fetchVouchers({String? businessId}) async {
-    try {
-      final bId = businessId ?? await _getBusinessId();
-      if (bId == null) return [];
+    final bId = businessId ?? await _getBusinessId();
+    if (bId == null) return [];
 
-      final response = await _client
-          .from('vouchers')
-          .select()
-          .eq('business_id', bId)
-          .order('created_at', ascending: false);
+    final response = await _client
+        .from('vouchers')
+        .select()
+        .eq('business_id', bId)
+        .order('created_at', ascending: false);
 
-      return (response as List)
-          .map((item) => VoucherModel.fromJson(item as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      if (kDebugMode) {
-        print('VoucherService.fetchVouchers error: $e');
-      }
-      return [];
-    }
+    return (response as List)
+        .map((item) => VoucherModel.fromJson(item as Map<String, dynamic>))
+        .toList();
   }
 
   Stream<List<VoucherModel>> streamVouchers({String? businessId}) async* {

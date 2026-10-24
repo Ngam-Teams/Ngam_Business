@@ -1062,7 +1062,12 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      showGlassToast(context, 'Ralat: $e', isError: true);
+      final errStr = e.toString();
+      String friendlyMsg = 'Ralat: $errStr';
+      if (errStr.contains('42501') || errStr.contains('permission denied')) {
+        friendlyMsg = 'Ralat 42501: Kebenaran terhad pada pangkalan data Supabase. Sila jalankan skrip "fix_vouchers_permissions.sql" di Supabase SQL Editor.';
+      }
+      showGlassToast(context, friendlyMsg, isError: true);
     }
   }
 
