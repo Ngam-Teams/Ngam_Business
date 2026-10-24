@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/sound_service.dart';
 import '../../settings/data/business_service.dart';
 import '../data/queue_service.dart';
@@ -43,10 +44,11 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   Timer? _clockTimer;
   DateTime _now = DateTime.now();
   StreamSubscription<List<QueueTicketModel>>? _subscription;
+  StreamSubscription<AuthState>? _authSub;
 
-  String _businessName = 'KEDAI ANDA';
+  String _businessName = '';
   String _businessId = '';
-  String _businessSlug = 'kedai';
+  String _businessSlug = '';
 
   // Susun atur & Tetapan TV (Default: Giliran + QR di mana QR 1/5 & Giliran 4/5 diperluas)
   TvQueueLayoutMode _layoutMode = TvQueueLayoutMode.queueAndQr;
@@ -67,16 +69,32 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   void initState() {
     super.initState();
     _loadPreferences();
+    _startTicketSubscription();
+
+    // Dengar profil kedai secara reaktif daripada BusinessService
+    BusinessService.profileNotifier.addListener(_onProfileNotifierChanged);
     _loadBusinessInfo();
 
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
 
-    _subscription = _queueService.streamQueueTickets().listen((tickets) {
+    _startPromoTimer();
+  }
+
+  void _onProfileNotifierChanged() {
+    final live = BusinessService.profileNotifier.value;
+    if (live != null && mounted) {
+      _applyBusinessProfile(live);
+    }
+  }
+
+  void _startTicketSubscription([String? explicitShopId]) {
+    _subscription?.cancel();
+    final shopId = explicitShopId ?? (_businessId.isNotEmpty ? _businessId : null);
+    _subscription = _queueService.streamQueueTickets(shopId).listen((tickets) {
       if (!mounted) return;
 
-      // Pantau jika ada nombor giliran baru dipanggil (calling)
       final callingTickets = tickets.where((t) => t.status == 'calling').toList();
       if (callingTickets.isNotEmpty) {
         callingTickets.sort((a, b) => (b.calledAt ?? b.createdAt).compareTo(a.calledAt ?? a.createdAt));
@@ -91,8 +109,36 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
 
       setState(() => _tickets = tickets);
     });
+  }
 
-    _startPromoTimer();
+  void _applyBusinessProfile(Map<String, dynamic> profile) {
+    if (!mounted) return;
+
+    final name = (profile['business_name'] ?? profile['name'] ?? profile['title'])?.toString().trim();
+    final id = profile['id']?.toString() ?? '';
+    final handleRaw = profile['business_handle'] ?? profile['handle'] ?? profile['username'];
+    final handle = handleRaw?.toString().trim().replaceAll('@', '').toLowerCase();
+
+    final slug = (handle != null && handle.isNotEmpty)
+        ? handle
+        : (profile['slug']?.toString() ?? (name != null ? name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '-') : ''));
+
+    final oldId = _businessId;
+    setState(() {
+      if (name != null && name.isNotEmpty) {
+        _businessName = name;
+      }
+      if (id.isNotEmpty) {
+        _businessId = id;
+      }
+      if (slug.isNotEmpty) {
+        _businessSlug = slug;
+      }
+    });
+
+    if (id.isNotEmpty && id != oldId) {
+      _startTicketSubscription(id);
+    }
   }
 
   Future<void> _loadPreferences() async {
@@ -148,27 +194,74 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   }
 
   Future<void> _loadBusinessInfo() async {
+    // 0. Semak query parameter URL jika paparan TV dibuka di Smart TV standalone (?shop=xxx atau ?id=xxx)
+    final uri = Uri.base;
+    final queryHandle = uri.queryParameters['shop'] ??
+        uri.queryParameters['handle'] ??
+        uri.queryParameters['id'] ??
+        uri.queryParameters['slug'];
+
+    if (queryHandle != null && queryHandle.trim().isNotEmpty) {
+      final clean = queryHandle.trim().toLowerCase().replaceAll('@', '');
+      try {
+        final isUuid = RegExp(
+          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+        ).hasMatch(clean);
+        var q = Supabase.instance.client.from('businesses').select();
+        if (isUuid) {
+          q = q.eq('id', clean);
+        } else {
+          q = q.eq('business_handle', clean);
+        }
+        final res = await q.maybeSingle();
+        if (res != null && mounted) {
+          _applyBusinessProfile(Map<String, dynamic>.from(res));
+          return;
+        }
+      } catch (e) {
+        debugPrint('Error loading business from URL query: $e');
+      }
+    }
+
+    // 1. Semak profil dari memori pantas (cache)
+    if (BusinessService.cachedProfile != null) {
+      _applyBusinessProfile(BusinessService.cachedProfile!);
+    }
+
+    // 2. Muat dari simpanan setempat (SharedPreferences)
+    try {
+      final localProfile = await BusinessService.loadCachedProfile();
+      if (localProfile != null && mounted) {
+        _applyBusinessProfile(localProfile);
+      }
+    } catch (_) {}
+
+    // 3. Tarik data profil terkini dari pangkalan data Supabase
     try {
       final profile = await BusinessService().getBusinessProfile();
       if (profile != null && mounted) {
-        setState(() {
-          _businessName = (profile['business_name'] ?? profile['name'] ?? profile['title'])?.toString().trim() ?? 'KEDAI ANDA';
-          _businessId = profile['id']?.toString() ?? '';
-
-          final handleRaw = profile['business_handle'] ?? profile['handle'] ?? profile['username'];
-          final handle = handleRaw?.toString().trim().replaceAll('@', '').toLowerCase();
-
-          final rawSlug = _businessName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '-');
-          _businessSlug = (handle != null && handle.isNotEmpty)
-              ? handle
-              : (profile['slug']?.toString() ?? rawSlug);
-        });
+        _applyBusinessProfile(profile);
       }
     } catch (_) {}
+
+    // 4. Jika masih belum selesai (cth: sesi log masuk Flutter Web baru hendak dipulihkan), pantau sesi log masuk
+    if (_businessSlug.isEmpty || _businessId.isEmpty) {
+      _authSub?.cancel();
+      _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+        if (data.session?.user != null) {
+          final p = await BusinessService().getBusinessProfile(forceRefresh: true);
+          if (p != null && mounted) {
+            _applyBusinessProfile(p);
+          }
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    BusinessService.profileNotifier.removeListener(_onProfileNotifierChanged);
+    _authSub?.cancel();
     _clockTimer?.cancel();
     _promoTimer?.cancel();
     _promoPageController.dispose();
@@ -184,7 +277,9 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         : 'https://ngam.dev/q';
   }
 
-  String get _shortUrlDisplay => 'ngam.dev/q/$_businessSlug';
+  String get _shortUrlDisplay => _businessSlug.isNotEmpty
+      ? 'ngam.dev/q/$_businessSlug'
+      : 'ngam.dev/q';
 
   QueueTicketModel? get _currentCallingTicket {
     final calling = _tickets.where((t) => t.status == 'calling').toList();
@@ -687,13 +782,21 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                     ),
                   ],
                 ),
-                child: QrImageView(
-                  data: _qrUrl,
-                  size: 280,
-                  version: QrVersions.auto,
-                  gapless: true,
-                  errorCorrectionLevel: QrErrorCorrectLevel.H,
-                ),
+                child: _businessSlug.isEmpty
+                    ? const SizedBox(
+                        width: 280,
+                        height: 280,
+                        child: Center(
+                          child: CircularProgressIndicator(color: Color(0xFF3B82F6), strokeWidth: 3),
+                        ),
+                      )
+                    : QrImageView(
+                        data: _qrUrl,
+                        size: 280,
+                        version: QrVersions.auto,
+                        gapless: true,
+                        errorCorrectionLevel: QrErrorCorrectLevel.H,
+                      ),
               ),
               const SizedBox(height: 16),
               Container(
@@ -1237,7 +1340,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                   ),
                 ),
                 Text(
-                  _businessName,
+                  _businessName.isNotEmpty ? _businessName : 'KEDAI ANDA',
                   style: const TextStyle(color: Colors.white54, fontSize: 10),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1381,7 +1484,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _businessName.toUpperCase(),
+                  (_businessName.isNotEmpty ? _businessName : 'KEDAI ANDA').toUpperCase(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1467,7 +1570,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
 
           // Business Name & Tagline
           Text(
-            _businessName.toUpperCase(),
+            (_businessName.isNotEmpty ? _businessName : 'KEDAI ANDA').toUpperCase(),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -1520,13 +1623,21 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                           ),
                         ],
                       ),
-                      child: QrImageView(
-                        data: _qrUrl,
-                        size: qrCodeSize,
-                        version: QrVersions.auto,
-                        gapless: true,
-                        errorCorrectionLevel: QrErrorCorrectLevel.M,
-                      ),
+                      child: _businessSlug.isEmpty
+                          ? const Center(
+                              child: SizedBox(
+                                width: 32,
+                                height: 32,
+                                child: CircularProgressIndicator(color: Color(0xFF3B82F6), strokeWidth: 3),
+                              ),
+                            )
+                          : QrImageView(
+                              data: _qrUrl,
+                              size: qrCodeSize,
+                              version: QrVersions.auto,
+                              gapless: true,
+                              errorCorrectionLevel: QrErrorCorrectLevel.M,
+                            ),
                     ),
                   ),
                 );
@@ -1742,7 +1853,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
           ),
           SizedBox(height: isMobile ? 6 : 12),
           Text(
-            _businessName.toUpperCase(),
+            (_businessName.isNotEmpty ? _businessName : 'KEDAI ANDA').toUpperCase(),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,

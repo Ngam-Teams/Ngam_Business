@@ -21,8 +21,8 @@ class QueueService {
   }
 
   /// Streams active queue tickets for the current business
-  Stream<List<QueueTicketModel>> streamQueueTickets() async* {
-    final businessId = await _getShopId();
+  Stream<List<QueueTicketModel>> streamQueueTickets([String? explicitBusinessId]) async* {
+    final businessId = explicitBusinessId ?? await _getShopId();
     if (businessId == null) {
       yield _localDemoTickets;
       return;
@@ -42,9 +42,9 @@ class QueueService {
   }
 
   /// Fetches queue tickets for today
-  Future<List<QueueTicketModel>> fetchQueueTickets() async {
+  Future<List<QueueTicketModel>> fetchQueueTickets([String? explicitBusinessId]) async {
     try {
-      final businessId = await _getShopId();
+      final businessId = explicitBusinessId ?? await _getShopId();
       if (businessId == null) return _localDemoTickets;
 
       final response = await _client
