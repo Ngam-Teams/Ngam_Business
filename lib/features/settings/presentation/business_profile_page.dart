@@ -330,7 +330,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
   Future<void> _pickAndUploadImage(String type) async {
     final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1080,
+      maxHeight: 1080,
+      imageQuality: 75,
+    );
 
     if (image == null) return;
 

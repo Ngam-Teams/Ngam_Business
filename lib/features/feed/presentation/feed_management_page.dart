@@ -1181,6 +1181,17 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
       final bytes = await video.readAsBytes();
       final size = bytes.lengthInBytes;
 
+      if (size > 50 * 1024 * 1024) {
+        if (mounted) {
+          showGlassToast(
+            context,
+            'Video terlalu besar (${(size / (1024 * 1024)).toStringAsFixed(1)} MB). Sila pilih video bawah 50 MB.',
+            isError: true,
+          );
+        }
+        return;
+      }
+
       await _videoPreviewController?.dispose();
       _videoPreviewController = null;
 
@@ -1237,7 +1248,9 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
+        maxWidth: 1080,
+        maxHeight: 1920,
+        imageQuality: 75,
       );
       if (image == null) return;
 
@@ -1324,6 +1337,15 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
           bytesToUpload = compressResult.bytes;
           if (mounted) {
             setState(() => _isCompressing = false);
+            if (compressResult.reductionPercent > 5) {
+              final savedMb = ((compressResult.originalSize - compressResult.compressedSize) / (1024 * 1024)).toStringAsFixed(1);
+              showGlassToast(
+                context,
+                'Video berjaya dimampatkan! Jimat $savedMb MB (${compressResult.reductionPercent.toStringAsFixed(0)}% penjimatan)',
+                type: GlassToastType.success,
+                color: const Color(0xFF10B981),
+              );
+            }
           }
         }
 

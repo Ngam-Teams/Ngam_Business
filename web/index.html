@@ -162,6 +162,108 @@
       }
     });
   </script>
+  <!-- Client-side Web Video Compressor (720p H.264 / WebM MediaRecorder) -->
+  <script>
+    window.compressVideoWeb = function(videoBlobUrl, maxW, maxH, bitrate, onProgress, onDone, onError) {
+      try {
+        var video = document.createElement('video');
+        video.src = videoBlobUrl;
+        video.muted = true;
+        video.playsInline = true;
+        video.crossOrigin = 'anonymous';
+
+        video.onloadedmetadata = function() {
+          var w = video.videoWidth || 720;
+          var h = video.videoHeight || 1280;
+          var aspect = w / h;
+
+          if (w > maxW || h > maxH) {
+            if (w > h) {
+              if (w > 1280) { w = 1280; h = Math.round(1280 / aspect); }
+              if (h > 720) { h = 720; w = Math.round(720 * aspect); }
+            } else {
+              if (w > 720) { w = 720; h = Math.round(720 / aspect); }
+              if (h > 1280) { h = 1280; w = Math.round(1280 * aspect); }
+            }
+          }
+          w = Math.round(w / 2) * 2;
+          h = Math.round(h / 2) * 2;
+
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+
+          var stream = canvas.captureStream ? canvas.captureStream(30) : (canvas.mozCaptureStream ? canvas.mozCaptureStream(30) : null);
+          if (!stream) {
+            onError('Canvas stream capture unsupported');
+            return;
+          }
+
+          if (video.captureStream) {
+            var vStream = video.captureStream();
+            vStream.getAudioTracks().forEach(function(t) { stream.addTrack(t); });
+          } else if (video.mozCaptureStream) {
+            var vStream = video.mozCaptureStream();
+            vStream.getAudioTracks().forEach(function(t) { stream.addTrack(t); });
+          }
+
+          var mime = 'video/mp4;codecs=avc1,mp4a.40.2';
+          if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/mp4';
+          if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm;codecs=vp8,opus';
+          if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
+
+          var recorder = new MediaRecorder(stream, {
+            mimeType: mime,
+            videoBitsPerSecond: bitrate || 1500000
+          });
+
+          var chunks = [];
+          recorder.ondataavailable = function(e) {
+            if (e.data && e.data.size > 0) chunks.push(e.data);
+          };
+
+          recorder.onstop = function() {
+            var outputBlob = new Blob(chunks, { type: mime });
+            var reader = new FileReader();
+            reader.onloadend = function() {
+              var buffer = reader.result;
+              var bytes = new Uint8Array(buffer);
+              onDone(bytes, mime);
+            };
+            reader.onerror = onError;
+            reader.readAsArrayBuffer(outputBlob);
+          };
+
+          video.currentTime = 0;
+          video.play().then(function() {
+            recorder.start(100);
+            var duration = video.duration || 1;
+
+            function drawLoop() {
+              if (!video.paused && !video.ended) {
+                ctx.drawImage(video, 0, 0, w, h);
+                if (onProgress && duration > 0) {
+                  onProgress(Math.min(0.95, video.currentTime / duration));
+                }
+                requestAnimationFrame(drawLoop);
+              }
+            }
+            drawLoop();
+          }).catch(onError);
+
+          video.onended = function() {
+            if (recorder.state === 'recording') {
+              recorder.stop();
+            }
+          };
+          video.onerror = onError;
+        };
+      } catch (err) {
+        onError(err);
+      }
+    };
+  </script>
   <script src="flutter_bootstrap.js" async=""></script>
 </body>
 </html>
