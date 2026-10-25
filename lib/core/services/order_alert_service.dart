@@ -416,5 +416,7 @@ class OrderAlertService {
     _channel = null;
     _streamSub?.cancel();
     _streamSub = null;
+    _businessId = null;
+    _knownOrderIds.clear();
   }
 }

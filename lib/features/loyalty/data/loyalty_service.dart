@@ -11,6 +11,12 @@ class LoyaltyService {
   static LoyaltyProgramModel? _localProgram;
   static final List<CustomerLoyaltyCardModel> _localCards = [];
 
+  /// Reset in-memory cached program and loyalty cards (e.g. on sign out)
+  static void reset() {
+    _localProgram = null;
+    _localCards.clear();
+  }
+
   LoyaltyService({SupabaseClient? client, BusinessService? businessService})
       : _client = client ?? Supabase.instance.client,
         _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);

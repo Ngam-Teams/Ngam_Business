@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'core/router/app_router.dart';
 import 'core/router/url_strategy.dart';
 import 'core/services/network_status_service.dart';
+import 'features/auth/data/auth_service.dart';
 import 'features/settings/data/business_service.dart';
 import 'widgets/offline_banner.dart';
 
@@ -35,12 +36,14 @@ void main() async {
       publishableKey: key,
     );
 
-    // Listen for password recovery event (bila peniaga tekan link reset emel)
+    // Listen for auth events globally
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.passwordRecovery) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           appRouter.go('/reset-password');
         });
+      } else if (data.event == AuthChangeEvent.signedOut) {
+        AuthService.cleanSessionData();
       }
     });
   } catch (e) {

@@ -11,6 +11,12 @@ class QueueService {
   static final List<QueueTicketModel> _localDemoTickets = [];
   static int _ticketSequence = 1;
 
+  /// Reset in-memory queue demo tickets and sequence (e.g. on sign out)
+  static void reset() {
+    _localDemoTickets.clear();
+    _ticketSequence = 1;
+  }
+
   QueueService({SupabaseClient? client, BusinessService? businessService})
       : _client = client ?? Supabase.instance.client,
         _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);

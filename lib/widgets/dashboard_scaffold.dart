@@ -2,9 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'bottom_nav.dart';
+import 'glass_toast.dart';
+import '../features/auth/data/auth_service.dart';
 import '../features/settings/data/business_service.dart';
 
 /// DashboardScaffold — master responsive layout for Ngam Business.
@@ -356,7 +357,72 @@ class DashboardScaffold extends StatelessWidget {
                       selected: false,
                       isExpanded: isExpanded,
                       onTap: () async {
-                        await Supabase.instance.client.auth.signOut();
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: const Color(0xFF141420),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: Colors.white.withValues(alpha: 0.1),
+                              ),
+                            ),
+                            title: const Row(
+                              children: [
+                                HugeIcon(
+                                  icon: HugeIcons.strokeRoundedLogout02,
+                                  color: Colors.redAccent,
+                                  size: 22,
+                                ),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Log Keluar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            content: const Text(
+                              'Adakah anda pasti ingin log keluar dari akaun perniagaan ini?',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(false),
+                                child: const Text(
+                                  'Batal',
+                                  style: TextStyle(color: Colors.white54),
+                                ),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      Colors.redAccent.withValues(alpha: 0.85),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () => Navigator.of(ctx).pop(true),
+                                child: const Text('Log Keluar'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm == true && context.mounted) {
+                          showGlassToast(context, 'Sedang log keluar...');
+                          await AuthService().signOut();
+                          if (context.mounted) {
+                            context.go('/login');
+                          }
+                        }
                       },
                     ),
                     const SizedBox(height: 12),

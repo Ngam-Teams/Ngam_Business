@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../widgets/glass_toast.dart';
+import '../../auth/data/auth_service.dart';
 import '../data/business_service.dart';
 import '../../../core/services/app_update_service.dart';
 
@@ -31,11 +32,30 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
+    _businessProfile = BusinessService.cachedProfile;
+    _loadingBusiness = _businessProfile == null;
+    BusinessService.profileNotifier.addListener(_onProfileUpdated);
     _loadBusiness();
   }
 
+  void _onProfileUpdated() {
+    if (mounted) {
+      setState(() {
+        _businessProfile = BusinessService.profileNotifier.value;
+        if (_businessProfile != null) {
+          _loadingBusiness = false;
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    BusinessService.profileNotifier.removeListener(_onProfileUpdated);
+    super.dispose();
+  }
+
   Future<void> _loadBusiness() async {
-    setState(() => _loadingBusiness = true);
     final profile = await _businessService.getBusinessProfile();
     if (mounted) {
       setState(() {
@@ -46,12 +66,76 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _signOut() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF141420),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
+        title: const Row(
+          children: [
+            HugeIcon(
+              icon: HugeIcons.strokeRoundedLogout02,
+              color: Colors.redAccent,
+              size: 22,
+            ),
+            SizedBox(width: 10),
+            Text(
+              'Log Keluar',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Adakah anda pasti ingin log keluar dari akaun perniagaan ini?',
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.85),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Log Keluar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     setState(() => _signingOut = true);
     try {
-      await _client.auth.signOut();
+      await AuthService().signOut();
+      if (mounted) {
+        showGlassToast(context, 'Berjaya log keluar.');
+        context.go('/login');
+      }
     } catch (e) {
       if (mounted) {
-        showGlassToast(context, 'Sign out failed.', isError: true);
+        showGlassToast(context, 'Sign out failed: $e', isError: true);
         setState(() => _signingOut = false);
       }
     }

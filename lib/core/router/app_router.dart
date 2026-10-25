@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../features/auth/data/auth_service.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/signup_page.dart';
 import '../../features/auth/presentation/reset_password_page.dart';
@@ -79,7 +81,7 @@ class _UnauthorizedScreen extends StatelessWidget {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () async {
-                await Supabase.instance.client.auth.signOut();
+                await AuthService().signOut();
                 if (context.mounted) context.go('/login');
               },
               child: const Text('Back to Login'),
@@ -196,11 +198,32 @@ class _AppShellState extends State<_AppShell> {
 }
 
 // ---------------------------------------------------------------------------
+// Converts a Stream into a Listenable for GoRouter reactive re-evaluation
+// ---------------------------------------------------------------------------
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen(
+      (dynamic _) => notifyListeners(),
+    );
+  }
+
+  late final StreamSubscription<dynamic> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
+  refreshListenable: GoRouterRefreshStream(Supabase.instance.client.auth.onAuthStateChange),
   redirect: (context, state) {
     final user = Supabase.instance.client.auth.currentUser;
     final isGoingToAuth =

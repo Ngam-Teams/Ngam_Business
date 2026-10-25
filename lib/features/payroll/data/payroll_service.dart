@@ -10,6 +10,12 @@ class PayrollService {
   static final Map<String, StaffPayrollSetting> _localSettings = {};
   static final List<MonthlyPayrollItem> _localCurrentPayroll = [];
 
+  /// Reset in-memory cached payroll data (e.g. on sign out)
+  static void reset() {
+    _localSettings.clear();
+    _localCurrentPayroll.clear();
+  }
+
   PayrollService({SupabaseClient? client, BusinessService? businessService})
       : _client = client ?? Supabase.instance.client,
         _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);

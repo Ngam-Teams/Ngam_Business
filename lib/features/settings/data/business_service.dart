@@ -19,18 +19,37 @@ class BusinessService {
 
   static const String _storageKey = 'cached_business_profile_v1';
 
-  /// Synchronously or eagerly load cached profile from SharedPreferences on app start
+  /// Synchronously or eagerly load cached profile from SharedPreferences on app start.
+  /// Validates that the cached record strictly matches the currently logged-in user.
   static Future<Map<String, dynamic>?> loadCachedProfile() async {
-    if (_cachedProfile != null) return _cachedProfile;
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null) {
+      clearCache();
+      return null;
+    }
+
+    if (_cachedProfile != null) {
+      if (_cachedProfile!['owner_user_id'] == currentUserId) {
+        return _cachedProfile;
+      } else {
+        clearCache();
+      }
+    }
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_storageKey);
       if (raw != null && raw.isNotEmpty) {
         final decoded = jsonDecode(raw);
         if (decoded is Map<String, dynamic>) {
-          _cachedProfile = decoded;
-          profileNotifier.value = decoded;
-          return decoded;
+          if (decoded['owner_user_id'] == currentUserId) {
+            _cachedProfile = decoded;
+            profileNotifier.value = decoded;
+            return decoded;
+          } else {
+            // Stale cache from another merchant account. Purge it.
+            await prefs.remove(_storageKey);
+          }
         }
       }
     } catch (e) {
@@ -40,6 +59,12 @@ class BusinessService {
   }
 
   static Future<void> _saveProfileToCache(Map<String, dynamic> profile) async {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    // Safety guard: only cache if it strictly belongs to the current user
+    if (currentUserId != null && profile['owner_user_id'] != currentUserId) {
+      return;
+    }
+
     _cachedProfile = Map<String, dynamic>.from(profile);
     profileNotifier.value = _cachedProfile;
     try {
@@ -58,10 +83,21 @@ class BusinessService {
 
   static void clearCache() {
     _cachedProfile = null;
+    _inflightFetch = null;
     profileNotifier.value = null;
     SharedPreferences.getInstance()
         .then((prefs) => prefs.remove(_storageKey))
         .catchError((_) => false);
+  }
+
+  static Future<void> clearCacheAsync() async {
+    _cachedProfile = null;
+    _inflightFetch = null;
+    profileNotifier.value = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_storageKey);
+    } catch (_) {}
   }
 
   BusinessService({SupabaseClient? client})
@@ -107,10 +143,21 @@ class BusinessService {
 
   /// Fetch the business record for the currently logged in owner.
   /// Also loads associated business_settings and business_compliance if available.
-  /// Returns immediately from local cache if available, while refreshing in background.
+  /// Returns immediately from local cache if available and matching current user, while refreshing in background.
   Future<Map<String, dynamic>?> getBusinessProfile({bool autoCreate = true, bool forceRefresh = false}) async {
-    // If cache exists and not forcing refresh, return immediately and trigger silent refresh
-    if (!forceRefresh && _cachedProfile != null) {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      clearCache();
+      return null;
+    }
+
+    // Safety check: if existing cache does not match the current user, purge it immediately
+    if (_cachedProfile != null && _cachedProfile!['owner_user_id'] != user.id) {
+      clearCache();
+    }
+
+    // If cache exists and belongs to current user, and not forcing refresh, return immediately and trigger silent refresh
+    if (!forceRefresh && _cachedProfile != null && _cachedProfile!['owner_user_id'] == user.id) {
       if (_inflightFetch == null) {
         _inflightFetch = _doGetBusinessProfile(autoCreate: autoCreate);
         _inflightFetch!.whenComplete(() => _inflightFetch = null);
@@ -129,7 +176,10 @@ class BusinessService {
 
   Future<Map<String, dynamic>?> _doGetBusinessProfile({bool autoCreate = true}) async {
     final user = _client.auth.currentUser;
-    if (user == null) return null;
+    if (user == null) {
+      clearCache();
+      return null;
+    }
 
     try {
       // Query businesses for this owner, newest first.

@@ -32,6 +32,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
   @override
   void initState() {
     super.initState();
+    _businessProfile = BusinessService.cachedProfile;
+    _loadingBusiness = _businessProfile == null;
+    BusinessService.profileNotifier.addListener(_onProfileUpdated);
     _loadBusinessProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 1500), () {
@@ -40,6 +43,23 @@ class _HomeDashboardState extends State<HomeDashboard> {
         }
       });
     });
+  }
+
+  void _onProfileUpdated() {
+    if (mounted) {
+      setState(() {
+        _businessProfile = BusinessService.profileNotifier.value;
+        if (_businessProfile != null) {
+          _loadingBusiness = false;
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    BusinessService.profileNotifier.removeListener(_onProfileUpdated);
+    super.dispose();
   }
 
   Future<void> _loadBusinessProfile() async {

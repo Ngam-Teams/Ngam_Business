@@ -1,6 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/services/order_alert_service.dart';
+import '../../loyalty/data/loyalty_service.dart';
+import '../../payroll/data/payroll_service.dart';
+import '../../queue/data/queue_service.dart';
+import '../../settings/data/business_service.dart';
+
 /// AuthService — handles sign in, sign out, and session state.
 class AuthService {
   final SupabaseClient _client;
@@ -14,19 +20,49 @@ class AuthService {
   /// Stream of auth state changes.
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
+  /// Completely purge all user and business caches, singletons, and active subscriptions.
+  static Future<void> cleanSessionData() async {
+    try {
+      await BusinessService.clearCacheAsync();
+    } catch (_) {}
+    try {
+      OrderAlertService.instance.dispose();
+    } catch (_) {}
+    try {
+      LoyaltyService.reset();
+    } catch (_) {}
+    try {
+      PayrollService.reset();
+    } catch (_) {}
+    try {
+      QueueService.reset();
+    } catch (_) {}
+  }
+
   /// Sign in with email and password.
   Future<void> signIn({
     required String email,
     required String password,
   }) async {
+    // Purge any stale cache from previous sessions before authenticating
+    await cleanSessionData();
+
     await _client.auth.signInWithPassword(
       email: email.trim(),
       password: password,
     );
+
+    // Eagerly pre-load the new business profile for the newly signed in merchant
+    try {
+      await BusinessService(client: _client).getBusinessProfile(forceRefresh: true);
+    } catch (e) {
+      debugPrint('[AuthService] Error fetching business profile after sign in: $e');
+    }
   }
 
   /// Sign in with Google
   Future<void> signInWithGoogle() async {
+    await cleanSessionData();
     await _client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.ngambusiness://login-callback',
@@ -35,6 +71,7 @@ class AuthService {
 
   /// Sign in with Apple
   Future<void> signInWithApple() async {
+    await cleanSessionData();
     await _client.auth.signInWithOAuth(
       OAuthProvider.apple,
       redirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.ngambusiness://login-callback',
@@ -115,8 +152,9 @@ class AuthService {
     }
   }
 
-  /// Sign out the current user.
+  /// Sign out the current user and wipe all session caches.
   Future<void> signOut() async {
+    await cleanSessionData();
     await _client.auth.signOut();
   }
 
