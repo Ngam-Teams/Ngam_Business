@@ -289,7 +289,10 @@ class _KdsPageState extends State<KdsPage> {
       } else if (stage == KdsStage.cooking) {
         ticket['stage'] = KdsStage.ready;
         if (rawId != null) _ticketStagesOverride[rawId] = KdsStage.ready;
-        showGlassToast(context, 'Tiket $ticketId ditandakan SIAP');
+        if (_soundEnabled) {
+          SoundService.instance.playOrderChime();
+        }
+        showGlassToast(context, 'Tiket $ticketId SIAP & dipanggil ke TV Display!');
       } else if (stage == KdsStage.ready) {
         ticket['stage'] = KdsStage.served;
         if (rawId != null) _ticketStagesOverride.remove(rawId);
@@ -626,6 +629,8 @@ class _KdsPageState extends State<KdsPage> {
     final timerColor = _getTimerColor((ticket['minutesAgo'] as int?) ?? 0);
     final items = (ticket['items'] as List<dynamic>?) ?? [];
     final stage = ticket['stage'] as KdsStage;
+    final rawId = ticket['rawId']?.toString();
+    final ticketId = ticket['id']?.toString() ?? '#';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -781,31 +786,79 @@ class _KdsPageState extends State<KdsPage> {
           // Bottom Action Button
           Padding(
             padding: const EdgeInsets.only(left: 14, right: 14, bottom: 14),
-            child: SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: stage == KdsStage.incoming
-                      ? const Color(0xFF42A5F5)
-                      : stage == KdsStage.cooking
-                          ? const Color(0xFFF9C80E)
-                          : const Color(0xFF10B981),
-                  foregroundColor: Colors.black,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () => _progressTicket(ticket),
-                child: Text(
-                  stage == KdsStage.incoming
-                      ? 'Start Preparing'
-                      : stage == KdsStage.cooking
-                          ? 'Mark as Ready'
-                          : 'Complete Order (Done)',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-              ),
-            ),
+            child: stage == KdsStage.ready
+                ? Row(
+                    children: [
+                      // Re-trigger TV Call Button
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFF9C80E),
+                          side: const BorderSide(color: Color(0xFFF9C80E)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        onPressed: () async {
+                          if (rawId != null) {
+                            await _ordersService.updateOrderStatus(rawId, 'ready');
+                          }
+                          if (_soundEnabled) {
+                            SoundService.instance.playOrderChime();
+                          }
+                          if (mounted) {
+                            showGlassToast(
+                              context,
+                              'Pesanan $ticketId dipanggil semula ke TV Display!',
+                              type: GlassToastType.success,
+                              color: const Color(0xFFF9C80E),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.campaign_rounded, size: 18),
+                        label: const Text('Panggil TV', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                      const SizedBox(width: 8),
+                      // Complete Order Button
+                      Expanded(
+                        child: SizedBox(
+                          height: 44,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.black,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () => _progressTicket(ticket),
+                            child: const Text(
+                              'Selesai (Done)',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: stage == KdsStage.incoming
+                            ? const Color(0xFF42A5F5)
+                            : const Color(0xFFF9C80E),
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => _progressTicket(ticket),
+                      child: Text(
+                        stage == KdsStage.incoming
+                            ? 'Start Preparing'
+                            : 'Mark as Ready',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),

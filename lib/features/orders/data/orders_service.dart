@@ -81,11 +81,22 @@ class OrdersService {
   /// Update the status of an order
   Future<bool> updateOrderStatus(String orderId, String newStatus) async {
     try {
-      await _client
-          .from('orders')
-          .update({'status': newStatus})
-          .eq('id', orderId);
-      return true;
+      try {
+        await _client
+            .from('orders')
+            .update({
+              'status': newStatus,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', orderId);
+        return true;
+      } catch (_) {
+        await _client
+            .from('orders')
+            .update({'status': newStatus})
+            .eq('id', orderId);
+        return true;
+      }
     } catch (e) {
       debugPrint('[OrdersService] updateOrderStatus error ($orderId -> $newStatus): $e');
       return false;
