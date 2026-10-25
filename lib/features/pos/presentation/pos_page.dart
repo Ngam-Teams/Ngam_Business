@@ -14,6 +14,7 @@ import 'widgets/payment_terminal_modal.dart';
 import 'widgets/dynamic_pos_scanner_modal.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/modal_sheet.dart';
+import '../../../../core/services/sound_service.dart';
 
 class PosPage extends StatefulWidget {
   const PosPage({super.key});
@@ -157,6 +158,30 @@ class _PosPageState extends State<PosPage> {
   }
 
   void _addToCart(ProductModel product) {
+    // Inventory & Stock Check for physical products
+    if (product.isProduct && product.trackInventory) {
+      if (product.stock <= 0) {
+        SoundService.instance.playErrorBeep();
+        showGlassToast(
+          context,
+          'Stok Habis! "${product.name}" tiada baki dalam inventori.',
+          isError: true,
+        );
+        return;
+      }
+
+      final existing = _cart.where((i) => i.product.id == product.id).firstOrNull;
+      if (existing != null && existing.quantity >= product.stock) {
+        SoundService.instance.playErrorBeep();
+        showGlassToast(
+          context,
+          'Had stok maksimum dicapai (Baki: ${product.stock} ${product.unit}).',
+          isError: true,
+        );
+        return;
+      }
+    }
+
     setState(() {
       final existing = _cart.where((i) => i.product.id == product.id).firstOrNull;
       if (existing != null) {
@@ -857,6 +882,9 @@ class _PosPageState extends State<PosPage> {
         ),
         const SizedBox(height: 14),
 
+        // Stock Alert Banner if any products are out of stock or low stock
+        _buildStockAlertBanner(),
+
         // Category chips
         SizedBox(
           height: 36,
@@ -910,6 +938,190 @@ class _PosPageState extends State<PosPage> {
                     ),
         ),
       ],
+    );
+  }
+
+  Widget _buildStockAlertBanner() {
+    final alertItems = _allProducts
+        .where((p) => p.isProduct && p.trackInventory && (p.isLowStock || p.isOutOfStock))
+        .toList();
+
+    if (alertItems.isEmpty) return const SizedBox.shrink();
+
+    final outOfStockCount = alertItems.where((p) => p.isOutOfStock).length;
+    final lowStockCount = alertItems.where((p) => p.isLowStock).length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF9800).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFF9800).withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF9800), size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Perhatian: ${outOfStockCount > 0 ? "$outOfStockCount habis stok, " : ""}$lowStockCount item stok rendah.',
+              style: const TextStyle(
+                color: Color(0xFFFFB74D),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          InkWell(
+            onTap: () => _showLowStockReviewSheet(alertItems),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF9800).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Semak', style: TextStyle(color: Color(0xFFFFB74D), fontSize: 11, fontWeight: FontWeight.bold)),
+                  SizedBox(width: 2),
+                  Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFFFB74D), size: 9),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLowStockReviewSheet(List<ProductModel> alertItems) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF10131E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          constraints: const BoxConstraints(maxHeight: 480),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.inventory_2_rounded, color: Color(0xFFFF9800), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Senarai Amaran Stok & Inventori',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Item di bawah memerlukan penambahan stok segera untuk mengelakkan gangguan jualan.',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11.5),
+              ),
+              const SizedBox(height: 14),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: alertItems.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, idx) {
+                    final item = alertItems[idx];
+                    final isOut = item.isOutOfStock;
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isOut
+                              ? Colors.redAccent.withValues(alpha: 0.3)
+                              : const Color(0xFFFF9800).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: (isOut ? Colors.redAccent : const Color(0xFFFF9800)).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              isOut ? Icons.block_rounded : Icons.warning_amber_rounded,
+                              color: isOut ? Colors.redAccent : const Color(0xFFFF9800),
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'RM ${item.price.toStringAsFixed(2)} · Had Minima: ${item.lowStockThreshold} ${item.unit}',
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: (isOut ? Colors.redAccent : const Color(0xFFFF9800)).withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              isOut ? '0 (HABIS)' : '${item.stock} ${item.unit}',
+                              style: TextStyle(
+                                color: isOut ? Colors.redAccent : const Color(0xFFFFB74D),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1027,13 +1239,30 @@ class _PosPageState extends State<PosPage> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'RM ${product.price.toStringAsFixed(2)}',
-                                    style: const TextStyle(
-                                      color: Color(0xFF42A5F5),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'RM ${product.price.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF42A5F5),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      if (product.isProduct && product.trackInventory)
+                                        Text(
+                                          product.isOutOfStock ? 'Habis stok' : '${product.stock} dlm stok',
+                                          style: TextStyle(
+                                            color: product.isOutOfStock
+                                                ? Colors.redAccent
+                                                : (product.isLowStock ? const Color(0xFFFF9800) : Colors.white38),
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                   Container(
                                     padding: const EdgeInsets.all(2.5),
@@ -1126,13 +1355,34 @@ class _PosPageState extends State<PosPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              'RM ${product.price.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                color: Color(0xFF42A5F5),
-                                fontSize: 14.5,
-                                fontWeight: FontWeight.w800,
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'RM ${product.price.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF42A5F5),
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                if (product.isProduct && product.trackInventory)
+                                  Text(
+                                    product.isOutOfStock
+                                        ? 'Habis stok'
+                                        : (product.isLowStock
+                                            ? 'Tinggal ${product.stock} ${product.unit}'
+                                            : 'Baki: ${product.stock} ${product.unit}'),
+                                    style: TextStyle(
+                                      color: product.isOutOfStock
+                                          ? Colors.redAccent
+                                          : (product.isLowStock ? const Color(0xFFFF9800) : Colors.white38),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                              ],
                             ),
                             Container(
                               width: 24,
@@ -1155,6 +1405,87 @@ class _PosPageState extends State<PosPage> {
                     ),
                   ),
                 ],
+
+                // Out of stock dark tint overlay
+                if (product.isProduct && product.trackInventory && product.isOutOfStock)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.45),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                  ),
+
+                // Out of Stock Badge at Top-Left
+                if (product.isProduct && product.trackInventory && product.isOutOfStock)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(7),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.redAccent.withValues(alpha: 0.4),
+                            blurRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.block_rounded, size: 9, color: Colors.white),
+                          SizedBox(width: 3),
+                          Text(
+                            'HABIS STOK',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                // Low Stock Badge at Top-Left
+                else if (product.isProduct && product.trackInventory && product.isLowStock)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF9800).withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(7),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF9800).withValues(alpha: 0.35),
+                            blurRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, size: 9, color: Colors.white),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Tinggal ${product.stock}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
                 // In-Cart Badge at Top-Right
                 if (inCart != null)

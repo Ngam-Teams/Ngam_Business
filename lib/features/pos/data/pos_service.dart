@@ -140,6 +140,30 @@ class PosService {
           }).toList();
 
       await _client.from('order_items').insert(orderItems);
+
+      // Auto-deduct inventory stock for physical products that track stock
+      for (final item in items) {
+        if (item.product.isProduct && item.product.trackInventory) {
+          try {
+            final current = await _client
+                .from('business_products')
+                .select('stock')
+                .eq('id', item.product.id)
+                .maybeSingle();
+
+            if (current != null) {
+              final currentStock = (current['stock'] as int?) ?? item.product.stock;
+              final newStock = (currentStock - item.quantity).clamp(0, 999999);
+              await _client
+                  .from('business_products')
+                  .update({'stock': newStock})
+                  .eq('id', item.product.id);
+            }
+          } catch (_) {
+            // Ignore individual stock deduction failures to not block order creation
+          }
+        }
+      }
     } catch (e) {
       // Re-throw so the UI can show the error
       rethrow;

@@ -168,6 +168,41 @@ class ProductService {
     }
   }
 
+  /// Updates stock level for a product
+  Future<bool> updateStock(String productId, int newStock) async {
+    try {
+      final safeStock = newStock < 0 ? 0 : newStock;
+      await _client.from('business_products').update({
+        'stock': safeStock,
+      }).eq('id', productId);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Deducts stock in batch when an order is completed
+  Future<void> deductStockBatch(Map<String, int> productQuantities) async {
+    for (final entry in productQuantities.entries) {
+      try {
+        final current = await _client
+            .from('business_products')
+            .select('stock, track_inventory')
+            .eq('id', entry.key)
+            .maybeSingle();
+
+        if (current != null && (current['track_inventory'] as bool? ?? true)) {
+          final currentStock = (current['stock'] as int?) ?? 0;
+          final newStock = (currentStock - entry.value).clamp(0, 999999);
+          await _client
+              .from('business_products')
+              .update({'stock': newStock})
+              .eq('id', entry.key);
+        }
+      } catch (_) {}
+    }
+  }
+
   /// Deletes a product
   Future<bool> deleteProduct(String productId) async {
     try {
