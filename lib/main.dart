@@ -11,11 +11,16 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'core/router/app_router.dart';
 import 'core/router/url_strategy.dart';
+import 'core/services/network_status_service.dart';
 import 'features/settings/data/business_service.dart';
+import 'widgets/offline_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   setCleanUrlStrategy();
+
+  // Initialize network connectivity monitoring
+  NetworkStatusService.instance.initialize();
 
   try {
     await dotenv.load(fileName: '.env');
@@ -61,6 +66,19 @@ class NgamBusinessApp extends StatelessWidget {
       title: 'Ngam Business',
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: OfflineBanner(),
+            ),
+          ],
+        );
+      },
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
