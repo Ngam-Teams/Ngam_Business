@@ -332,9 +332,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(
       source: ImageSource.gallery,
-      maxWidth: 1080,
-      maxHeight: 1080,
-      imageQuality: 75,
+      maxWidth: type == 'logo' ? 1024 : 2560,
+      maxHeight: type == 'logo' ? 1024 : 1440,
+      imageQuality: 90,
     );
 
     if (image == null) return;
@@ -366,7 +366,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         });
 
         if (mounted) {
-          showGlassToast(context, '${type == 'logo' ? 'Logo' : 'Cover'} uploaded successfully!');
+          showGlassToast(context, '${type == 'logo' ? 'Logo' : 'Cover'} berjaya dimampatkan & dimuat naik!');
         }
       } else {
         if (mounted) showGlassToast(context, 'Upload failed. Storage bucket error.', isError: true);

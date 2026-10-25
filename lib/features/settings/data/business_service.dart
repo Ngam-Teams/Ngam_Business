@@ -1,3 +1,4 @@
+import '../../../core/services/image_compression_service.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -575,19 +576,33 @@ class BusinessService {
     }
   }
 
-  /// Upload an image to the Supabase Storage bucket 'business-assets'
+  /// Upload an image to the Supabase Storage bucket 'business-assets' with automatic smart compression
   Future<String?> uploadBusinessImage(String businessId, String folder, XFile file) async {
     try {
-      final fileName = '${businessId}_${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      final rawBytes = await file.readAsBytes();
+
+      // Profil pemampatan pintar: 'logos' (512x512) vs 'covers' (1920x1080)
+      final type = folder == 'logos'
+          ? ImageCompressionType.logo
+          : ImageCompressionType.cover;
+
+      final compressed = await ImageCompressionService.compress(
+        bytes: rawBytes,
+        type: type,
+      );
+
+      final fileName = '${businessId}_${DateTime.now().millisecondsSinceEpoch}.${compressed.extension}';
       final path = '$folder/$fileName';
 
-      // Read as bytes to support cross-platform (Web/Mobile/Desktop)
-      final bytes = await file.readAsBytes();
+      debugPrint(
+        '[ImageCompression] Folder: $folder | Asal: ${compressed.originalSizeFormatted} -> '
+        'Mampat: ${compressed.compressedSizeFormatted} (${compressed.reductionPercent.toStringAsFixed(1)}% jimat)',
+      );
 
       await _client.storage.from('business-assets').uploadBinary(
             path,
-            bytes,
-            fileOptions: FileOptions(contentType: file.mimeType ?? 'image/jpeg', upsert: true),
+            compressed.bytes,
+            fileOptions: FileOptions(contentType: compressed.mimeType, upsert: true),
           );
 
       return _client.storage.from('business-assets').getPublicUrl(path);

@@ -1,3 +1,4 @@
+import '../../../core/services/image_compression_service.dart';
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../pos/models/product_model.dart';
@@ -90,10 +91,18 @@ class ProductService {
       if (shopId == null) return null;
 
       String? imageUrl;
-      if (imageBytes != null && imageExt != null) {
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.$imageExt';
+      if (imageBytes != null) {
+        final compressed = await ImageCompressionService.compress(
+          bytes: imageBytes,
+          type: ImageCompressionType.product,
+        );
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.${compressed.extension}';
         final path = 'products/$fileName';
-        await _client.storage.from('business-assets').uploadBinary(path, imageBytes);
+        await _client.storage.from('business-assets').uploadBinary(
+          path, 
+          compressed.bytes,
+          fileOptions: FileOptions(contentType: compressed.mimeType, upsert: true),
+        );
         imageUrl = _client.storage.from('business-assets').getPublicUrl(path);
       }
 
@@ -148,10 +157,18 @@ class ProductService {
     String? imageExt,
   }) async {
     try {
-      if (imageBytes != null && imageExt != null) {
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.$imageExt';
+      if (imageBytes != null) {
+        final compressed = await ImageCompressionService.compress(
+          bytes: imageBytes,
+          type: ImageCompressionType.product,
+        );
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.${compressed.extension}';
         final path = 'products/$fileName';
-        await _client.storage.from('business-assets').uploadBinary(path, imageBytes);
+        await _client.storage.from('business-assets').uploadBinary(
+          path, 
+          compressed.bytes,
+          fileOptions: FileOptions(contentType: compressed.mimeType, upsert: true),
+        );
         final imageUrl = _client.storage.from('business-assets').getPublicUrl(path);
         updates['image_url'] = imageUrl;
       }
