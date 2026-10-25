@@ -28,12 +28,17 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   Map<String, dynamic>? _businessProfile;
   bool _loadingBusiness = true;
+  late Future<Map<String, dynamic>> _overviewFuture;
+  String? _lastLoadedBusinessId;
 
   @override
   void initState() {
     super.initState();
     _businessProfile = BusinessService.cachedProfile;
     _loadingBusiness = _businessProfile == null;
+    _lastLoadedBusinessId = _businessProfile?['id']?.toString();
+    _overviewFuture = _analytics.fetchOverviewStats();
+
     BusinessService.profileNotifier.addListener(_onProfileUpdated);
     _loadBusinessProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -47,10 +52,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   void _onProfileUpdated() {
     if (mounted) {
+      final updatedProfile = BusinessService.profileNotifier.value;
+      final newId = updatedProfile?['id']?.toString();
+      final bool idChanged = newId != null && newId != _lastLoadedBusinessId;
+
       setState(() {
-        _businessProfile = BusinessService.profileNotifier.value;
+        _businessProfile = updatedProfile;
         if (_businessProfile != null) {
           _loadingBusiness = false;
+        }
+        if (idChanged) {
+          _lastLoadedBusinessId = newId;
+          _overviewFuture = _analytics.fetchOverviewStats(forceRefresh: true);
         }
       });
     }
@@ -65,9 +78,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
   Future<void> _loadBusinessProfile() async {
     final profile = await _businessService.getBusinessProfile();
     if (mounted) {
+      final newId = profile?['id']?.toString();
+      final bool idChanged = newId != null && newId != _lastLoadedBusinessId;
+
       setState(() {
         _businessProfile = profile;
         _loadingBusiness = false;
+        if (idChanged) {
+          _lastLoadedBusinessId = newId;
+          _overviewFuture = _analytics.fetchOverviewStats(forceRefresh: true);
+        }
       });
     }
   }
@@ -126,9 +146,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>>(
-      future: _analytics.fetchOverviewStats(),
+      future: _overviewFuture,
       builder: (context, snapshot) {
-        final data = snapshot.data;
+        final data = snapshot.data ?? AnalyticsService.cachedOverviewStats;
         final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
 
         final double todayRev = (data?['todayRevenue'] as num?)?.toDouble() ?? 0.0;
@@ -136,7 +156,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
         final int pendingOrders = (data?['pendingOrders'] as num?)?.toInt() ?? 0;
         final double monthlyRev = (data?['monthlyRevenue'] as num?)?.toDouble() ?? 0.0;
 
-        final loading = snapshot.connectionState == ConnectionState.waiting;
+        final loading = (snapshot.connectionState == ConnectionState.waiting) && data == null;
 
         final cards = [
           StatCard(
@@ -258,20 +278,31 @@ class _HomeDashboardState extends State<HomeDashboard> {
               );
             }
 
-            // Mobile portrait layout (vertical phone)
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(0, 0, 0, 100),
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (showBanner) _buildProfileIncompleteBanner(context),
-                  _buildStatCards(cards, width, isLandscape: false),
-                  const SizedBox(height: 16),
-                  _buildRecentActivity(isDesktop: false),
-                  const SizedBox(height: 16),
-                  _buildQuickActions(context, isDesktop: false),
-                ],
+            // Mobile portrait layout (vertical phone) with Pull-to-Refresh
+            return RefreshIndicator(
+              onRefresh: () async {
+                final f = _analytics.fetchOverviewStats(forceRefresh: true);
+                setState(() {
+                  _overviewFuture = f;
+                });
+                await f;
+              },
+              color: const Color(0xFF42A5F5),
+              backgroundColor: const Color(0xFF141424),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 100),
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (showBanner) _buildProfileIncompleteBanner(context),
+                    _buildStatCards(cards, width, isLandscape: false),
+                    const SizedBox(height: 16),
+                    _buildRecentActivity(isDesktop: false),
+                    const SizedBox(height: 16),
+                    _buildQuickActions(context, isDesktop: false),
+                  ],
+                ),
               ),
             );
           },

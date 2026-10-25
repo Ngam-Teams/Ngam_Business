@@ -24,6 +24,13 @@ class AnalyticsPage extends StatefulWidget {
 class _AnalyticsPageState extends State<AnalyticsPage> {
   final AnalyticsService _service = AnalyticsService();
   AnalyticsPeriod _selectedPeriod = AnalyticsPeriod.sevenDays;
+  late Future<Map<String, dynamic>> _overviewFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _overviewFuture = _service.fetchOverviewStats();
+  }
 
   void _exportReport() {
     showModalBottomSheet(
@@ -169,21 +176,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
           // Revenue summary panel
           FutureBuilder<Map<String, dynamic>>(
-            future: _service.fetchOverviewStats(),
+            future: _overviewFuture,
             builder: (context, snapshot) {
-              final data = snapshot.data;
+              final data = snapshot.data ?? AnalyticsService.cachedOverviewStats;
               final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
-              final loading = snapshot.connectionState == ConnectionState.waiting;
+              final loading = (snapshot.connectionState == ConnectionState.waiting) && data == null;
               final mult = _getPeriodMultiplier();
 
-              final todayRev = (data?['todayRevenue'] ?? 1450.0) as double;
-              final todayOrders = (data?['todayOrders'] ?? 42) as int;
-              final avgOrder = (data?['avgOrderValue'] ?? 34.50) as double;
+              final double todayRev = (data?['todayRevenue'] as num?)?.toDouble() ?? 1450.0;
+              final int todayOrders = (data?['todayOrders'] as num?)?.toInt() ?? 42;
+              final double avgOrder = (data?['avgOrderValue'] as num?)?.toDouble() ?? 34.50;
+              final double monthlyRev = (data?['monthlyRevenue'] as num?)?.toDouble() ?? 38450.0;
 
               final displayedRevenue = _selectedPeriod == AnalyticsPeriod.today
                   ? todayRev
                   : (_selectedPeriod == AnalyticsPeriod.thirtyDays
-                      ? (data?['monthlyRevenue'] ?? 38450.0) as double
+                      ? monthlyRev
                       : todayRev * mult);
 
               final displayedOrders = (_selectedPeriod == AnalyticsPeriod.today ? todayOrders : (todayOrders * mult).round());

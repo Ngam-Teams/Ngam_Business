@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../settings/data/business_service.dart';
 
@@ -5,98 +7,98 @@ class AnalyticsService {
   final SupabaseClient _client;
   final BusinessService _businessService;
 
+  static Map<String, dynamic>? _cachedOverviewStats;
+  static Map<String, dynamic>? get cachedOverviewStats => _cachedOverviewStats;
+
+  static const Map<String, dynamic> fallbackOverviewStats = {
+    'todayRevenue': 0.0,
+    'todayOrders': 0,
+    'monthlyRevenue': 0.0,
+    'productCount': 0,
+    'avgOrderValue': 0.0,
+    'pendingOrders': 0,
+  };
+
   AnalyticsService({SupabaseClient? client, BusinessService? businessService})
       : _client = client ?? Supabase.instance.client,
         _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);
 
   Future<String?> _getBusinessId() async {
-    final profile = await _businessService.getBusinessProfile();
-    return profile?['id'];
+    try {
+      final profile = await _businessService.getBusinessProfile().timeout(
+            const Duration(seconds: 4),
+            onTimeout: () => BusinessService.cachedProfile,
+          );
+      return profile?['id']?.toString();
+    } catch (_) {
+      return BusinessService.cachedProfile?['id']?.toString();
+    }
   }
 
   /// Fetches overview stats: today's revenue, order count, avg order value.
-  Future<Map<String, dynamic>> fetchOverviewStats() async {
+  /// Runs database queries concurrently with timeout and guaranteed fallback.
+  Future<Map<String, dynamic>> fetchOverviewStats({bool forceRefresh = false}) async {
     try {
       final businessId = await _getBusinessId();
       if (businessId == null) {
-        return {
-          'todayRevenue': 0.0,
-          'todayOrders': 0,
-          'monthlyRevenue': 0.0,
-          'productCount': 0,
-          'avgOrderValue': 0.0,
-          'pendingOrders': 0,
-        };
+        return _cachedOverviewStats ?? fallbackOverviewStats;
       }
 
       final today = DateTime.now();
-      final startOfDay = DateTime(today.year, today.month, today.day)
-          .toIso8601String();
+      final startOfDay = DateTime(today.year, today.month, today.day).toIso8601String();
+      final startOfMonth = DateTime(today.year, today.month, 1).toIso8601String();
 
-      final ordersRes = await _client
-          .from('orders')
-          .select('total, created_at, status')
-          .eq('business_id', businessId)
-          .gte('created_at', startOfDay);
-
-      final orders = ordersRes as List;
-      double todayRevenue = 0;
-      for (final o in orders) {
-        todayRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
-      }
-
-      // Monthly revenue
-      final startOfMonth =
-          DateTime(today.year, today.month, 1).toIso8601String();
-      final monthlyRes = await _client
-          .from('orders')
-          .select('total')
-          .eq('business_id', businessId)
-          .gte('created_at', startOfMonth);
-
-      double monthlyRevenue = 0;
-      for (final o in monthlyRes as List) {
-        monthlyRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
-      }
-
-      // Product count
-      int productCount = 0;
-      try {
-        final prodRes = await _client
+      // Run queries concurrently with an 8-second total timeout
+      final responses = await Future.wait([
+        _client
+            .from('orders')
+            .select('total, created_at, status')
+            .eq('business_id', businessId)
+            .gte('created_at', startOfDay),
+        _client
+            .from('orders')
+            .select('total')
+            .eq('business_id', businessId)
+            .gte('created_at', startOfMonth),
+        _client
             .from('business_products')
             .select('id')
             .eq('shop_id', businessId)
-            .eq('is_active', true);
-        productCount = (prodRes as List).length;
-      } on PostgrestException {
-        productCount = 0;
-      }
+            .eq('is_active', true),
+      ]).timeout(const Duration(seconds: 8));
 
-      // Pending Orders
+      final orders = (responses[0] as List?) ?? [];
+      final monthlyOrders = (responses[1] as List?) ?? [];
+      final products = (responses[2] as List?) ?? [];
+
+      double todayRevenue = 0.0;
       int pendingOrders = 0;
       for (final o in orders) {
+        todayRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
         if (o['status'] == 'pending') {
           pendingOrders++;
         }
       }
 
-      return {
+      double monthlyRevenue = 0.0;
+      for (final o in monthlyOrders) {
+        monthlyRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
+      }
+
+      final stats = {
         'todayRevenue': todayRevenue,
         'todayOrders': orders.length,
         'monthlyRevenue': monthlyRevenue,
-        'productCount': productCount,
+        'productCount': products.length,
         'avgOrderValue': orders.isEmpty ? 0.0 : todayRevenue / orders.length,
         'pendingOrders': pendingOrders,
       };
-    } on PostgrestException {
-      return {
-        'todayRevenue': 0.0,
-        'todayOrders': 0,
-        'monthlyRevenue': 0.0,
-        'productCount': 0,
-        'avgOrderValue': 0.0,
-        'pendingOrders': 0,
-      };
+
+      _cachedOverviewStats = stats;
+      return stats;
+    } catch (e) {
+      debugPrint('[AnalyticsService] fetchOverviewStats error or timeout: ');
+      return _cachedOverviewStats ?? fallbackOverviewStats;
     }
   }
 
@@ -114,10 +116,12 @@ class AnalyticsService {
           .select('total, created_at')
           .eq('business_id', businessId)
           .gte('created_at', weekAgo.toIso8601String())
-          .order('created_at');
+          .order('created_at')
+          .timeout(const Duration(seconds: 8));
 
       return (res as List).cast<Map<String, dynamic>>();
-    } on PostgrestException {
+    } catch (e) {
+      debugPrint('[AnalyticsService] fetchWeeklyRevenue error: ');
       return [];
     }
   }
@@ -132,7 +136,8 @@ class AnalyticsService {
           .from('orders')
           .select('id')
           .eq('business_id', businessId)
-          .limit(100);
+          .limit(100)
+          .timeout(const Duration(seconds: 8));
 
       final orderIds = (ordersRes as List)
           .map((o) => o['id']?.toString())
@@ -144,7 +149,8 @@ class AnalyticsService {
       final res = await _client
           .from('order_items')
           .select('product_name, quantity')
-          .filter('order_id', 'in', orderIds);
+          .filter('order_id', 'in', orderIds)
+          .timeout(const Duration(seconds: 8));
 
       final Map<String, int> counts = {};
       for (final item in (res as List)) {
@@ -160,7 +166,8 @@ class AnalyticsService {
           .take(limit)
           .map((e) => {'product_name': e.key, 'quantity': e.value})
           .toList();
-    } on PostgrestException {
+    } catch (e) {
+      debugPrint('[AnalyticsService] fetchTopProducts error: ');
       return [];
     }
   }
