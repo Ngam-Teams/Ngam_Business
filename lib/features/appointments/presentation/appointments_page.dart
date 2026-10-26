@@ -17,7 +17,7 @@ import '../../pos/models/order_model.dart';
 // AppointmentsPage — Merchant Booking & Schedule Management
 // ============================================================
 
-enum AppointmentStatus { pending, confirmed, inProgress, completed, cancelled }
+enum AppointmentStatus { pending, confirmed, inProgress, completed, cancelled, disputed }
 
 class AppointmentsPage extends StatefulWidget {
   const AppointmentsPage({super.key});
@@ -134,6 +134,9 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                 case 'cancelled':
                   apptStatus = AppointmentStatus.cancelled;
                   break;
+                case 'disputed':
+                  apptStatus = AppointmentStatus.disputed;
+                  break;
                 case 'pending':
                 default:
                   apptStatus = AppointmentStatus.pending;
@@ -247,6 +250,9 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
           break;
         case AppointmentStatus.cancelled:
           statusStr = 'cancelled';
+          break;
+        case AppointmentStatus.disputed:
+          statusStr = 'disputed';
           break;
         case AppointmentStatus.pending:
           statusStr = 'pending';
@@ -723,6 +729,8 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
         return const Color(0xFF44CF6C);
       case AppointmentStatus.cancelled:
         return Colors.redAccent;
+      case AppointmentStatus.disputed:
+        return const Color(0xFFF97316);
     }
   }
 
@@ -738,6 +746,8 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
         return 'Selesai';
       case AppointmentStatus.cancelled:
         return 'Dibatalkan';
+      case AppointmentStatus.disputed:
+        return 'Pertikaian';
     }
   }
 
@@ -974,6 +984,30 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                                   child: Text(
                                     'Catatan: ${appt['notes']}',
                                     style: const TextStyle(color: Colors.white60, fontSize: 12, fontStyle: FontStyle.italic),
+                                  ),
+                                ),
+                              ],
+
+                              if (status == AppointmentStatus.disputed) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                                  ),
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 18),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Pelanggan telah memfailkan pertikaian. Dana ditahan oleh Ngam. Sila hubungi pelanggan melalui WhatsApp untuk selesaikan isu.',
+                                          style: TextStyle(color: Colors.orangeAccent, fontSize: 11.5, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
