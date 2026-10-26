@@ -123,7 +123,9 @@ class _PosPageState extends State<PosPage> {
   }
 
   void _initProductStream() {
-    setState(() => _loading = true);
+    if (_allProducts.isEmpty) {
+      setState(() => _loading = true);
+    }
     _productSubscription = _service.streamProducts().listen((products) {
       if (!mounted) return;
       setState(() {

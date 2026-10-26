@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/cache_service.dart';
 import '../../settings/data/business_service.dart';
 import '../models/product_model.dart';
 import '../models/order_model.dart';
@@ -41,7 +43,7 @@ class PosService {
     }
   }
 
-  /// Streams available products for real-time updates for the current tenant.
+  /// Streams available products for real-time updates (dilengkapi cache pantas SWR 0-saat)
   Stream<List<ProductModel>> streamProducts() async* {
     final businessId = await _getShopId();
     if (businessId == null) {
@@ -49,15 +51,39 @@ class PosService {
       return;
     }
 
+    final cacheKey = 'pos_products_';
+
+    // 1. Pancarkan data produk POS dari cache serta-merta (0 ms)
+    final cached = await CacheService.get<List<ProductModel>>(
+      key: cacheKey,
+      fromJson: (jsonList) => (jsonList as List)
+          .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+    if (cached != null && cached.isNotEmpty) {
+      yield cached;
+    }
+
+    // 2. Sambungkan stream realtime Supabase & simpan ke cache
     yield* _client
         .from('business_products')
         .stream(primaryKey: ['id'])
         .eq('shop_id', businessId)
         .order('name')
-        .map((list) => list
-            .map((json) => ProductModel.fromJson(json))
-            .where((p) => p.isAvailable)
-            .toList());
+        .map((list) {
+          final products = list
+              .map((json) => ProductModel.fromJson(json))
+              .where((p) => p.isAvailable)
+              .toList();
+
+          unawaited(CacheService.set<List<ProductModel>>(
+            key: cacheKey,
+            data: products,
+            toJson: (prods) => prods.map((p) => p.toJson()).toList(),
+          ));
+
+          return products;
+        });
   }
 
   // ---------------------------------------------------------------------------

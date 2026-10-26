@@ -41,7 +41,9 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
   }
 
   void _initProductStream() {
-    setState(() => _isLoading = true);
+    if (_products.isEmpty) {
+      setState(() => _isLoading = true);
+    }
     _productSubscription = _service.streamAllProducts().listen((products) {
       if (!mounted) return;
       setState(() {

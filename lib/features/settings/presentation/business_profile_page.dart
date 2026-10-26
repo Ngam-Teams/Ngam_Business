@@ -140,89 +140,99 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     }
   }
 
-  Future<void> _loadProfile() async {
-    setState(() => _isLoading = true);
-    final data = await _service.getBusinessProfile();
+  void _populateProfile(Map<String, dynamic> data) {
+    _businessId = data['id'];
+    _nameController.text = data['business_name'] ?? '';
 
-    if (mounted) {
-      if (data != null) {
-        _businessId = data['id'];
-        _nameController.text = data['business_name'] ?? '';
+    final handle = (data['business_handle'] as String?)?.trim() ?? '';
+    if (handle.isNotEmpty) {
+      _handleController.text = handle.replaceAll('@', '').toLowerCase();
+      _isHandleCustomized = true;
+    } else if (_nameController.text.isNotEmpty) {
+      _handleController.text = BusinessService.generateHandleFromName(_nameController.text);
+      _isHandleCustomized = false;
+    }
 
-        final handle = (data['business_handle'] as String?)?.trim() ?? '';
-        if (handle.isNotEmpty) {
-          _handleController.text = handle.replaceAll('@', '').toLowerCase();
-          _isHandleCustomized = true;
-        } else if (_nameController.text.isNotEmpty) {
-          _handleController.text = BusinessService.generateHandleFromName(_nameController.text);
-          _isHandleCustomized = false;
+    final industry = (data['business_industry'] as String? ?? 'services').toLowerCase();
+    if (_industries.any((i) => i['id'] == industry)) {
+      _selectedIndustry = industry;
+    } else {
+      _selectedIndustry = 'services';
+    }
+
+    _regNoController.text = data['business_registration_number'] ?? '';
+    _sstNoController.text = data['sst_number'] ?? '';
+    _phoneController.text = data['business_phone'] ?? '';
+    _emailController.text = data['business_email'] ?? '';
+    _websiteController.text = data['business_website'] ?? '';
+
+    _addressLineController.text = data['address_line'] ?? '';
+    _postcodeController.text = data['postcode'] ?? '';
+    _cityController.text = data['business_city'] ?? '';
+
+    final stateVal = data['state'] as String?;
+    if (stateVal != null && _malaysianStates.contains(stateVal)) {
+      _selectedState = stateVal;
+    } else if (stateVal != null && stateVal.isNotEmpty) {
+      _selectedState = stateVal;
+    }
+
+    _countryController.text = data['business_country'] ?? 'Malaysia';
+    _logoUrl = data['business_logo_url'];
+    _coverUrl = data['business_cover_url'];
+    _latitude = (data['latitude'] as num?)?.toDouble();
+    _longitude = (data['longitude'] as num?)?.toDouble();
+
+    // Load Settings if present
+    if (data['settings'] != null) {
+      final settings = data['settings'] as Map<String, dynamic>;
+      _isHalal = settings['is_halal'] ?? false;
+      _slotDuration = settings['slot_duration'] ?? 30;
+      _chairsController.text = (settings['total_chairs'] ?? 1).toString();
+
+      final opHours = settings['operating_hours'];
+      if (opHours is Map) {
+        final openStr = opHours['open_time'] as String?;
+        final closeStr = opHours['close_time'] as String?;
+        if (openStr != null && openStr.contains(':')) {
+          final parts = openStr.split(':');
+          _openTime = TimeOfDay(hour: int.tryParse(parts[0]) ?? 9, minute: int.tryParse(parts[1]) ?? 0);
         }
-
-        final industry = (data['business_industry'] as String? ?? 'services').toLowerCase();
-        if (_industries.any((i) => i['id'] == industry)) {
-          _selectedIndustry = industry;
-        } else {
-          _selectedIndustry = 'services';
-        }
-
-        _regNoController.text = data['business_registration_number'] ?? '';
-        _sstNoController.text = data['sst_number'] ?? '';
-        _phoneController.text = data['business_phone'] ?? '';
-        _emailController.text = data['business_email'] ?? '';
-        _websiteController.text = data['business_website'] ?? '';
-
-        _addressLineController.text = data['address_line'] ?? '';
-        _postcodeController.text = data['postcode'] ?? '';
-        _cityController.text = data['business_city'] ?? '';
-
-        final stateVal = data['state'] as String?;
-        if (stateVal != null && _malaysianStates.contains(stateVal)) {
-          _selectedState = stateVal;
-        } else if (stateVal != null && stateVal.isNotEmpty) {
-          _selectedState = stateVal;
-        }
-
-        _countryController.text = data['business_country'] ?? 'Malaysia';
-        _logoUrl = data['business_logo_url'];
-        _coverUrl = data['business_cover_url'];
-        _latitude = (data['latitude'] as num?)?.toDouble();
-        _longitude = (data['longitude'] as num?)?.toDouble();
-
-        // Load Settings if present
-        if (data['settings'] != null) {
-          final settings = data['settings'] as Map<String, dynamic>;
-          _isHalal = settings['is_halal'] ?? false;
-          _slotDuration = settings['slot_duration'] ?? 30;
-          _chairsController.text = (settings['total_chairs'] ?? 1).toString();
-
-          final opHours = settings['operating_hours'];
-          if (opHours is Map) {
-            final openStr = opHours['open_time'] as String?;
-            final closeStr = opHours['close_time'] as String?;
-            if (openStr != null && openStr.contains(':')) {
-              final parts = openStr.split(':');
-              _openTime = TimeOfDay(hour: int.tryParse(parts[0]) ?? 9, minute: int.tryParse(parts[1]) ?? 0);
-            }
-            if (closeStr != null && closeStr.contains(':')) {
-              final parts = closeStr.split(':');
-              _closeTime = TimeOfDay(hour: int.tryParse(parts[0]) ?? 22, minute: int.tryParse(parts[1]) ?? 0);
-            }
-          }
-        }
-
-        // Load Compliance if present
-        if (data['compliance'] != null) {
-          final compliance = data['compliance'] as Map<String, dynamic>;
-          final bank = compliance['bank_name'] as String?;
-          if (bank != null && _malaysianBanks.contains(bank)) {
-            _selectedBank = bank;
-          } else if (bank != null && bank.isNotEmpty) {
-            _selectedBank = 'Other Bank';
-          }
-          _accountHolderController.text = compliance['account_holder'] ?? '';
-          _accountNumberController.text = compliance['account_number'] ?? '';
+        if (closeStr != null && closeStr.contains(':')) {
+          final parts = closeStr.split(':');
+          _closeTime = TimeOfDay(hour: int.tryParse(parts[0]) ?? 22, minute: int.tryParse(parts[1]) ?? 0);
         }
       }
+    }
+
+    // Load Compliance if present
+    if (data['compliance'] != null) {
+      final compliance = data['compliance'] as Map<String, dynamic>;
+      final bank = compliance['bank_name'] as String?;
+      if (bank != null && _malaysianBanks.contains(bank)) {
+        _selectedBank = bank;
+      } else if (bank != null && bank.isNotEmpty) {
+        _selectedBank = 'Other Bank';
+      }
+      _accountHolderController.text = compliance['account_holder'] ?? '';
+      _accountNumberController.text = compliance['account_number'] ?? '';
+    }
+  }
+
+  Future<void> _loadProfile() async {
+    // 1. Tunjuk data cache profil serta-merta jika ada (0 saat / sifar loading)
+    final cached = BusinessService.cachedProfile ?? await BusinessService.loadCachedProfile();
+    if (cached != null && mounted) {
+      _populateProfile(cached);
+      setState(() => _isLoading = false);
+    } else {
+      setState(() => _isLoading = true);
+    }
+
+    // 2. Tarik profil terkini dari Supabase di latar belakang
+    final data = await _service.getBusinessProfile();
+    if (mounted && data != null) {
+      _populateProfile(data);
       setState(() => _isLoading = false);
     }
   }
