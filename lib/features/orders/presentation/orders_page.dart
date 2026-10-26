@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/orders_service.dart';
 import '../../../widgets/glass_toast.dart';
@@ -77,6 +78,48 @@ class _OrdersPageState extends State<OrdersPage> {
         'Gagal mengemaskini status pesanan',
         isError: true,
       );
+    }
+  }
+
+  void _sendWhatsAppToCustomer(OrderModel order) async {
+    String? rawPhone = order.customerPhone;
+    
+    // Check if phone was written in notes (e.g., "0123456789")
+    if (rawPhone == null || rawPhone.isEmpty) {
+      if (order.notes != null) {
+        final phoneMatch = RegExp(r'(01[0-9]{8,9}|\+?601[0-9]{8,9})').firstMatch(order.notes!);
+        if (phoneMatch != null) {
+          rawPhone = phoneMatch.group(0);
+        }
+      }
+    }
+
+    if (rawPhone == null || rawPhone.isEmpty) {
+      showGlassToast(context, 'Tiada nombor telefon pelanggan untuk pesanan ini', isError: true);
+      return;
+    }
+
+    String phone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (phone.startsWith('0')) {
+      phone = '6$phone';
+    } else if (!phone.startsWith('60') && phone.length >= 9) {
+      phone = '60$phone';
+    }
+
+    final shortId = order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase();
+    final message = Uri.encodeComponent(
+      'Hai ${order.customerName ?? 'Pelanggan'}, pesanan anda (#$shortId) bernilai RM ${order.total.toStringAsFixed(2)} di kedai kami sedang disiapkan/diproses. Terima kasih!'
+    );
+
+    final url = Uri.parse('https://wa.me/$phone?text=$message');
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) showGlassToast(context, 'Tidak dapat membuka WhatsApp', isError: true);
+      }
+    } catch (e) {
+      if (mounted) showGlassToast(context, 'Ralat melancarkan WhatsApp: $e', isError: true);
     }
   }
 
@@ -322,16 +365,38 @@ class _OrdersPageState extends State<OrdersPage> {
                 ),
               ),
               const SizedBox(width: 8),
-              if (isPending)
-                ElevatedButton.icon(
-                  onPressed: () => _updateStatus(order, 'completed'),
-                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: Colors.white, size: 18),
-                  label: const Text('Complete'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: IconButton(
+                      icon: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedWhatsapp,
+                        color: Color(0xFF25D366),
+                        size: 20,
+                      ),
+                      tooltip: 'WhatsApp Pelanggan',
+                      onPressed: () => _sendWhatsAppToCustomer(order),
+                    ),
                   ),
-                ),
+                  if (isPending) ...[
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _updateStatus(order, 'completed'),
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: Colors.white, size: 18),
+                      label: const Text('Complete'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
           

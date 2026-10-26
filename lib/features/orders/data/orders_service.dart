@@ -10,6 +10,7 @@ class OrderModel {
   final String status;
   final String source;
   final String? customerName;
+  final String? customerPhone;
   final String? notes;
   final DateTime createdAt;
 
@@ -20,11 +21,16 @@ class OrderModel {
     required this.status,
     required this.source,
     this.customerName,
+    this.customerPhone,
     this.notes,
     required this.createdAt,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
+    String? phone = json['customer_phone'] as String?;
+    if (phone == null && json['users'] is Map) {
+      phone = json['users']['user_phone'] as String?;
+    }
     return OrderModel(
       id: json['id'] as String,
       ownerUserId: (json['owner_user_id'] as String?) ?? '',
@@ -32,6 +38,7 @@ class OrderModel {
       status: json['status'] as String,
       source: json['source'] as String? ?? 'pos',
       customerName: json['customer_name'] as String?,
+      customerPhone: phone,
       notes: json['notes'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );

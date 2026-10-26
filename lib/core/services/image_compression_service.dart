@@ -9,7 +9,7 @@ enum ImageCompressionType {
   /// Banner muka depan (1920x1080 max, Full HD panorama, 82% quality)
   cover,
 
-  /// Gambar produk (1080x1080 max, 80% quality)
+  /// Gambar produk (1080x1440 max, menyokong nisbah 1:1 persegi & 3:4 potret Shopee/TikTok Shop, 80% quality)
   product,
 
   /// Avatar pengguna (512x512 max, 85% quality)
@@ -114,7 +114,7 @@ CompressedImageResult _compressIsolateWorker(_CompressParams params) {
         break;
       case ImageCompressionType.product:
         maxWidth = params.customMaxWidth ?? 1080;
-        maxHeight = params.customMaxHeight ?? 1080;
+        maxHeight = params.customMaxHeight ?? 1440;
         quality = params.customQuality ?? 80;
         break;
       case ImageCompressionType.avatar:
