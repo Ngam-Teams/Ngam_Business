@@ -1030,6 +1030,57 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                               ),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    // ─── Aspect Ratio Recommendation Guide ───
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              HugeIcon(
+                                icon: HugeIcons.strokeRoundedInformationCircle,
+                                color: Colors.blue.shade300,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Nisbah Gambar Disyorkan (Pinterest Masonry)',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              _buildRatioBadge('1:1 Square', 'F&B, Gajet, Produk Am'),
+                              _buildRatioBadge('3:4 Portrait', 'Fesyen, Servis, Kosmetik'),
+                              _buildRatioBadge('2:3 Tall', 'Model Penuh, Lookbook'),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Sistem memampatkan gambar secara automatik mengikut nisbah asal dengan kualiti HD tanpa herotan.',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.45),
+                              fontSize: 10.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 20),
 
                     // ─── Basic Info ──────────────────────────────────────────
@@ -1420,6 +1471,45 @@ class _AddProductSheetState extends State<_AddProductSheet> {
       child: Text(
         title,
         style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+      ),
+    );
+  }
+
+  Widget _buildRatioBadge(String ratio, String desc) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6366F1).withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              ratio,
+              style: const TextStyle(
+                color: Color(0xFF818CF8),
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            desc,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 10.5,
+            ),
+          ),
+        ],
       ),
     );
   }
