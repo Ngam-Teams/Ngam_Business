@@ -14,6 +14,7 @@ import '../../analytics/data/analytics_service.dart';
 import '../../orders/data/orders_service.dart';
 import '../../settings/data/business_service.dart';
 import '../../../core/services/app_update_service.dart';
+import '../../../core/services/ngam_teams_service.dart';
 
 class HomeDashboard extends StatefulWidget {
   const HomeDashboard({super.key});
@@ -719,10 +720,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onTap: () => context.push('/receipt-settings'),
       ),
       (
-        label: 'Staff\nManagement',
+        label: 'Ngam Teams\n& Pasukan',
         icon: HugeIcons.strokeRoundedUserGroup,
         color: const Color(0xFFE5B9FF),
-        onTap: () => context.push('/staff-management'),
+        onTap: () => NgamTeamsService.showTeamsHubModal(
+          context,
+          businessName: (_businessProfile?['business_name'] ?? BusinessService.cachedProfile?['business_name']) as String?,
+        ),
       ),
       (
         label: 'WhatsApp\nMarketing',

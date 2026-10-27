@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:go_router/go_router.dart';
 import '../../../core/services/audit_service.dart';
+import '../../../core/services/ngam_teams_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../data/business_service.dart';
 
@@ -247,6 +248,11 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedSmartPhone01, color: Color(0xFF38BDF8), size: 22),
+            tooltip: 'Hab Ngam Teams (Krew App)',
+            onPressed: () => NgamTeamsService.showTeamsHubModal(context, businessName: _businessName),
+          ),
+          IconButton(
             icon: const HugeIcon(icon: HugeIcons.strokeRoundedTask01, color: Color(0xFF42A5F5), size: 22),
             tooltip: 'Audit Logs & Rekod Staf',
             onPressed: () => context.push('/audit-logs'),
@@ -269,23 +275,157 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
-          : _staffList.isEmpty
-              ? _buildEmptyState()
-              : RefreshIndicator(
-                  color: const Color(0xFF42A5F5),
-                  onRefresh: _loadStaff,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16).copyWith(bottom: 120),
-                    itemCount: _staffList.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return _buildLinkingGuideBanner();
-                      }
-                      final staff = _staffList[index - 1];
-                      return _buildStaffCard(staff);
-                    },
-                  ),
+          : RefreshIndicator(
+              color: const Color(0xFF42A5F5),
+              onRefresh: _loadStaff,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16).copyWith(bottom: 120),
+                itemCount: _staffList.isEmpty ? 3 : _staffList.length + 2,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return _buildNgamTeamsBanner();
+                  }
+                  if (index == 1) {
+                    return _buildLinkingGuideBanner();
+                  }
+                  if (_staffList.isEmpty) {
+                    return _buildEmptyState();
+                  }
+                  final staff = _staffList[index - 2];
+                  return _buildStaffCard(staff);
+                },
+              ),
+            ),
+    );
+  }
+
+  Widget _buildNgamTeamsBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF6C5CE7).withValues(alpha: 0.22),
+            const Color(0xFF3B82F6).withValues(alpha: 0.12),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF6C5CE7).withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6C5CE7).withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedUserGroup,
+                  color: Color(0xFFA78BFA),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Aplikasi Operasi Krew (Ngam Teams)',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.5,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Kakitangan anda menggunakan aplikasi Ngam Teams untuk tugasan harian, kehadiran & panggil giliran.',
+                      style: TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.3),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // 3 Quick Action Buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                    elevation: 0,
+                  ),
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedSmartPhone01,
+                    color: Colors.white,
+                    size: 15,
+                  ),
+                  label: const Text(
+                    'Buka App',
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () => NgamTeamsService.launchTeamsApp(context),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                  ),
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedDownload04,
+                    color: Colors.white70,
+                    size: 15,
+                  ),
+                  label: const Text(
+                    'Muat Turun',
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () => NgamTeamsService.openDownloadReleases(context),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF25D366),
+                    side: BorderSide(color: const Color(0xFF25D366).withValues(alpha: 0.4)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                  ),
+                  icon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedShare01,
+                    color: Color(0xFF25D366),
+                    size: 15,
+                  ),
+                  label: const Text(
+                    'Jemput',
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () => NgamTeamsService.copyStaffInvite(context, businessName: _businessName),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -818,13 +958,16 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     final biz = _businessName;
 
     final msg = '''
-Halo $name! Anda telah ditambah sebagai staf untuk "$biz" di aplikasi Ngam Teams.
+Halo $name! Anda telah ditambah sebagai krew/staf untuk "$biz" di aplikasi Ngam Teams.
+
+📲 Muat Turun Aplikasi (Android APK):
+${NgamTeamsService.apkDownloadUrl}
 
 🔑 Kod Staf Anda: $code
-📧 Emel: $email
+📧 Emel Berdaftar: $email
 
 Cara Menyambung Mudah & Pantas:
-1. Buka aplikasi Ngam Teams.
+1. Pasang aplikasi Ngam Teams menggunakan pautan di atas.
 2. Log masuk menggunakan emel ($email), ATAU buka menu Profil dan tekan "Enter Staff Code to Connect" lalu masukkan kod: $code.
 Selamat bertugas!
 '''.trim();

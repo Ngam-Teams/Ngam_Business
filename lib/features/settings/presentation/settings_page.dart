@@ -324,7 +324,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Staff Management',
+            label: 'Staff & Ngam Teams',
             icon: HugeIcons.strokeRoundedUserGroup,
             onTap: () => context.push('/staff-management'),
           ),
