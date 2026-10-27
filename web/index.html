@@ -71,7 +71,47 @@
   }
   </script>
 
-  <meta name="theme-color" content="#2196F3">
+  <!-- PWA Theme Color (Adaptive Light & Dark Mode) -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F8F9FA">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0A0A14">
+  <meta name="theme-color" content="#0A0A14">
+
+  <!-- PWA Theme Color Auto-sync & Bridge -->
+  <script>
+    (function() {
+      try {
+        var isDarkPref = localStorage.getItem('flutter.theme_mode');
+        var isDark = isDarkPref !== null
+          ? isDarkPref === 'true'
+          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var color = isDark ? '#0A0A14' : '#F8F9FA';
+        var metas = document.querySelectorAll('meta[name="theme-color"]');
+        metas.forEach(function(m) {
+          if (!m.getAttribute('media')) {
+            m.setAttribute('content', color);
+          }
+        });
+        if (document.body) {
+          document.body.style.backgroundColor = color;
+        }
+      } catch (e) {}
+    })();
+
+    window.updatePwaThemeColor = function(isDark) {
+      try {
+        var color = isDark ? '#0A0A14' : '#F8F9FA';
+        var metas = document.querySelectorAll('meta[name="theme-color"]');
+        metas.forEach(function(m) {
+          if (!m.getAttribute('media')) {
+            m.setAttribute('content', color);
+          }
+        });
+        if (document.body) {
+          document.body.style.backgroundColor = color;
+        }
+      } catch (e) {}
+    };
+  </script>
   <!-- Auto-redirect from .pages.dev to official business.ngam.dev -->
   <script>
     if (window.location.hostname.endsWith('pages.dev')) {
@@ -144,7 +184,7 @@
       50% { transform: scale(1.04); opacity: 1; filter: drop-shadow(0 0 16px rgba(33, 150, 243, 0.45)); }
     }
   </style>
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
 <body style="background-color: #0A0A0A;">
   <div id="ngam-splash">
