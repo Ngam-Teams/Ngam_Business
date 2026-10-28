@@ -147,18 +147,44 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
               final rawPrice = meta['total_price']?.toString() ?? '0';
               price = double.tryParse(rawPrice.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 35.0;
 
+              String serviceLabel = b['service_name']?.toString() ?? meta['category']?.toString() ?? 'Perkhidmatan';
+              final rawAddons = meta['addons_list'];
+              if (rawAddons is List && rawAddons.isNotEmpty) {
+                final addonsStr = rawAddons.map((a) => a.toString()).join(', ');
+                if (!serviceLabel.contains(addonsStr)) {
+                  serviceLabel = '$serviceLabel + $addonsStr';
+                }
+              }
+
+              final List<String> noteParts = [];
+              final String rawNotes = meta['notes']?.toString().trim() ?? '';
+              if (rawNotes.isNotEmpty) {
+                noteParts.add(rawNotes);
+              }
+              if (meta['estimated_duration_mins'] != null) {
+                noteParts.add('Tempoh: ~${meta['estimated_duration_mins']} min');
+              }
+              if (meta['payment_method'] != null) {
+                noteParts.add('Bayaran: ${meta['payment_method']}');
+              }
+              if (meta['cancellation_reason'] != null) {
+                noteParts.add('Sebab Batal: ${meta['cancellation_reason']}');
+              }
+
               return {
                 'db_id': b['id'],
                 'id': meta['booking_id'] ?? meta['short_ref'] ?? 'BK-${b['id'].toString().substring(0, b['id'].toString().length > 6 ? 6 : b['id'].toString().length)}',
                 'customerName': b['customer_name'] ?? meta['customer_name'] ?? 'Pelanggan Ngam',
-                'phone': meta['phone'] ?? '+60 12-345 6789',
-                'service': b['service_name'] ?? meta['category'] ?? 'Perkhidmatan',
+                'phone': (meta['phone'] != null && meta['phone'].toString().trim().isNotEmpty)
+                    ? meta['phone'].toString().trim()
+                    : '+60 12-345 6789',
+                'service': serviceLabel,
                 'dateTime': '${b['booking_date'] ?? 'Hari Ini'}, ${b['booking_time'] ?? ''}',
                 'staff': meta['provider_name'] ?? 'Staff',
                 'price': price,
                 'deposit': price * 0.3,
                 'status': apptStatus,
-                'notes': meta['notes'] ?? 'Tempahan melalui Aplikasi Ngam',
+                'notes': noteParts.isNotEmpty ? noteParts.join(' • ') : 'Tempahan melalui Aplikasi Ngam',
               };
             }).toList();
 
