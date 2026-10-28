@@ -12,6 +12,7 @@ import '../../customers/data/membership_service.dart';
 import 'widgets/split_payment_sheet.dart';
 import 'widgets/payment_terminal_modal.dart';
 import 'widgets/dynamic_pos_scanner_modal.dart';
+import 'widgets/pos_enterprise_modals.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/modal_sheet.dart';
 import '../../../../core/services/sound_service.dart';
@@ -45,6 +46,15 @@ class _PosPageState extends State<PosPage> {
   String? _voucherId;
   CustomerMember? _selectedMember;
 
+  // Enterprise Completeness: Held Orders, Offline Queue, Manual Discount, Auto-Print
+  List<HeldOrderModel> _heldOrders = [];
+  int _offlineQueueCount = 0;
+  bool _isSyncingOffline = false;
+  double _manualDiscount = 0.0;
+  String? _manualDiscountLabel;
+  bool _autoPrintReceipt = false;
+  Map<String, dynamic>? _lastCompletedReceipt;
+
   List<String> get _categories {
     final cats = _allProducts
         .map((p) => (p.category == null || p.category!.trim().isEmpty) ? 'Other' : p.category!.trim())
@@ -61,7 +71,7 @@ class _PosPageState extends State<PosPage> {
       _cart.fold(0, (sum, item) => sum + item.quantity);
 
   double get _discountedSubtotal =>
-      (_cartTotal - _voucherDiscount).clamp(0.0, double.infinity);
+      (_cartTotal - _voucherDiscount - _manualDiscount).clamp(0.0, double.infinity);
 
   // Bank Negara Malaysia 5-sen rounding mechanism for cash & POS
   double get _grandTotal {
@@ -111,7 +121,40 @@ class _PosPageState extends State<PosPage> {
   void initState() {
     super.initState();
     _initProductStream();
+    _loadEnterprisePosState();
     _searchController.addListener(_applyFilter);
+  }
+
+  Future<void> _loadEnterprisePosState() async {
+    final held = await _service.loadHeldOrders();
+    final queue = await _service.getOfflineQueuedOrders();
+    if (!mounted) return;
+    setState(() {
+      _heldOrders = held;
+      _offlineQueueCount = queue.length;
+    });
+    if (queue.isNotEmpty) {
+      _syncOfflineQueue(silent: true);
+    }
+  }
+
+  Future<void> _syncOfflineQueue({bool silent = false}) async {
+    if (_isSyncingOffline) return;
+    setState(() => _isSyncingOffline = true);
+    final synced = await _service.syncOfflineOrders();
+    final remaining = await _service.getOfflineQueuedOrders();
+    if (!mounted) return;
+    setState(() {
+      _offlineQueueCount = remaining.length;
+      _isSyncingOffline = false;
+    });
+    if (synced > 0 && !silent) {
+      showGlassToast(
+        context,
+        '$synced pesanan luar talian berjaya diselaraskan ke awan!',
+        customColor: const Color(0xFF00C853),
+      );
+    }
   }
 
   @override
@@ -184,14 +227,221 @@ class _PosPageState extends State<PosPage> {
       }
     }
 
+    if (product.variants.isNotEmpty || product.modifiers.isNotEmpty) {
+      _customizeCartItem(product);
+      return;
+    }
+
     setState(() {
-      final existing = _cart.where((i) => i.product.id == product.id).firstOrNull;
+      final existing = _cart
+          .where((i) => i.product.id == product.id && !i.hasCustomizations && !i.isReward)
+          .firstOrNull;
       if (existing != null) {
         existing.quantity++;
       } else {
         _cart.add(CartItem(product: product));
       }
     });
+  }
+
+  Future<void> _customizeCartItem(ProductModel product, {CartItem? existingItem}) async {
+    final res = await PosItemModifierModal.show(
+      context: context,
+      product: product,
+      existingItem: existingItem,
+    );
+    if (res == null || !mounted) return;
+
+    setState(() {
+      if (existingItem != null) {
+        existingItem.selectedVariant = res.selectedVariant;
+        existingItem.variantPriceDelta = res.variantPriceDelta;
+        existingItem.selectedModifiers = List<Map<String, dynamic>>.from(res.selectedModifiers);
+        existingItem.itemNote = res.itemNote;
+      } else {
+        final newItem = CartItem(
+          product: product,
+          quantity: res.quantity,
+          selectedVariant: res.selectedVariant,
+          variantPriceDelta: res.variantPriceDelta,
+          selectedModifiers: List<Map<String, dynamic>>.from(res.selectedModifiers),
+          itemNote: res.itemNote,
+        );
+        final match = _cart.where((i) => i.cartLineKey == newItem.cartLineKey).firstOrNull;
+        if (match != null) {
+          match.quantity += res.quantity;
+        } else {
+          _cart.add(newItem);
+        }
+      }
+    });
+  }
+
+  Future<void> _holdCurrentOrder() async {
+    if (_cart.isEmpty) return;
+    final held = HeldOrderModel(
+      id: 'HOLD-${DateTime.now().millisecondsSinceEpoch}',
+      ticketNumber: '#NG-$_orderSequence',
+      orderType: _orderType,
+      tableNumber: _tableNumber,
+      customerName: _customerController.text.trim().isNotEmpty
+          ? _customerController.text.trim()
+          : (_selectedMember?.name),
+      items: List<CartItem>.from(_cart),
+      heldAt: DateTime.now(),
+      manualDiscount: _manualDiscount,
+      manualDiscountLabel: _manualDiscountLabel,
+    );
+
+    setState(() {
+      _heldOrders.insert(0, held);
+      _cart = [];
+      _customerController.clear();
+      _selectedMember = null;
+      _appliedVoucherCode = null;
+      _voucherDiscount = 0.0;
+      _voucherId = null;
+      _manualDiscount = 0.0;
+      _manualDiscountLabel = null;
+      _orderSequence++;
+    });
+
+    await _service.saveHeldOrders(_heldOrders);
+    if (!mounted) return;
+    showGlassToast(
+      context,
+      'Bil ${held.ticketNumber} (${_orderType == 'dine_in' ? 'Meja $_tableNumber' : _orderType.toUpperCase()}) disimpan ke Senarai Tahan!',
+      customColor: Colors.amber,
+    );
+  }
+
+  void _showHeldOrdersDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => PosHeldOrdersModal(
+        heldOrders: _heldOrders,
+        onResume: (order) async {
+          setState(() {
+            _cart = List<CartItem>.from(order.items);
+            _orderType = order.orderType;
+            _tableNumber = order.tableNumber;
+            _customerController.text = order.customerName ?? '';
+            _manualDiscount = order.manualDiscount;
+            _manualDiscountLabel = order.manualDiscountLabel;
+            _heldOrders.removeWhere((h) => h.id == order.id);
+          });
+          await _service.saveHeldOrders(_heldOrders);
+          if (!mounted) return;
+          showGlassToast(
+            context,
+            'Pesanan ${order.ticketNumber} telah dibuka semula ke troli!',
+            customColor: const Color(0xFF42A5F5),
+          );
+        },
+        onDelete: (order) async {
+          setState(() {
+            _heldOrders.removeWhere((h) => h.id == order.id);
+          });
+          await _service.saveHeldOrders(_heldOrders);
+          if (ctx.mounted) Navigator.pop(ctx);
+          if (mounted) _showHeldOrdersDialog();
+        },
+      ),
+    );
+  }
+
+  Future<void> _showManualDiscountDialog() async {
+    if (_cart.isEmpty) {
+      showGlassToast(context, 'Sila tambah produk ke troli terlebih dahulu.', isError: true);
+      return;
+    }
+    final res = await PosManualDiscountModal.show(
+      context: context,
+      subtotal: _cartTotal,
+    );
+    if (res == null || !mounted) return;
+    setState(() {
+      _manualDiscount = res.discountAmount;
+      _manualDiscountLabel = res.label;
+    });
+    showGlassToast(
+      context,
+      'Diskaun Manual digunakan: -RM ${res.discountAmount.toStringAsFixed(2)} (${res.label})',
+      customColor: const Color(0xFF00C853),
+    );
+  }
+
+  void _showRecentOrdersAndVoidDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => PosRecentOrdersVoidModal(
+        service: _service,
+        onReprintOrder: (orderData) {
+          final rawItems = (orderData['order_items'] as List?) ?? [];
+          final lines = rawItems.isNotEmpty
+              ? rawItems
+                  .map((it) => '${it['quantity']}x ${it['product_name']} | RM ${((it['subtotal'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2)}')
+                  .toList()
+              : ['1x Jualan POS | RM ${((orderData['total'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2)}'];
+          PosQuickThermalReceiptModal.show(context, {
+            'ref': '#${orderData['id'].toString().substring(0, 6).toUpperCase()}',
+            'mode': 'CETAK SEMULA',
+            'customer': orderData['customer_name']?.toString() ?? 'Pelanggan Kaunter',
+            'items': lines,
+            'total': (orderData['total'] as num?)?.toDouble() ?? 0.0,
+            'method': (orderData['payment_method']?.toString() ?? 'TUNAI').toUpperCase(),
+          });
+        },
+      ),
+    );
+  }
+
+  Future<void> _handlePostOrderSuccess({
+    required bool syncedOnline,
+    required List<CartItem> itemsSnapshot,
+    required double grandTotal,
+    required String paymentMethodLabel,
+    String? customerName,
+  }) async {
+    final receiptPayload = {
+      'ref': '#NG-$_orderSequence',
+      'mode': _orderType == 'dine_in' ? 'MAKAN SINI (Meja $_tableNumber)' : _orderType.toUpperCase(),
+      'customer': (customerName != null && customerName.isNotEmpty) ? customerName : 'Pelanggan Kaunter',
+      'items': itemsSnapshot
+          .map((i) => '${i.quantity}x ${i.formattedOrderItemName} | RM ${i.subtotal.toStringAsFixed(2)}')
+          .toList(),
+      'total': grandTotal,
+      'method': paymentMethodLabel,
+    };
+
+    final queue = await _service.getOfflineQueuedOrders();
+    if (!mounted) return;
+
+    setState(() {
+      _lastCompletedReceipt = receiptPayload;
+      _offlineQueueCount = queue.length;
+      _cart = [];
+      _customerController.clear();
+      _selectedMember = null;
+      _appliedVoucherCode = null;
+      _voucherDiscount = 0.0;
+      _voucherId = null;
+      _manualDiscount = 0.0;
+      _manualDiscountLabel = null;
+      _orderSequence++;
+    });
+
+    if (!syncedOnline && mounted) {
+      showGlassToast(
+        context,
+        'Tiada internet: Pesanan disimpan dalam Barisan Luar Talian & akan auto-sync!',
+        customColor: Colors.amber,
+      );
+    }
+
+    if (_autoPrintReceipt && mounted) {
+      await PosQuickThermalReceiptModal.show(context, receiptPayload);
+    }
   }
 
   void _removeFromCart(CartItem item) {
@@ -236,7 +486,11 @@ class _PosPageState extends State<PosPage> {
         combinedNotes = '$voucherTag | $combinedNotes';
       }
 
-      await _service.submitOrder(
+      if (_manualDiscount > 0) {
+        combinedNotes = '[Diskaun Manual: ${_manualDiscountLabel ?? "Diskaun"} (-RM ${_manualDiscount.toStringAsFixed(2)})] | $combinedNotes';
+      }
+
+      final syncedOnline = await _service.submitOrder(
         items: _cart,
         total: result.total,
         customerName: result.customerName,
@@ -285,15 +539,13 @@ class _PosPageState extends State<PosPage> {
         } catch (_) {}
       }
 
-      setState(() {
-        _cart = [];
-        _customerController.clear();
-        _selectedMember = null;
-        _appliedVoucherCode = null;
-        _voucherDiscount = 0.0;
-        _voucherId = null;
-        _orderSequence++;
-      });
+      await _handlePostOrderSuccess(
+        syncedOnline: syncedOnline,
+        itemsSnapshot: List<CartItem>.from(_cart),
+        grandTotal: result.total,
+        paymentMethodLabel: 'PECAH BIL (SPLIT)',
+        customerName: result.customerName,
+      );
     } catch (e) {
       if (!mounted) return;
       showGlassToast(context, 'Gagal membuat pesanan: $e', isError: true);
@@ -313,7 +565,7 @@ class _PosPageState extends State<PosPage> {
       customerName: _selectedMember != null
           ? '${_selectedMember!.name} (${_selectedMember!.phone})'
           : (customer.isNotEmpty ? customer : 'Pelanggan Kaunter'),
-      itemLines: _cart.map((i) => '${i.quantity}x ${i.product.name}${i.isReward ? " (🎁 Ganjaran)" : ""} | RM ${i.subtotal.toStringAsFixed(2)}').toList(),
+      itemLines: _cart.map((i) => '${i.quantity}x ${i.formattedOrderItemName} | RM ${i.subtotal.toStringAsFixed(2)}').toList(),
       initialStep: initialStep,
     );
 
@@ -328,7 +580,11 @@ class _PosPageState extends State<PosPage> {
         notes += ' (Diterima: RM ${result.cashTendered.toStringAsFixed(2)}, Baki: RM ${result.change.toStringAsFixed(2)})';
       }
 
-      await _service.submitOrder(
+      if (_manualDiscount > 0) {
+        notes += ' [Diskaun Manual: ${_manualDiscountLabel ?? "Diskaun"} (-RM ${_manualDiscount.toStringAsFixed(2)})]';
+      }
+
+      final syncedOnline = await _service.submitOrder(
         items: _cart,
         total: grandTotal,
         customerName: customer.isNotEmpty ? customer : null,
@@ -366,15 +622,13 @@ class _PosPageState extends State<PosPage> {
         } catch (_) {}
       }
 
-      setState(() {
-        _cart = [];
-        _customerController.clear();
-        _selectedMember = null;
-        _appliedVoucherCode = null;
-        _voucherDiscount = 0.0;
-        _voucherId = null;
-        _orderSequence++;
-      });
+      await _handlePostOrderSuccess(
+        syncedOnline: syncedOnline,
+        itemsSnapshot: List<CartItem>.from(_cart),
+        grandTotal: grandTotal,
+        paymentMethodLabel: result.paymentMethod.toUpperCase(),
+        customerName: customer,
+      );
     } catch (e) {
       if (!mounted) return;
       showGlassToast(context, 'Gagal membuat pesanan: $e', isError: true);
@@ -494,7 +748,11 @@ class _PosPageState extends State<PosPage> {
         notes += ' [Baucar: $_appliedVoucherCode (-RM ${_voucherDiscount.toStringAsFixed(2)})]';
       }
 
-      await _service.submitOrder(
+      if (_manualDiscount > 0) {
+        notes += ' [Diskaun Manual: ${_manualDiscountLabel ?? "Diskaun"} (-RM ${_manualDiscount.toStringAsFixed(2)})]';
+      }
+
+      final syncedOnline = await _service.submitOrder(
         items: _cart,
         total: grandTotal,
         customerName: customer.isNotEmpty ? customer : null,
@@ -532,15 +790,13 @@ class _PosPageState extends State<PosPage> {
         } catch (_) {}
       }
 
-      setState(() {
-        _cart = [];
-        _customerController.clear();
-        _selectedMember = null;
-        _appliedVoucherCode = null;
-        _voucherDiscount = 0.0;
-        _voucherId = null;
-        _orderSequence++;
-      });
+      await _handlePostOrderSuccess(
+        syncedOnline: syncedOnline,
+        itemsSnapshot: List<CartItem>.from(_cart),
+        grandTotal: grandTotal,
+        paymentMethodLabel: 'TUNAI PANTAS',
+        customerName: customer,
+      );
     } catch (e) {
       if (!mounted) return;
       showGlassToast(context, 'Gagal membuat pesanan: $e', isError: true);
@@ -884,6 +1140,12 @@ class _PosPageState extends State<PosPage> {
         ),
         const SizedBox(height: 14),
 
+        // Enterprise POS Utility Bar (Hold Tabs, Recent/Void, Reprint, Auto-Print)
+        _buildEnterpriseUtilityBar(),
+
+        // Offline Queue Sync Banner (when offline orders exist)
+        _buildOfflineQueueBanner(),
+
         // Stock Alert Banner if any products are out of stock or low stock
         _buildStockAlertBanner(),
 
@@ -940,6 +1202,211 @@ class _PosPageState extends State<PosPage> {
                     ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEnterpriseUtilityBar() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            // 1. Open Tabs / Held Orders Button
+            InkWell(
+              onTap: _showHeldOrdersDialog,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: _heldOrders.isNotEmpty
+                      ? Colors.amber.withValues(alpha: 0.16)
+                      : Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _heldOrders.isNotEmpty
+                        ? Colors.amber.withValues(alpha: 0.45)
+                        : Colors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.pause_circle_filled_rounded,
+                      size: 15,
+                      color: _heldOrders.isNotEmpty ? Colors.amber : Colors.white70,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Tab Ditahan (${_heldOrders.length})',
+                      style: TextStyle(
+                        color: _heldOrders.isNotEmpty ? Colors.amber : Colors.white70,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // 2. Recent Orders & Void/Refund (Manager PIN)
+            InkWell(
+              onTap: _showRecentOrdersAndVoidDialog,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.history_rounded, size: 15, color: Color(0xFF42A5F5)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Sejarah & Void/Refund',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // 3. Reprint Last Receipt
+            if (_lastCompletedReceipt != null) ...[
+              InkWell(
+                onTap: () => PosQuickThermalReceiptModal.show(context, _lastCompletedReceipt!),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF42A5F5).withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.35)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.print_rounded, size: 15, color: Color(0xFF42A5F5)),
+                      SizedBox(width: 6),
+                      Text(
+                        'Cetak Resit Terakhir',
+                        style: TextStyle(
+                          color: Color(0xFF42A5F5),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+
+            // 4. Auto-Print Thermal Receipt Toggle
+            InkWell(
+              onTap: () {
+                setState(() => _autoPrintReceipt = !_autoPrintReceipt);
+                showGlassToast(
+                  context,
+                  _autoPrintReceipt
+                      ? 'Auto-Cetak Resit Thermal DIAKTIFKAN setiap kali bayaran selesai.'
+                      : 'Auto-Cetak Resit Thermal DIMATIKAN.',
+                  customColor: _autoPrintReceipt ? const Color(0xFF00C853) : Colors.white54,
+                );
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: _autoPrintReceipt
+                      ? const Color(0xFF00C853).withValues(alpha: 0.15)
+                      : Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _autoPrintReceipt
+                        ? const Color(0xFF00C853).withValues(alpha: 0.4)
+                        : Colors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _autoPrintReceipt ? Icons.check_circle_rounded : Icons.print_outlined,
+                      size: 14,
+                      color: _autoPrintReceipt ? const Color(0xFF00C853) : Colors.white54,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Auto-Cetak: ${_autoPrintReceipt ? "ON" : "OFF"}',
+                      style: TextStyle(
+                        color: _autoPrintReceipt ? const Color(0xFF00C853) : Colors.white54,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOfflineQueueBanner() {
+    if (_offlineQueueCount <= 0) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.cloud_upload_rounded, color: Color(0xFF42A5F5), size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Mod Luar Talian: $_offlineQueueCount pesanan disimpan di peranti menunggu penyelarasan.',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _isSyncingOffline ? null : () => _syncOfflineQueue(silent: false),
+            icon: _isSyncingOffline
+                ? const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)),
+                  )
+                : const Icon(Icons.sync_rounded, size: 15, color: Color(0xFF42A5F5)),
+            label: Text(
+              _isSyncingOffline ? 'Menyelaras...' : 'Sync Sekarang',
+              style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 11.5, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1173,6 +1640,7 @@ class _PosPageState extends State<PosPage> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _addToCart(product),
+        onLongPress: () => _customizeCartItem(product),
         borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
@@ -1669,6 +2137,57 @@ class _PosPageState extends State<PosPage> {
 
               const Spacer(),
 
+              // Hold Order (Tahan Bil) button
+              if (_cart.isNotEmpty) ...[
+                GestureDetector(
+                  onTap: _holdCurrentOrder,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.pause_rounded, size: 12, color: Colors.amber),
+                        SizedBox(width: 3),
+                        Text(
+                          'Tahan Bil',
+                          style: TextStyle(
+                            color: Colors.amber,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ] else if (_heldOrders.isNotEmpty) ...[
+                GestureDetector(
+                  onTap: _showHeldOrdersDialog,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
+                    ),
+                    child: Text(
+                      'Tab (${_heldOrders.length})',
+                      style: const TextStyle(
+                        color: Colors.amber,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
               // Clear button
               if (_cart.isNotEmpty)
                 GestureDetector(
@@ -1678,6 +2197,8 @@ class _PosPageState extends State<PosPage> {
                       _appliedVoucherCode = null;
                       _voucherDiscount = 0.0;
                       _voucherId = null;
+                      _manualDiscount = 0.0;
+                      _manualDiscountLabel = null;
                     });
                   },
                   child: Container(
@@ -1966,17 +2487,63 @@ class _PosPageState extends State<PosPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  item.isReward
-                      ? 'Penebusan Ganjaran • Percuma (RM 0.00)'
-                      : 'RM ${item.product.price.toStringAsFixed(2)} / unit',
-                  style: TextStyle(
-                    color: item.isReward ? const Color(0xFFFF9800) : Colors.white.withValues(alpha: 0.45),
-                    fontSize: 11,
-                    fontFamily: item.isReward ? null : 'monospace',
-                    fontWeight: item.isReward ? FontWeight.bold : FontWeight.normal,
+                if (item.hasCustomizations) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    item.customizationSummary,
+                    style: const TextStyle(
+                      color: Color(0xFF42A5F5),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
+                ],
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        item.isReward
+                            ? 'Penebusan Ganjaran • Percuma'
+                            : 'RM ${item.unitPriceWithAddons.toStringAsFixed(2)} / unit',
+                        style: TextStyle(
+                          color: item.isReward ? const Color(0xFFFF9800) : Colors.white.withValues(alpha: 0.45),
+                          fontSize: 11,
+                          fontFamily: item.isReward ? null : 'monospace',
+                          fontWeight: item.isReward ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    if (!item.isReward) ...[
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _customizeCartItem(item.product, existingItem: item),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.07),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.tune_rounded, size: 10, color: Color(0xFF42A5F5)),
+                              const SizedBox(width: 3),
+                              Text(
+                                item.hasCustomizations ? 'Ubah Pilihan' : '+ Varian/Nota',
+                                style: const TextStyle(
+                                  color: Color(0xFF42A5F5),
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -2004,7 +2571,19 @@ class _PosPageState extends State<PosPage> {
               ),
               _cartBtn(
                 Icons.add_rounded,
-                () => _addToCart(item.product),
+                () {
+                  if (item.product.isProduct &&
+                      item.product.trackInventory &&
+                      item.quantity >= item.product.stock) {
+                    showGlassToast(
+                      context,
+                      'Had stok maksimum dicapai (${item.product.stock} ${item.product.unit}).',
+                      isError: true,
+                    );
+                    return;
+                  }
+                  setState(() => item.quantity++);
+                },
               ),
             ],
           ),
@@ -2135,6 +2714,62 @@ class _PosPageState extends State<PosPage> {
                         onTap: _showVoucherDialog,
                         child: const Text(
                           '+ Tebus Kod',
+                          style: TextStyle(
+                            color: Color(0xFF42A5F5),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 5),
+
+                // Manual / Staff Discount Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _manualDiscountLabel != null
+                            ? 'Diskaun ($_manualDiscountLabel)'
+                            : 'Diskaun Manual / Staf',
+                        style: const TextStyle(color: Colors.white60, fontSize: 11.5),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (_manualDiscount > 0)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '-RM ${_manualDiscount.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: Color(0xFF00C853),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _manualDiscount = 0.0;
+                                _manualDiscountLabel = null;
+                              });
+                            },
+                            child: const Icon(Icons.cancel_rounded, size: 14, color: Colors.redAccent),
+                          ),
+                        ],
+                      )
+                    else
+                      GestureDetector(
+                        onTap: _showManualDiscountDialog,
+                        child: const Text(
+                          '+ Diskaun (% / RM)',
                           style: TextStyle(
                             color: Color(0xFF42A5F5),
                             fontWeight: FontWeight.bold,
