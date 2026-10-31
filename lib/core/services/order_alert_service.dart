@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:go_router/go_router.dart';
@@ -180,9 +181,9 @@ class OrderAlertService {
     final bool isTable = source == 'table';
     final String? notes = order['notes']?.toString();
 
-    final Color badgeColor = isPreOrder
-        ? Colors.purpleAccent
-        : (isTable ? const Color(0xFF00E676) : const Color(0xFF42A5F5));
+    final Color accentColor = isPreOrder
+        ? const Color(0xFFC084FC) // Soft lavender
+        : (isTable ? const Color(0xFF34D399) : const Color(0xFF38BDF8));
 
     final String badgeText = isPreOrder
         ? '📅 PESANAN AWAL (PRE-ORDER)'
@@ -191,7 +192,7 @@ class OrderAlertService {
     showDialog(
       context: navContext,
       barrierDismissible: false, // Force interaction so order isn't ignored
-      barrierColor: Colors.black.withValues(alpha: 0.75),
+      barrierColor: Colors.black.withValues(alpha: 0.72),
       builder: (ctx) {
         return PopScope(
           canPop: true,
@@ -201,211 +202,288 @@ class OrderAlertService {
           },
           child: Dialog(
             backgroundColor: Colors.transparent,
+            elevation: 0,
             insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(
-                  maxWidth: 440,
+                  maxWidth: 420,
                   minWidth: 280,
                 ),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF141424),
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(
-                      color: badgeColor.withValues(alpha: 0.6),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: badgeColor.withValues(alpha: 0.25),
-                        blurRadius: 30,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Top Animated / Pulsing Icon
-                        Container(
-                          width: 68,
-                          height: 68,
-                          decoration: BoxDecoration(
-                            color: badgeColor.withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: HugeIcon(
-                              icon: isPreOrder
-                                  ? HugeIcons.strokeRoundedCalendar03
-                                  : (isTable ? HugeIcons.strokeRoundedQrCode : HugeIcons.strokeRoundedNotification03),
-                              color: badgeColor,
-                              size: 36,
-                              strokeWidth: 2.2,
-                            ),
-                          ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.78),
+                        borderRadius: BorderRadius.circular(28),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          width: 1.2,
                         ),
-                        const SizedBox(height: 16),
-
-                        // Title Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: badgeColor.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            blurRadius: 32,
+                            offset: const Offset(0, 12),
                           ),
-                          child: Text(
-                            badgeText,
-                            style: TextStyle(
-                              color: badgeColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        Text(
-                          'RM ${total.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-
-                        Text(
-                          'Daripada: $customerName',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-
-                        if (notes != null && notes.trim().isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white12),
-                            ),
-                            child: Text(
-                              'Nota: $notes',
-                              style: const TextStyle(
-                                color: Colors.white60,
-                                fontSize: 12,
-                                fontStyle: FontStyle.italic,
-                              ),
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.05),
+                            blurRadius: 0,
+                            spreadRadius: 1,
                           ),
                         ],
-
-                        const SizedBox(height: 24),
-
-                        // Action Buttons
-                        Row(
+                      ),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Accept Button
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
+                            // Top Glassmorphic Icon Avatar
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.12),
+                                    width: 1,
                                   ),
                                 ),
-                                onPressed: () async {
-                                  stopAlertSound();
-                                  _isModalShowing = false;
-                                  Navigator.of(ctx, rootNavigator: true).pop();
-
-                                  // Mark as completed/accepted in Supabase
-                                  try {
-                                    await Supabase.instance.client
-                                        .from('orders')
-                                        .update({'status': 'completed'})
-                                        .eq('id', orderId);
-                                  } catch (e) {
-                                    debugPrint('[OrderAlertService] Error accepting order: $e');
-                                  }
-                                },
-                                icon: const HugeIcon(
-                                  icon: HugeIcons.strokeRoundedCheckmarkBadge01,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                                label: const Text(
-                                  'Terima',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                child: Center(
+                                  child: HugeIcon(
+                                    icon: isPreOrder
+                                        ? HugeIcons.strokeRoundedCalendar03
+                                        : (isTable ? HugeIcons.strokeRoundedQrCode : HugeIcons.strokeRoundedNotification03),
+                                    color: accentColor,
+                                    size: 32,
+                                  ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(height: 16),
 
-                            // View Orders Tab Button
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF42A5F5),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
+                            // Title Glass Pill Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                badgeText,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Total Price
+                            Text(
+                              'RM ${total.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+
+                            // Customer Name
+                            Text(
+                              'Daripada: $customerName',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.75),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+
+                            // Order Notes (if present)
+                            if (notes != null && notes.trim().isNotEmpty) ...[
+                              const SizedBox(height: 14),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.08),
+                                    width: 0.8,
                                   ),
                                 ),
-                                onPressed: () {
-                                  stopAlertSound();
-                                  _isModalShowing = false;
-                                  Navigator.of(ctx, rootNavigator: true).pop();
-                                  try {
-                                    navContext.go('/');
-                                  } catch (_) {}
-                                  onSwitchTab?.call(1); // Navigate to Orders Tab
-                                },
-                                icon: const HugeIcon(
-                                  icon: HugeIcons.strokeRoundedInvoice01,
-                                  color: Colors.white,
-                                  size: 18,
+                                child: Text(
+                                  'Nota: $notes',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.65),
+                                    fontSize: 12.5,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                label: const Text(
-                                  'Buka Order',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                            ],
+
+                            const SizedBox(height: 24),
+
+                            // Action Buttons (Glassmorphic style)
+                            Row(
+                              children: [
+                                // Accept Button
+                                Expanded(
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () async {
+                                        stopAlertSound();
+                                        _isModalShowing = false;
+                                        Navigator.of(ctx, rootNavigator: true).pop();
+
+                                        // Mark as completed/accepted in Supabase
+                                        try {
+                                          await Supabase.instance.client
+                                              .from('orders')
+                                              .update({'status': 'completed'})
+                                              .eq('id', orderId);
+                                        } catch (e) {
+                                          debugPrint('[OrderAlertService] Error accepting order: $e');
+                                        }
+                                      },
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(16),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            HugeIcon(
+                                              icon: HugeIcons.strokeRoundedCheckmarkBadge01,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              'Terima',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+
+                                // View Orders Tab Button
+                                Expanded(
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        stopAlertSound();
+                                        _isModalShowing = false;
+                                        Navigator.of(ctx, rootNavigator: true).pop();
+                                        try {
+                                          navContext.go('/');
+                                        } catch (_) {}
+                                        onSwitchTab?.call(1); // Navigate to Orders Tab
+                                      },
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: Colors.white.withValues(alpha: 0.18),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            HugeIcon(
+                                              icon: HugeIcons.strokeRoundedInvoice01,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              'Buka Order',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Dismiss / Silence button
+                            TextButton(
+                              onPressed: () {
+                                stopAlertSound();
+                                _isModalShowing = false;
+                                Navigator.of(ctx, rootNavigator: true).pop();
+                              },
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              ),
+                              child: Text(
+                                'Senyapkan / Tutup',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
-
-                        // Dismiss / Silence button
-                        TextButton(
-                          onPressed: () {
-                            stopAlertSound();
-                            _isModalShowing = false;
-                            Navigator.of(ctx, rootNavigator: true).pop();
-                          },
-                          child: const Text(
-                            'Senyapkan / Tutup',
-                            style: TextStyle(color: Colors.white54, fontSize: 13),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
