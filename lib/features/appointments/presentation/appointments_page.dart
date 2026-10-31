@@ -383,6 +383,428 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
     }
   }
 
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+    bool isBold = false,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.white54),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white54, fontSize: 13),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              color: valueColor ?? Colors.white,
+              fontSize: 13,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showBookingDetailsModal(Map<String, dynamic> appt) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) {
+          final status = appt['status'] as AppointmentStatus;
+          final color = _statusColor(status);
+          final price = (appt['price'] as num?)?.toDouble() ?? 0.0;
+          final phone = appt['phone']?.toString() ?? '';
+          final bookingId = appt['id']?.toString() ?? '';
+          final customerName = appt['customerName']?.toString() ?? 'Pelanggan Ngam';
+          final service = appt['service']?.toString() ?? 'Perkhidmatan';
+          final dateTime = appt['dateTime']?.toString() ?? '';
+          final staff = appt['staff']?.toString() ?? 'Staff';
+          final notes = appt['notes']?.toString() ?? '';
+          final paymentMethod = appt['payment_method']?.toString() ?? 'Bayar di Kedai (Tunai)';
+          final pax = appt['pax']?.toString() ?? '1';
+
+          return Container(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.88,
+            ),
+            decoration: const BoxDecoration(
+              color: Color(0xFF141724),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border(
+                top: BorderSide(color: Colors.white12, width: 1),
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Top Header: Title, ID & Status
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Butiran Tempahan',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          GestureDetector(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(text: bookingId));
+                              showGlassToast(context, 'ID Tempahan disalin!');
+                            },
+                            child: Row(
+                              children: [
+                                Text(
+                                  bookingId,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF42A5F5),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF42A5F5)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: color.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          _statusLabel(status),
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Customer Profile Card
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.person_rounded, color: Color(0xFF42A5F5), size: 24),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                customerName,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                phone,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.phone_outlined, color: Colors.blueAccent, size: 20),
+                          tooltip: 'Panggil Telefon',
+                          onPressed: () => _callCustomer(phone),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 20),
+                          tooltip: 'WhatsApp Peringatan',
+                          onPressed: () => _sendWhatsAppReminder(appt),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Booking Info Box (Key-Value rows)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildDetailRow(
+                          icon: Icons.bookmark_border_rounded,
+                          label: 'Perkhidmatan',
+                          value: service,
+                        ),
+                        const Divider(color: Colors.white10, height: 20),
+                        _buildDetailRow(
+                          icon: Icons.calendar_today_rounded,
+                          label: 'Tarikh & Masa',
+                          value: dateTime,
+                        ),
+                        const Divider(color: Colors.white10, height: 20),
+                        _buildDetailRow(
+                          icon: Icons.badge_outlined,
+                          label: 'Kakitangan / Staf',
+                          value: staff,
+                        ),
+                        const Divider(color: Colors.white10, height: 20),
+                        _buildDetailRow(
+                          icon: Icons.group_outlined,
+                          label: 'Bilangan Pax',
+                          value: '$pax Orang',
+                        ),
+                        const Divider(color: Colors.white10, height: 20),
+                        _buildDetailRow(
+                          icon: Icons.payments_outlined,
+                          label: 'Jumlah Harga',
+                          value: 'RM ${price.toStringAsFixed(2)}',
+                          valueColor: const Color(0xFF44CF6C),
+                          isBold: true,
+                        ),
+                        const Divider(color: Colors.white10, height: 20),
+                        _buildDetailRow(
+                          icon: Icons.account_balance_wallet_outlined,
+                          label: 'Kaedah Bayaran',
+                          value: paymentMethod,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (notes.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white10),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.notes_rounded, size: 16, color: Colors.white54),
+                              SizedBox(width: 6),
+                              Text(
+                                'Catatan / Nota Pelanggan:',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            notes,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  if (status == AppointmentStatus.disputed) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Pelanggan telah memfailkan pertikaian. Sila hubungi pelanggan melalui WhatsApp untuk menyelesaikan isu.',
+                              style: const TextStyle(
+                                color: Colors.orangeAccent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // Bottom Action Buttons in Modal
+                  Row(
+                    children: [
+                      if (status == AppointmentStatus.pending) ...[
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.redAccent,
+                              side: const BorderSide(color: Colors.redAccent),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(modalCtx);
+                              _updateStatus(appt, AppointmentStatus.cancelled);
+                            },
+                            child: const Text('Tolak / Batal', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF42A5F5),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(modalCtx);
+                              _updateStatus(appt, AppointmentStatus.confirmed);
+                            },
+                            child: const Text('Terima Tempahan', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ] else if (status == AppointmentStatus.confirmed || status == AppointmentStatus.inProgress) ...[
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFED1164),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(modalCtx);
+                              _payAppointmentAtPos(appt);
+                            },
+                            icon: const Icon(Icons.bolt_rounded, size: 18),
+                            label: const Text('Bayar POS', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF44CF6C),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () {
+                              Navigator.pop(modalCtx);
+                              _updateStatus(appt, AppointmentStatus.completed);
+                            },
+                            icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                            label: const Text('Tanda Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ] else ...[
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white12,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () => Navigator.pop(modalCtx),
+                            child: const Text('Tutup', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _openNewAppointmentModal() {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
@@ -914,29 +1336,38 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                         final status = appt['status'] as AppointmentStatus;
                         final color = _statusColor(status);
 
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 14),
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Top Header: ID & Status Badge
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    appt['id'],
-                                    style: const TextStyle(
-                                      color: Color(0xFF42A5F5),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                        return GestureDetector(
+                          onTap: () => _showBookingDetailsModal(appt),
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Top Header: ID & Status Badge
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          appt['id'],
+                                          style: const TextStyle(
+                                            color: Color(0xFF42A5F5),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.white38),
+                                      ],
                                     ),
-                                  ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
@@ -1113,9 +1544,10 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                               ),
                             ],
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
+                  ),
             ),
           ],
         ),
