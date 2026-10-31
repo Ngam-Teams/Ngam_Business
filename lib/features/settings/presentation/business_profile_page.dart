@@ -68,25 +68,73 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       'id': 'fnb',
       'label': 'Food & Beverage',
       'icon': HugeIcons.strokeRoundedRestaurant01,
-      'subtitle': 'Restaurants, Cafes, Bakeries & Food stalls',
+      'subtitle': 'Restaurants, Cafes, Bakeries & Stalls',
     },
     {
       'id': 'barber',
       'label': 'Barber & Salon',
       'icon': HugeIcons.strokeRoundedScissor,
-      'subtitle': 'Barbershops, Hair Salons, Spas & Grooming',
+      'subtitle': 'Barbershops, Hair Salons & Grooming',
+    },
+    {
+      'id': 'beauty',
+      'label': 'Beauty, Spa & Wellness',
+      'icon': HugeIcons.strokeRoundedSparkles,
+      'subtitle': 'Spas, Massages, Skincare & Aesthetics',
+    },
+    {
+      'id': 'auto',
+      'label': 'Automotive & Workshop',
+      'icon': HugeIcons.strokeRoundedCar01,
+      'subtitle': 'Carwash, Detailing, Workshops & Tyres',
     },
     {
       'id': 'retail',
       'label': 'Retail & Shopping',
       'icon': HugeIcons.strokeRoundedShoppingBag01,
-      'subtitle': 'Boutiques, Marts, Electronics & General Stores',
+      'subtitle': 'Boutiques, Marts, Fashion & Stores',
+    },
+    {
+      'id': 'clinic',
+      'label': 'Clinic & Healthcare',
+      'icon': HugeIcons.strokeRoundedFirstAidKit,
+      'subtitle': 'Clinics, Dental, Pharmacy & Optical',
+    },
+    {
+      'id': 'fitness',
+      'label': 'Sports & Fitness',
+      'icon': HugeIcons.strokeRoundedActivity01,
+      'subtitle': 'Gyms, Badmintons, Futsal & Studios',
+    },
+    {
+      'id': 'cleaning',
+      'label': 'Home & Cleaning',
+      'icon': HugeIcons.strokeRoundedClean,
+      'subtitle': 'Housekeeping, Aircond, Plumbing & Handyman',
+    },
+    {
+      'id': 'electronics',
+      'label': 'Gadget & Tech Repair',
+      'icon': HugeIcons.strokeRoundedSmartPhone01,
+      'subtitle': 'Phone Repair, Computers & IT Services',
+    },
+    {
+      'id': 'events',
+      'label': 'Events & Photography',
+      'icon': HugeIcons.strokeRoundedCamera01,
+      'subtitle': 'Studios, Photographers & Party Planners',
+    },
+    {
+      'id': 'education',
+      'label': 'Education & Classes',
+      'icon': HugeIcons.strokeRoundedBook01,
+      'subtitle': 'Tuitions, Daycares, Academies & Lessons',
     },
     {
       'id': 'services',
-      'label': 'Services & Other',
+      'label': 'Services & Professional',
       'icon': HugeIcons.strokeRoundedBriefcase02,
-      'subtitle': 'Consulting, Workshops, Fitness & Professional',
+      'subtitle': 'Consulting, Agency, Printing & General',
     },
   ];
 
@@ -1219,75 +1267,97 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
             ),
           ),
         ),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.4,
-          ),
-          itemCount: _industries.length,
-          itemBuilder: (context, index) {
-            final item = _industries[index];
-            final isSelected = _selectedIndustry == item['id'];
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Adaptive cross-axis count: 3 on wide views/desktop, 2 on mobile
+            final int crossAxisCount = constraints.maxWidth > 700 ? 3 : 2;
+            // Compact uniform aspect ratio to keep all card heights equal and sleek
+            final double childAspectRatio = constraints.maxWidth > 700 ? 3.3 : 2.9;
 
-            return GestureDetector(
-              onTap: () => setState(() => _selectedIndustry = item['id']),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF42A5F5).withValues(alpha: 0.15)
-                      : Colors.white.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFF42A5F5)
-                        : Colors.white.withValues(alpha: 0.08),
-                    width: isSelected ? 1.5 : 1.0,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    HugeIcon(
-                      icon: item['icon'],
-                      color: isSelected ? const Color(0xFF42A5F5) : Colors.white54,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['label'],
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.white70,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                              fontSize: 13,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            item['subtitle'],
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.35),
-                              fontSize: 10,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: childAspectRatio,
+              ),
+              itemCount: _industries.length,
+              itemBuilder: (context, index) {
+                final item = _industries[index];
+                final isSelected = _selectedIndustry == item['id'];
+
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedIndustry = item['id']),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? const Color(0xFF42A5F5).withValues(alpha: 0.15)
+                          : Colors.white.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFF42A5F5)
+                            : Colors.white.withValues(alpha: 0.08),
+                        width: isSelected ? 1.5 : 1.0,
                       ),
                     ),
-                  ],
-                ),
-              ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF42A5F5).withValues(alpha: 0.2)
+                                : Colors.white.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: HugeIcon(
+                              icon: item['icon'],
+                              color: isSelected ? const Color(0xFF42A5F5) : Colors.white60,
+                              size: 17,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['label'],
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.85),
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                item['subtitle'],
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white70 : Colors.white.withValues(alpha: 0.38),
+                                  fontSize: 9.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             );
           },
         ),

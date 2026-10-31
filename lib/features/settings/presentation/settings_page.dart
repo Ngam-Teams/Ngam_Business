@@ -147,11 +147,27 @@ class _SettingsPageState extends State<SettingsPage> {
         return 'Food & Beverage';
       case 'barber':
         return 'Barber & Salon';
+      case 'beauty':
+        return 'Beauty, Spa & Wellness';
+      case 'auto':
+        return 'Automotive & Workshop';
       case 'retail':
         return 'Retail & Shopping';
+      case 'clinic':
+        return 'Clinic & Healthcare';
+      case 'fitness':
+        return 'Sports & Fitness';
+      case 'cleaning':
+        return 'Home & Cleaning';
+      case 'electronics':
+        return 'Gadget & Tech Repair';
+      case 'events':
+        return 'Events & Photography';
+      case 'education':
+        return 'Education & Classes';
       case 'services':
       default:
-        return 'Services & Other';
+        return 'Services & Professional';
     }
   }
 
