@@ -114,8 +114,15 @@ class OrderAlertService {
     _knownOrderIds.add(id);
 
     final status = order['status']?.toString().toLowerCase();
-    // Only alert for pending online or pre-order orders
+    // Hanya beri alert untuk pesanan berstatus 'pending'
     if (status != 'pending') return;
+
+    final String source = order['source']?.toString().toLowerCase() ?? 'pos';
+    // PENTING: Hanya pesanan dari pelanggan luar (Ngam App: online, pre_order, table) yang mencetuskan alert.
+    // Pesanan yang dibuat oleh cashier/juruwang di kaunter POS (source == 'pos') TIDAK BOLEH hantar alert/ringtone.
+    final bool isFromCustomerApp = source != 'pos' &&
+        (source == 'online' || source == 'pre_order' || source == 'table');
+    if (!isFromCustomerApp) return;
 
     // Start Ringtone Audio
     _playAlertSound();
@@ -170,7 +177,16 @@ class OrderAlertService {
     final double total = (order['total'] as num?)?.toDouble() ?? 0.0;
     final String source = order['source']?.toString().toLowerCase() ?? 'online';
     final bool isPreOrder = source == 'pre_order';
+    final bool isTable = source == 'table';
     final String? notes = order['notes']?.toString();
+
+    final Color badgeColor = isPreOrder
+        ? Colors.purpleAccent
+        : (isTable ? const Color(0xFF00E676) : const Color(0xFF42A5F5));
+
+    final String badgeText = isPreOrder
+        ? '📅 PESANAN AWAL (PRE-ORDER)'
+        : (isTable ? '🍽️ PESANAN IMBAS MEJA (NGAM APP)' : '🔔 PESANAN ONLINE (NGAM APP)');
 
     showDialog(
       context: navContext,
@@ -199,16 +215,12 @@ class OrderAlertService {
                     color: const Color(0xFF141424),
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(
-                      color: isPreOrder
-                          ? Colors.purpleAccent.withValues(alpha: 0.6)
-                          : const Color(0xFF42A5F5).withValues(alpha: 0.6),
+                      color: badgeColor.withValues(alpha: 0.6),
                       width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: isPreOrder
-                            ? Colors.purpleAccent.withValues(alpha: 0.25)
-                            : const Color(0xFF42A5F5).withValues(alpha: 0.25),
+                        color: badgeColor.withValues(alpha: 0.25),
                         blurRadius: 30,
                         spreadRadius: 2,
                       ),
@@ -223,16 +235,15 @@ class OrderAlertService {
                           width: 68,
                           height: 68,
                           decoration: BoxDecoration(
-                            color: (isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5))
-                                .withValues(alpha: 0.15),
+                            color: badgeColor.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
                             child: HugeIcon(
                               icon: isPreOrder
                                   ? HugeIcons.strokeRoundedCalendar03
-                                  : HugeIcons.strokeRoundedNotification03,
-                              color: isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5),
+                                  : (isTable ? HugeIcons.strokeRoundedQrCode : HugeIcons.strokeRoundedNotification03),
+                              color: badgeColor,
                               size: 36,
                               strokeWidth: 2.2,
                             ),
@@ -244,14 +255,13 @@ class OrderAlertService {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: (isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5))
-                                .withValues(alpha: 0.2),
+                            color: badgeColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            isPreOrder ? '📅 PESANAN AWAL (PRE-ORDER)' : '🔔 PESANAN ONLINE BARU',
+                            badgeText,
                             style: TextStyle(
-                              color: isPreOrder ? Colors.purpleAccent : const Color(0xFF42A5F5),
+                              color: badgeColor,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,

@@ -238,13 +238,49 @@ class _KdsPageState extends State<KdsPage> {
               };
             }).toList();
 
+      final String notesStr = (r['notes'] ?? '').toString();
       String tableLabel = 'Kaunter';
       String typeLabel = 'Dine-In';
-      if (source == 'takeaway' || source == 'delivery') {
+
+      final bool isTakeaway = source == 'takeaway' ||
+          notesStr.toUpperCase().contains('TAKEAWAY') ||
+          notesStr.toUpperCase().contains('BUNGKUS') ||
+          notesStr.toUpperCase().contains('BAWA PULANG');
+      final bool isDelivery = source == 'delivery' ||
+          notesStr.toUpperCase().contains('DELIVERY') ||
+          notesStr.toUpperCase().contains('HANTAR') ||
+          notesStr.toUpperCase().contains('PENGHANTARAN');
+
+      if (isDelivery) {
+        typeLabel = 'Delivery';
+        tableLabel = 'Hantar';
+      } else if (isTakeaway) {
         typeLabel = 'Takeaway';
         tableLabel = 'Bungkus';
+      } else if (notesStr.toUpperCase().contains('DINE_IN') || notesStr.toUpperCase().contains('MAKAN SINI')) {
+        typeLabel = 'Dine-In';
+        final tableMatch = RegExp(r'Meja:\s*([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(notesStr) ??
+            RegExp(r'Meja\s*#?([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(notesStr);
+        if (tableMatch != null && tableMatch.group(1) != '0') {
+          tableLabel = 'Meja ${tableMatch.group(1)}';
+        } else {
+          tableLabel = 'Makan Sini';
+        }
       } else if (r['customer_name'] != null && r['customer_name'].toString().trim().isNotEmpty) {
         tableLabel = r['customer_name'].toString().trim();
+      }
+
+      String serverLabel = 'Kaunter';
+      if (source == 'pos') {
+        serverLabel = 'Kaunter';
+      } else if (source == 'online') {
+        serverLabel = 'Ngam App';
+      } else if (source == 'table') {
+        serverLabel = 'Imbas Meja (App)';
+      } else if (source == 'pre_order') {
+        serverLabel = 'Pre-Order (App)';
+      } else {
+        serverLabel = 'Pesanan Online';
       }
 
       transformed.add({
@@ -254,7 +290,7 @@ class _KdsPageState extends State<KdsPage> {
         'type': typeLabel,
         'minutesAgo': minutesAgo,
         'stage': stage,
-        'server': source == 'pos' ? 'Kaunter' : 'Pesanan Online',
+        'server': serverLabel,
         'items': itemsList,
         'notes': r['notes'] ?? '',
       });

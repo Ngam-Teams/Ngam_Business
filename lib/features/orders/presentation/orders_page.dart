@@ -41,8 +41,12 @@ class _OrdersPageState extends State<OrdersPage> {
     final newlyAdded = newIds.difference(_knownOrderIds);
     
     if (newlyAdded.isNotEmpty) {
-      // Check if any of the new orders are "pending" (online orders)
-      final hasNewOnlineOrder = orders.any((o) => newlyAdded.contains(o.id) && o.status == 'pending');
+      // PENTING: Hanya semak pesanan dari Ngam App (pelanggan luar).
+      // Abaikan pesanan yang dibuat oleh juruwang / cashier di kaunter POS (source == 'pos').
+      final hasNewOnlineOrder = orders.any((o) =>
+          newlyAdded.contains(o.id) &&
+          o.status == 'pending' &&
+          o.source != 'pos');
       
       if (hasNewOnlineOrder) {
         // Play notification sound
@@ -51,7 +55,7 @@ class _OrdersPageState extends State<OrdersPage> {
         if (mounted) {
           showGlassToast(
             context,
-            'Pesanan dalam talian baru diterima!',
+            'Pesanan Ngam App baru diterima!',
             type: GlassToastType.info,
             color: const Color(0xFF42A5F5),
           );
@@ -309,17 +313,31 @@ class _OrdersPageState extends State<OrdersPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: order.source == 'pre_order'
-                          ? Colors.purpleAccent.withValues(alpha: 0.2)
-                          : Colors.white.withValues(alpha: 0.1),
+                      color: order.source == 'online'
+                          ? const Color(0xFF42A5F5).withValues(alpha: 0.2)
+                          : (order.source == 'table'
+                              ? const Color(0xFF00E676).withValues(alpha: 0.2)
+                              : (order.source == 'pre_order'
+                                  ? Colors.purpleAccent.withValues(alpha: 0.2)
+                                  : Colors.white.withValues(alpha: 0.1))),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       order.source == 'online'
                           ? 'Ngam App'
-                          : (order.source == 'pre_order' ? 'Pre-Order' : 'In-Store'),
+                          : (order.source == 'table'
+                              ? 'Ngam App (Meja)'
+                              : (order.source == 'pre_order'
+                                  ? 'Pre-Order'
+                                  : 'Kaunter POS')),
                       style: TextStyle(
-                        color: order.source == 'pre_order' ? Colors.purpleAccent : Colors.white70,
+                        color: order.source == 'online'
+                            ? const Color(0xFF42A5F5)
+                            : (order.source == 'table'
+                                ? const Color(0xFF00E676)
+                                : (order.source == 'pre_order'
+                                    ? Colors.purpleAccent
+                                    : Colors.white70)),
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
