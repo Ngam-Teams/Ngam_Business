@@ -147,4 +147,18 @@ class OrdersService {
       return false;
     }
   }
+
+  /// Ambil senarai item pesanan daripada table order_items
+  Future<List<Map<String, dynamic>>> fetchOrderItems(String orderId) async {
+    try {
+      final res = await _client
+          .from('order_items')
+          .select()
+          .eq('order_id', orderId);
+      return List<Map<String, dynamic>>.from(res);
+    } catch (e) {
+      debugPrint('[OrdersService] fetchOrderItems error ($orderId): $e');
+      return [];
+    }
+  }
 }

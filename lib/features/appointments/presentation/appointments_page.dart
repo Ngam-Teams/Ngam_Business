@@ -20,7 +20,8 @@ import '../../pos/models/order_model.dart';
 enum AppointmentStatus { pending, confirmed, inProgress, completed, cancelled, disputed }
 
 class AppointmentsPage extends StatefulWidget {
-  const AppointmentsPage({super.key});
+  final bool isEmbedded;
+  const AppointmentsPage({super.key, this.isEmbedded = false});
 
   @override
   State<AppointmentsPage> createState() => _AppointmentsPageState();
@@ -1202,7 +1203,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A14),
+      backgroundColor: widget.isEmbedded ? Colors.transparent : const Color(0xFF0A0A14),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF42A5F5),
         foregroundColor: Colors.white,
@@ -1211,58 +1212,60 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
         label: const Text('Tempahan Baharu', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: SafeArea(
+        top: !widget.isEmbedded,
         child: Column(
           children: [
-            // Top Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                      ),
-                      child: const Center(
-                        child: HugeIcon(
-                          icon: HugeIcons.strokeRoundedArrowLeft01,
-                          color: Colors.white,
-                          size: 20,
+            // Top Bar (Hanya dipaparkan jika dibuka dari menu luar / standalone)
+            if (!widget.isEmbedded)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Pengurusan Tempahan & Temu Janji',
-                          style: TextStyle(
+                        child: const Center(
+                          child: HugeIcon(
+                            icon: HugeIcons.strokeRoundedArrowLeft01,
                             color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                            size: 20,
                           ),
                         ),
-                        Text(
-                          'Khidmat, slot temu janji, meja & servis perniagaan',
-                          style: TextStyle(
-                            color: Colors.white54,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pengurusan Tempahan & Temu Janji',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Khidmat, slot temu janji, meja & servis perniagaan',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
             // Filter Chips
             SizedBox(
