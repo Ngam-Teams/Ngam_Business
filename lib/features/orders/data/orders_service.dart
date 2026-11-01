@@ -102,7 +102,15 @@ class OrdersService {
 
   /// Stream orders for real-time updates (ditapis mengikut business_id peniaga)
   Stream<List<OrderModel>> streamOrders() async* {
-    const cacheKey = 'orders_list_cache';
+    String? businessId = BusinessService.cachedProfile?['id']?.toString();
+    if (businessId == null || businessId.isEmpty) {
+      try {
+        final profile = await _businessService.getBusinessProfile();
+        businessId = profile?['id']?.toString();
+      } catch (_) {}
+    }
+
+    final cacheKey = 'orders_list_cache_${businessId ?? "default"}';
 
     final cached = await CacheService.get<List<OrderModel>>(
       key: cacheKey,
@@ -113,12 +121,6 @@ class OrdersService {
     if (cached != null && cached.isNotEmpty) {
       yield cached;
     }
-
-    String? businessId;
-    try {
-      final profile = await _businessService.getBusinessProfile();
-      businessId = profile?['id']?.toString();
-    } catch (_) {}
 
     final baseStream = (businessId != null && businessId.isNotEmpty)
         ? _client

@@ -65,11 +65,25 @@ class AnalyticsService {
             .select('id')
             .eq('shop_id', businessId)
             .eq('is_active', true),
+        _client
+            .from('orders')
+            .select('id, total, status, source, customer_name, created_at')
+            .eq('business_id', businessId)
+            .order('created_at', ascending: false)
+            .limit(8),
+        _client
+            .from('bookings')
+            .select('id, service_name, customer_name, status, created_at, booking_metadata')
+            .eq('business_id', businessId)
+            .order('created_at', ascending: false)
+            .limit(5),
       ]).timeout(const Duration(seconds: 8));
 
       final orders = (responses[0] as List?) ?? [];
       final monthlyOrders = (responses[1] as List?) ?? [];
       final products = (responses[2] as List?) ?? [];
+      final recentOrders = (responses[3] as List?) ?? [];
+      final recentBookings = (responses[4] as List?) ?? [];
 
       double todayRevenue = 0.0;
       int pendingOrders = 0;
@@ -85,6 +99,42 @@ class AnalyticsService {
         monthlyRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
       }
 
+      final List<Map<String, dynamic>> recentActivities = [];
+      for (final ro in recentOrders) {
+        final rawId = (ro['id'] ?? '').toString();
+        final shortId = rawId.length > 6 ? rawId.substring(0, 6).toUpperCase() : rawId.toUpperCase();
+        final amt = ((ro['total'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+        final st = (ro['status'] ?? 'pending').toString().toLowerCase();
+        final stLabel = st == 'completed'
+            ? 'selesai'
+            : st == 'ready'
+                ? 'sedia diambil'
+                : st == 'preparing' || st == 'in_progress'
+                    ? 'sedang disediakan'
+                    : st == 'cancelled'
+                        ? 'dibatalkan'
+                        : 'baharu diterima';
+        recentActivities.add({
+          'type': 'order',
+          'status': st,
+          'event': 'Pesanan #$shortId $stLabel — RM $amt',
+          'created_at': (ro['created_at'] ?? '').toString(),
+        });
+      }
+      for (final rb in recentBookings) {
+        final st = (rb['status'] ?? 'pending').toString().toLowerCase();
+        if (st == 'holding') continue;
+        final svc = (rb['service_name'] ?? 'Perkhidmatan').toString();
+        final cust = (rb['customer_name'] ?? 'Pelanggan').toString();
+        recentActivities.add({
+          'type': 'booking',
+          'status': st,
+          'event': 'Tempahan $svc ($cust) — ${st.toUpperCase()}',
+          'created_at': (rb['created_at'] ?? '').toString(),
+        });
+      }
+      recentActivities.sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+
       final stats = {
         'todayRevenue': todayRevenue,
         'todayOrders': orders.length,
@@ -92,6 +142,7 @@ class AnalyticsService {
         'productCount': products.length,
         'avgOrderValue': orders.isEmpty ? 0.0 : todayRevenue / orders.length,
         'pendingOrders': pendingOrders,
+        'recentActivities': recentActivities.take(8).toList(),
       };
 
       _cachedOverviewStats = stats;

@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/services/sound_service.dart';
 import '../../../customers/data/membership_service.dart';
 import '../../../promotions/data/voucher_service.dart';
 import '../../../promotions/models/voucher_model.dart';
+import '../../../settings/data/business_service.dart';
 import '../../models/product_model.dart';
 
 // =============================================================================
@@ -256,10 +258,16 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
       if (upperQuery.startsWith('NGAM-ORDER:')) {
         final orderId = query.substring('NGAM-ORDER:'.length).trim();
         if (orderId.isNotEmpty) {
-          await Supabase.instance.client.from('orders').update({
+          final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+          final shopId = profile?['id']?.toString();
+          var updateQuery = Supabase.instance.client.from('orders').update({
             'status': 'completed',
             'payment_status': 'paid',
           }).eq('id', orderId);
+          if (shopId != null && shopId.isNotEmpty) {
+            updateQuery = updateQuery.eq('business_id', shopId);
+          }
+          await updateQuery;
           SoundService.instance.playOrderChime();
           if (mounted) {
             setState(() {
@@ -276,9 +284,15 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
         String bookingCode = upperQuery;
         final m = RegExp(r'(RZRV-[A-Z0-9-]+)').firstMatch(upperQuery);
         if (m != null) bookingCode = m.group(1)!;
-        final rows = await Supabase.instance.client
+        final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+        final shopId = profile?['id']?.toString();
+        var selectQuery = Supabase.instance.client
             .from('bookings')
-            .select('id, booking_metadata')
+            .select('id, business_id, booking_metadata');
+        if (shopId != null && shopId.isNotEmpty) {
+          selectQuery = selectQuery.eq('business_id', shopId);
+        }
+        final rows = await selectQuery
             .order('created_at', ascending: false)
             .limit(100);
         for (final r in (rows as List)) {

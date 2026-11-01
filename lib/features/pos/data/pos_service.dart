@@ -57,7 +57,7 @@ class PosService {
       return;
     }
 
-    const cacheKey = 'pos_products_';
+    final cacheKey = 'pos_products_$businessId';
 
     // 1. Pancarkan data produk POS dari cache serta-merta (0 ms)
     final cached = await CacheService.get<List<ProductModel>>(

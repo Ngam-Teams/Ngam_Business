@@ -60,6 +60,7 @@ class QueueService {
       // Only active orders appear in queue and smart TV display
       if (status != 'pending' &&
           status != 'preparing' &&
+          status != 'in_progress' &&
           status != 'cooking' &&
           status != 'ready') {
         continue;
@@ -218,7 +219,7 @@ class QueueService {
             .from('orders')
             .select()
             .eq('business_id', businessId)
-            .inFilter('status', ['pending', 'preparing', 'cooking', 'ready'])
+            .inFilter('status', ['pending', 'preparing', 'in_progress', 'cooking', 'ready'])
             .order('created_at', ascending: true);
         result.addAll(_convertOrdersToQueueTickets((ordersRes as List).cast<Map<String, dynamic>>(), businessId));
       } catch (_) {}

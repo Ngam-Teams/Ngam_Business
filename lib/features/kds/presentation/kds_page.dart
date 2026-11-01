@@ -154,6 +154,7 @@ class _KdsPageState extends State<KdsPage> {
       final status = (r['status'] ?? '').toString().toLowerCase();
       return status == 'pending' ||
           status == 'preparing' ||
+          status == 'in_progress' ||
           status == 'cooking' ||
           status == 'ready';
     }).toList();
@@ -203,7 +204,7 @@ class _KdsPageState extends State<KdsPage> {
       final minutesAgo = DateTime.now().difference(createdAt).inMinutes;
 
       KdsStage stage = KdsStage.incoming;
-      if (status == 'preparing' || status == 'cooking') {
+      if (status == 'preparing' || status == 'in_progress' || status == 'cooking') {
         stage = KdsStage.cooking;
       } else if (status == 'ready') {
         stage = KdsStage.ready;
@@ -380,7 +381,8 @@ class _KdsPageState extends State<KdsPage> {
           icon: Icons.filter_list_rounded,
           tooltip: 'Tapis: $_filterType',
           onTap: () {
-            final next = _filterType == 'All' ? 'Dine-In' : (_filterType == 'Dine-In' ? 'Takeaway' : 'All');
+            const filters = ['All', 'Dine-In', 'Takeaway', 'Delivery'];
+            final next = filters[(filters.indexOf(_filterType) + 1) % filters.length];
             setState(() => _filterType = next);
             showGlassToast(context, 'Tapis pesanan: $next');
           },

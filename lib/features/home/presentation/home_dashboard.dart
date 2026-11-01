@@ -233,7 +233,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         children: [
                           Expanded(
                             flex: width < 900 ? 5 : 2,
-                            child: _buildRecentActivity(isDesktop: true),
+                            child: _buildRecentActivity(isDesktop: true, liveRaw: data?['recentActivities'] as List?),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -264,7 +264,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         children: [
                           Expanded(
                             flex: width < 900 ? 5 : 2,
-                            child: _buildRecentActivity(isDesktop: true),
+                            child: _buildRecentActivity(isDesktop: true, liveRaw: data?['recentActivities'] as List?),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -299,7 +299,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     if (showBanner) _buildProfileIncompleteBanner(context),
                     _buildStatCards(cards, width, isLandscape: false),
                     const SizedBox(height: 16),
-                    _buildRecentActivity(isDesktop: false),
+                    _buildRecentActivity(isDesktop: false, liveRaw: data?['recentActivities'] as List?),
                     const SizedBox(height: 16),
                     _buildQuickActions(context, isDesktop: false),
                   ],
@@ -500,7 +500,44 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
   }
 
-  Widget _buildRecentActivity({bool isDesktop = false}) {
+  String _formatRelativeTime(String isoString) {
+    final dt = DateTime.tryParse(isoString)?.toLocal();
+    if (dt == null) return 'Baru sahaja';
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'Baru sahaja';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m lalu';
+    if (diff.inHours < 24) return '${diff.inHours}j lalu';
+    return '${diff.inDays}h lalu';
+  }
+
+  Widget _buildRecentActivity({bool isDesktop = false, List<dynamic>? liveRaw}) {
+    final List<({Color color, String event, dynamic icon, String time})> displayActivities;
+    if (liveRaw != null && liveRaw.isNotEmpty) {
+      displayActivities = liveRaw.map((item) {
+        final map = item as Map<String, dynamic>;
+        final isBooking = map['type'] == 'booking';
+        final st = (map['status'] ?? '').toString();
+        final Color c = st == 'completed'
+            ? const Color(0xFF44CF6C)
+            : st == 'cancelled'
+                ? const Color(0xFFEF4444)
+                : isBooking
+                    ? const Color(0xFF8B5CF6)
+                    : const Color(0xFF42A5F5);
+        final dynamic ic = isBooking
+            ? HugeIcons.strokeRoundedCalendar01
+            : HugeIcons.strokeRoundedShoppingBag01;
+        return (
+          time: _formatRelativeTime((map['created_at'] ?? '').toString()),
+          event: (map['event'] ?? '').toString(),
+          icon: ic,
+          color: c,
+        );
+      }).toList();
+    } else {
+      displayActivities = _activities;
+    }
+
     return _buildPanel(
       title: 'Recent Activity',
       icon: HugeIcons.strokeRoundedActivity01,
@@ -543,13 +580,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
               child: ListView.separated(
                 padding: EdgeInsets.zero,
                 physics: const BouncingScrollPhysics(),
-                itemCount: _activities.length,
+                itemCount: displayActivities.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, i) => _buildActivityItem(_activities[i]),
+                itemBuilder: (context, i) => _buildActivityItem(displayActivities[i]),
               ),
             )
           : Column(
-              children: _activities
+              children: displayActivities
                   .map(
                     (act) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),

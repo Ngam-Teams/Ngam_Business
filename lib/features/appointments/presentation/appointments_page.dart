@@ -116,7 +116,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
           return true;
         }).toList();
 
-        if (relevantBookings.isNotEmpty) {
+        if (relevantBookings.isNotEmpty || (_businessId != null && _businessId!.isNotEmpty)) {
           setState(() {
             final liveList = relevantBookings.map((b) {
               final meta = b['booking_metadata'] as Map<String, dynamic>? ?? {};
