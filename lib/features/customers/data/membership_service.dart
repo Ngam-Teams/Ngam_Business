@@ -334,5 +334,30 @@ class MembershipService {
         qrCode: current.qrCode,
       );
     }
+
+    // Persist visit & stamps to Supabase customer_loyalty_cards for this business
+    try {
+      final businessId = await _getBusinessId();
+      if (businessId != null && norm.isNotEmpty) {
+        final existing = await _client
+            .from('customer_loyalty_cards')
+            .select()
+            .eq('business_id', businessId)
+            .eq('customer_phone', norm)
+            .maybeSingle();
+        if (existing != null) {
+          final curStamps = (existing['current_stamps'] as num?)?.toInt() ?? 0;
+          final reqStamps = (existing['total_stamps_required'] as num?)?.toInt() ?? 5;
+          final nextStamps = (curStamps + 1) > reqStamps ? 1 : (curStamps + 1);
+          await _client
+              .from('customer_loyalty_cards')
+              .update({
+                'current_stamps': nextStamps,
+                'last_stamped_at': DateTime.now().toUtc().toIso8601String(),
+              })
+              .eq('id', existing['id']);
+        }
+      }
+    } catch (_) {}
   }
 }

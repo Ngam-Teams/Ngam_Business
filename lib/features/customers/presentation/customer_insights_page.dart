@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_nav_button.dart';
 import '../../../widgets/glass_toast.dart';
 
@@ -69,6 +71,88 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
         'tier': 'Regular',
       },
     ];
+    _loadLiveCustomers();
+  }
+
+  Future<void> _loadLiveCustomers() async {
+    try {
+      final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+      final businessId = profile?['id']?.toString();
+      if (businessId == null || businessId.isEmpty) {
+        return;
+      }
+
+      final results = await Future.wait([
+        Supabase.instance.client
+            .from('customer_loyalty_cards')
+            .select()
+            .eq('business_id', businessId),
+        Supabase.instance.client
+            .from('orders')
+            .select('customer_name, customer_phone, total, status, created_at')
+            .eq('business_id', businessId)
+            .order('created_at', ascending: false)
+            .limit(200),
+      ]);
+
+      final cards = (results[0] as List?) ?? [];
+      final orders = (results[1] as List?) ?? [];
+
+      final Map<String, Map<String, dynamic>> agg = {};
+
+      for (final c in cards) {
+        final phone = (c['customer_phone'] ?? '').toString().trim();
+        final name = (c['customer_name'] ?? 'Pelanggan').toString().trim();
+        final key = phone.isNotEmpty ? phone : name.toLowerCase();
+        if (key.isEmpty) continue;
+        agg[key] = {
+          'id': c['id']?.toString() ?? 'CUST',
+          'name': name,
+          'phone': phone.isNotEmpty ? phone : '-',
+          'visits': (c['current_stamps'] as num?)?.toInt() ?? 1,
+          'totalSpent': 0.0,
+          'lastVisit': 'Ahli Setia',
+          'tier': 'Silver VIP',
+        };
+      }
+
+      for (final o in orders) {
+        final st = (o['status'] ?? '').toString().toLowerCase();
+        if (st == 'cancelled' || st == 'refunded') continue;
+        final name = (o['customer_name'] ?? '').toString().trim();
+        final phone = (o['customer_phone'] ?? '').toString().trim();
+        if (name.isEmpty && phone.isEmpty) continue;
+        final key = phone.isNotEmpty ? phone : name.toLowerCase();
+        final amt = (o['total'] as num?)?.toDouble() ?? 0.0;
+        final entry = agg.putIfAbsent(key, () => {
+          'id': 'CUST-${agg.length + 1}',
+          'name': name.isNotEmpty ? name : 'Pelanggan ($phone)',
+          'phone': phone.isNotEmpty ? phone : '-',
+          'visits': 0,
+          'totalSpent': 0.0,
+          'lastVisit': 'Baru-baru ini',
+          'tier': 'Regular',
+        });
+        entry['visits'] = (entry['visits'] as int) + 1;
+        entry['totalSpent'] = (entry['totalSpent'] as double) + amt;
+        final spent = entry['totalSpent'] as double;
+        entry['tier'] = spent >= 500
+            ? 'Gold VIP'
+            : (spent >= 200 || (entry['visits'] as int) >= 5 ? 'Silver VIP' : 'Regular');
+      }
+
+      if (mounted) {
+        setState(() {
+          if (agg.isNotEmpty) {
+            final list = agg.values.toList()
+              ..sort((a, b) => (b['totalSpent'] as double).compareTo(a['totalSpent'] as double));
+            _customers = list;
+          }
+        });
+      }
+    } catch (_) {
+
+    }
   }
 
   @override
@@ -123,12 +207,12 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                       ),
-                      child: const Column(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Total Customers', style: TextStyle(color: Colors.white54, fontSize: 11)),
-                          SizedBox(height: 4),
-                          Text('142', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                          const Text('Total Customers', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          const SizedBox(height: 4),
+                          Text('${_customers.length}', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),

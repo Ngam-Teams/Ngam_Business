@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/services/order_alert_service.dart';
+import '../../analytics/data/analytics_service.dart';
 import '../../loyalty/data/loyalty_service.dart';
 import '../../payroll/data/payroll_service.dart';
 import '../../queue/data/queue_service.dart';
@@ -30,6 +31,7 @@ class AuthService {
     } catch (_) {}
     try {
       LoyaltyService.reset();
+      AnalyticsService.reset();
     } catch (_) {}
     try {
       PayrollService.reset();

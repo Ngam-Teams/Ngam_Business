@@ -47,7 +47,7 @@ class ProductService {
       return;
     }
 
-    final cacheKey = 'catalogue_products_';
+    final cacheKey = 'catalogue_products_$shopId';
 
     // 1. Pancarkan data cache serta-merta (0 ms)
     final cached = await CacheService.get<List<ProductModel>>(

@@ -86,6 +86,10 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
       double card = 0.0;
 
       for (final order in orders) {
+        final orderStatus = (order['status'] as String?)?.toLowerCase() ?? 'pending';
+        if (orderStatus == 'cancelled' || orderStatus == 'refund_pending' || orderStatus == 'refunded') {
+          continue;
+        }
         final total = (order['total'] as num?)?.toDouble() ?? 0.0;
         final method = (order['payment_method'] as String?)?.toLowerCase() ?? 'cash';
         final splits = order['payment_splits'] as List<dynamic>?;

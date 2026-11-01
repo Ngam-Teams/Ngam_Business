@@ -183,10 +183,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               final loading = (snapshot.connectionState == ConnectionState.waiting) && data == null;
               final mult = _getPeriodMultiplier();
 
-              final double todayRev = (data?['todayRevenue'] as num?)?.toDouble() ?? 1450.0;
-              final int todayOrders = (data?['todayOrders'] as num?)?.toInt() ?? 42;
-              final double avgOrder = (data?['avgOrderValue'] as num?)?.toDouble() ?? 34.50;
-              final double monthlyRev = (data?['monthlyRevenue'] as num?)?.toDouble() ?? 38450.0;
+              final double todayRev = (data?['todayRevenue'] as num?)?.toDouble() ?? 0.0;
+              final int todayOrders = (data?['todayOrders'] as num?)?.toInt() ?? 0;
+              final double avgOrder = (data?['avgOrderValue'] as num?)?.toDouble() ?? 0.0;
+              final double monthlyRev = (data?['monthlyRevenue'] as num?)?.toDouble() ?? 0.0;
 
               final displayedRevenue = _selectedPeriod == AnalyticsPeriod.today
                   ? todayRev
@@ -667,9 +667,40 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   Widget _buildRevenueChart() {
-    final mockData = [42.0, 85.0, 60.0, 95.0, 72.0, 110.0, 88.0];
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final maxVal = mockData.reduce((a, b) => a > b ? a : b);
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _service.fetchWeeklyRevenue(),
+      builder: (context, snapshot) {
+        final rows = snapshot.data ?? [];
+        final now = DateTime.now();
+        final List<double> dailyTotals = List.filled(7, 0.0);
+        final List<String> days = [];
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        for (int i = 6; i >= 0; i--) {
+          final d = now.subtract(Duration(days: i));
+          days.add(dayNames[d.weekday - 1]);
+        }
+        for (final r in rows) {
+          final dt = DateTime.tryParse((r['created_at'] ?? '').toString())?.toLocal();
+          if (dt != null) {
+            final diffDays = DateTime(now.year, now.month, now.day)
+                .difference(DateTime(dt.year, dt.month, dt.day))
+                .inDays;
+            if (diffDays >= 0 && diffDays < 7) {
+              final idx = 6 - diffDays;
+              dailyTotals[idx] += (r['total'] as num?)?.toDouble() ?? 0.0;
+            }
+          }
+        }
+        final hasLive = dailyTotals.any((v) => v > 0);
+        final mockData = hasLive ? dailyTotals : [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        final rawMax = mockData.reduce((a, b) => a > b ? a : b);
+        final maxVal = rawMax > 0 ? rawMax : 100.0;
+        return _buildRevenueChartBars(mockData, days, maxVal);
+      },
+    );
+  }
+
+  Widget _buildRevenueChartBars(List<double> mockData, List<String> days, double maxVal) {
 
     return SizedBox(
       height: 160,

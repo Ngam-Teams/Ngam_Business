@@ -505,7 +505,7 @@ class _PosPageState extends State<PosPage> {
             voucherId: result.voucherId!,
             discountAmount: result.discountAmount,
             orderSubtotal: subtotal,
-            customerPhone: null,
+            customerPhone: _selectedMember?.phone ?? (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : null),
           );
         } catch (_) {}
       } else if (_voucherId != null && _voucherDiscount > 0) {
@@ -514,7 +514,7 @@ class _PosPageState extends State<PosPage> {
             voucherId: _voucherId!,
             discountAmount: _voucherDiscount,
             orderSubtotal: subtotal,
-            customerPhone: null,
+            customerPhone: _selectedMember?.phone ?? (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : null),
           );
         } catch (_) {}
       }
@@ -600,7 +600,7 @@ class _PosPageState extends State<PosPage> {
             voucherId: _voucherId!,
             discountAmount: _voucherDiscount,
             orderSubtotal: _cartTotal,
-            customerPhone: null,
+            customerPhone: _selectedMember?.phone ?? (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : null),
           );
         } catch (_) {}
       }
@@ -768,7 +768,7 @@ class _PosPageState extends State<PosPage> {
             voucherId: _voucherId!,
             discountAmount: _voucherDiscount,
             orderSubtotal: _cartTotal,
-            customerPhone: null,
+            customerPhone: _selectedMember?.phone ?? (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : null),
           );
         } catch (_) {}
       }

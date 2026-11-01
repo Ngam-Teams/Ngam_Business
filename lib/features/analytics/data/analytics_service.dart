@@ -10,6 +10,10 @@ class AnalyticsService {
   static Map<String, dynamic>? _cachedOverviewStats;
   static Map<String, dynamic>? get cachedOverviewStats => _cachedOverviewStats;
 
+  static void reset() {
+    _cachedOverviewStats = null;
+  }
+
   static const Map<String, dynamic> fallbackOverviewStats = {
     'todayRevenue': 0.0,
     'todayOrders': 0,
@@ -57,7 +61,7 @@ class AnalyticsService {
             .gte('created_at', startOfDay),
         _client
             .from('orders')
-            .select('total')
+            .select('total, status, source, payment_method, created_at')
             .eq('business_id', businessId)
             .gte('created_at', startOfMonth),
         _client
@@ -87,15 +91,21 @@ class AnalyticsService {
 
       double todayRevenue = 0.0;
       int pendingOrders = 0;
+      int validTodayOrders = 0;
       for (final o in orders) {
+        final st = (o['status'] ?? '').toString().toLowerCase();
+        if (st == 'cancelled' || st == 'refunded') continue;
+        validTodayOrders++;
         todayRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
-        if (o['status'] == 'pending') {
+        if (st == 'pending') {
           pendingOrders++;
         }
       }
 
       double monthlyRevenue = 0.0;
       for (final o in monthlyOrders) {
+        final st = (o['status'] ?? '').toString().toLowerCase();
+        if (st == 'cancelled' || st == 'refunded') continue;
         monthlyRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
       }
 
@@ -137,10 +147,10 @@ class AnalyticsService {
 
       final stats = {
         'todayRevenue': todayRevenue,
-        'todayOrders': orders.length,
+        'todayOrders': validTodayOrders,
         'monthlyRevenue': monthlyRevenue,
         'productCount': products.length,
-        'avgOrderValue': orders.isEmpty ? 0.0 : todayRevenue / orders.length,
+        'avgOrderValue': validTodayOrders == 0 ? 0.0 : todayRevenue / validTodayOrders,
         'pendingOrders': pendingOrders,
         'recentActivities': recentActivities.take(8).toList(),
       };

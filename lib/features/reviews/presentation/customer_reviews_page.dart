@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_nav_button.dart';
 import '../../../widgets/glass_toast.dart';
 
@@ -70,6 +72,51 @@ class _CustomerReviewsPageState extends State<CustomerReviewsPage> {
     for (var r in _reviews) {
       _replyControllers[r['id']] = TextEditingController();
     }
+    _loadLiveReviews();
+  }
+
+  Future<void> _loadLiveReviews() async {
+    try {
+      final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+      final businessId = profile?['id']?.toString();
+      if (businessId == null || businessId.isEmpty) return;
+
+      final orders = await Supabase.instance.client
+          .from('orders')
+          .select('id, customer_name, notes, created_at')
+          .eq('business_id', businessId)
+          .order('created_at', ascending: false)
+          .limit(100);
+
+      final List<Map<String, dynamic>> liveRevs = [];
+      for (final o in (orders as List)) {
+        final notes = (o['notes'] ?? '').toString();
+        final match = RegExp(r'\[ULASAN PELANGGAN:\s*(\d+)★\]\s*(.*)').firstMatch(notes);
+        if (match != null) {
+          final rating = int.tryParse(match.group(1) ?? '5') ?? 5;
+          final comment = (match.group(2) ?? '').trim();
+          final id = 'REV-${o['id'].toString().substring(0, 6)}';
+          _replyControllers.putIfAbsent(id, () => TextEditingController());
+          liveRevs.add({
+            'id': id,
+            'order_id': o['id'],
+            'customerName': o['customer_name']?.toString() ?? 'Pelanggan Ngam',
+            'rating': rating,
+            'date': 'Pesanan Disahkan',
+            'service': 'Pesanan Kedai',
+            'comment': comment.isNotEmpty ? comment : 'Perkhidmatan terbaik!',
+            'merchantReply': null,
+            'replyDate': null,
+          });
+        }
+      }
+
+      if (liveRevs.isNotEmpty && mounted) {
+        setState(() {
+          _reviews = [...liveRevs, ..._reviews];
+        });
+      }
+    } catch (_) {}
   }
 
   @override
