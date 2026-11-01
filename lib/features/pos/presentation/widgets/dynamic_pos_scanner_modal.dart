@@ -252,6 +252,55 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
       final upperQuery = query.toUpperCase();
       final digitsOnly = query.replaceAll(RegExp(r'\D'), '');
 
+      // 0A. Semak jika ia adalah QR Pengambilan Pesanan (NGAM-ORDER:<id>)
+      if (upperQuery.startsWith('NGAM-ORDER:')) {
+        final orderId = query.substring('NGAM-ORDER:'.length).trim();
+        if (orderId.isNotEmpty) {
+          await Supabase.instance.client.from('orders').update({
+            'status': 'completed',
+            'payment_status': 'paid',
+          }).eq('id', orderId);
+          SoundService.instance.playOrderChime();
+          if (mounted) {
+            setState(() {
+              _isResolving = false;
+              _statusError = '✅ Pesanan #${orderId.length > 6 ? orderId.substring(0, 6).toUpperCase() : orderId} disahkan selesai diambil!';
+            });
+          }
+          return;
+        }
+      }
+
+      // 0B. Semak jika ia adalah QR Tiket Tempahan (ID:RZRV-... atau RZRV-...)
+      if (upperQuery.contains('RZRV-')) {
+        String bookingCode = upperQuery;
+        final m = RegExp(r'(RZRV-[A-Z0-9-]+)').firstMatch(upperQuery);
+        if (m != null) bookingCode = m.group(1)!;
+        final rows = await Supabase.instance.client
+            .from('bookings')
+            .select('id, booking_metadata')
+            .order('created_at', ascending: false)
+            .limit(100);
+        for (final r in (rows as List)) {
+          final meta = r['booking_metadata'] as Map<String, dynamic>? ?? {};
+          final ref = (meta['booking_id'] ?? meta['short_ref'] ?? '').toString().toUpperCase();
+          if (ref == bookingCode) {
+            await Supabase.instance.client
+                .from('bookings')
+                .update({'status': 'in_progress'})
+                .eq('id', r['id']);
+            SoundService.instance.playOrderChime();
+            if (mounted) {
+              setState(() {
+                _isResolving = false;
+                _statusError = '✅ Tiket Tempahan $bookingCode berjaya Check-In!';
+              });
+            }
+            return;
+          }
+        }
+      }
+
       // 1. Semak jika ia adalah KEAHLIAN PELANGGAN (Phone No. atau Kod Ahli)
       // Cth: '01123456789', '+6011...', 'MEM-xxxx', 'CUST-01', 'NGAM-MEM-...'
       final isLikelyPhone = digitsOnly.length >= 9 && (digitsOnly.startsWith('01') || digitsOnly.startsWith('601'));

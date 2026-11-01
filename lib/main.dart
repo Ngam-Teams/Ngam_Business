@@ -57,6 +57,44 @@ void main() async {
     debugPrint('loadCachedProfile error: $e');
   }
 
+  // Custom error widget so Flutter Web/Desktop never displays a solid grey screen
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: const Color(0xFF10121D),
+      child: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 40),
+              const SizedBox(height: 12),
+              const Text(
+                'Ralat Memuatkan Komponen',
+                style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                details.exceptionAsString(),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11.5),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
+
   runApp(const NgamBusinessApp());
 }
 

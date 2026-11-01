@@ -172,6 +172,9 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                 noteParts.add('Sebab Batal: ${meta['cancellation_reason']}');
               }
 
+              final String payStatus = (meta['payment_status']?.toString() ?? 'unpaid').toLowerCase();
+              final bool isPaidOnline = payStatus == 'paid';
+
               return {
                 'db_id': b['id'],
                 'id': meta['booking_id'] ?? meta['short_ref'] ?? 'BK-${b['id'].toString().substring(0, b['id'].toString().length > 6 ? 6 : b['id'].toString().length)}',
@@ -183,7 +186,11 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                 'dateTime': '${b['booking_date'] ?? 'Hari Ini'}, ${b['booking_time'] ?? ''}',
                 'staff': meta['provider_name'] ?? 'Staff',
                 'price': price,
-                'deposit': price * 0.3,
+                'deposit': isPaidOnline ? price : 0.0,
+                'payment_status': payStatus,
+                'payment_method': meta['payment_method']?.toString() ?? 'Bayar di Kedai (Tunai)',
+                'pax': b['pax'] ?? meta['pax'] ?? 1,
+                'raw_meta': meta,
                 'status': apptStatus,
                 'notes': noteParts.isNotEmpty ? noteParts.join(' • ') : 'Tempahan melalui Aplikasi Ngam',
               };
@@ -416,6 +423,180 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
     );
   }
 
+  Future<void> _rejectWithReason(Map<String, dynamic> appt) async {
+    String selectedReason = 'Slot penuh pada waktu tersebut';
+    final reasons = [
+      'Slot penuh pada waktu tersebut',
+      'Kakitangan / Pakar sedang bercuti',
+      'Kedai tutup awal / kecemasan',
+      'Perkhidmatan tidak tersedia buat sementara',
+    ];
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => AlertDialog(
+          backgroundColor: const Color(0xFF141724),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: const Text(
+            'Sebab Penolakan / Pembatalan',
+            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: reasons.map((r) {
+              final sel = selectedReason == r;
+              return RadioListTile<String>(
+                value: r,
+                groupValue: selectedReason,
+                activeColor: Colors.redAccent,
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  r,
+                  style: TextStyle(
+                    color: sel ? Colors.white : Colors.white70,
+                    fontSize: 13,
+                    fontWeight: sel ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                onChanged: (v) {
+                  if (v != null) setModal(() => selectedReason = v);
+                },
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Sahkan Batal', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      appt['status'] = AppointmentStatus.cancelled;
+    });
+
+    final dbId = appt['db_id'];
+    if (dbId != null) {
+      final rawMeta = (appt['raw_meta'] is Map)
+          ? Map<String, dynamic>.from(appt['raw_meta'] as Map)
+          : <String, dynamic>{};
+      final isPaid = appt['payment_status'] == 'paid';
+      try {
+        await Supabase.instance.client.from('bookings').update({
+          'status': 'cancelled',
+          'booking_metadata': {
+            ...rawMeta,
+            'cancellation_reason': selectedReason,
+            'cancelled_by_merchant': true,
+            if (isPaid) 'payment_status': 'refund_pending',
+          },
+        }).eq('id', dbId);
+      } catch (e) {
+        debugPrint('Error rejecting booking: $e');
+      }
+    }
+    if (mounted) {
+      showGlassToast(context, 'Tempahan ${appt['id']} telah dibatalkan ($selectedReason).');
+    }
+  }
+
+  Future<void> _openBookingQrCheckIn() async {
+    final codeCtrl = TextEditingController();
+    final matched = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF141724),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Row(
+          children: [
+            Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF42A5F5)),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Check-In QR Tiket Tempahan',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Imbas kod QR tiket pelanggan (ID:RZRV-...) atau masukkan ID Tempahan:',
+              style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: codeCtrl,
+              autofocus: true,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: 'Cth: RZRV-261101-ABCDE',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.06),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF42A5F5),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              String raw = codeCtrl.text.trim().toUpperCase();
+              if (raw.contains('ID:')) {
+                final m = RegExp(r'ID:([^|]+)').firstMatch(raw);
+                if (m != null) raw = m.group(1)!.trim();
+              }
+              for (final a in _appointments) {
+                final aid = (a['id']?.toString() ?? '').toUpperCase();
+                if (aid == raw || aid.contains(raw)) {
+                  Navigator.pop(ctx, a);
+                  return;
+                }
+              }
+              showGlassToast(context, 'Tiket tempahan tidak ditemui.', isError: true);
+            },
+            child: const Text('Cari & Check-In', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (matched != null && mounted) {
+      _showBookingDetailsModal(matched);
+    }
+  }
+
   void _showBookingDetailsModal(Map<String, dynamic> appt) {
     showModalBottomSheet(
       context: context,
@@ -637,6 +818,20 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           label: 'Kaedah Bayaran',
                           value: paymentMethod,
                         ),
+                        const Divider(color: Colors.white10, height: 20),
+                        _buildDetailRow(
+                          icon: Icons.verified_outlined,
+                          label: 'Status Bayaran',
+                          value: appt['payment_status'] == 'paid'
+                              ? 'SUDAH DIBAYAR PENUH (ONLINE)'
+                              : (appt['payment_status'] == 'refund_pending'
+                                  ? 'PEMULANGAN WANG (REFUND)'
+                                  : 'BELUM DIBAYAR (BAYAR DI KEDAI)'),
+                          valueColor: appt['payment_status'] == 'paid'
+                              ? const Color(0xFF44CF6C)
+                              : Colors.orangeAccent,
+                          isBold: true,
+                        ),
                       ],
                     ),
                   ),
@@ -726,7 +921,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                             ),
                             onPressed: () {
                               Navigator.pop(modalCtx);
-                              _updateStatus(appt, AppointmentStatus.cancelled);
+                              _rejectWithReason(appt);
                             },
                             child: const Text('Tolak / Batal', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
@@ -748,23 +943,43 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           ),
                         ),
                       ] else if (status == AppointmentStatus.confirmed || status == AppointmentStatus.inProgress) ...[
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFED1164),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        if (appt['payment_status'] != 'paid') ...[
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFED1164),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(modalCtx);
+                                _payAppointmentAtPos(appt);
+                              },
+                              icon: const Icon(Icons.bolt_rounded, size: 18),
+                              label: const Text('Bayar POS', style: TextStyle(fontWeight: FontWeight.bold)),
                             ),
-                            onPressed: () {
-                              Navigator.pop(modalCtx);
-                              _payAppointmentAtPos(appt);
-                            },
-                            icon: const Icon(Icons.bolt_rounded, size: 18),
-                            label: const Text('Bayar POS', style: TextStyle(fontWeight: FontWeight.bold)),
                           ),
-                        ),
-                        const SizedBox(width: 10),
+                          const SizedBox(width: 10),
+                        ] else if (status == AppointmentStatus.confirmed) ...[
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF9C27B0),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(modalCtx);
+                                _updateStatus(appt, AppointmentStatus.inProgress);
+                              },
+                              icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                              label: const Text('Check-In Hadir', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
                         Expanded(
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
@@ -1219,6 +1434,37 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
               padding: EdgeInsets.only(top: !widget.isEmbedded ? 64 : 0),
               child: Column(
                 children: [
+                  // QR Check-In Bar
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+                    child: InkWell(
+                      onTap: _openBookingQrCheckIn,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.35)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF42A5F5), size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Imbas / Sahkan QR Tiket Tempahan Pelanggan (RZRV)',
+                              style: TextStyle(
+                                color: Color(0xFF42A5F5),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                   // Filter Chips
             SizedBox(
               height: 40,

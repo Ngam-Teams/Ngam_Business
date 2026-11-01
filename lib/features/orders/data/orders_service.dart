@@ -8,9 +8,12 @@ import '../../settings/data/business_service.dart';
 class OrderModel {
   final String id;
   final String ownerUserId;
+  final String? businessId;
   final double total;
   final String status;
   final String source;
+  final String paymentStatus;
+  final String paymentMethod;
   final String? customerName;
   final String? customerPhone;
   final String? notes;
@@ -19,9 +22,12 @@ class OrderModel {
   OrderModel({
     required this.id,
     required this.ownerUserId,
+    this.businessId,
     required this.total,
     required this.status,
     required this.source,
+    this.paymentStatus = 'paid',
+    this.paymentMethod = 'online',
     this.customerName,
     this.customerPhone,
     this.notes,
@@ -36,9 +42,12 @@ class OrderModel {
     return OrderModel(
       id: json['id'] as String,
       ownerUserId: (json['owner_user_id'] as String?) ?? '',
+      businessId: json['business_id']?.toString(),
       total: (json['total'] as num).toDouble(),
       status: json['status'] as String,
       source: json['source'] as String? ?? 'pos',
+      paymentStatus: (json['payment_status'] as String?) ?? 'paid',
+      paymentMethod: (json['payment_method'] as String?) ?? 'online',
       customerName: json['customer_name'] as String?,
       customerPhone: phone,
       notes: json['notes'] as String?,
@@ -49,9 +58,12 @@ class OrderModel {
   Map<String, dynamic> toJson() => {
     'id': id,
     'owner_user_id': ownerUserId,
+    'business_id': businessId,
     'total': total,
     'status': status,
     'source': source,
+    'payment_status': paymentStatus,
+    'payment_method': paymentMethod,
     'customer_name': customerName,
     'customer_phone': customerPhone,
     'notes': notes,
@@ -88,11 +100,10 @@ class OrdersService {
     }
   }
 
-  /// Stream orders for real-time updates (dilengkapi cache pantas SWR 0-saat)
+  /// Stream orders for real-time updates (ditapis mengikut business_id peniaga)
   Stream<List<OrderModel>> streamOrders() async* {
     const cacheKey = 'orders_list_cache';
 
-    // 1. Tunjuk data cache pesanan serta-merta jika ada (0 ms)
     final cached = await CacheService.get<List<OrderModel>>(
       key: cacheKey,
       fromJson: (jsonList) => (jsonList as List)
@@ -103,43 +114,54 @@ class OrdersService {
       yield cached;
     }
 
-    // 2. Dengar stream realtime Supabase & simpan ke cache
-    yield* _client
-        .from('orders')
-        .stream(primaryKey: ['id'])
-        .order('created_at', ascending: false)
-        .map((list) {
-          final orders = list
-              .map((json) => OrderModel.fromJson(json))
-              .toList();
+    String? businessId;
+    try {
+      final profile = await _businessService.getBusinessProfile();
+      businessId = profile?['id']?.toString();
+    } catch (_) {}
 
-          unawaited(CacheService.set<List<OrderModel>>(
-            key: cacheKey,
-            data: orders,
-            toJson: (items) => items.map((o) => o.toJson()).toList(),
-          ));
+    final baseStream = (businessId != null && businessId.isNotEmpty)
+        ? _client
+            .from('orders')
+            .stream(primaryKey: ['id'])
+            .eq('business_id', businessId)
+            .order('created_at', ascending: false)
+        : _client
+            .from('orders')
+            .stream(primaryKey: ['id'])
+            .order('created_at', ascending: false);
 
-          return orders;
-        });
+    yield* baseStream.map((list) {
+      final orders = list.map((json) => OrderModel.fromJson(json)).toList();
+
+      unawaited(CacheService.set<List<OrderModel>>(
+        key: cacheKey,
+        data: orders,
+        toJson: (items) => items.map((o) => o.toJson()).toList(),
+      ));
+
+      return orders;
+    });
   }
 
   /// Update the status of an order
-  Future<bool> updateOrderStatus(String orderId, String newStatus) async {
+  Future<bool> updateOrderStatus(String orderId, String newStatus, {String? paymentStatus}) async {
     try {
+      final payload = <String, dynamic>{
+        'status': newStatus,
+        if (paymentStatus != null) 'payment_status': paymentStatus,
+      };
       try {
         await _client
             .from('orders')
             .update({
-              'status': newStatus,
+              ...payload,
               'updated_at': DateTime.now().toIso8601String(),
             })
             .eq('id', orderId);
         return true;
       } catch (_) {
-        await _client
-            .from('orders')
-            .update({'status': newStatus})
-            .eq('id', orderId);
+        await _client.from('orders').update(payload).eq('id', orderId);
         return true;
       }
     } catch (e) {

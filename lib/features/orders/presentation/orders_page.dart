@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -56,7 +57,13 @@ class _OrdersPageState extends State<OrdersPage> {
       
       if (hasNewOnlineOrder) {
         // Play notification sound
-        FlutterRingtonePlayer().playNotification();
+        try {
+          if (!kIsWeb) {
+            FlutterRingtonePlayer().playNotification();
+          }
+        } catch (e) {
+          debugPrint('[OrdersPage] Sound notification error: $e');
+        }
         
         if (mounted) {
           showGlassToast(
@@ -72,8 +79,8 @@ class _OrdersPageState extends State<OrdersPage> {
     }
   }
 
-  Future<void> _updateStatus(OrderModel order, String newStatus) async {
-    final success = await _ordersService.updateOrderStatus(order.id, newStatus);
+  Future<void> _updateStatus(OrderModel order, String newStatus, {String? paymentStatus}) async {
+    final success = await _ordersService.updateOrderStatus(order.id, newStatus, paymentStatus: paymentStatus);
     if (!mounted) return;
     
     if (success) {
@@ -91,7 +98,95 @@ class _OrdersPageState extends State<OrdersPage> {
     }
   }
 
-    void _showOrderDetailsModal(OrderModel order) {
+    Future<void> _openPickupQrVerifier(List<OrderModel> allOrders) async {
+    final codeCtrl = TextEditingController();
+    final matched = await showDialog<OrderModel>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF141724),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Row(
+          children: [
+            Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF00E5FF)),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Sahkan QR Ambil Pesanan',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Imbas dengan pengimbas barcode/QR atau masukkan Kod Pesanan pelanggan (cth: NGAM-ORDER:... atau 6 aksara pertama ID):',
+              style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: codeCtrl,
+              autofocus: true,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                hintText: 'NGAM-ORDER:... atau #A1B2C3',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.06),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onSubmitted: (val) {
+                final cleaned = val.trim().replaceAll('NGAM-ORDER:', '').replaceAll('#', '').toLowerCase();
+                if (cleaned.isEmpty) return;
+                for (final o in allOrders) {
+                  if (o.id.toLowerCase() == cleaned || o.id.toLowerCase().startsWith(cleaned)) {
+                    Navigator.pop(ctx, o);
+                    return;
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00E5FF),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              final cleaned = codeCtrl.text.trim().replaceAll('NGAM-ORDER:', '').replaceAll('#', '').toLowerCase();
+              if (cleaned.isEmpty) return;
+              for (final o in allOrders) {
+                if (o.id.toLowerCase() == cleaned || o.id.toLowerCase().startsWith(cleaned)) {
+                  Navigator.pop(ctx, o);
+                  return;
+                }
+              }
+              showGlassToast(context, 'Pesanan tidak ditemui untuk kod tersebut.', isError: true);
+            },
+            child: const Text('Cari & Sahkan', style: TextStyle(fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+
+    if (matched != null && mounted) {
+      _showOrderDetailsModal(matched);
+    }
+  }
+
+  void _showOrderDetailsModal(OrderModel order) {
     final shortId = order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase();
     final isPending = order.status == 'pending';
     final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
@@ -487,44 +582,91 @@ class _OrdersPageState extends State<OrdersPage> {
 
                   const SizedBox(height: 20),
 
-                  // Actions
-                  Row(
+                  // Actions (4-Stage Lifecycle: pending -> preparing -> ready -> completed)
+                  Column(
                     children: [
-                      if (isPending) ...[
-                        Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.redAccent,
-                              side: const BorderSide(color: Colors.redAccent),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      if (order.status == 'pending') ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.redAccent,
+                                  side: const BorderSide(color: Colors.redAccent),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(modalCtx);
+                                  _updateStatus(order, 'cancelled');
+                                },
+                                child: const Text('Batal Pesanan', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
                             ),
-                            onPressed: () {
-                              Navigator.pop(modalCtx);
-                              _updateStatus(order, 'cancelled');
-                            },
-                            child: const Text('Batal Pesanan', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF00B0FF),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(modalCtx);
+                                  _updateStatus(order, 'preparing');
+                                },
+                                icon: const HugeIcon(icon: HugeIcons.strokeRoundedRestaurant01, color: Colors.white, size: 18),
+                                label: const Text('Terima & Sediakan', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ] else if (order.status == 'preparing' || order.status == 'in_progress') ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF00E676),
+                                  foregroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(modalCtx);
+                                  _updateStatus(order, 'ready');
+                                },
+                                icon: const HugeIcon(icon: HugeIcons.strokeRoundedShoppingBag01, color: Colors.black, size: 18),
+                                label: const Text('Sedia Untuk Diambil (Ready)', style: TextStyle(fontWeight: FontWeight.w900)),
+                              ),
                             ),
-                            onPressed: () {
-                              Navigator.pop(modalCtx);
-                              _updateStatus(order, 'completed');
-                            },
-                            icon: const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: Colors.white, size: 18),
-                            label: const Text('Tanda Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ),
+                          ],
+                        ),
+                      ] else if (order.status == 'ready') ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(modalCtx);
+                                  _updateStatus(order, 'completed', paymentStatus: 'paid');
+                                },
+                                icon: const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: Colors.white, size: 18),
+                                label: const Text('Sahkan Pengambilan & Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ],
                         ),
                       ] else ...[
-                        Expanded(
+                        SizedBox(
+                          width: double.infinity,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white12,
@@ -715,9 +857,14 @@ class _OrdersPageState extends State<OrdersPage> {
                       _checkForNewOrders(allOrders);
                     });
 
-                    // Group by status
-                    final pendingOrders = allOrders.where((o) => o.status == 'pending').toList();
-                    final completedOrders = allOrders.where((o) => o.status != 'pending').toList();
+                    // Group by active lifecycle vs completed/cancelled
+                    final pendingOrders = allOrders.where((o) =>
+                        o.status == 'pending' ||
+                        o.status == 'preparing' ||
+                        o.status == 'in_progress' ||
+                        o.status == 'ready').toList();
+                    final completedOrders = allOrders.where((o) =>
+                        o.status == 'completed' || o.status == 'cancelled').toList();
 
                     if (allOrders.isEmpty) {
                       return _buildEmptyState();
@@ -791,6 +938,34 @@ class _OrdersPageState extends State<OrdersPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: () => _openPickupQrVerifier(allOrders),
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E5FF).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: 0.35)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF00E5FF), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Imbas / Sahkan Kod QR Pengambilan Pelanggan (NGAM-ORDER)',
+                      style: TextStyle(
+                        color: Color(0xFF00E5FF),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
 
             if (pendingOrders.isNotEmpty) ...[
@@ -844,7 +1019,8 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   Widget _buildOrderCard(OrderModel order) {
-    final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
+    try {
+      final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
     final isPending = order.status == 'pending';
     
     return GestureDetector(
@@ -975,12 +1151,34 @@ class _OrdersPageState extends State<OrdersPage> {
                       onPressed: () => _sendWhatsAppToCustomer(order),
                     ),
                   ),
-                  if (isPending) ...[
+                  if (order.status == 'pending') ...[
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
-                      onPressed: () => _updateStatus(order, 'completed'),
-                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: Colors.white, size: 18),
-                      label: const Text('Complete'),
+                      onPressed: () => _updateStatus(order, 'preparing'),
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedRestaurant01, color: Colors.white, size: 16),
+                      label: const Text('Masak'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00B0FF),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ] else if (order.status == 'preparing' || order.status == 'in_progress') ...[
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _updateStatus(order, 'ready'),
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedShoppingBag01, color: Colors.black, size: 16),
+                      label: const Text('Sedia', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00E676),
+                        foregroundColor: Colors.black,
+                      ),
+                    ),
+                  ] else if (order.status == 'ready') ...[
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _updateStatus(order, 'completed', paymentStatus: 'paid'),
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: Colors.white, size: 16),
+                      label: const Text('Selesai'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
@@ -1011,5 +1209,39 @@ class _OrdersPageState extends State<OrdersPage> {
       ),
     ),
     );
+    } catch (e, st) {
+      debugPrint('[OrdersPage] Error building order card for #${order.id}: $e\n$st');
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pesanan #${order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase()}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Ralat paparan butiran: $e',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
