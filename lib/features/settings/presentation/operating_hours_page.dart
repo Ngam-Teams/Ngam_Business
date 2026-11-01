@@ -435,32 +435,21 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top Bar
-            GlassTopBar(
-              title: 'Hours & Store Status',
-              subtitle: 'Waktu operasi & status kedai',
-              onBack: () => Navigator.pop(context),
-              actionItems: [
-                GlassNavPillItem(
-                  icon: HugeIcons.strokeRoundedTick01,
-                  iconColor: const Color(0xFF42A5F5),
-                  tooltip: 'Simpan',
-                  isLoading: _isSaving,
-                  onTap: _isSaving ? null : _saveSchedule,
-                ),
-              ],
-            ),
-
-            if (_isLoading)
-              const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5))))
-            else
-              Expanded(
-                child: ListView(
+      title: 'Hours & Store Status',
+      subtitle: 'Waktu operasi & status kedai',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedTick01,
+          tooltip: 'Simpan',
+          isLoading: _isSaving,
+          onTap: _isSaving ? null : _saveSchedule,
+        ),
+      ],
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
+          : ListView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
                   children: [
@@ -717,10 +706,6 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
                       }),
                   ],
                 ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }

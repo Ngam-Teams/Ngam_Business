@@ -111,19 +111,13 @@ class _CustomerReviewsPageState extends State<CustomerReviewsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top Bar
-            GlassTopBar(
-              title: 'Customer Reviews',
-              subtitle: 'Maklum balas & ulasan pelanggan',
-              onBack: () => Navigator.pop(context),
-            ),
-
-            // Rating Overview Banner
+      title: 'Customer Reviews',
+      subtitle: 'Maklum balas & ulasan pelanggan',
+      body: Column(
+        children: [
+          // Rating Overview Banner
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               padding: const EdgeInsets.all(18),
@@ -409,7 +403,6 @@ class _CustomerReviewsPageState extends State<CustomerReviewsPage> {
             ),
           ],
         ),
-      ),
     );
   }
 }

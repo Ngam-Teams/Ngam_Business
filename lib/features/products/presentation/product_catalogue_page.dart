@@ -146,20 +146,17 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
     final serviceCount = _products.where((p) => p.isService).length;
     final filtered = _filteredProducts;
 
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'Products & Services',
-        subtitle: 'Katalog produk & servis kedai',
-        actionItems: [
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedAdd01,
-            iconColor: const Color(0xFF42A5F5),
-            tooltip: 'Tambah Item / Servis',
-            onTap: () => _showAddProductModal(),
-          ),
-        ],
-      ),
+      title: 'Products & Services',
+      subtitle: 'Katalog produk & servis kedai',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedAdd01,
+          tooltip: 'Tambah Item / Servis',
+          onTap: () => _showAddProductModal(),
+        ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddProductModal(),
         backgroundColor: const Color(0xFF42A5F5),

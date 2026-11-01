@@ -476,29 +476,27 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'Payouts & Settlement',
-        subtitle: 'Direct bank transfers & DuitNow settlements',
-        actionItems: [
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedDownload01,
-            tooltip: 'Export Statement',
-            onTap: () => showGlassToast(context, 'Monthly financial statement exported (PDF/CSV)'),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: const Color(0xFF42A5F5),
-          indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white54,
-          tabs: const [
-            Tab(text: 'Overview & Accounts'),
-            Tab(text: 'Settlement History'),
-          ],
+      title: 'Payouts & Settlement',
+      subtitle: 'Direct bank transfers & DuitNow settlements',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedDownload01,
+          tooltip: 'Export Statement',
+          onTap: () => showGlassToast(context, 'Monthly financial statement exported (PDF/CSV)'),
         ),
+      ],
+      bottomTabBar: TabBar(
+        controller: _tabController,
+        indicatorColor: const Color(0xFF42A5F5),
+        indicatorWeight: 3,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white54,
+        tabs: const [
+          Tab(text: 'Overview & Accounts'),
+          Tab(text: 'Settlement History'),
+        ],
       ),
       body: TabBarView(
         controller: _tabController,

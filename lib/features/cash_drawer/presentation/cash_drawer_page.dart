@@ -671,29 +671,26 @@ Status: Syif Ditutup & Disahkan ke Cloud
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'Cash Drawer & Closing',
-        subtitle: 'Petty cash logs & Z-Reports',
-        actionItems: [
-          GlassNavPillItem(
-            icon: Icons.refresh_rounded,
-            tooltip: 'Kemas Kini Jualan',
-            isLoading: _isLoadingSales,
-            onTap: () {
-              _loadLiveShiftSales();
-              showGlassToast(context, 'Mengemas kini data jualan syif terkini...');
-            },
-          ),
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedMoneyAdd02,
-            iconColor: const Color(0xFF42A5F5),
-            tooltip: 'Add Petty Cash',
-            onTap: _openAddPettyCashDialog,
-          ),
-        ],
-      ),
+      title: 'Cash Drawer & Closing',
+      subtitle: 'Petty cash logs & Z-Reports',
+      actionItems: [
+        GlassNavPillItem(
+          icon: Icons.refresh_rounded,
+          tooltip: 'Kemas Kini Jualan',
+          isLoading: _isLoadingSales,
+          onTap: () {
+            _loadLiveShiftSales();
+            showGlassToast(context, 'Mengemas kini data jualan syif terkini...');
+          },
+        ),
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedMoneyAdd02,
+          tooltip: 'Add Petty Cash',
+          onTap: _openAddPettyCashDialog,
+        ),
+      ],
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

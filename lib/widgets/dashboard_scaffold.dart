@@ -799,8 +799,7 @@ class _TopBarActions extends StatelessWidget {
           tooltip: 'Pemberitahuan',
           size: 44,
           iconSize: 20,
-          iconColor: Colors.white70,
-          onTap: () => context.push('/merchant-inbox'),
+                    onTap: () => context.push('/merchant-inbox'),
         ),
         const SizedBox(width: 8),
         ValueListenableBuilder<Map<String, dynamic>?>(

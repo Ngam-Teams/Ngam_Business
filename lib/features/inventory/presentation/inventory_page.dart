@@ -106,46 +106,40 @@ class _InventoryPageState extends State<InventoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      body: SafeArea(
-        child: StreamBuilder<List<ProductModel>>(
-          stream: _productService.streamAllProducts(),
-          builder: (context, snapshot) {
-            final allItems = snapshot.data ?? [];
-            // Filter physical items that track inventory (or all products)
-            final physicalItems = allItems.where((p) => p.isProduct).toList();
+      title: 'Inventori & Stok',
+      subtitle: 'Pemantauan stok masa nyata',
+      body: StreamBuilder<List<ProductModel>>(
+        stream: _productService.streamAllProducts(),
+        builder: (context, snapshot) {
+          final allItems = snapshot.data ?? [];
+          // Filter physical items that track inventory (or all products)
+          final physicalItems = allItems.where((p) => p.isProduct).toList();
 
-            final lowStockCount = physicalItems.where((i) => i.trackInventory && i.isLowStock).length;
-            final outOfStockCount = physicalItems.where((i) => i.trackInventory && i.isOutOfStock).length;
+          final lowStockCount = physicalItems.where((i) => i.trackInventory && i.isLowStock).length;
+          final outOfStockCount = physicalItems.where((i) => i.trackInventory && i.isOutOfStock).length;
 
-            final filteredItems = physicalItems.where((item) {
-              final query = _searchQuery.toLowerCase();
-              final matchesQuery = item.name.toLowerCase().contains(query) ||
-                  (item.category?.toLowerCase().contains(query) ?? false) ||
-                  (item.sku?.toLowerCase().contains(query) ?? false) ||
-                  (item.barcode?.toLowerCase().contains(query) ?? false);
+          final filteredItems = physicalItems.where((item) {
+            final query = _searchQuery.toLowerCase();
+            final matchesQuery = item.name.toLowerCase().contains(query) ||
+                (item.category?.toLowerCase().contains(query) ?? false) ||
+                (item.sku?.toLowerCase().contains(query) ?? false) ||
+                (item.barcode?.toLowerCase().contains(query) ?? false);
 
-              if (!matchesQuery) return false;
+            if (!matchesQuery) return false;
 
-              if (_selectedFilterIndex == 1) {
-                return item.trackInventory && item.isLowStock;
-              } else if (_selectedFilterIndex == 2) {
-                return item.trackInventory && item.isOutOfStock;
-              }
-              return true;
-            }).toList();
+            if (_selectedFilterIndex == 1) {
+              return item.trackInventory && item.isLowStock;
+            } else if (_selectedFilterIndex == 2) {
+              return item.trackInventory && item.isOutOfStock;
+            }
+            return true;
+          }).toList();
 
-            return Column(
-              children: [
-                // Top Bar
-                GlassTopBar(
-                  title: 'Inventori & Stok',
-                  subtitle: 'Pemantauan stok masa nyata',
-                  onBack: () => Navigator.pop(context),
-                ),
-
-                // Low Stock / Out of Stock Warning Banner
+          return Column(
+            children: [
+              // Low Stock / Out of Stock Warning Banner
                 if (lowStockCount > 0 || outOfStockCount > 0)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
@@ -555,7 +549,6 @@ class _InventoryPageState extends State<InventoryPage> {
             );
           },
         ),
-      ),
     );
   }
 }

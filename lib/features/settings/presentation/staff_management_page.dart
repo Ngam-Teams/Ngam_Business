@@ -229,32 +229,27 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'Staff Management',
-        subtitle: _businessName.isNotEmpty ? _businessName : 'Pasukan & Staf',
-        actionItems: [
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedSmartPhone01,
-            iconColor: const Color(0xFF38BDF8),
-            tooltip: 'Hab Ngam Teams (Krew App)',
-            onTap: () => NgamTeamsService.showTeamsHubModal(context, businessName: _businessName),
-          ),
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedTask01,
-            iconColor: const Color(0xFF42A5F5),
-            tooltip: 'Audit Logs & Rekod Staf',
-            onTap: () => context.push('/audit-logs'),
-          ),
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedCoins01,
-            iconColor: const Color(0xFF10B981),
-            tooltip: 'Urus Gaji & Komisen Staf',
-            onTap: () => context.push('/payroll'),
-          ),
-        ],
-      ),
+      title: 'Staff Management',
+      subtitle: _businessName.isNotEmpty ? _businessName : 'Pasukan & Staf',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedSmartPhone01,
+          tooltip: 'Hab Ngam Teams (Krew App)',
+          onTap: () => NgamTeamsService.showTeamsHubModal(context, businessName: _businessName),
+        ),
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedTask01,
+          tooltip: 'Audit Logs & Rekod Staf',
+          onTap: () => context.push('/audit-logs'),
+        ),
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedCoins01,
+          tooltip: 'Urus Gaji & Komisen Staf',
+          onTap: () => context.push('/payroll'),
+        ),
+      ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showInviteModal,
         backgroundColor: const Color(0xFF42A5F5),

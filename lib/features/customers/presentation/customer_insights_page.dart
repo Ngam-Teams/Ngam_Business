@@ -104,19 +104,13 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top Bar
-            GlassTopBar(
-              title: 'Customer Insights & VIPs',
-              subtitle: 'Analisis pelanggan setia & VIP',
-              onBack: () => Navigator.pop(context),
-            ),
-
-            // Top Stat Summary Banner
+      title: 'Customer Insights & VIPs',
+      subtitle: 'Analisis pelanggan setia & VIP',
+      body: Column(
+        children: [
+          // Top Stat Summary Banner
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(
@@ -304,7 +298,6 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
             ),
           ],
         ),
-      ),
     );
   }
 }

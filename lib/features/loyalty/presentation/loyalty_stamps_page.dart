@@ -257,20 +257,17 @@ class _LoyaltyStampsPageState extends State<LoyaltyStampsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'Kad Cop Digital (Loyalty)',
-        subtitle: 'Program kesetiaan & ganjaran pelanggan',
-        actionItems: [
-          GlassNavPillItem(
-            icon: Icons.settings_outlined,
-            iconColor: const Color(0xFF42A5F5),
-            tooltip: 'Tetapan Program',
-            onTap: _openProgramSettingsModal,
-          ),
-        ],
-      ),
+      title: 'Kad Cop Digital (Loyalty)',
+      subtitle: 'Program kesetiaan & ganjaran pelanggan',
+      actionItems: [
+        GlassNavPillItem(
+          icon: Icons.settings_outlined,
+          tooltip: 'Tetapan Program',
+          onTap: _openProgramSettingsModal,
+        ),
+      ],
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
           : SingleChildScrollView(

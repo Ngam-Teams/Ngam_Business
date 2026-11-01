@@ -84,19 +84,17 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'Audit Trails & Security',
-        subtitle: 'Rekod log aktiviti keselamatan',
-        actionItems: [
-          GlassNavPillItem(
-            icon: Icons.refresh_rounded,
-            tooltip: 'Muat Semula Log',
-            onTap: _fetchLogs,
-          ),
-        ],
-      ),
+      title: 'Audit Trails & Security',
+      subtitle: 'Rekod log aktiviti keselamatan',
+      actionItems: [
+        GlassNavPillItem(
+          icon: Icons.refresh_rounded,
+          tooltip: 'Muat Semula Log',
+          onTap: _fetchLogs,
+        ),
+      ],
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),

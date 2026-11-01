@@ -676,20 +676,17 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'QR & Standee Generator',
-        subtitle: 'Menu, Meja, WiFi & Baucar',
-        actionItems: [
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedDownload04,
-            iconColor: const Color(0xFF42A5F5),
-            tooltip: 'Muat Turun Standee',
-            onTap: _captureAndSaveStandee,
-          ),
-        ],
-      ),
+      title: 'QR & Standee Generator',
+      subtitle: 'Menu, Meja, WiFi & Baucar',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedDownload04,
+          tooltip: 'Muat Turun Standee',
+          onTap: _captureAndSaveStandee,
+        ),
+      ],
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 860;

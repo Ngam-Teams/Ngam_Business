@@ -1213,17 +1213,13 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
       ),
       body: SafeArea(
         top: !widget.isEmbedded,
-        child: Column(
+        child: Stack(
           children: [
-            // Top Bar (Hanya dipaparkan jika dibuka dari menu luar / standalone)
-            if (!widget.isEmbedded)
-              GlassTopBar(
-                title: 'Tempahan & Temu Janji',
-                subtitle: 'Slot temu janji & servis',
-                onBack: () => Navigator.pop(context),
-              ),
-
-            // Filter Chips
+            Padding(
+              padding: EdgeInsets.only(top: !widget.isEmbedded ? 64 : 0),
+              child: Column(
+                children: [
+                  // Filter Chips
             SizedBox(
               height: 40,
               child: ListView.builder(
@@ -1508,6 +1504,15 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                     },
                   ),
             ),
+                ],
+              ),
+            ),
+            if (!widget.isEmbedded)
+              FloatingTopBar(
+                title: 'Tempahan & Temu Janji',
+                subtitle: 'Slot temu janji & servis',
+                onBack: () => Navigator.pop(context),
+              ),
           ],
         ),
       ),

@@ -184,12 +184,10 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: const GlassAppBar(
-        title: 'Two-Factor Auth',
-        subtitle: 'Pengesahan 2-Faktor (2FA)',
-      ),
+      title: 'Two-Factor Auth',
+      subtitle: 'Pengesahan 2-Faktor (2FA)',
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
           : SingleChildScrollView(

@@ -242,12 +242,10 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: const GlassAppBar(
-        title: 'Subscription & Plans',
-        subtitle: 'Pelan langganan & keupayaan',
-      ),
+      title: 'Subscription & Plans',
+      subtitle: 'Pelan langganan & keupayaan',
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

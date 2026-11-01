@@ -371,44 +371,40 @@ class _KdsPageState extends State<KdsPage> {
     final cookingTickets = filteredTickets.where((t) => t['stage'] == KdsStage.cooking).toList();
     final readyTickets = filteredTickets.where((t) => t['stage'] == KdsStage.ready).toList();
 
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF09090F),
-      appBar: GlassAppBar(
-        title: 'Live Order Board',
-        subtitle: _useDemoData ? 'Mod Demo (${filteredTickets.length} Tiket)' : 'Live (${filteredTickets.length} Tiket)',
-        actionItems: [
-          GlassNavPillItem(
-            icon: Icons.filter_list_rounded,
-            tooltip: 'Tapis: $_filterType',
-            iconColor: _filterType != 'All' ? const Color(0xFFF9C80E) : Colors.white70,
-            onTap: () {
-              final next = _filterType == 'All' ? 'Dine-In' : (_filterType == 'Dine-In' ? 'Takeaway' : 'All');
-              setState(() => _filterType = next);
-              showGlassToast(context, 'Tapis pesanan: $next');
-            },
-          ),
-          GlassNavPillItem(
-            icon: _soundEnabled ? Icons.notifications_active_rounded : Icons.notifications_off_rounded,
-            iconColor: _soundEnabled ? const Color(0xFF44CF6C) : Colors.white38,
-            tooltip: _soundEnabled ? 'Bunyi Pesanan Aktif' : 'Bunyi Dimatikan',
-            onTap: () {
-              setState(() => _soundEnabled = !_soundEnabled);
-              if (_soundEnabled) {
-                SoundService.instance.playOrderChime();
-              }
-              showGlassToast(context, _soundEnabled ? 'Bunyi amaran pesanan diaktifkan' : 'Bunyi amaran dinyahaktifkan');
-            },
-          ),
-          GlassNavPillItem(
-            icon: Icons.refresh_rounded,
-            tooltip: 'Muat Semula Papan',
-            onTap: () {
-              _initLiveKds();
-              showGlassToast(context, 'Memuat semula pesanan...');
-            },
-          ),
-        ],
-      ),
+      title: 'Live Order Board',
+      subtitle: _useDemoData ? 'Mod Demo (${filteredTickets.length} Tiket)' : 'Live (${filteredTickets.length} Tiket)',
+      actionItems: [
+        GlassNavPillItem(
+          icon: Icons.filter_list_rounded,
+          tooltip: 'Tapis: $_filterType',
+          onTap: () {
+            final next = _filterType == 'All' ? 'Dine-In' : (_filterType == 'Dine-In' ? 'Takeaway' : 'All');
+            setState(() => _filterType = next);
+            showGlassToast(context, 'Tapis pesanan: $next');
+          },
+        ),
+        GlassNavPillItem(
+          icon: _soundEnabled ? Icons.notifications_active_rounded : Icons.notifications_off_rounded,
+          tooltip: _soundEnabled ? 'Bunyi Pesanan Aktif' : 'Bunyi Dimatikan',
+          onTap: () {
+            setState(() => _soundEnabled = !_soundEnabled);
+            if (_soundEnabled) {
+              SoundService.instance.playOrderChime();
+            }
+            showGlassToast(context, _soundEnabled ? 'Bunyi amaran pesanan diaktifkan' : 'Bunyi amaran dinyahaktifkan');
+          },
+        ),
+        GlassNavPillItem(
+          icon: Icons.refresh_rounded,
+          tooltip: 'Muat Semula Papan',
+          onTap: () {
+            _initLiveKds();
+            showGlassToast(context, 'Memuat semula pesanan...');
+          },
+        ),
+      ],
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFFF9C80E)),

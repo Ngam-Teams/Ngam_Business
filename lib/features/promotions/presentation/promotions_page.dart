@@ -202,7 +202,16 @@ class _PromotionsPageState extends State<PromotionsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
+      title: 'Baucar & Promosi',
+      subtitle: 'Pengurusan kod diskaun',
+      actionItems: [
+        GlassNavPillItem(
+          icon: Icons.refresh_rounded,
+          tooltip: 'Muat Semula',
+          onTap: _loadData,
+        ),
+      ],
       backgroundColor: const Color(0xFF0A0A14),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF42A5F5),
@@ -215,29 +224,14 @@ class _PromotionsPageState extends State<PromotionsPage> {
           style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.3),
         ),
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
+      body: RefreshIndicator(
           onRefresh: _loadData,
           color: const Color(0xFF42A5F5),
           backgroundColor: const Color(0xFF141722),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             slivers: [
-              // Top Bar
-              SliverToBoxAdapter(
-                child: GlassTopBar(
-                  title: 'Baucar & Promosi',
-                  subtitle: 'Pengurusan kod diskaun',
-                  onBack: () => Navigator.pop(context),
-                  actionItems: [
-                    GlassNavPillItem(
-                      icon: Icons.refresh_rounded,
-                      tooltip: 'Muat Semula',
-                      onTap: _loadData,
-                    ),
-                  ],
-                ),
-              ),
+
 
               // Metrics Bar
               SliverToBoxAdapter(
@@ -422,7 +416,6 @@ class _PromotionsPageState extends State<PromotionsPage> {
             ],
           ),
         ),
-      ),
     );
   }
 

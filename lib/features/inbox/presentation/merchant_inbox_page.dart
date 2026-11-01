@@ -135,28 +135,25 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 800;
 
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: _activeThread != null && !isDesktop ? (_activeThread!['customerName'] as String) : 'Customer Inbox',
-        subtitle: _activeThread != null && !isDesktop ? (_activeThread!['orderRef'] as String) : 'Customer inquiries & chat',
-        onBack: () {
-          if (_activeThread != null && !isDesktop) {
-            setState(() => _activeThread = null);
-          } else {
-            Navigator.pop(context);
-          }
-        },
-        actionItems: [
-          if (_activeThread != null)
-            GlassNavPillItem(
-              icon: Icons.phone_rounded,
-              iconColor: const Color(0xFF44CF6C),
-              tooltip: 'Hubungi Pelanggan',
-              onTap: () => _callCustomer(_activeThread!['phone'] as String),
-            ),
-        ],
-      ),
+      title: _activeThread != null && !isDesktop ? (_activeThread!['customerName'] as String) : 'Customer Inbox',
+      subtitle: _activeThread != null && !isDesktop ? (_activeThread!['orderRef'] as String) : 'Customer inquiries & chat',
+      onBack: () {
+        if (_activeThread != null && !isDesktop) {
+          setState(() => _activeThread = null);
+        } else {
+          Navigator.pop(context);
+        }
+      },
+      actionItems: [
+        if (_activeThread != null)
+          GlassNavPillItem(
+            icon: Icons.phone_rounded,
+            tooltip: 'Hubungi Pelanggan',
+            onTap: () => _callCustomer(_activeThread!['phone'] as String),
+          ),
+      ],
       body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
     );
   }

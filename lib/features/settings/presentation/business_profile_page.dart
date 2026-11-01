@@ -491,21 +491,18 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   Widget build(BuildContext context) {
     final isNewBusiness = _businessId == null;
 
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: isNewBusiness ? 'Add Business' : 'Business Profile',
-        subtitle: 'Maklumat & profil kedai',
-        actionItems: [
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedTick01,
-            iconColor: const Color(0xFF42A5F5),
-            tooltip: 'Simpan Profil',
-            isLoading: _isSaving,
-            onTap: _isSaving ? null : _saveProfile,
-          ),
-        ],
-      ),
+      title: isNewBusiness ? 'Add Business' : 'Business Profile',
+      subtitle: 'Maklumat & profil kedai',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedTick01,
+          tooltip: 'Simpan Profil',
+          isLoading: _isSaving,
+          onTap: _isSaving ? null : _saveProfile,
+        ),
+      ],
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFF42A5F5)),

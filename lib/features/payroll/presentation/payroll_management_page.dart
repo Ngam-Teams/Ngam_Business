@@ -348,29 +348,26 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'Penggajian & Komisen (Payroll)',
-        subtitle: 'Gaji pokok, komisen jualan & caruman',
-        actionItems: [
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedDownload04,
-            iconColor: const Color(0xFF42A5F5),
-            tooltip: 'Eksport Penyata Gaji',
-            onTap: () => showGlassToast(context, 'Mengeksport ringkasan gaji PDF/CSV...'),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: const Color(0xFF42A5F5),
-          labelColor: const Color(0xFF42A5F5),
-          unselectedLabelColor: Colors.white54,
-          tabs: const [
-            Tab(text: 'Gaji Bulan Ini (Run)'),
-            Tab(text: 'Tetapan Komisen'),
-          ],
+      title: 'Penggajian & Komisen (Payroll)',
+      subtitle: 'Gaji pokok, komisen jualan & caruman',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedDownload04,
+          tooltip: 'Eksport Penyata Gaji',
+          onTap: () => showGlassToast(context, 'Mengeksport ringkasan gaji PDF/CSV...'),
         ),
+      ],
+      bottomTabBar: TabBar(
+        controller: _tabController,
+        indicatorColor: const Color(0xFF42A5F5),
+        labelColor: const Color(0xFF42A5F5),
+        unselectedLabelColor: Colors.white54,
+        tabs: const [
+          Tab(text: 'Gaji Bulan Ini (Run)'),
+          Tab(text: 'Tetapan Komisen'),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))

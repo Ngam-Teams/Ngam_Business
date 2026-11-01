@@ -222,25 +222,22 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isPhone = screenWidth < 600;
 
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: isPhone ? 'Feed & Post' : 'Ngam Feed Studio',
-        subtitle: 'Video & hantaran promosi',
-        actionItems: [
-          GlassNavPillItem(
-            icon: Icons.refresh_rounded,
-            tooltip: 'Muat Semula',
-            onTap: _loadInitialData,
-          ),
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedAdd01,
-            iconColor: const Color(0xFFEC4899),
-            tooltip: 'Cipta Post',
-            onTap: () => _openCreateOrEditPostDialog(),
-          ),
-        ],
-      ),
+      title: isPhone ? 'Feed & Post' : 'Ngam Feed Studio',
+      subtitle: 'Video & hantaran promosi',
+      actionItems: [
+        GlassNavPillItem(
+          icon: Icons.refresh_rounded,
+          tooltip: 'Muat Semula',
+          onTap: _loadInitialData,
+        ),
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedAdd01,
+          tooltip: 'Cipta Post',
+          onTap: () => _openCreateOrEditPostDialog(),
+        ),
+      ],
       // Mobile-friendly Floating Action Button for quick thumb tap on phones
       floatingActionButton: isPhone
           ? FloatingActionButton.extended(

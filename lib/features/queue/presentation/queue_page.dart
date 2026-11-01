@@ -160,26 +160,22 @@ class _QueuePageState extends State<QueuePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'Pengurusan Giliran (Queue)',
-        subtitle: 'Papan giliran walk-in & TV',
-        actionItems: [
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedTv01,
-            iconColor: const Color(0xFF42A5F5),
-            tooltip: 'Buka Paparan TV Kedai',
-            onTap: () => context.push('/queue/tv'),
-          ),
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedTicket01,
-            iconColor: const Color(0xFF44CF6C),
-            tooltip: 'Keluarkan Tiket Walk-In',
-            onTap: () => IssueTicketModal.show(context: context, queueService: _queueService),
-          ),
-        ],
-      ),
+      title: 'Pengurusan Giliran (Queue)',
+      subtitle: 'Papan giliran walk-in & TV',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedTv01,
+          tooltip: 'Buka Paparan TV Kedai',
+          onTap: () => context.push('/queue/tv'),
+        ),
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedTicket01,
+          tooltip: 'Keluarkan Tiket Walk-In',
+          onTap: () => IssueTicketModal.show(context: context, queueService: _queueService),
+        ),
+      ],
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
           : RefreshIndicator(

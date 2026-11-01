@@ -294,27 +294,23 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: GlassAppBar(
-        title: 'Studio Resit & Pencetak',
-        subtitle: 'Kustomisasi logo & pencetak haba',
-        actionItems: [
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedDownload04,
-            iconColor: const Color(0xFF42A5F5),
-            tooltip: 'Muat Turun Resit Digital (HD)',
-            isLoading: _isDownloadingReceipt,
-            onTap: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
-          ),
-          GlassNavPillItem(
-            icon: HugeIcons.strokeRoundedPrinter,
-            iconColor: const Color(0xFF44CF6C),
-            tooltip: 'Uji Cetak Resit',
-            onTap: _printTestReceipt,
-          ),
-        ],
-      ),
+      title: 'Studio Resit & Pencetak',
+      subtitle: 'Kustomisasi logo & pencetak haba',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedDownload04,
+          tooltip: 'Muat Turun Resit Digital (HD)',
+          isLoading: _isDownloadingReceipt,
+          onTap: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
+        ),
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedPrinter,
+          tooltip: 'Uji Cetak Resit',
+          onTap: _printTestReceipt,
+        ),
+      ],
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 880;
