@@ -73,8 +73,8 @@
 
   <!-- PWA Theme Color (Adaptive Light & Dark Mode) -->
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F8F9FA">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0A0A14">
-  <meta name="theme-color" content="#0A0A14">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <meta name="theme-color" content="#000000">
 
   <!-- PWA Theme Color Auto-sync & Bridge -->
   <script>
@@ -84,7 +84,7 @@
         var isDark = isDarkPref !== null
           ? isDarkPref === 'true'
           : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        var color = isDark ? '#0A0A14' : '#F8F9FA';
+        var color = isDark ? '#000000' : '#F8F9FA';
         var metas = document.querySelectorAll('meta[name="theme-color"]');
         metas.forEach(function(m) {
           if (!m.getAttribute('media')) {
@@ -99,7 +99,7 @@
 
     window.updatePwaThemeColor = function(isDark) {
       try {
-        var color = isDark ? '#0A0A14' : '#F8F9FA';
+        var color = isDark ? '#000000' : '#F8F9FA';
         var metas = document.querySelectorAll('meta[name="theme-color"]');
         metas.forEach(function(m) {
           if (!m.getAttribute('media')) {
@@ -138,7 +138,7 @@
   <link rel="manifest" href="manifest.json">
   <style>
     html, body {
-      background-color: #0A0A0A;
+      background-color: #000000;
       margin: 0;
       padding: 0;
       overflow: hidden;
@@ -154,7 +154,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background-color: #0A0A0A;
+      background-color: #000000;
       z-index: 99999;
       transition: opacity 0.35s ease-out;
       user-select: none;
@@ -183,10 +183,29 @@
       0%, 100% { transform: scale(1); opacity: 0.95; }
       50% { transform: scale(1.04); opacity: 1; filter: drop-shadow(0 0 16px rgba(33, 150, 243, 0.45)); }
     }
+    /* Sembunyikan #ngam-splash jika dibuka sebagai PWA Standalone di Android/iOS */
+    /* Chrome WebAPK sudah ada native OS splash screen sendiri, elak duplicate splash */
+    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+      #ngam-splash {
+        display: none !important;
+      }
+    }
   </style>
+  <script>
+    (function() {
+      var isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                         window.navigator.standalone === true ||
+                         document.referrer.includes('android-app://');
+      if (isStandalone) {
+        var style = document.createElement('style');
+        style.textContent = '#ngam-splash { display: none !important; }';
+        document.head.appendChild(style);
+      }
+    })();
+  </script>
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
-<body style="background-color: #0A0A0A;">
+<body style="background-color: #000000;">
   <div id="ngam-splash">
     <img src="icons/Icon-192.png" alt="Ngam Business" class="splash-logo">
     <div class="splash-spinner"></div>
