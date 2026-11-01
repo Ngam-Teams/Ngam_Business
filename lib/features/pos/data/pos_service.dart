@@ -263,6 +263,7 @@ class PosService {
     final baseOrderData = {
       'total': total,
       'status': initialStatus,
+      'payment_status': 'paid',
       'source': 'pos',
       'business_id': businessId,
       if (user != null) 'owner_user_id': user.id,
@@ -363,15 +364,32 @@ class PosService {
     required String reason,
     String? existingNotes,
   }) async {
+    final businessId = await _getShopId();
     final voidTag = '[BATAL/REFUND: $reason pada ${DateTime.now().toIso8601String().substring(0, 16)}]';
     final updatedNotes = (existingNotes == null || existingNotes.trim().isEmpty)
         ? voidTag
         : '$existingNotes | $voidTag';
 
-    await _client.from('orders').update({
-      'status': 'cancelled',
-      'notes': updatedNotes,
-    }).eq('id', orderId);
+    try {
+      var q = _client.from('orders').update({
+        'status': 'cancelled',
+        'payment_status': 'refunded',
+        'notes': updatedNotes,
+      }).eq('id', orderId);
+      if (businessId != null && businessId.isNotEmpty) {
+        q = q.eq('business_id', businessId);
+      }
+      await q;
+    } catch (_) {
+      var q = _client.from('orders').update({
+        'status': 'cancelled',
+        'notes': updatedNotes,
+      }).eq('id', orderId);
+      if (businessId != null && businessId.isNotEmpty) {
+        q = q.eq('business_id', businessId);
+      }
+      await q;
+    }
 
     // Restore stock for items in the voided order
     try {

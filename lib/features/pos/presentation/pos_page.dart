@@ -461,12 +461,15 @@ class _PosPageState extends State<PosPage> {
   Future<void> _checkout() async {
     if (_cart.isEmpty) return;
 
-    final subtotal = _grandTotal;
+    final preVoucherAmount = (((_cartTotal - _manualDiscount).clamp(0.0, double.infinity)) * 20).round() / 20.0;
     final result = await SplitPaymentSheet.show(
       context: context,
-      totalAmount: subtotal,
+      totalAmount: preVoucherAmount,
       itemCount: _cartCount,
       initialCustomerName: _customerController.text.trim(),
+      initialVoucherCode: _appliedVoucherCode,
+      initialVoucherId: _voucherId,
+      initialDiscountAmount: _voucherDiscount,
     );
 
     if (result == null || !mounted) return;
@@ -504,7 +507,7 @@ class _PosPageState extends State<PosPage> {
           await VoucherService().recordVoucherUsage(
             voucherId: result.voucherId!,
             discountAmount: result.discountAmount,
-            orderSubtotal: subtotal,
+            orderSubtotal: _cartTotal,
             customerPhone: _selectedMember?.phone ?? (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : null),
           );
         } catch (_) {}
@@ -513,7 +516,7 @@ class _PosPageState extends State<PosPage> {
           await VoucherService().recordVoucherUsage(
             voucherId: _voucherId!,
             discountAmount: _voucherDiscount,
-            orderSubtotal: subtotal,
+            orderSubtotal: _cartTotal,
             customerPhone: _selectedMember?.phone ?? (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : null),
           );
         } catch (_) {}
@@ -534,7 +537,7 @@ class _PosPageState extends State<PosPage> {
         try {
           await MembershipService().recordVisit(
             phone: _selectedMember!.phone,
-            amountSpent: subtotal,
+            amountSpent: result.total,
           );
         } catch (_) {}
       }

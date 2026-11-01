@@ -310,8 +310,17 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   }
 
   Future<void> _payAppointmentAtPos(Map<String, dynamic> appt) async {
-    final amount = (appt['price'] as num?)?.toDouble() ?? 0.0;
-    if (amount <= 0) return;
+    if (appt['payment_status'] == 'paid') {
+      showGlassToast(context, 'Tempahan ini sudah dibayar penuh secara atas talian.');
+      return;
+    }
+    final price = (appt['price'] as num?)?.toDouble() ?? 0.0;
+    final deposit = (appt['deposit'] as num?)?.toDouble() ?? 0.0;
+    final amount = (price - deposit).clamp(0.0, double.infinity);
+    if (amount <= 0) {
+      showGlassToast(context, 'Tiada baki bayaran tertunggak untuk tempahan ini.');
+      return;
+    }
 
     final result = await PaymentTerminalModal.show(
       context: context,
@@ -343,6 +352,26 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
         initialStatus: 'completed',
       );
 
+      setState(() {
+        appt['payment_status'] = 'paid';
+        appt['deposit'] = price;
+      });
+      final dbId = appt['db_id'];
+      if (dbId != null) {
+        final rawMeta = (appt['raw_meta'] is Map)
+            ? Map<String, dynamic>.from(appt['raw_meta'] as Map)
+            : <String, dynamic>{};
+        try {
+          await Supabase.instance.client.from('bookings').update({
+            'status': 'completed',
+            'booking_metadata': {
+              ...rawMeta,
+              'payment_status': 'paid',
+              'payment_method': 'POS (${result.paymentMethod.toUpperCase()})',
+            },
+          }).eq('id', dbId);
+        } catch (_) {}
+      }
       _updateStatus(appt, AppointmentStatus.completed);
 
       if (!mounted) return;
@@ -1715,19 +1744,21 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                                           child: const Text('Terima', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                                         ),
                                       ] else if (status == AppointmentStatus.confirmed || status == AppointmentStatus.inProgress) ...[
-                                        ElevatedButton.icon(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFFED1164),
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                            elevation: 0,
+                                        if (appt['payment_status'] != 'paid') ...[
+                                          ElevatedButton.icon(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFFED1164),
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                              elevation: 0,
+                                            ),
+                                            onPressed: () => _payAppointmentAtPos(appt),
+                                            icon: const Icon(Icons.bolt_rounded, size: 15),
+                                            label: const Text('Bayar POS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
                                           ),
-                                          onPressed: () => _payAppointmentAtPos(appt),
-                                          icon: const Icon(Icons.bolt_rounded, size: 15),
-                                          label: const Text('Bayar POS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
-                                        ),
-                                        const SizedBox(width: 6),
+                                          const SizedBox(width: 6),
+                                        ],
                                         ElevatedButton(
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: const Color(0xFF44CF6C),

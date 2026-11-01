@@ -56,12 +56,12 @@ class AnalyticsService {
       final responses = await Future.wait([
         _client
             .from('orders')
-            .select('total, created_at, status')
+            .select('total, created_at, status, payment_status')
             .eq('business_id', businessId)
             .gte('created_at', startOfDay),
         _client
             .from('orders')
-            .select('total, status, source, payment_method, created_at')
+            .select('total, status, payment_status, source, payment_method, created_at')
             .eq('business_id', businessId)
             .gte('created_at', startOfMonth),
         _client
@@ -94,7 +94,14 @@ class AnalyticsService {
       int validTodayOrders = 0;
       for (final o in orders) {
         final st = (o['status'] ?? '').toString().toLowerCase();
-        if (st == 'cancelled' || st == 'refunded') continue;
+        final paySt = (o['payment_status'] ?? 'paid').toString().toLowerCase();
+        if (st == 'cancelled' ||
+            st == 'refunded' ||
+            st == 'refund_pending' ||
+            paySt == 'refunded' ||
+            paySt == 'refund_pending') {
+          continue;
+        }
         validTodayOrders++;
         todayRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
         if (st == 'pending') {
@@ -105,7 +112,14 @@ class AnalyticsService {
       double monthlyRevenue = 0.0;
       for (final o in monthlyOrders) {
         final st = (o['status'] ?? '').toString().toLowerCase();
-        if (st == 'cancelled' || st == 'refunded') continue;
+        final paySt = (o['payment_status'] ?? 'paid').toString().toLowerCase();
+        if (st == 'cancelled' ||
+            st == 'refunded' ||
+            st == 'refund_pending' ||
+            paySt == 'refunded' ||
+            paySt == 'refund_pending') {
+          continue;
+        }
         monthlyRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
       }
 
@@ -174,13 +188,24 @@ class AnalyticsService {
 
       final res = await _client
           .from('orders')
-          .select('total, created_at')
+          .select('total, status, payment_status, created_at')
           .eq('business_id', businessId)
           .gte('created_at', weekAgo.toIso8601String())
           .order('created_at')
           .timeout(const Duration(seconds: 8));
 
-      return (res as List).cast<Map<String, dynamic>>();
+      return (res as List)
+          .cast<Map<String, dynamic>>()
+          .where((o) {
+            final st = (o['status'] ?? '').toString().toLowerCase();
+            final paySt = (o['payment_status'] ?? 'paid').toString().toLowerCase();
+            return st != 'cancelled' &&
+                st != 'refunded' &&
+                st != 'refund_pending' &&
+                paySt != 'refunded' &&
+                paySt != 'refund_pending';
+          })
+          .toList();
     } catch (e) {
       debugPrint('[AnalyticsService] fetchWeeklyRevenue error: ');
       return [];
@@ -195,12 +220,21 @@ class AnalyticsService {
 
       final ordersRes = await _client
           .from('orders')
-          .select('id')
+          .select('id, status, payment_status')
           .eq('business_id', businessId)
           .limit(100)
           .timeout(const Duration(seconds: 8));
 
       final orderIds = (ordersRes as List)
+          .where((o) {
+            final st = (o['status'] ?? '').toString().toLowerCase();
+            final paySt = (o['payment_status'] ?? 'paid').toString().toLowerCase();
+            return st != 'cancelled' &&
+                st != 'refunded' &&
+                st != 'refund_pending' &&
+                paySt != 'refunded' &&
+                paySt != 'refund_pending';
+          })
           .map((o) => o['id']?.toString())
           .whereType<String>()
           .toList();

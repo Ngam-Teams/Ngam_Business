@@ -148,6 +148,36 @@ class OrdersService {
 
   /// Update the status of an order
   Future<bool> updateOrderStatus(String orderId, String newStatus, {String? paymentStatus}) async {
+    // Jika pesanan dibatalkan, pulihkan semula stok inventori bagi produk fizikal
+    if (newStatus.toLowerCase() == 'cancelled') {
+      try {
+        final items = await _client
+            .from('order_items')
+            .select('product_id, quantity')
+            .eq('order_id', orderId);
+        for (final row in (items as List)) {
+          final prodId = row['product_id']?.toString();
+          final qty = (row['quantity'] as num?)?.toInt() ?? 0;
+          if (prodId != null && prodId.isNotEmpty && qty > 0) {
+            final prod = await _client
+                .from('business_products')
+                .select('stock, track_inventory, item_type')
+                .eq('id', prodId)
+                .maybeSingle();
+            if (prod != null &&
+                prod['item_type'] != 'service' &&
+                (prod['track_inventory'] as bool? ?? true)) {
+              final curStock = (prod['stock'] as num?)?.toInt() ?? 0;
+              await _client
+                  .from('business_products')
+                  .update({'stock': curStock + qty})
+                  .eq('id', prodId);
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     try {
       final payload = <String, dynamic>{
         'status': newStatus,

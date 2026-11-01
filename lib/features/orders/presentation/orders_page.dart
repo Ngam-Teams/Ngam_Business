@@ -598,7 +598,11 @@ class _OrdersPageState extends State<OrdersPage> {
                                 ),
                                 onPressed: () {
                                   Navigator.pop(modalCtx);
-                                  _updateStatus(order, 'cancelled');
+                                  _updateStatus(
+                                    order,
+                                    'cancelled',
+                                    paymentStatus: order.paymentStatus.toLowerCase() == 'paid' ? 'refund_pending' : null,
+                                  );
                                 },
                                 child: const Text('Batal Pesanan', style: TextStyle(fontWeight: FontWeight.bold)),
                               ),

@@ -77,7 +77,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
 
       final orders = await Supabase.instance.client
           .from('orders')
-          .select('id, total, payment_method, payment_splits, status, created_at')
+          .select('id, total, payment_method, payment_splits, status, payment_status, source, created_at')
           .eq('business_id', businessId)
           .gte('created_at', todayStart);
 
@@ -87,7 +87,17 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
 
       for (final order in orders) {
         final orderStatus = (order['status'] as String?)?.toLowerCase() ?? 'pending';
-        if (orderStatus == 'cancelled' || orderStatus == 'refund_pending' || orderStatus == 'refunded') {
+        final payStatus = (order['payment_status'] as String?)?.toLowerCase() ?? 'paid';
+        final source = (order['source'] as String?)?.toLowerCase() ?? 'pos';
+        if (orderStatus == 'cancelled' ||
+            orderStatus == 'refund_pending' ||
+            orderStatus == 'refunded' ||
+            payStatus == 'refund_pending' ||
+            payStatus == 'refunded') {
+          continue;
+        }
+        // Jangan kira pesanan dalam talian yang masih 'unpaid' (Bayar di Kedai) sebelum pelanggan selesai membayar
+        if (payStatus == 'unpaid' && orderStatus != 'completed' && source != 'pos') {
           continue;
         }
         final total = (order['total'] as num?)?.toDouble() ?? 0.0;

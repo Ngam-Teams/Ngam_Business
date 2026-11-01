@@ -33,12 +33,18 @@ class SplitPaymentSheet extends StatefulWidget {
   final double totalAmount;
   final int itemCount;
   final String initialCustomerName;
+  final String? initialVoucherCode;
+  final String? initialVoucherId;
+  final double initialDiscountAmount;
 
   const SplitPaymentSheet({
     super.key,
     required this.totalAmount,
     required this.itemCount,
     this.initialCustomerName = '',
+    this.initialVoucherCode,
+    this.initialVoucherId,
+    this.initialDiscountAmount = 0.0,
   });
 
   static Future<SplitPaymentResult?> show({
@@ -46,6 +52,9 @@ class SplitPaymentSheet extends StatefulWidget {
     required double totalAmount,
     required int itemCount,
     String initialCustomerName = '',
+    String? initialVoucherCode,
+    String? initialVoucherId,
+    double initialDiscountAmount = 0.0,
   }) {
     return showModalBottomSheet<SplitPaymentResult>(
       context: context,
@@ -55,6 +64,9 @@ class SplitPaymentSheet extends StatefulWidget {
         totalAmount: totalAmount,
         itemCount: itemCount,
         initialCustomerName: initialCustomerName,
+        initialVoucherCode: initialVoucherCode,
+        initialVoucherId: initialVoucherId,
+        initialDiscountAmount: initialDiscountAmount,
       ),
     );
   }
@@ -110,9 +122,23 @@ class _SplitPaymentSheetState extends State<SplitPaymentSheet> {
     super.initState();
     _customerCtrl = TextEditingController(text: widget.initialCustomerName);
     _notesCtrl = TextEditingController();
-    _amountCtrl = TextEditingController(text: widget.totalAmount.toStringAsFixed(2));
-    _cashTenderedCtrl = TextEditingController(text: widget.totalAmount.toStringAsFixed(2));
-    _voucherCtrl = TextEditingController();
+    if (widget.initialVoucherCode != null &&
+        widget.initialVoucherCode!.isNotEmpty &&
+        widget.initialDiscountAmount > 0) {
+      _discountAmount = widget.initialDiscountAmount;
+      _appliedVoucher = VoucherValidationResult(
+        isValid: true,
+        voucherId: widget.initialVoucherId,
+        code: widget.initialVoucherCode,
+        discountAmount: widget.initialDiscountAmount,
+        finalTotal: (widget.totalAmount - widget.initialDiscountAmount).clamp(0.0, double.infinity),
+        message: 'Baucar ${widget.initialVoucherCode} aktif dari troli POS',
+      );
+    }
+    final initialNet = _netTotal;
+    _amountCtrl = TextEditingController(text: initialNet.toStringAsFixed(2));
+    _cashTenderedCtrl = TextEditingController(text: initialNet.toStringAsFixed(2));
+    _voucherCtrl = TextEditingController(text: widget.initialVoucherCode ?? '');
   }
 
   @override

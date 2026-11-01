@@ -138,18 +138,46 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
       if (businessId != null && businessId.isNotEmpty) {
         final orders = await Supabase.instance.client
             .from('orders')
-            .select('total, status, payment_status')
+            .select('total, status, payment_status, payment_method, payment_splits')
             .eq('business_id', businessId);
         double completedRev = 0.0;
         double pendingRev = 0.0;
         for (final o in (orders as List)) {
           final st = (o['status'] ?? '').toString().toLowerCase();
-          if (st == 'cancelled' || st == 'refunded') continue;
-          final amt = (o['total'] as num?)?.toDouble() ?? 0.0;
-          if (st == 'completed') {
-            completedRev += amt;
+          final paySt = (o['payment_status'] ?? 'paid').toString().toLowerCase();
+          if (st == 'cancelled' ||
+              st == 'refunded' ||
+              st == 'refund_pending' ||
+              paySt == 'refunded' ||
+              paySt == 'refund_pending') {
+            continue;
+          }
+
+          double cashlessAmt = 0.0;
+          final splits = o['payment_splits'];
+          if (splits is List && splits.isNotEmpty) {
+            for (final s in splits) {
+              if (s is Map) {
+                final m = (s['method'] ?? '').toString().toLowerCase();
+                final a = (s['amount'] as num?)?.toDouble() ?? 0.0;
+                if (m != 'cash') {
+                  cashlessAmt += a;
+                }
+              }
+            }
           } else {
-            pendingRev += amt;
+            final method = (o['payment_method'] ?? 'online').toString().toLowerCase();
+            if (method != 'cash') {
+              cashlessAmt = (o['total'] as num?)?.toDouble() ?? 0.0;
+            }
+          }
+
+          if (cashlessAmt <= 0) continue;
+
+          if (st == 'completed' && paySt == 'paid') {
+            completedRev += cashlessAmt;
+          } else if (paySt == 'paid') {
+            pendingRev += cashlessAmt;
           }
         }
         if (completedRev > 0 || pendingRev > 0) {
