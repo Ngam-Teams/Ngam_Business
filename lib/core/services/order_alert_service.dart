@@ -357,11 +357,14 @@ class OrderAlertService {
                                         _isModalShowing = false;
                                         Navigator.of(ctx, rootNavigator: true).pop();
 
-                                        // Mark as completed/accepted in Supabase
+                                        // Mark as accepted & preparing in Supabase so it flows into KDS & TV Queue
                                         try {
                                           await Supabase.instance.client
                                               .from('orders')
-                                              .update({'status': 'completed'})
+                                              .update({
+                                                'status': 'preparing',
+                                                'updated_at': DateTime.now().toIso8601String(),
+                                              })
                                               .eq('id', orderId);
                                         } catch (e) {
                                           debugPrint('[OrderAlertService] Error accepting order: $e');

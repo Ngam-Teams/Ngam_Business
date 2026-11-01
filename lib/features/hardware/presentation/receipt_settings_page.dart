@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_nav_button.dart';
@@ -191,14 +192,21 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       if (byteData == null) throw Exception('Gagal menukar grafik kepada fail imej');
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
-      final dir = await getApplicationDocumentsDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'Ngam_Resit_${_paperWidth}mm_$timestamp.png';
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(pngBytes);
 
-      if (mounted) {
-        _showReceiptDownloadModal(file, pngBytes);
+      if (kIsWeb) {
+        await downloadStandeeImage(bytes: pngBytes, fileName: fileName);
+        if (mounted) {
+          showGlassToast(context, 'Resit digital berjaya dimuat turun ($fileName)!');
+        }
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(pngBytes);
+        if (mounted) {
+          _showReceiptDownloadModal(file, pngBytes);
+        }
       }
     } catch (e) {
       if (mounted) {

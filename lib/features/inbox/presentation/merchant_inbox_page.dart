@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/glass_nav_button.dart';
 
@@ -94,6 +96,93 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
 
     // Default to first thread
     _activeThread = _threads.first;
+    _loadLiveThreads();
+  }
+
+  Future<void> _loadLiveThreads() async {
+    try {
+      final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+      final businessId = profile?['id']?.toString();
+      if (businessId == null || businessId.isEmpty) return;
+
+      final res = await Future.wait([
+        Supabase.instance.client
+            .from('orders')
+            .select('id, customer_name, customer_phone, notes, status, total, created_at')
+            .eq('business_id', businessId)
+            .order('created_at', ascending: false)
+            .limit(15),
+        Supabase.instance.client
+            .from('bookings')
+            .select('id, customer_name, service_name, booking_date, booking_time, status, booking_metadata, created_at')
+            .eq('business_id', businessId)
+            .order('created_at', ascending: false)
+            .limit(15),
+      ]);
+
+      final liveThreads = <Map<String, dynamic>>[];
+      for (final o in (res[0] as List? ?? [])) {
+        final notes = (o['notes'] ?? '').toString().trim();
+        final cust = (o['customer_name'] ?? '').toString().trim();
+        if (cust.isEmpty && notes.isEmpty) continue;
+        final idStr = o['id'].toString();
+        final shortId = idStr.length > 6 ? idStr.substring(0, 6).toUpperCase() : idStr.toUpperCase();
+        liveThreads.add({
+          'id': 'ORD-$shortId',
+          'customerName': cust.isNotEmpty ? cust : 'Pelanggan #$shortId',
+          'phone': (o['customer_phone'] ?? '+60123456789').toString(),
+          'type': 'Order Inquiries',
+          'orderRef': 'Order #$shortId (RM ${((o['total'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2)})',
+          'unread': o['status'] == 'pending' ? 1 : 0,
+          'lastTime': 'Terkini',
+          'messages': [
+            {
+              'from': 'customer',
+              'text': notes.isNotEmpty ? notes : 'Pesanan #$shortId telah dihantar melalui Aplikasi Ngam.',
+              'time': 'Terkini',
+            },
+          ],
+        });
+      }
+
+      for (final b in (res[1] as List? ?? [])) {
+        if (b['status'] == 'holding') continue;
+        final meta = b['booking_metadata'] as Map<String, dynamic>? ?? {};
+        final cust = (b['customer_name'] ?? meta['customer_name'] ?? 'Pelanggan Tempahan').toString();
+        final svc = (b['service_name'] ?? 'Servis').toString();
+        final notes = (meta['notes'] ?? '').toString().trim();
+        final ref = (meta['booking_id'] ?? meta['short_ref'] ?? 'BK-${b['id'].toString().substring(0, 5)}').toString();
+        liveThreads.add({
+          'id': 'BK-$ref',
+          'customerName': cust,
+          'phone': (meta['phone'] ?? '+60123456789').toString(),
+          'type': 'Bookings',
+          'orderRef': '$ref • $svc (${b['booking_date'] ?? ''})',
+          'unread': b['status'] == 'pending' ? 1 : 0,
+          'lastTime': 'Terkini',
+          'messages': [
+            {
+              'from': 'customer',
+              'text': notes.isNotEmpty ? notes : 'Tempahan baharu untuk $svc pada ${b['booking_date']} ${b['booking_time'] ?? ''}.',
+              'time': 'Terkini',
+            },
+          ],
+        });
+      }
+
+      if (liveThreads.isNotEmpty && mounted) {
+        setState(() {
+          _threads = [...liveThreads, ..._threads];
+          _activeThread = _threads.first;
+        });
+      }
+    } catch (_) {}
+  }
+
+  List<Map<String, dynamic>> get _filteredThreads {
+    if (_selectedFilter == 0) return _threads;
+    final targetType = _filters[_selectedFilter];
+    return _threads.where((t) => t['type'] == targetType).toList();
   }
 
   @override
@@ -227,11 +316,12 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
   }
 
   Widget _buildThreadList() {
+    final list = _filteredThreads;
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _threads.length,
+      itemCount: list.length,
       itemBuilder: (ctx, idx) {
-        final thread = _threads[idx];
+        final thread = list[idx];
         final isSel = _activeThread != null && _activeThread!['id'] == thread['id'];
         final unread = thread['unread'] as int;
         final messages = thread['messages'] as List<dynamic>;

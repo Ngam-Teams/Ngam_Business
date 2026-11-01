@@ -124,9 +124,13 @@ class LoyaltyService {
             .order('last_stamped_at', ascending: false);
 
         if (res.isNotEmpty) {
-          return res
+          final loaded = res
               .map((j) => CustomerLoyaltyCardModel.fromJson(j))
               .toList();
+          _localCards
+            ..clear()
+            ..addAll(loaded);
+          return loaded;
         }
       }
     } catch (_) {}
@@ -173,15 +177,29 @@ class LoyaltyService {
     try {
       final businessId = await _getShopId();
       if (businessId != null) {
-        await _client.from('customer_loyalty_cards').upsert({
-          'program_id': program.id,
-          'business_id': businessId,
-          'customer_name': updated.customerName,
-          'customer_phone': updated.customerPhone,
-          'current_stamps': updated.currentStamps,
-          'total_stamps_required': updated.totalStampsRequired,
-          'last_stamped_at': DateTime.now().toIso8601String(),
-        });
+        final existing = await _client
+            .from('customer_loyalty_cards')
+            .select('id, current_stamps')
+            .eq('business_id', businessId)
+            .eq('customer_phone', updated.customerPhone)
+            .maybeSingle();
+        if (existing != null) {
+          final newCount = ((existing['current_stamps'] as num?)?.toInt() ?? 0) + stampsToAdd;
+          await _client.from('customer_loyalty_cards').update({
+            'current_stamps': newCount,
+            'last_stamped_at': DateTime.now().toIso8601String(),
+          }).eq('id', existing['id']);
+        } else {
+          await _client.from('customer_loyalty_cards').insert({
+            'program_id': program.id,
+            'business_id': businessId,
+            'customer_name': updated.customerName,
+            'customer_phone': updated.customerPhone,
+            'current_stamps': updated.currentStamps,
+            'total_stamps_required': updated.totalStampsRequired,
+            'last_stamped_at': DateTime.now().toIso8601String(),
+          });
+        }
       }
     } catch (_) {}
 

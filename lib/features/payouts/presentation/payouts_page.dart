@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/glass_nav_button.dart';
 
@@ -20,8 +22,8 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
   late TabController _tabController;
 
   double _availableBalance = 4820.50;
-  final double _pendingClearance = 1240.00;
-  final double _lifetimePayout = 38950.00;
+  double _pendingClearance = 1240.00;
+  double _lifetimePayout = 38950.00;
   String _selectedSchedule = 'Daily Auto-Payout';
 
   late List<Map<String, dynamic>> _bankAccounts;
@@ -103,6 +105,66 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
         'reference': 'DNT20260926061001',
       },
     ];
+    _loadLivePayoutInfo();
+  }
+
+  Future<void> _loadLivePayoutInfo() async {
+    try {
+      final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+      if (profile == null) return;
+      final businessId = profile['id']?.toString();
+      final bizName = (profile['business_name'] ?? 'PERNIAGAAN NGAM').toString().toUpperCase();
+      final compliance = profile['compliance'] as Map<String, dynamic>?;
+      final bankName = compliance?['bank_name']?.toString() ?? profile['bank_name']?.toString();
+      final accNo = compliance?['bank_account_number']?.toString() ?? profile['bank_account_number']?.toString();
+      final holder = compliance?['bank_account_holder']?.toString() ?? bizName;
+
+      if (bankName != null && bankName.isNotEmpty && accNo != null && accNo.isNotEmpty) {
+        _bankAccounts[0] = {
+          'id': 'BA-01',
+          'bankName': bankName,
+          'accountNumber': accNo,
+          'accountHolder': holder,
+          'isDefault': true,
+          'badgeColor': const Color(0xFFF9C80E),
+        };
+      } else {
+        _bankAccounts[0]['accountHolder'] = bizName;
+        if (_bankAccounts.length > 1) {
+          _bankAccounts[1]['accountHolder'] = bizName;
+        }
+      }
+
+      if (businessId != null && businessId.isNotEmpty) {
+        final orders = await Supabase.instance.client
+            .from('orders')
+            .select('total, status, payment_status')
+            .eq('business_id', businessId);
+        double completedRev = 0.0;
+        double pendingRev = 0.0;
+        for (final o in (orders as List)) {
+          final st = (o['status'] ?? '').toString().toLowerCase();
+          if (st == 'cancelled' || st == 'refunded') continue;
+          final amt = (o['total'] as num?)?.toDouble() ?? 0.0;
+          if (st == 'completed') {
+            completedRev += amt;
+          } else {
+            pendingRev += amt;
+          }
+        }
+        if (completedRev > 0 || pendingRev > 0) {
+          if (mounted) {
+            setState(() {
+              _availableBalance = completedRev;
+              _pendingClearance = pendingRev;
+              _lifetimePayout = completedRev;
+            });
+          }
+          return;
+        }
+      }
+      if (mounted) setState(() {});
+    } catch (_) {}
   }
 
   @override
