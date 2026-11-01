@@ -28,11 +28,13 @@ class ChipPaymentService {
   static final ChipPaymentService instance = ChipPaymentService._internal();
   ChipPaymentService._internal();
 
+  static const String _defaultBrandId = '844a8f74-4426-4285-9a90-3c39e1259e75';
   static const String _baseUrl = 'https://gate.chip-in.asia/api/v1';
 
-  String get _brandId => dotenv.env['CHIP_BRAND_ID'] ?? '';
-
+  String get _brandId => dotenv.env['CHIP_BRAND_ID'] ?? _defaultBrandId;
   String get _apiKey => dotenv.env['CHIP_API_KEY'] ?? '';
+  String get _supabaseUrl => dotenv.env['SUPABASE_URL'] ?? 'https://rsueaoglsdxhzpupjljd.supabase.co';
+  String get _edgeFunctionUrl => '$_supabaseUrl/functions/v1/payment-webhook';
 
   Map<String, String> get _headers => {
         'Authorization': 'Bearer $_apiKey',
@@ -43,15 +45,60 @@ class ChipPaymentService {
   Future<ChipPurchaseResult> createDuitNowPurchase({
     required double amount,
     required String orderTitle,
+    String? reference,
     String? clientName,
     String? clientEmail,
     String? clientPhone,
   }) async {
+    // 1. Try Supabase Edge Function proxy first (solves Flutter Web CORS and links webhook)
+    try {
+      final edgeRes = await http.post(
+        Uri.parse(_edgeFunctionUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'create_purchase',
+          'amount': amount,
+          'order_title': orderTitle,
+          'reference': reference ?? '',
+          'order_id': reference ?? '',
+          'client_name': (clientName != null && clientName.isNotEmpty) ? clientName : 'Pelanggan Kaunter',
+          'client_email': (clientEmail != null && clientEmail.isNotEmpty) ? clientEmail : 'customer@ngam.dev',
+          'client_phone': (clientPhone != null && clientPhone.isNotEmpty) ? clientPhone : '+601115892468',
+          'brand_id': _brandId,
+          'payment_method_whitelist': ['duitnow_qr'],
+        }),
+      );
+
+      if (edgeRes.statusCode >= 200 && edgeRes.statusCode < 300) {
+        final data = jsonDecode(edgeRes.body) as Map<String, dynamic>;
+        final id = data['id']?.toString() ?? '';
+        final checkoutUrl = (data['checkout_url'] as String?) ?? 'https://gate.chip-in.asia/p/$id/';
+        final duitNowUrl = data['payment_methods']?['duitnow']?['qr_code_url']?.toString() ??
+            '$checkoutUrl?preferred=duitnow_qr';
+        final status = (data['status'] as String?) ?? 'created';
+
+        return ChipPurchaseResult(
+          id: id,
+          checkoutUrl: checkoutUrl,
+          duitNowUrl: duitNowUrl,
+          amount: amount,
+          status: status,
+          raw: data,
+        );
+      } else {
+        debugPrint('[ChipPaymentService] Edge function return ${edgeRes.statusCode}: ${edgeRes.body}');
+      }
+    } catch (e) {
+      debugPrint('[ChipPaymentService] Edge function proxy error, falling back to direct CHIP API: $e');
+    }
+
+    // 2. Fallback to direct CHIP API
     final cents = (amount * 100).round();
     final url = Uri.parse('$_baseUrl/purchases/');
 
     final payload = {
       'brand_id': _brandId,
+      if (reference != null && reference.isNotEmpty) 'reference': reference,
       'client': {
         'email': (clientEmail != null && clientEmail.isNotEmpty)
             ? clientEmail
@@ -74,6 +121,7 @@ class ChipPaymentService {
         ],
       },
       'payment_method_whitelist': ['duitnow_qr'],
+      'success_callback': _edgeFunctionUrl,
       'success_redirect': 'https://ngam.dev/payment-success',
       'failure_redirect': 'https://ngam.dev/payment-failure',
     };
@@ -106,14 +154,9 @@ class ChipPaymentService {
         throw Exception('Gagal menjana DuitNow QR: ${response.body}');
       }
     } catch (e) {
-      // In Flutter Web (Chrome/Edge browsers), direct client-side requests to CHIP are blocked
-      // by the browser's CORS policy because CHIP requires server-to-server calls for security.
-      // On mobile apps (Android/iOS) and Windows Desktop, CORS does not exist.
-      // We provide a web sandbox simulator matching the exact dynamic amount requested!
       if (kIsWeb) {
         debugPrint('[ChipPaymentService] Browser CORS active on Web. Activating Web Sandbox Simulator for RM ${amount.toStringAsFixed(2)}: $e');
         final mockId = 'web-${DateTime.now().millisecondsSinceEpoch}';
-        // Dynamic DuitNow QR mock data encoding the exact amount
         final mockQrData = 'duitnow://pay?brand=NGAM&amount=${amount.toStringAsFixed(2)}&orderRef=$mockId';
         return ChipPurchaseResult(
           id: mockId,
@@ -134,6 +177,26 @@ class ChipPaymentService {
       return 'created';
     }
 
+    // 1. Try checking status via Supabase Edge Function
+    try {
+      final edgeRes = await http.post(
+        Uri.parse(_edgeFunctionUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'check_status',
+          'purchase_id': purchaseId,
+        }),
+      );
+      if (edgeRes.statusCode == 200) {
+        final data = jsonDecode(edgeRes.body) as Map<String, dynamic>;
+        final status = (data['status'] as String?)?.toLowerCase();
+        if (status != null && status.isNotEmpty) {
+          return status;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fallback to direct CHIP API
     try {
       final url = Uri.parse('$_baseUrl/purchases/$purchaseId/');
       final response = await http.get(url, headers: _headers);

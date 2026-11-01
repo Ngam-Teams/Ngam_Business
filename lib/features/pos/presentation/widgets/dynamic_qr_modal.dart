@@ -12,12 +12,14 @@ class DynamicQrModal extends StatefulWidget {
   final double amount;
   final String orderTitle;
   final String? customerName;
+  final String? reference;
 
   const DynamicQrModal({
     super.key,
     required this.amount,
     required this.orderTitle,
     this.customerName,
+    this.reference,
   });
 
   static Future<bool> show({
@@ -25,6 +27,7 @@ class DynamicQrModal extends StatefulWidget {
     required double amount,
     required String orderTitle,
     String? customerName,
+    String? reference,
   }) async {
     final res = await showDialog<bool>(
       context: context,
@@ -33,6 +36,7 @@ class DynamicQrModal extends StatefulWidget {
         amount: amount,
         orderTitle: orderTitle,
         customerName: customerName,
+        reference: reference,
       ),
     );
     return res ?? false;
@@ -78,6 +82,7 @@ class _DynamicQrModalState extends State<DynamicQrModal> with SingleTickerProvid
       final res = await ChipPaymentService.instance.createDuitNowPurchase(
         amount: widget.amount,
         orderTitle: widget.orderTitle,
+        reference: widget.reference ?? widget.orderTitle,
         clientName: widget.customerName,
       );
 

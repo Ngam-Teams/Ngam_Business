@@ -38,6 +38,7 @@ class PaymentTerminalModal extends StatefulWidget {
   final double amount;
   final String orderTitle;
   final String? customerName;
+  final String? reference;
   final List<String>? itemLines;
   final TerminalStep initialStep;
 
@@ -46,6 +47,7 @@ class PaymentTerminalModal extends StatefulWidget {
     required this.amount,
     required this.orderTitle,
     this.customerName,
+    this.reference,
     this.itemLines,
     this.initialStep = TerminalStep.chooseMethod,
   });
@@ -55,6 +57,7 @@ class PaymentTerminalModal extends StatefulWidget {
     required double amount,
     required String orderTitle,
     String? customerName,
+    String? reference,
     List<String>? itemLines,
     TerminalStep initialStep = TerminalStep.chooseMethod,
   }) async {
@@ -65,6 +68,7 @@ class PaymentTerminalModal extends StatefulWidget {
         amount: amount,
         orderTitle: orderTitle,
         customerName: customerName,
+        reference: reference,
         itemLines: itemLines,
         initialStep: initialStep,
       ),
@@ -134,6 +138,7 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
       final res = await ChipPaymentService.instance.createDuitNowPurchase(
         amount: widget.amount,
         orderTitle: widget.orderTitle,
+        reference: widget.reference ?? widget.orderTitle,
         clientName: widget.customerName,
       );
 
