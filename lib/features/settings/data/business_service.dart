@@ -104,15 +104,13 @@ class BusinessService {
   BusinessService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
 
-  /// Generate a clean, URL-safe business handle from a business name
+  /// Generate a clean, URL-safe business handle from a business name (tightly concatenated without hyphens)
   static String generateHandleFromName(String name) {
     String clean = name.trim().toLowerCase();
-    // Replace spaces and special characters with hyphen
-    clean = clean.replaceAll(RegExp(r'[^a-z0-9_]+'), '-');
-    // Remove leading and trailing hyphens
-    clean = clean.replaceAll(RegExp(r'^-+|-+$'), '');
+    // Remove spaces and special characters, rapatkan tanpa sempang
+    clean = clean.replaceAll(RegExp(r'[^a-z0-9]+'), '');
     if (clean.length < 3) {
-      clean = 'kedai-${clean.isEmpty ? "ngam" : clean}';
+      clean = 'kedai${clean.isEmpty ? "ngam" : clean}';
     }
     if (clean.length > 30) {
       clean = clean.substring(0, 30);
@@ -230,7 +228,7 @@ class BusinessService {
           final candidate = generateHandleFromName(profile['business_name'] ?? 'kedai');
           try {
             final available = await isHandleAvailable(candidate, excludeBusinessId: profile['id']);
-            final finalHandle = available ? candidate : '$candidate-${profile['id'].toString().substring(0, 4)}';
+            final finalHandle = available ? candidate : '$candidate${profile['id'].toString().substring(0, 4)}';
             await _client.from('businesses').update({'business_handle': finalHandle}).eq('id', profile['id']);
             profile['business_handle'] = finalHandle;
           } catch (_) {
