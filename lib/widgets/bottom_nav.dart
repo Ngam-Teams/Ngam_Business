@@ -42,7 +42,8 @@ class _BottomNavState extends State<BottomNav> {
     final bool isKeyboardOpen = keyboardHeight > 100;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final double safeBottom = MediaQuery.paddingOf(context).bottom;
-    final double adjustedBottomPadding = safeBottom > 0 ? safeBottom + 0 : 20;
+    // Turunkan jurang bawah (floating bottom gap) sebanyak 50% mengikut tetapan Ngam supaya navbar tidak terapung terlalu tinggi dalam pelayar web / PWA / skrin penuh
+    final double adjustedBottomPadding = safeBottom > 0 ? (safeBottom * 0.5) : 10.0;
 
     const Duration animDuration = Duration(milliseconds: 450);
     const Curve animCurve = Curves.easeOutQuint;
@@ -52,15 +53,17 @@ class _BottomNavState extends State<BottomNav> {
       opacity: isKeyboardOpen ? 0.0 : 1.0,
       child: isKeyboardOpen
           ? const SizedBox.shrink()
-          : ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 14,
-                  right: 14,
-                  bottom: adjustedBottomPadding,
-                  top: 10,
-                ),
+          : Align(
+              alignment: Alignment.bottomCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 14,
+                    right: 14,
+                    bottom: adjustedBottomPadding,
+                    top: 10,
+                  ),
                 child: GlassContainer(
                   useOwnLayer: true,
                   quality: GlassQuality.standard,
@@ -208,11 +211,12 @@ class _BottomNavState extends State<BottomNav> {
                                                             widget.items[i].title,
                                                             maxLines: 1,
                                                             overflow: TextOverflow.ellipsis,
+                                                            softWrap: false,
                                                             style: TextStyle(
                                                               color: itemColor,
                                                               fontWeight:
                                                                   FontWeight.w900,
-                                                              fontSize: 13,
+                                                              fontSize: 12.5,
                                                             ),
                                                           ),
                                                         ),
@@ -236,6 +240,7 @@ class _BottomNavState extends State<BottomNav> {
                 ),
               ),
             ),
+          ),
     );
   }
 }
