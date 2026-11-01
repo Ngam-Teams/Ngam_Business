@@ -18,6 +18,20 @@ import '../../../widgets/glass_nav_button.dart';
 // Modul Pengurusan Resit & Penyesuaian Penuh Resit Terma (58mm / 80mm)
 // =============================================================================
 
+enum ReceiptFont {
+  spaceMono('Space Mono', 'Klasik POS', '123 ABC Monospace'),
+  courierPrime('Courier Prime', 'Mesin Taip', '123 ABC Typewriter'),
+  inconsolata('Inconsolata', 'Kompak Tech', '123 ABC Compact Mono'),
+  robotoMono('Roboto Mono', 'Moden Digital', '123 ABC Clean Mono'),
+  vt323('VT323 Pixel', 'Dot Matrix', '123 ABC 80s Pixel'),
+  inter('Inter Sans', 'Minimalis', '123 ABC Clean Sans');
+
+  final String name;
+  final String tag;
+  final String previewText;
+  const ReceiptFont(this.name, this.tag, this.previewText);
+}
+
 enum DividerStyle { dashed, dotted, solidDouble, stars }
 enum BottomCodeType { qrReceipt, qrPromo, qrWifi, barcode, none }
 enum LogoSize { small, medium, large }
@@ -38,6 +52,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   int _paperWidth = 80; // 58mm or 80mm
 
   // Layout & Alignment Customization
+  ReceiptFont _selectedFont = ReceiptFont.spaceMono;
   TextAlign _headerAlign = TextAlign.center;
   DividerStyle _dividerStyle = DividerStyle.dashed;
   LogoSize _logoSize = LogoSize.medium;
@@ -444,20 +459,26 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         _buildDividerStyleSelector(),
         const SizedBox(height: 24),
 
-        // 3. Logo & Store Branding Customization
-        _buildSectionHeader('3. Logo & Penjenamaan Resit', HugeIcons.strokeRoundedImage01),
+        // 3. Font / Typography Customization
+        _buildSectionHeader('3. Pilihan Fon Resit (Typography)', HugeIcons.strokeRoundedTextFont),
+        const SizedBox(height: 10),
+        _buildFontSelector(),
+        const SizedBox(height: 24),
+
+        // 4. Logo & Store Branding Customization
+        _buildSectionHeader('4. Logo & Penjenamaan Resit', HugeIcons.strokeRoundedImage01),
         const SizedBox(height: 10),
         _buildLogoCustomizerCard(),
         const SizedBox(height: 24),
 
-        // 4. Alignment & Header Style
-        _buildSectionHeader('4. Penjajaran Teks Kepala Resit', HugeIcons.strokeRoundedTextAlignCenter),
+        // 5. Alignment & Header Style
+        _buildSectionHeader('5. Penjajaran Teks Kepala Resit', HugeIcons.strokeRoundedTextAlignCenter),
         const SizedBox(height: 10),
         _buildAlignmentSelector(),
         const SizedBox(height: 24),
 
-        // 5. Store Info & Legal Details
-        _buildSectionHeader('5. Maklumat Rasmi Kedai & Cukai', HugeIcons.strokeRoundedBuilding02),
+        // 6. Store Info & Legal Details
+        _buildSectionHeader('6. Maklumat Rasmi Kedai & Cukai', HugeIcons.strokeRoundedBuilding02),
         const SizedBox(height: 12),
         _buildTextField(controller: _storeNameCtrl, label: 'Nama Kedai / Syarikat (Kepala Resit)'),
         const SizedBox(height: 10),
@@ -474,28 +495,28 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         _buildTextFieldWithToggle(controller: _socialCtrl, label: 'Akaun Media Sosial (IG / TikTok)', value: _showSocial, onChanged: (v) => setState(() => _showSocial = v)),
         const SizedBox(height: 24),
 
-        // 6. Transaction & Pricing Toggles
-        _buildSectionHeader('6. Butiran Transaksi & Pengiraan Cukai', HugeIcons.strokeRoundedInvoice),
+        // 7. Transaction & Pricing Toggles
+        _buildSectionHeader('7. Butiran Transaksi & Pengiraan Cukai', HugeIcons.strokeRoundedInvoice),
         const SizedBox(height: 10),
         _buildTransactionTogglesCard(),
         const SizedBox(height: 24),
 
-        // 7. Bottom Code Customization (QR Receipt, Promo, WiFi, Barcode, None)
-        _buildSectionHeader('7. Kod Interaktif Bawah Resit (Bottom Code)', HugeIcons.strokeRoundedQrCode),
+        // 8. Bottom Code Customization (QR Receipt, Promo, WiFi, Barcode, None)
+        _buildSectionHeader('8. Kod Interaktif Bawah Resit (Bottom Code)', HugeIcons.strokeRoundedQrCode),
         const SizedBox(height: 10),
         _buildBottomCodeSelector(),
         const SizedBox(height: 24),
 
-        // 8. Footer Notes & Return Policy
-        _buildSectionHeader('8. Mesej Bawah & Dasar Pulangan', HugeIcons.strokeRoundedNote01),
+        // 9. Footer Notes & Return Policy
+        _buildSectionHeader('9. Mesej Bawah & Dasar Pulangan', HugeIcons.strokeRoundedNote01),
         const SizedBox(height: 12),
         _buildTextField(controller: _footerMsgCtrl, label: 'Ucapan Terima Kasih (Footer Note)'),
         const SizedBox(height: 10),
         _buildTextField(controller: _policyCtrl, label: 'Syarat & Dasar Pertukaran / Bayaran Balik'),
         const SizedBox(height: 24),
 
-        // 9. Hardware Connection Status
-        _buildSectionHeader('9. Sambungan Pencetak Terma', HugeIcons.strokeRoundedPrinter),
+        // 10. Hardware Connection Status
+        _buildSectionHeader('10. Sambungan Pencetak Terma', HugeIcons.strokeRoundedPrinter),
         const SizedBox(height: 10),
         _buildPrinterStatusCard(),
         const SizedBox(height: 28),
@@ -607,6 +628,202 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   // ===========================================================================
   // DIVIDER STYLE SELECTOR
   // ===========================================================================
+  TextStyle _getReceiptFont({
+    Color? color,
+    double? fontSize,
+    FontWeight? fontWeight,
+    FontStyle? fontStyle,
+    double? letterSpacing,
+    double? height,
+  }) {
+    switch (_selectedFont) {
+      case ReceiptFont.spaceMono:
+        return GoogleFonts.spaceMono(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.courierPrime:
+        return GoogleFonts.courierPrime(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.inconsolata:
+        return GoogleFonts.inconsolata(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.robotoMono:
+        return GoogleFonts.robotoMono(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.vt323:
+        return GoogleFonts.vt323(
+          color: color,
+          fontSize: fontSize != null ? (fontSize * 1.35) : null,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.inter:
+        return GoogleFonts.inter(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+    }
+  }
+
+  Widget _buildFontSelector() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Tipografi Resit (6 Pilihan Fon)',
+                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _selectedFont.name,
+                  style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold, fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              mainAxisExtent: 76,
+            ),
+            itemCount: ReceiptFont.values.length,
+            itemBuilder: (context, i) {
+              final font = ReceiptFont.values[i];
+              final isSelected = _selectedFont == font;
+
+              TextStyle previewStyle;
+              switch (font) {
+                case ReceiptFont.spaceMono:
+                  previewStyle = _getReceiptFont();
+                  break;
+                case ReceiptFont.courierPrime:
+                  previewStyle = GoogleFonts.courierPrime();
+                  break;
+                case ReceiptFont.inconsolata:
+                  previewStyle = GoogleFonts.inconsolata();
+                  break;
+                case ReceiptFont.robotoMono:
+                  previewStyle = GoogleFonts.robotoMono();
+                  break;
+                case ReceiptFont.vt323:
+                  previewStyle = GoogleFonts.vt323(fontSize: 16);
+                  break;
+                case ReceiptFont.inter:
+                  previewStyle = GoogleFonts.inter();
+                  break;
+              }
+
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedFont = font;
+                  });
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color(0xFF42A5F5).withValues(alpha: 0.15)
+                        : Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFF42A5F5)
+                          : Colors.white.withValues(alpha: 0.08),
+                      width: isSelected ? 1.5 : 1.0,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            font.name,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(Icons.check_circle_rounded, color: Color(0xFF42A5F5), size: 14),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        font.previewText,
+                        style: previewStyle.copyWith(
+                          color: isSelected ? const Color(0xFF42A5F5) : Colors.white38,
+                          fontSize: font == ReceiptFont.vt323 ? 13 : 10.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDividerStyleSelector() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1158,7 +1375,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   Text(
                     _storeNameCtrl.text.isNotEmpty ? _storeNameCtrl.text : 'KEDAI NGAM',
                     textAlign: _headerAlign,
-                    style: GoogleFonts.spaceMono(
+                    style: _getReceiptFont(
                       color: Colors.black,
                       fontWeight: FontWeight.w900,
                       fontSize: _paperWidth == 58 ? 13.0 : 15.0,
@@ -1172,7 +1389,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     Text(
                       _taglineCtrl.text,
                       textAlign: _headerAlign,
-                      style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 8.5, fontStyle: FontStyle.italic),
+                      style: _getReceiptFont(color: Colors.black54, fontSize: 8.5, fontStyle: FontStyle.italic),
                     ),
                   ],
 
@@ -1183,7 +1400,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     Text(
                       _ssmCtrl.text,
                       textAlign: _headerAlign,
-                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.0),
+                      style: _getReceiptFont(color: Colors.black87, fontSize: 9.0),
                     ),
 
                   // SST
@@ -1191,7 +1408,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     Text(
                       _sstCtrl.text,
                       textAlign: _headerAlign,
-                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.0),
+                      style: _getReceiptFont(color: Colors.black87, fontSize: 9.0),
                     ),
 
                   // Address
@@ -1201,7 +1418,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                       child: Text(
                         _addressCtrl.text,
                         textAlign: _headerAlign,
-                        style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 8.5),
+                        style: _getReceiptFont(color: Colors.black54, fontSize: 8.5),
                       ),
                     ),
 
@@ -1210,7 +1427,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     Text(
                       'Tel: ${_phoneCtrl.text}',
                       textAlign: _headerAlign,
-                      style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.0),
+                      style: _getReceiptFont(color: Colors.black87, fontSize: 9.0),
                     ),
 
                   // Social Media
@@ -1218,7 +1435,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     Text(
                       _socialCtrl.text,
                       textAlign: _headerAlign,
-                      style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 8.5),
+                      style: _getReceiptFont(color: Colors.black54, fontSize: 8.5),
                     ),
 
                   const SizedBox(height: 4),
@@ -1230,12 +1447,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     children: [
                       Text(
                         'Pesanan: #NG-4029',
-                        style: GoogleFonts.spaceMono(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 9.5),
+                        style: _getReceiptFont(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 9.5),
                       ),
                       if (_showDateTime)
                         Text(
                           '30/09/2026 12:45',
-                          style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 9.0),
+                          style: _getReceiptFont(color: Colors.black54, fontSize: 9.0),
                         ),
                     ],
                   ),
@@ -1244,11 +1461,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         if (_showTableNo)
-                          Text('Meja: 04 (Makan Sini)', style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 9.0))
+                          Text('Meja: 04 (Makan Sini)', style: _getReceiptFont(color: Colors.black87, fontSize: 9.0))
                         else
                           const SizedBox.shrink(),
                         if (_showCashier)
-                          Text('Kasir: Ahmad', style: GoogleFonts.spaceMono(color: Colors.black54, fontSize: 9.0))
+                          Text('Kasir: Ahmad', style: _getReceiptFont(color: Colors.black54, fontSize: 9.0))
                         else
                           const SizedBox.shrink(),
                       ],
@@ -1284,7 +1501,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                       children: [
                         Text(
                           'JUMLAH BESAR',
-                          style: GoogleFonts.spaceMono(
+                          style: _getReceiptFont(
                             color: Colors.black,
                             fontWeight: FontWeight.w900,
                             fontSize: _paperWidth == 58 ? 11.5 : 13.0,
@@ -1292,7 +1509,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                         ),
                         Text(
                           _showServiceCharge ? 'RM 33.25' : 'RM 30.40',
-                          style: GoogleFonts.spaceMono(
+                          style: _getReceiptFont(
                             color: Colors.black,
                             fontWeight: FontWeight.w900,
                             fontSize: _paperWidth == 58 ? 12.5 : 14.5,
@@ -1316,7 +1533,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                       child: Text(
                         _footerMsgCtrl.text,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.spaceMono(
+                        style: _getReceiptFont(
                           color: Colors.black87,
                           fontWeight: FontWeight.bold,
                           fontSize: 9.0,
@@ -1329,7 +1546,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                       child: Text(
                         _policyCtrl.text,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.spaceMono(color: Colors.black45, fontSize: 8.0),
+                        style: _getReceiptFont(color: Colors.black45, fontSize: 8.0),
                       ),
                     ),
                   ],
@@ -1385,7 +1602,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           overflow: TextOverflow.clip,
           softWrap: false,
           textAlign: TextAlign.center,
-          style: GoogleFonts.spaceMono(
+          style: _getReceiptFont(
             color: Colors.black38,
             fontSize: _dividerStyle == DividerStyle.solidDouble ? 8.5 : 9.0,
             letterSpacing: _dividerStyle == DividerStyle.solidDouble ? -0.3 : 1.2,
@@ -1408,7 +1625,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           if (qty.isNotEmpty) ...[
             Text(
               qty,
-              style: GoogleFonts.spaceMono(
+              style: _getReceiptFont(
                 color: Colors.black,
                 fontSize: _paperWidth == 58 ? 9.0 : 10.0,
                 fontWeight: FontWeight.bold,
@@ -1419,7 +1636,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           Expanded(
             child: Text(
               name,
-              style: GoogleFonts.spaceMono(
+              style: _getReceiptFont(
                 color: isSub ? Colors.black54 : Colors.black,
                 fontSize: _paperWidth == 58 ? 9.0 : 10.0,
                 fontWeight: isSub ? FontWeight.normal : FontWeight.w600,
@@ -1432,7 +1649,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           const SizedBox(width: 6),
           Text(
             price,
-            style: GoogleFonts.spaceMono(
+            style: _getReceiptFont(
               color: Colors.black,
               fontSize: _paperWidth == 58 ? 9.0 : 10.0,
               fontWeight: FontWeight.bold,
@@ -1454,7 +1671,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         children: [
           Text(
             label,
-            style: GoogleFonts.spaceMono(
+            style: _getReceiptFont(
               color: isBold ? Colors.black : Colors.black87,
               fontSize: _paperWidth == 58 ? 8.5 : 9.5,
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
@@ -1462,7 +1679,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           ),
           Text(
             value,
-            style: GoogleFonts.spaceMono(
+            style: _getReceiptFont(
               color: Colors.black,
               fontSize: _paperWidth == 58 ? 8.5 : 9.5,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
@@ -1501,11 +1718,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               const SizedBox(height: 3),
               Text(
                 'Imbas Simpan e-Resit & Poin Ngam',
-                style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
+                style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
                 'ngam.dev/receipt/NG4029',
-                style: GoogleFonts.spaceMono(color: Colors.black38, fontSize: 7.0),
+                style: _getReceiptFont(color: Colors.black38, fontSize: 7.0),
               ),
             ],
           ),
@@ -1534,11 +1751,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               const SizedBox(height: 3),
               Text(
                 '🎁 10% OFF Lawatan Seterusnya! (KOD: NGAM10)',
-                style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
+                style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
                 'Tunjuk atau imbas resit ini untuk tebus',
-                style: GoogleFonts.spaceMono(color: Colors.black38, fontSize: 7.0),
+                style: _getReceiptFont(color: Colors.black38, fontSize: 7.0),
               ),
             ],
           ),
@@ -1567,11 +1784,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               const SizedBox(height: 3),
               Text(
                 '📶 Imbas Untuk Sambung WiFi Tetamu Kedai',
-                style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
+                style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
                 'SSID: WarungNgam_Guest',
-                style: GoogleFonts.spaceMono(color: Colors.black45, fontSize: 7.0),
+                style: _getReceiptFont(color: Colors.black45, fontSize: 7.0),
               ),
             ],
           ),
@@ -1600,7 +1817,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               const SizedBox(height: 3),
               Text(
                 '*NG-4029-2026*',
-                style: GoogleFonts.spaceMono(color: Colors.black87, fontSize: 8.0, letterSpacing: 1.5),
+                style: _getReceiptFont(color: Colors.black87, fontSize: 8.0, letterSpacing: 1.5),
               ),
             ],
           ),
