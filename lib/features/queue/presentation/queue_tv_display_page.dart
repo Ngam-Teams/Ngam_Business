@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../../../widgets/glass_nav_button.dart';
 import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1180,10 +1181,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         children: [
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70, size: 18),
-                onPressed: () => Navigator.pop(context),
-              ),
+GlassNavButton.back(context: context, size: 44),
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.all(8),
@@ -1310,12 +1308,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
       ),
       child: Row(
         children: [
-          IconButton(
-            constraints: const BoxConstraints(),
-            padding: const EdgeInsets.all(6),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white70, size: 16),
-            onPressed: () => Navigator.pop(context),
-          ),
+GlassNavButton.back(context: context, size: 44),
           const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.all(6),

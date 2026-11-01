@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/audit_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 // ============================================================
 // CashDrawerPage — Shift Management, Petty Cash & Z-Report
@@ -672,55 +673,24 @@ Status: Syif Ditutup & Disahkan ke Cloud
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A14),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Cash Drawer & Closing',
-              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              'Petty cash logs & Z-Reports',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-        actions: [
-          _isLoadingSales
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Center(
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)),
-                    ),
-                  ),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
-                  tooltip: 'Kemas Kini Jualan',
-                  onPressed: () {
-                    _loadLiveShiftSales();
-                    showGlassToast(context, 'Mengemas kini data jualan syif terkini...');
-                  },
-                ),
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedMoneyAdd02, color: Color(0xFF42A5F5), size: 22),
+      appBar: GlassAppBar(
+        title: 'Cash Drawer & Closing',
+        subtitle: 'Petty cash logs & Z-Reports',
+        actionItems: [
+          GlassNavPillItem(
+            icon: Icons.refresh_rounded,
+            tooltip: 'Kemas Kini Jualan',
+            isLoading: _isLoadingSales,
+            onTap: () {
+              _loadLiveShiftSales();
+              showGlassToast(context, 'Mengemas kini data jualan syif terkini...');
+            },
+          ),
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedMoneyAdd02,
+            iconColor: const Color(0xFF42A5F5),
             tooltip: 'Add Petty Cash',
-            onPressed: _openAddPettyCashDialog,
+            onTap: _openAddPettyCashDialog,
           ),
         ],
       ),

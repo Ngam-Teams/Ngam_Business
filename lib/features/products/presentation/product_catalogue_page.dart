@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../pos/models/product_model.dart';
 import '../data/product_service.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 class ProductCataloguePage extends StatefulWidget {
   const ProductCataloguePage({super.key});
@@ -147,14 +148,17 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF10101A),
-        elevation: 0,
-        title: const Text(
-          'Products & Services',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
+      appBar: GlassAppBar(
+        title: 'Products & Services',
+        subtitle: 'Katalog produk & servis kedai',
+        actionItems: [
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedAdd01,
+            iconColor: const Color(0xFF42A5F5),
+            tooltip: 'Tambah Item / Servis',
+            onTap: () => _showAddProductModal(),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddProductModal(),

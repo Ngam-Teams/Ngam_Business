@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../../widgets/glass_nav_button.dart';
 import 'package:flutter/services.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import '../../../widgets/glass_toast.dart';
 import '../models/voucher_model.dart';
@@ -225,61 +225,17 @@ class _PromotionsPageState extends State<PromotionsPage> {
             slivers: [
               // Top Bar
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                          ),
-                          child: const Center(
-                            child: HugeIcon(
-                              icon: HugeIcons.strokeRoundedArrowLeft01,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Baucar & Promosi',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 19,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Pengurusan kod diskaun standard e-commerce',
-                              style: TextStyle(
-                                color: Colors.white54,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: _loadData,
-                        icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
-                        tooltip: 'Muat Semula',
-                      ),
-                    ],
-                  ),
+                child: GlassTopBar(
+                  title: 'Baucar & Promosi',
+                  subtitle: 'Pengurusan kod diskaun',
+                  onBack: () => Navigator.pop(context),
+                  actionItems: [
+                    GlassNavPillItem(
+                      icon: Icons.refresh_rounded,
+                      tooltip: 'Muat Semula',
+                      onTap: _loadData,
+                    ),
+                  ],
                 ),
               ),
 

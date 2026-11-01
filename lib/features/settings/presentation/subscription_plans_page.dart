@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 // ============================================================
 // SubscriptionPlansPage — Plan Details, Comparison & Upgrading
@@ -243,31 +244,9 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A14),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Subscription & Plans',
-              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              'Manage your tier & unlock business capabilities',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+      appBar: const GlassAppBar(
+        title: 'Subscription & Plans',
+        subtitle: 'Pelan langganan & keupayaan',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

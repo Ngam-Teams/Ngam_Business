@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../../widgets/glass_nav_button.dart';
 import '../../settings/data/business_service.dart';
 import '../../pos/presentation/widgets/payment_terminal_modal.dart';
 import '../../pos/data/pos_service.dart';
@@ -1217,54 +1217,10 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
           children: [
             // Top Bar (Hanya dipaparkan jika dibuka dari menu luar / standalone)
             if (!widget.isEmbedded)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                        ),
-                        child: const Center(
-                          child: HugeIcon(
-                            icon: HugeIcons.strokeRoundedArrowLeft01,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Pengurusan Tempahan & Temu Janji',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Khidmat, slot temu janji, meja & servis perniagaan',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              GlassTopBar(
+                title: 'Tempahan & Temu Janji',
+                subtitle: 'Slot temu janji & servis',
+                onBack: () => Navigator.pop(context),
               ),
 
             // Filter Chips

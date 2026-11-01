@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/services/audit_service.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 class AuditLogsPage extends StatefulWidget {
   const AuditLogsPage({super.key});
@@ -85,25 +86,15 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Audit Trails & Security Logs',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
+      appBar: GlassAppBar(
+        title: 'Audit Trails & Security',
+        subtitle: 'Rekod log aktiviti keselamatan',
+        actionItems: [
+          GlassNavPillItem(
+            icon: Icons.refresh_rounded,
             tooltip: 'Muat Semula Log',
-            onPressed: _fetchLogs,
+            onTap: _fetchLogs,
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: Center(

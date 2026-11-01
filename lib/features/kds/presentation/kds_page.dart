@@ -7,6 +7,7 @@ import '../../../core/services/sound_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../orders/data/orders_service.dart';
 import '../../settings/data/business_service.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 // ============================================================
 // KdsPage — Live Order Board & Preparation Display Screen
@@ -372,114 +373,38 @@ class _KdsPageState extends State<KdsPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090F),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF09090F),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const HugeIcon(icon: HugeIcons.strokeRoundedTv01, color: Color(0xFFF9C80E), size: 20),
-            const SizedBox(width: 8),
-            const Flexible(
-              child: Text(
-                'Live Order Board',
-                style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '${filteredTickets.length}',
-                style: const TextStyle(color: Color(0xFF10B981), fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Live / Demo Mode Badge
-            GestureDetector(
-              onTap: () {
-                setState(() => _useDemoData = !_useDemoData);
-                showGlassToast(
-                  context,
-                  _useDemoData ? 'Beralih ke Mod Demo Simulasi' : 'Beralih ke Data Pesanan Live',
-                  color: _useDemoData ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: _useDemoData
-                      ? const Color(0xFFF59E0B).withValues(alpha: 0.18)
-                      : const Color(0xFF10B981).withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _useDemoData
-                        ? const Color(0xFFF59E0B).withValues(alpha: 0.4)
-                        : const Color(0xFF10B981).withValues(alpha: 0.4),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _useDemoData ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      _useDemoData ? 'Demo' : 'Live',
-                      style: TextStyle(
-                        color: _useDemoData ? const Color(0xFFF59E0B) : const Color(0xFF10B981),
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list_rounded, color: Colors.white70),
-            tooltip: 'Filter Tickets',
-            color: const Color(0xFF1A1A2E),
-            onSelected: (val) => setState(() => _filterType = val),
-            itemBuilder: (context) => ['All', 'Dine-In', 'Takeaway'].map((type) {
-              return PopupMenuItem(
-                value: type,
-                child: Text(type, style: TextStyle(color: _filterType == type ? const Color(0xFFF9C80E) : Colors.white)),
-              );
-            }).toList(),
+      appBar: GlassAppBar(
+        title: 'Live Order Board',
+        subtitle: _useDemoData ? 'Mod Demo (${filteredTickets.length} Tiket)' : 'Live (${filteredTickets.length} Tiket)',
+        actionItems: [
+          GlassNavPillItem(
+            icon: Icons.filter_list_rounded,
+            tooltip: 'Tapis: $_filterType',
+            iconColor: _filterType != 'All' ? const Color(0xFFF9C80E) : Colors.white70,
+            onTap: () {
+              final next = _filterType == 'All' ? 'Dine-In' : (_filterType == 'Dine-In' ? 'Takeaway' : 'All');
+              setState(() => _filterType = next);
+              showGlassToast(context, 'Tapis pesanan: $next');
+            },
           ),
-          IconButton(
-            icon: Icon(
-              _soundEnabled ? Icons.notifications_active_rounded : Icons.notifications_off_rounded,
-              color: _soundEnabled ? const Color(0xFF44CF6C) : Colors.white38,
-              size: 22,
-            ),
-            tooltip: 'Order Chime Alert',
-            onPressed: () {
+          GlassNavPillItem(
+            icon: _soundEnabled ? Icons.notifications_active_rounded : Icons.notifications_off_rounded,
+            iconColor: _soundEnabled ? const Color(0xFF44CF6C) : Colors.white38,
+            tooltip: _soundEnabled ? 'Bunyi Pesanan Aktif' : 'Bunyi Dimatikan',
+            onTap: () {
               setState(() => _soundEnabled = !_soundEnabled);
               if (_soundEnabled) {
                 SoundService.instance.playOrderChime();
               }
-              showGlassToast(context, _soundEnabled ? 'Order chime alert enabled' : 'Order chime muted');
+              showGlassToast(context, _soundEnabled ? 'Bunyi amaran pesanan diaktifkan' : 'Bunyi amaran dinyahaktifkan');
+            },
+          ),
+          GlassNavPillItem(
+            icon: Icons.refresh_rounded,
+            tooltip: 'Muat Semula Papan',
+            onTap: () {
+              _initLiveKds();
+              showGlassToast(context, 'Memuat semula pesanan...');
             },
           ),
         ],

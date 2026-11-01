@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../widgets/glass_nav_button.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../widgets/glass_toast.dart';
 import '../data/business_service.dart';
@@ -440,66 +441,19 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
         child: Column(
           children: [
             // Top Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                      ),
-                      child: const Center(
-                        child: HugeIcon(
-                          icon: HugeIcons.strokeRoundedArrowLeft01,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Hours & Store Status',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Waktu operasi, sibuk & cuti perayaan',
-                          style: TextStyle(
-                            color: Colors.white54,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF42A5F5),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: _isSaving ? null : _saveSchedule,
-                    child: _isSaving
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                ],
-              ),
+            GlassTopBar(
+              title: 'Hours & Store Status',
+              subtitle: 'Waktu operasi & status kedai',
+              onBack: () => Navigator.pop(context),
+              actionItems: [
+                GlassNavPillItem(
+                  icon: HugeIcons.strokeRoundedTick01,
+                  iconColor: const Color(0xFF42A5F5),
+                  tooltip: 'Simpan',
+                  isLoading: _isSaving,
+                  onTap: _isSaving ? null : _saveSchedule,
+                ),
+              ],
             ),
 
             if (_isLoading)

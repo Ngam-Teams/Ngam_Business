@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 // ============================================================
 // PayoutsPage — Merchant Settlement, Bank Accounts & Withdrawals
@@ -477,32 +478,14 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A14),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Payouts & Settlement',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Direct bank transfers & DuitNow settlements',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedDownload01, color: Colors.white70, size: 20),
+      appBar: GlassAppBar(
+        title: 'Payouts & Settlement',
+        subtitle: 'Direct bank transfers & DuitNow settlements',
+        actionItems: [
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedDownload01,
             tooltip: 'Export Statement',
-            onPressed: () => showGlassToast(context, 'Monthly financial statement exported (PDF/CSV)'),
+            onTap: () => showGlassToast(context, 'Monthly financial statement exported (PDF/CSV)'),
           ),
         ],
         bottom: TabBar(

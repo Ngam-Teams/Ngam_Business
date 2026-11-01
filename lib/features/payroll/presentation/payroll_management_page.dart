@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 
 import '../data/payroll_service.dart';
 import '../models/staff_payroll_model.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 class PayrollManagementPage extends StatefulWidget {
   const PayrollManagementPage({super.key});
@@ -350,32 +350,15 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A14),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => context.pop(),
-        ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Penggajian & Komisen (Payroll)',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Gaji pokok, komisen jualan & caruman',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedDownload04, color: Color(0xFF42A5F5), size: 22),
+      appBar: GlassAppBar(
+        title: 'Penggajian & Komisen (Payroll)',
+        subtitle: 'Gaji pokok, komisen jualan & caruman',
+        actionItems: [
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedDownload04,
+            iconColor: const Color(0xFF42A5F5),
             tooltip: 'Eksport Penyata Gaji',
-            onPressed: () => showGlassToast(context, 'Mengeksport ringkasan gaji PDF/CSV...'),
+            onTap: () => showGlassToast(context, 'Mengeksport ringkasan gaji PDF/CSV...'),
           ),
         ],
         bottom: TabBar(

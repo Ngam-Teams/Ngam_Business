@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../data/loyalty_service.dart';
 import '../models/loyalty_model.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 class LoyaltyStampsPage extends StatefulWidget {
   const LoyaltyStampsPage({super.key});
@@ -259,32 +259,15 @@ class _LoyaltyStampsPageState extends State<LoyaltyStampsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A14),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => context.pop(),
-        ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Kad Cop Digital (Loyalty)',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Program kesetiaan & ganjaran pelanggan',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Color(0xFF42A5F5), size: 22),
+      appBar: GlassAppBar(
+        title: 'Kad Cop Digital (Loyalty)',
+        subtitle: 'Program kesetiaan & ganjaran pelanggan',
+        actionItems: [
+          GlassNavPillItem(
+            icon: Icons.settings_outlined,
+            iconColor: const Color(0xFF42A5F5),
             tooltip: 'Tetapan Program',
-            onPressed: _openProgramSettingsModal,
+            onTap: _openProgramSettingsModal,
           ),
         ],
       ),

@@ -10,6 +10,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 // ============================================================
 // QrGeneratorPage — Modern Storefront, Table, WiFi & Promo QR Standee Generator
@@ -677,36 +678,15 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A14),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'QR & Standee Generator',
-              style: GoogleFonts.outfit(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              'Menu, Meja, WiFi & Baucar Standee HD',
-              style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedDownload04, color: Color(0xFF42A5F5), size: 22),
+      appBar: GlassAppBar(
+        title: 'QR & Standee Generator',
+        subtitle: 'Menu, Meja, WiFi & Baucar',
+        actionItems: [
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedDownload04,
+            iconColor: const Color(0xFF42A5F5),
             tooltip: 'Muat Turun Standee',
-            onPressed: _captureAndSaveStandee,
+            onTap: _captureAndSaveStandee,
           ),
         ],
       ),

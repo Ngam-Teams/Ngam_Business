@@ -11,6 +11,7 @@ import '../../../core/services/video_compression_service.dart';
 import '../data/feed_service.dart';
 import '../models/feed_post_model.dart';
 import '../../settings/data/business_service.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 /// FeedManagementPage — Ngam Feed & Post Studio.
 /// Dioptimumkan sepenuhnya untuk responsif telefon pintar (Mobile-Friendly)
@@ -223,58 +224,21 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const HugeIcon(
-              icon: HugeIcons.strokeRoundedVideo01,
-              color: Color(0xFFEC4899),
-              size: 22,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                isPhone ? 'Feed & Post' : 'Ngam Feed & Post Studio',
-                style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
+      appBar: GlassAppBar(
+        title: isPhone ? 'Feed & Post' : 'Ngam Feed Studio',
+        subtitle: 'Video & hantaran promosi',
+        actionItems: [
+          GlassNavPillItem(
+            icon: Icons.refresh_rounded,
             tooltip: 'Muat Semula',
-            onPressed: _loadInitialData,
+            onTap: _loadInitialData,
           ),
-          if (!isPhone) ...[
-            const SizedBox(width: 4),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: ElevatedButton.icon(
-                onPressed: () => _openCreateOrEditPostDialog(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEC4899),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                icon: const Icon(Icons.add_rounded, size: 20),
-                label: const Text('Cipta Post', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              ),
-            ),
-            const SizedBox(width: 16),
-          ] else
-            const SizedBox(width: 8),
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedAdd01,
+            iconColor: const Color(0xFFEC4899),
+            tooltip: 'Cipta Post',
+            onTap: () => _openCreateOrEditPostDialog(),
+          ),
         ],
       ),
       // Mobile-friendly Floating Action Button for quick thumb tap on phones

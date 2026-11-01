@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 // ============================================================
 // MerchantInboxPage — Live Customer Chat & Reservation Support
@@ -136,42 +137,23 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A14),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () {
-            if (_activeThread != null && !isDesktop) {
-              setState(() => _activeThread = null);
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _activeThread != null && !isDesktop ? (_activeThread!['customerName'] as String) : 'Customer Inbox',
-              style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              _activeThread != null && !isDesktop ? (_activeThread!['orderRef'] as String) : 'Customer inquiries & chat',
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-        actions: [
+      appBar: GlassAppBar(
+        title: _activeThread != null && !isDesktop ? (_activeThread!['customerName'] as String) : 'Customer Inbox',
+        subtitle: _activeThread != null && !isDesktop ? (_activeThread!['orderRef'] as String) : 'Customer inquiries & chat',
+        onBack: () {
+          if (_activeThread != null && !isDesktop) {
+            setState(() => _activeThread = null);
+          } else {
+            Navigator.pop(context);
+          }
+        },
+        actionItems: [
           if (_activeThread != null)
-            IconButton(
-              icon: const Icon(Icons.phone_rounded, color: Color(0xFF44CF6C), size: 22),
-              onPressed: () => _callCustomer(_activeThread!['phone'] as String),
+            GlassNavPillItem(
+              icon: Icons.phone_rounded,
+              iconColor: const Color(0xFF44CF6C),
+              tooltip: 'Hubungi Pelanggan',
+              onTap: () => _callCustomer(_activeThread!['phone'] as String),
             ),
         ],
       ),

@@ -9,6 +9,7 @@ import '../data/queue_service.dart';
 import '../models/queue_ticket_model.dart';
 import 'widgets/issue_ticket_modal.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 class QueuePage extends StatefulWidget {
   const QueuePage({super.key});
@@ -161,39 +162,21 @@ class _QueuePageState extends State<QueuePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A14),
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => context.pop(),
-        ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Pengurusan Giliran (Queue)',
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Papan kawalan giliran walk-in & TV',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          // Open TV Display Mode button
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedTv01, color: Color(0xFF42A5F5), size: 22),
+      appBar: GlassAppBar(
+        title: 'Pengurusan Giliran (Queue)',
+        subtitle: 'Papan giliran walk-in & TV',
+        actionItems: [
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedTv01,
+            iconColor: const Color(0xFF42A5F5),
             tooltip: 'Buka Paparan TV Kedai',
-            onPressed: () => context.push('/queue/tv'),
+            onTap: () => context.push('/queue/tv'),
           ),
-          // Issue Ticket Button
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF44CF6C), size: 26),
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedTicket01,
+            iconColor: const Color(0xFF44CF6C),
             tooltip: 'Keluarkan Tiket Walk-In',
-            onPressed: () => IssueTicketModal.show(context: context, queueService: _queueService),
+            onTap: () => IssueTicketModal.show(context: context, queueService: _queueService),
           ),
         ],
       ),

@@ -10,6 +10,7 @@ import '../../../core/services/audit_service.dart';
 import '../../../core/services/ngam_teams_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../data/business_service.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 class StaffManagementPage extends StatefulWidget {
   const StaffManagementPage({super.key});
@@ -230,37 +231,27 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF10101A),
-        elevation: 0,
-        title: Column(
-          children: [
-            const Text(
-              'Staff & Team Management',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-            ),
-            Text(
-              _businessName,
-              style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 12),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedSmartPhone01, color: Color(0xFF38BDF8), size: 22),
+      appBar: GlassAppBar(
+        title: 'Staff Management',
+        subtitle: _businessName.isNotEmpty ? _businessName : 'Pasukan & Staf',
+        actionItems: [
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedSmartPhone01,
+            iconColor: const Color(0xFF38BDF8),
             tooltip: 'Hab Ngam Teams (Krew App)',
-            onPressed: () => NgamTeamsService.showTeamsHubModal(context, businessName: _businessName),
+            onTap: () => NgamTeamsService.showTeamsHubModal(context, businessName: _businessName),
           ),
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedTask01, color: Color(0xFF42A5F5), size: 22),
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedTask01,
+            iconColor: const Color(0xFF42A5F5),
             tooltip: 'Audit Logs & Rekod Staf',
-            onPressed: () => context.push('/audit-logs'),
+            onTap: () => context.push('/audit-logs'),
           ),
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedCoins01, color: Color(0xFF10B981), size: 22),
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedCoins01,
+            iconColor: const Color(0xFF10B981),
             tooltip: 'Urus Gaji & Komisen Staf',
-            onPressed: () => context.push('/payroll'),
+            onTap: () => context.push('/payroll'),
           ),
         ],
       ),

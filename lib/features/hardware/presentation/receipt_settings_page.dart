@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
+import '../../../widgets/glass_nav_button.dart';
 
 // =============================================================================
 // ReceiptSettingsPage — Thermal Printer & Dynamic Receipt Customizer Studio
@@ -295,43 +296,23 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A14),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Studio Resit & Pencetak Terma',
-              style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              'Kustomisasi penuh susun atur, logo kedai & garisan pemisah dinamik',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedDownload04, color: Color(0xFF42A5F5), size: 20),
+      appBar: GlassAppBar(
+        title: 'Studio Resit & Pencetak',
+        subtitle: 'Kustomisasi logo & pencetak haba',
+        actionItems: [
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedDownload04,
+            iconColor: const Color(0xFF42A5F5),
             tooltip: 'Muat Turun Resit Digital (HD)',
-            onPressed: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
+            isLoading: _isDownloadingReceipt,
+            onTap: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
           ),
-          IconButton(
-            icon: const HugeIcon(icon: HugeIcons.strokeRoundedPrinter, color: Color(0xFF44CF6C), size: 22),
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedPrinter,
+            iconColor: const Color(0xFF44CF6C),
             tooltip: 'Uji Cetak Resit',
-            onPressed: _printTestReceipt,
+            onTap: _printTestReceipt,
           ),
-          const SizedBox(width: 8),
         ],
       ),
       body: LayoutBuilder(
