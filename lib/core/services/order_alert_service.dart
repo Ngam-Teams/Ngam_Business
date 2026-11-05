@@ -7,6 +7,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/app_router.dart';
 import 'sound_service.dart';
+import 'notification_bridge.dart';
 
 // =============================================================================
 // OrderAlertService
@@ -124,6 +125,17 @@ class OrderAlertService {
     final bool isFromCustomerApp = source != 'pos' &&
         (source == 'online' || source == 'pre_order' || source == 'table');
     if (!isFromCustomerApp) return;
+
+    // Dispatch Native Browser / OS Push Notification
+    final orderNum = order['order_number']?.toString() ?? (id.length > 6 ? id.substring(0, 6) : id);
+    final total = (order['total'] as num?)?.toDouble() ?? 0.0;
+    final customer = order['customer_name']?.toString() ?? 'Pelanggan';
+    showWebNotification(
+      title: '🔔 Pesanan Baharu #$orderNum',
+      body: '$customer telah membuat pesanan RM ${total.toStringAsFixed(2)}.',
+      tag: 'order_$id',
+      url: '/orders',
+    );
 
     // Start Ringtone Audio
     _playAlertSound();

@@ -37,7 +37,7 @@ import '../../features/settings/presentation/mfa_setup_page.dart';
 import '../../features/settings/presentation/audit_logs_page.dart';
 import '../../features/feed/presentation/feed_management_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
-import '../services/order_alert_service.dart';
+import '../services/merchant_notification_service.dart';
 import '../../features/settings/data/business_service.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -118,7 +118,7 @@ class _AppShellState extends State<_AppShell> {
       final profile = await BusinessService().getBusinessProfile();
       final businessId = profile?['id']?.toString();
       if (businessId != null && mounted) {
-        OrderAlertService.instance.initialize(
+        MerchantNotificationService.instance.initialize(
           businessId: businessId,
           onTabSwitch: (index) {
             if (mounted) {
@@ -137,7 +137,7 @@ class _AppShellState extends State<_AppShell> {
 
   @override
   void dispose() {
-    OrderAlertService.instance.dispose();
+    MerchantNotificationService.instance.dispose();
     super.dispose();
   }
 

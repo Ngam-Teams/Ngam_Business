@@ -69,6 +69,61 @@
       }
     ]
   }
+
+    // Universal Web / PWA Push Notification Bridge
+    window.isNotificationSupported = function() {
+      return ('Notification' in window);
+    };
+
+    window.getNotificationPermission = function() {
+      if (!('Notification' in window)) return 'unsupported';
+      return Notification.permission;
+    };
+
+    window.requestNotificationPermissionAsync = function(callback) {
+      if (!('Notification' in window)) {
+        if (callback) callback('unsupported');
+        return;
+      }
+      Notification.requestPermission().then(function(perm) {
+        if (callback) callback(perm);
+      }).catch(function() {
+        if (callback) callback('denied');
+      });
+    };
+
+    window.showWebPushNotification = function(title, body, tag, icon, url) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        var options = {
+          body: body || '',
+          icon: icon || 'favicon.png',
+          badge: 'favicon.png',
+          tag: tag || ('ngam_biz_' + Date.now()),
+          renotify: true,
+          requireInteraction: false
+        };
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(function(reg) {
+            reg.showNotification(title, options);
+          }).catch(function() {
+            var n = new Notification(title, options);
+            n.onclick = function() {
+              window.focus();
+              n.close();
+            };
+          });
+        } else {
+          var n = new Notification(title, options);
+          n.onclick = function() {
+            window.focus();
+            n.close();
+          };
+        }
+      } catch (err) {
+        console.warn('[WebNotification] Display error:', err);
+      }
+    };
   </script>
 
   <!-- PWA Theme Color (Adaptive Light & Dark Mode) -->
@@ -111,12 +166,122 @@
         }
       } catch (e) {}
     };
+
+    // Universal Web / PWA Push Notification Bridge
+    window.isNotificationSupported = function() {
+      return ('Notification' in window);
+    };
+
+    window.getNotificationPermission = function() {
+      if (!('Notification' in window)) return 'unsupported';
+      return Notification.permission;
+    };
+
+    window.requestNotificationPermissionAsync = function(callback) {
+      if (!('Notification' in window)) {
+        if (callback) callback('unsupported');
+        return;
+      }
+      Notification.requestPermission().then(function(perm) {
+        if (callback) callback(perm);
+      }).catch(function() {
+        if (callback) callback('denied');
+      });
+    };
+
+    window.showWebPushNotification = function(title, body, tag, icon, url) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        var options = {
+          body: body || '',
+          icon: icon || 'favicon.png',
+          badge: 'favicon.png',
+          tag: tag || ('ngam_biz_' + Date.now()),
+          renotify: true,
+          requireInteraction: false
+        };
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(function(reg) {
+            reg.showNotification(title, options);
+          }).catch(function() {
+            var n = new Notification(title, options);
+            n.onclick = function() {
+              window.focus();
+              n.close();
+            };
+          });
+        } else {
+          var n = new Notification(title, options);
+          n.onclick = function() {
+            window.focus();
+            n.close();
+          };
+        }
+      } catch (err) {
+        console.warn('[WebNotification] Display error:', err);
+      }
+    };
   </script>
   <!-- Auto-redirect from .pages.dev to official business.ngam.dev -->
   <script>
     if (window.location.hostname.endsWith('pages.dev')) {
       window.location.replace('https://business.ngam.dev' + window.location.pathname + window.location.search);
     }
+
+    // Universal Web / PWA Push Notification Bridge
+    window.isNotificationSupported = function() {
+      return ('Notification' in window);
+    };
+
+    window.getNotificationPermission = function() {
+      if (!('Notification' in window)) return 'unsupported';
+      return Notification.permission;
+    };
+
+    window.requestNotificationPermissionAsync = function(callback) {
+      if (!('Notification' in window)) {
+        if (callback) callback('unsupported');
+        return;
+      }
+      Notification.requestPermission().then(function(perm) {
+        if (callback) callback(perm);
+      }).catch(function() {
+        if (callback) callback('denied');
+      });
+    };
+
+    window.showWebPushNotification = function(title, body, tag, icon, url) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        var options = {
+          body: body || '',
+          icon: icon || 'favicon.png',
+          badge: 'favicon.png',
+          tag: tag || ('ngam_biz_' + Date.now()),
+          renotify: true,
+          requireInteraction: false
+        };
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(function(reg) {
+            reg.showNotification(title, options);
+          }).catch(function() {
+            var n = new Notification(title, options);
+            n.onclick = function() {
+              window.focus();
+              n.close();
+            };
+          });
+        } else {
+          var n = new Notification(title, options);
+          n.onclick = function() {
+            window.focus();
+            n.close();
+          };
+        }
+      } catch (err) {
+        console.warn('[WebNotification] Display error:', err);
+      }
+    };
   </script>
 
   <!-- iOS / iPadOS PWA meta tags & icons -->
@@ -202,6 +367,61 @@
         document.head.appendChild(style);
       }
     })();
+
+    // Universal Web / PWA Push Notification Bridge
+    window.isNotificationSupported = function() {
+      return ('Notification' in window);
+    };
+
+    window.getNotificationPermission = function() {
+      if (!('Notification' in window)) return 'unsupported';
+      return Notification.permission;
+    };
+
+    window.requestNotificationPermissionAsync = function(callback) {
+      if (!('Notification' in window)) {
+        if (callback) callback('unsupported');
+        return;
+      }
+      Notification.requestPermission().then(function(perm) {
+        if (callback) callback(perm);
+      }).catch(function() {
+        if (callback) callback('denied');
+      });
+    };
+
+    window.showWebPushNotification = function(title, body, tag, icon, url) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        var options = {
+          body: body || '',
+          icon: icon || 'favicon.png',
+          badge: 'favicon.png',
+          tag: tag || ('ngam_biz_' + Date.now()),
+          renotify: true,
+          requireInteraction: false
+        };
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(function(reg) {
+            reg.showNotification(title, options);
+          }).catch(function() {
+            var n = new Notification(title, options);
+            n.onclick = function() {
+              window.focus();
+              n.close();
+            };
+          });
+        } else {
+          var n = new Notification(title, options);
+          n.onclick = function() {
+            window.focus();
+            n.close();
+          };
+        }
+      } catch (err) {
+        console.warn('[WebNotification] Display error:', err);
+      }
+    };
   </script>
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
@@ -220,6 +440,61 @@
         }, 350);
       }
     });
+
+    // Universal Web / PWA Push Notification Bridge
+    window.isNotificationSupported = function() {
+      return ('Notification' in window);
+    };
+
+    window.getNotificationPermission = function() {
+      if (!('Notification' in window)) return 'unsupported';
+      return Notification.permission;
+    };
+
+    window.requestNotificationPermissionAsync = function(callback) {
+      if (!('Notification' in window)) {
+        if (callback) callback('unsupported');
+        return;
+      }
+      Notification.requestPermission().then(function(perm) {
+        if (callback) callback(perm);
+      }).catch(function() {
+        if (callback) callback('denied');
+      });
+    };
+
+    window.showWebPushNotification = function(title, body, tag, icon, url) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        var options = {
+          body: body || '',
+          icon: icon || 'favicon.png',
+          badge: 'favicon.png',
+          tag: tag || ('ngam_biz_' + Date.now()),
+          renotify: true,
+          requireInteraction: false
+        };
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(function(reg) {
+            reg.showNotification(title, options);
+          }).catch(function() {
+            var n = new Notification(title, options);
+            n.onclick = function() {
+              window.focus();
+              n.close();
+            };
+          });
+        } else {
+          var n = new Notification(title, options);
+          n.onclick = function() {
+            window.focus();
+            n.close();
+          };
+        }
+      } catch (err) {
+        console.warn('[WebNotification] Display error:', err);
+      }
+    };
   </script>
   <!-- Client-side Web Video Compressor (720p H.264 / WebM MediaRecorder) -->
   <script>
@@ -320,6 +595,61 @@
         };
       } catch (err) {
         onError(err);
+      }
+    };
+
+    // Universal Web / PWA Push Notification Bridge
+    window.isNotificationSupported = function() {
+      return ('Notification' in window);
+    };
+
+    window.getNotificationPermission = function() {
+      if (!('Notification' in window)) return 'unsupported';
+      return Notification.permission;
+    };
+
+    window.requestNotificationPermissionAsync = function(callback) {
+      if (!('Notification' in window)) {
+        if (callback) callback('unsupported');
+        return;
+      }
+      Notification.requestPermission().then(function(perm) {
+        if (callback) callback(perm);
+      }).catch(function() {
+        if (callback) callback('denied');
+      });
+    };
+
+    window.showWebPushNotification = function(title, body, tag, icon, url) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        var options = {
+          body: body || '',
+          icon: icon || 'favicon.png',
+          badge: 'favicon.png',
+          tag: tag || ('ngam_biz_' + Date.now()),
+          renotify: true,
+          requireInteraction: false
+        };
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready.then(function(reg) {
+            reg.showNotification(title, options);
+          }).catch(function() {
+            var n = new Notification(title, options);
+            n.onclick = function() {
+              window.focus();
+              n.close();
+            };
+          });
+        } else {
+          var n = new Notification(title, options);
+          n.onclick = function() {
+            window.focus();
+            n.close();
+          };
+        }
+      } catch (err) {
+        console.warn('[WebNotification] Display error:', err);
       }
     };
   </script>
