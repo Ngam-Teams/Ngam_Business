@@ -742,7 +742,7 @@ class _OrdersPageState extends State<OrdersPage> {
       children: [
         // Top Segmented Switcher: Pesanan (Orders) vs Tempahan (Bookings)
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.05),
