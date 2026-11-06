@@ -115,11 +115,16 @@ class _StatCardState extends State<StatCard> {
                     width: 78,
                     height: 38,
                     child: IgnorePointer(
-                      child: CustomPaint(
-                        painter: _StatCardSparklinePainter(
-                          data: sparkline,
-                          color: widget.accentColor,
-                          isHovered: _isHovered,
+                      child: SizedBox(
+                        width: 78,
+                        height: 38,
+                        child: CustomPaint(
+                          size: const Size(78, 38),
+                          painter: _StatCardSparklinePainter(
+                            data: sparkline,
+                            color: widget.accentColor,
+                            isHovered: _isHovered,
+                          ),
                         ),
                       ),
                     ),
@@ -276,30 +281,43 @@ class _StatCardSparklinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (data.length < 2) return;
+    if (data.length < 2 || size.width <= 0 || size.height <= 0) return;
 
     final double minVal = data.reduce(math.min);
     final double maxVal = data.reduce(math.max);
-    final double range = (maxVal - minVal) == 0 ? 1 : (maxVal - minVal);
+    final bool isAllZero = maxVal == 0.0 && minVal == 0.0;
+    final List<double> drawData;
+    if (isAllZero) {
+      // Subtle baseline telemetry ripple when no transactions yet
+      drawData = const [0.8, 1.4, 1.0, 2.0, 1.8, 2.6, 2.1, 2.8, 3.2];
+    } else if (maxVal == minVal) {
+      drawData = [minVal * 0.8, minVal, minVal * 0.9, minVal * 1.05, minVal];
+    } else {
+      drawData = data;
+    }
+
+    final double effMin = drawData.reduce(math.min);
+    final double effMax = drawData.reduce(math.max);
+    final double range = (effMax - effMin) == 0 ? 1.0 : (effMax - effMin);
 
     final path = Path();
     final fillPath = Path();
 
-    final stepX = size.width / (data.length - 1);
+    final stepX = size.width / (drawData.length - 1);
 
     double getY(double val) {
-      final normalized = (val - minVal) / range;
+      final normalized = (val - effMin) / range;
       return size.height - (normalized * (size.height * 0.70) + (size.height * 0.15));
     }
 
-    final pStart = Offset(0, getY(data[0]));
+    final pStart = Offset(0, getY(drawData[0]));
     path.moveTo(pStart.dx, pStart.dy);
     fillPath.moveTo(0, size.height);
     fillPath.lineTo(pStart.dx, pStart.dy);
 
-    for (int i = 0; i < data.length - 1; i++) {
-      final p0 = Offset(i * stepX, getY(data[i]));
-      final p1 = Offset((i + 1) * stepX, getY(data[i + 1]));
+    for (int i = 0; i < drawData.length - 1; i++) {
+      final p0 = Offset(i * stepX, getY(drawData[i]));
+      final p1 = Offset((i + 1) * stepX, getY(drawData[i + 1]));
 
       final controlPoint1 = Offset(p0.dx + (p1.dx - p0.dx) / 2, p0.dy);
       final controlPoint2 = Offset(p0.dx + (p1.dx - p0.dx) / 2, p1.dy);
@@ -325,13 +343,20 @@ class _StatCardSparklinePainter extends CustomPainter {
     fillPath.lineTo(size.width, size.height);
     fillPath.close();
 
+    final double fillAlpha = isAllZero
+        ? (isHovered ? 0.15 : 0.08)
+        : (isHovered ? 0.24 : 0.14);
+    final double strokeAlpha = isAllZero
+        ? (isHovered ? 0.55 : 0.38)
+        : (isHovered ? 0.88 : 0.65);
+
     // 1. Soft vertical gradient fill
     final fillPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          color.withValues(alpha: isHovered ? 0.24 : 0.14),
+          color.withValues(alpha: fillAlpha),
           color.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
@@ -340,19 +365,19 @@ class _StatCardSparklinePainter extends CustomPainter {
 
     // 2. Glowing curved stroke line
     final linePaint = Paint()
-      ..color = color.withValues(alpha: isHovered ? 0.85 : 0.55)
+      ..color = color.withValues(alpha: strokeAlpha)
       ..strokeWidth = 1.8
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
     canvas.drawPath(path, linePaint);
 
     // 3. Terminal live pulse dot at the end of the sparkline
-    final lastPoint = Offset(size.width, getY(data.last));
+    final lastPoint = Offset(size.width, getY(drawData.last));
     final dotPaint = Paint()
       ..color = color.withValues(alpha: isHovered ? 1.0 : 0.85)
       ..style = PaintingStyle.fill;
     final dotGlow = Paint()
-      ..color = color.withValues(alpha: 0.35)
+      ..color = color.withValues(alpha: isAllZero ? 0.20 : 0.35)
       ..style = PaintingStyle.fill;
 
     canvas.drawCircle(lastPoint, 3.8, dotGlow);

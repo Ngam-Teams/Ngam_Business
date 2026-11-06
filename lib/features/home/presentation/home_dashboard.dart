@@ -160,6 +160,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
         final loading = (snapshot.connectionState == ConnectionState.waiting) && data == null;
 
+        final todayRevSpark = (data?['todayRevenueSparkline'] as List?)
+            ?.map((e) => (e as num).toDouble())
+            .toList();
+        final todayOrdSpark = (data?['todayOrdersSparkline'] as List?)
+            ?.map((e) => (e as num).toDouble())
+            .toList();
+        final pendingOrdSpark = (data?['pendingOrdersSparkline'] as List?)
+            ?.map((e) => (e as num).toDouble())
+            .toList();
+        final monthlyRevSpark = (data?['monthlyRevenueSparkline'] as List?)
+            ?.map((e) => (e as num).toDouble())
+            .toList();
+
         final cards = [
           StatCard(
             label: "Today's Revenue",
@@ -169,7 +182,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             badgeColor: const Color(0xFF44CF6C),
             icon: HugeIcons.strokeRoundedMoney01,
             accentColor: const Color(0xFF42A5F5),
-            sparklineData: const [2.5, 3.8, 3.2, 5.0, 5.8, 7.2, 6.9, 8.8, 9.5],
+            sparklineData: todayRevSpark,
             onTap: () => switchAppShellTab(3),
           ),
           StatCard(
@@ -180,7 +193,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             badgeColor: const Color(0xFF42A5F5),
             icon: HugeIcons.strokeRoundedShoppingBag01,
             accentColor: const Color(0xFF44CF6C),
-            sparklineData: const [1.2, 2.5, 3.0, 2.2, 4.5, 5.2, 4.8, 6.5, 7.8],
+            sparklineData: todayOrdSpark,
             onTap: () => switchAppShellTab(1),
           ),
           StatCard(
@@ -191,9 +204,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             badgeColor: pendingOrders > 0 ? const Color(0xFFF9C80E) : const Color(0xFF44CF6C),
             icon: HugeIcons.strokeRoundedTime02,
             accentColor: const Color(0xFFF9C80E),
-            sparklineData: pendingOrders > 0
-                ? const [1.0, 2.5, 3.2, 2.8, 4.0, 3.5, 5.0]
-                : const [4.5, 3.5, 2.8, 2.0, 1.2, 0.4, 0.0],
+            sparklineData: pendingOrdSpark,
             onTap: () => switchAppShellTab(1),
           ),
           StatCard(
@@ -204,7 +215,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             badgeColor: const Color(0xFF8B5CF6),
             icon: HugeIcons.strokeRoundedChartIncrease,
             accentColor: const Color(0xFF8B5CF6),
-            sparklineData: const [1.5, 2.5, 3.8, 4.2, 5.5, 6.8, 8.0, 9.2, 10.5],
+            sparklineData: monthlyRevSpark,
             onTap: () => switchAppShellTab(3),
           ),
         ];

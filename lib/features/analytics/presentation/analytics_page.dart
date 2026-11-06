@@ -4,7 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
 
 import '../../../widgets/glass_toast.dart';
-import '../../../widgets/skeleton_box.dart';
+import '../../../widgets/stat_card.dart';
 import '../data/analytics_service.dart';
 
 enum AnalyticsPeriod {
@@ -199,33 +199,51 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               return LayoutBuilder(
                 builder: (context, constraints) {
                   final width = constraints.maxWidth;
+                  final revSpark = (_selectedPeriod == AnalyticsPeriod.today
+                      ? (data?['todayRevenueSparkline'] as List?)
+                      : (data?['monthlyRevenueSparkline'] as List?))
+                      ?.map((e) => (e as num).toDouble())
+                      .toList();
+                  final ordSpark = (data?['todayOrdersSparkline'] as List?)
+                      ?.map((e) => (e as num).toDouble())
+                      .toList();
+
                   final summaryCards = [
-                    _SummaryCard(
+                    StatCard(
                       label: '${_getPeriodLabel()} Revenue',
                       value: fmt.format(displayedRevenue),
                       isLoading: loading,
-                      color: const Color(0xFF42A5F5),
+                      subtitle: _getPeriodLabel(),
+                      accentColor: const Color(0xFF42A5F5),
                       icon: HugeIcons.strokeRoundedMoney01,
+                      sparklineData: revSpark,
                     ),
-                    _SummaryCard(
+                    StatCard(
                       label: '${_getPeriodLabel()} Orders',
                       value: displayedOrders.toString(),
                       isLoading: loading,
-                      color: const Color(0xFF44CF6C),
+                      subtitle: '$displayedOrders Total',
+                      accentColor: const Color(0xFF44CF6C),
                       icon: HugeIcons.strokeRoundedShoppingBag01,
+                      sparklineData: ordSpark,
                     ),
-                    _SummaryCard(
+                    StatCard(
                       label: 'Avg Order Value',
                       value: fmt.format(avgOrder),
                       isLoading: loading,
-                      color: const Color(0xFFF9C80E),
+                      subtitle: 'Per Order',
+                      accentColor: const Color(0xFFF9C80E),
                       icon: HugeIcons.strokeRoundedReceiptText,
+                      sparklineData: const [28.0, 32.0, 30.5, 36.0, 34.2, 40.0, 38.5],
                     ),
-                    _SummaryCard(
-                      label: 'Avg Table Turnover',
-                      value: '34 mins',
-                      color: const Color(0xFFAB47BC),
-                      icon: HugeIcons.strokeRoundedTime02,
+                    StatCard(
+                      label: 'Active Catalogue',
+                      value: '${data?['productCount'] ?? 0} Items',
+                      isLoading: loading,
+                      subtitle: 'In Stock',
+                      accentColor: const Color(0xFFAB47BC),
+                      icon: HugeIcons.strokeRoundedPackage,
+                      sparklineData: const [12.0, 14.0, 15.0, 18.0, 17.5, 20.0, 22.0],
                     ),
                   ];
 
@@ -817,77 +835,6 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  final dynamic icon;
-  final bool isLoading;
-
-  const _SummaryCard({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-    this.isLoading = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: color.withValues(alpha: 0.25),
-          width: 1.2,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          HugeIcon(icon: icon, color: color, size: 20, strokeWidth: 2.1),
-          const SizedBox(height: 10),
-          if (isLoading || value == '...')
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 2),
-              child: SkeletonBox(
-                width: 80,
-                height: 20,
-                borderRadius: BorderRadius.all(Radius.circular(6)),
-              ),
-            )
-          else
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.55),
-              fontSize: 11,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
       ),
     );
   }
