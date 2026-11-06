@@ -11,6 +11,7 @@ import '../data/orders_service.dart';
 import 'package:flutter/services.dart';
 import '../../appointments/presentation/appointments_page.dart';
 
+import 'widgets/order_pickup_qr_scanner_screen.dart';
 import '../../../widgets/glass_toast.dart';
 
 class OrdersPage extends StatefulWidget {
@@ -98,86 +99,11 @@ class _OrdersPageState extends State<OrdersPage> {
     }
   }
 
-    Future<void> _openPickupQrVerifier(List<OrderModel> allOrders) async {
-    final codeCtrl = TextEditingController();
-    final matched = await showDialog<OrderModel>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF141724),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: const Row(
-          children: [
-            Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF00E5FF)),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Sahkan QR Ambil Pesanan',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Imbas dengan pengimbas barcode/QR atau masukkan Kod Pesanan pelanggan (cth: NGAM-ORDER:... atau 6 aksara pertama ID):',
-              style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: codeCtrl,
-              autofocus: true,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              decoration: InputDecoration(
-                hintText: 'NGAM-ORDER:... atau #A1B2C3',
-                hintStyle: const TextStyle(color: Colors.white38),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.06),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              onSubmitted: (val) {
-                final cleaned = val.trim().replaceAll('NGAM-ORDER:', '').replaceAll('#', '').toLowerCase();
-                if (cleaned.isEmpty) return;
-                for (final o in allOrders) {
-                  if (o.id.toLowerCase() == cleaned || o.id.toLowerCase().startsWith(cleaned)) {
-                    Navigator.pop(ctx, o);
-                    return;
-                  }
-                }
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00E5FF),
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () {
-              final cleaned = codeCtrl.text.trim().replaceAll('NGAM-ORDER:', '').replaceAll('#', '').toLowerCase();
-              if (cleaned.isEmpty) return;
-              for (final o in allOrders) {
-                if (o.id.toLowerCase() == cleaned || o.id.toLowerCase().startsWith(cleaned)) {
-                  Navigator.pop(ctx, o);
-                  return;
-                }
-              }
-              showGlassToast(context, 'Pesanan tidak ditemui untuk kod tersebut.', isError: true);
-            },
-            child: const Text('Cari & Sahkan', style: TextStyle(fontWeight: FontWeight.w900)),
-          ),
-        ],
+  Future<void> _openPickupQrVerifier(List<OrderModel> allOrders) async {
+    final matched = await Navigator.push<OrderModel>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderPickupQrScannerScreen(allOrders: allOrders),
       ),
     );
 
