@@ -40,6 +40,15 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       BusinessService.cachedProfile?['id']?.toString() ?? 'store';
   String _businessHandle =
       BusinessService.cachedProfile?['business_handle']?.toString() ?? '';
+  String? _storeLogoUrl = (BusinessService.cachedProfile?['business_logo_url'] ??
+          BusinessService.cachedProfile?['logo_url'] ??
+          BusinessService.cachedProfile?['logo'] ??
+          BusinessService.cachedProfile?['image'])
+      ?.toString()
+      .trim();
+
+  // Standee Language: 'ms' (Bahasa Melayu) or 'en' (English)
+  String _standeeLanguage = 'ms';
 
   // Customizable Table Identifier (Supports any number/name e.g. 1, 12, A-01, VIP)
   final _tableCtrl = TextEditingController(text: '1');
@@ -49,19 +58,19 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
     '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '12', '15', '20', 'VIP', 'A-01', 'Bar 1'
   ];
 
-  // WiFi Settings Controllers (Editable)
-  final _wifiSsidCtrl = TextEditingController(text: 'WarungNgam_Guest');
-  final _wifiPasswordCtrl = TextEditingController(text: 'makanansedap');
-  bool _includeWifi = true;
+  // WiFi Settings Controllers (Editable) — Default EMPTY and DISABLED
+  final _wifiSsidCtrl = TextEditingController(text: '');
+  final _wifiPasswordCtrl = TextEditingController(text: '');
+  bool _includeWifi = false;
   bool _obscureWifiPassword = false;
 
-  // Promo Code Settings Controllers (Customizable)
-  final _promoCodeCtrl = TextEditingController(text: 'NGAM10');
-  final _promoDiscountCtrl = TextEditingController(text: '10% OFF Semua Menu');
+  // Promo Code Settings Controllers (Customizable) — Default EMPTY and DISABLED
+  final _promoCodeCtrl = TextEditingController(text: '');
+  final _promoDiscountCtrl = TextEditingController(text: '');
   bool _includePromoBadge = false;
 
-  // Custom Tagline Controller
-  final _customTaglineCtrl = TextEditingController(text: 'Imbas Untuk Pesan & Bayar Terus');
+  // Custom Tagline Controller — Default EMPTY and DISABLED
+  final _customTaglineCtrl = TextEditingController(text: '');
   bool _includeCustomTagline = false;
 
   // RepaintBoundary Key for Real Image Generation
@@ -119,6 +128,15 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           }
           _businessId = profile['id']?.toString() ?? 'store';
           _businessHandle = (profile['business_handle'] ?? '').toString().trim().replaceAll('@', '').toLowerCase();
+          final logo = (profile['business_logo_url'] ??
+                  profile['logo_url'] ??
+                  profile['logo'] ??
+                  profile['image'])
+              ?.toString()
+              .trim();
+          if (logo != null && logo.isNotEmpty) {
+            _storeLogoUrl = logo;
+          }
 
           final settings = profile['settings'] as Map<String, dynamic>?;
           if (settings != null) {
@@ -718,6 +736,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                         ],
                         _buildModularTogglesCard(),
                         const SizedBox(height: 16),
+                        _buildLanguageCustomizerCard(),
+                        const SizedBox(height: 16),
                         _buildBrandingAndColorsCard(),
                       ],
                     ),
@@ -740,7 +760,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         _buildPreviewHeader(),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 14),
+                        _buildStandeeLanguageToggle(),
+                        const SizedBox(height: 12),
                         _buildStandeePreview(),
                         const SizedBox(height: 24),
                         ConstrainedBox(
@@ -761,7 +783,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildModeSelector(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  Center(child: _buildStandeeLanguageToggle()),
+                  const SizedBox(height: 12),
                   Center(child: _buildStandeePreview()),
                   const SizedBox(height: 16),
                   _buildActionButtons(),
@@ -777,6 +801,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     const SizedBox(height: 16),
                   ],
                   _buildModularTogglesCard(),
+                  const SizedBox(height: 16),
+                  _buildLanguageCustomizerCard(),
                   const SizedBox(height: 16),
                   _buildBrandingAndColorsCard(),
                   const SizedBox(height: 32),
@@ -951,11 +977,42 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
+
+                        // Store Logo (Rendered prominently right above Store Name if configured)
+                        if (_storeLogoUrl != null && _storeLogoUrl!.isNotEmpty) ...[
+                          Container(
+                            width: 58,
+                            height: 58,
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              border: Border.all(
+                                color: _accentColor.withValues(alpha: 0.3),
+                                width: 1.8,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: Image.network(
+                                _storeLogoUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                              ),
+                            ),
+                          ),
+                        ],
 
                         // Store Title (Fixed from Business Profile)
                         Text(
-                          _storeName.trim().isEmpty ? 'Memuatkan...' : _storeName.trim(),
+                          _storeName.trim().isEmpty ? (_standeeLanguage == 'en' ? 'Loading...' : 'Memuatkan...') : _storeName.trim(),
                           textAlign: TextAlign.center,
                           style: GoogleFonts.outfit(
                             color: const Color(0xFF0F172A),
@@ -983,10 +1040,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                               ],
                             ),
                             child: Text(
-                              _tableCtrl.text.trim().toUpperCase().startsWith('MEJA') ||
-                                      _tableCtrl.text.trim().toUpperCase().startsWith('TABLE')
-                                  ? _tableCtrl.text.trim().toUpperCase()
-                                  : 'TABLE ${_tableCtrl.text.trim().toUpperCase()}',
+                              _getTableBadgeText(),
                               style: GoogleFonts.outfit(
                                 color: Colors.white,
                                 fontSize: 14.5,
@@ -996,8 +1050,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             ),
                           ),
 
-                        // Promo Badge (if promo mode or toggle on)
-                        if (_selectedMode == QrMode.promo || _includePromoBadge)
+                        // Promo Badge (if promo mode or toggle on AND promo code is filled)
+                        if ((_selectedMode == QrMode.promo || _includePromoBadge) && _promoCodeCtrl.text.trim().isNotEmpty)
                           Container(
                             margin: const EdgeInsets.symmetric(vertical: 6),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -1012,7 +1066,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                                 const Icon(Icons.local_offer_rounded, color: Color(0xFFD97706), size: 14),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'KOD: ${_promoCodeCtrl.text.toUpperCase()} (${_promoDiscountCtrl.text})',
+                                  _getPromoBadgeText(),
                                   style: GoogleFonts.inter(
                                     color: const Color(0xFFB45309),
                                     fontSize: 11,
@@ -1023,12 +1077,12 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             ),
                           ),
 
-                        // Custom Tagline Badge (if enabled)
-                        if (_includeCustomTagline && _customTaglineCtrl.text.isNotEmpty)
+                        // Custom Tagline Badge (if enabled AND tagline is filled)
+                        if (_includeCustomTagline && _customTaglineCtrl.text.trim().isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 4, bottom: 6),
                             child: Text(
-                              _customTaglineCtrl.text,
+                              _customTaglineCtrl.text.trim(),
                               style: GoogleFonts.inter(
                                 color: const Color(0xFF475569),
                                 fontSize: 12,
@@ -1081,8 +1135,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                         ),
                         const SizedBox(height: 12),
 
-                        // WiFi Badge (if enabled or if mode is wifi)
-                        if (_includeWifi || _selectedMode == QrMode.wifi)
+                        // WiFi Badge (if enabled or if mode is wifi AND wifi ssid is filled)
+                        if ((_includeWifi || _selectedMode == QrMode.wifi) && _wifiSsidCtrl.text.trim().isNotEmpty)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
@@ -1096,7 +1150,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                                 const Icon(Icons.wifi, size: 14, color: Color(0xFF334155)),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'WiFi: ${_wifiSsidCtrl.text}  |  Pass: ${_wifiPasswordCtrl.text}',
+                                  _getWifiBadgeText(),
                                   style: GoogleFonts.inter(
                                     color: const Color(0xFF334155),
                                     fontSize: 10.5,
@@ -1141,7 +1195,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             ),
                             const SizedBox(width: 7),
                             Text(
-                              'Powered by Ngam',
+                              _getFooterText(),
                               style: GoogleFonts.outfit(
                                 color: const Color(0xFF64748B),
                                 fontSize: 11.5,
@@ -1478,33 +1532,94 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   }
 
   String _getHeaderBadgeText() {
-    switch (_selectedMode) {
-      case QrMode.storefront:
-        return 'Scan To Browse & Order';
-      case QrMode.table:
-        return 'Dine-In Table Order';
-      case QrMode.promo:
-        return 'Special Promo Voucher';
-      case QrMode.wifi:
-        return 'Free Guest Wi-Fi Access';
-      case QrMode.queue:
-        return 'Smart Walk-In Queue';
+    if (_standeeLanguage == 'en') {
+      switch (_selectedMode) {
+        case QrMode.storefront:
+          return 'Scan To Browse & Order';
+        case QrMode.table:
+          return 'Dine-In Table Order';
+        case QrMode.promo:
+          return 'Special Promo Voucher';
+        case QrMode.wifi:
+          return 'Free Guest Wi-Fi Access';
+        case QrMode.queue:
+          return 'Smart Walk-In Queue';
+      }
+    } else {
+      switch (_selectedMode) {
+        case QrMode.storefront:
+          return 'Imbas Untuk Pesan & Katalog';
+        case QrMode.table:
+          return 'Pesanan Meja Dine-In';
+        case QrMode.promo:
+          return 'Baucar Promosi Khas';
+        case QrMode.wifi:
+          return 'Sambungan Wi-Fi Tetamu';
+        case QrMode.queue:
+          return 'Giliran Pintar Walk-In';
+      }
     }
   }
 
   String _getInstructionText() {
-    switch (_selectedMode) {
-      case QrMode.wifi:
-        return 'Halakan kamera telefon untuk sambung WiFi';
-      case QrMode.promo:
-        return 'Imbas kamera untuk tebus tawaran ini';
-      case QrMode.queue:
-        return 'Imbas kamera untuk ambil giliran walk-in';
-      case QrMode.table:
-        return 'Imbas kamera untuk pesan terus ke meja';
-      case QrMode.storefront:
-        return 'Halakan kamera telefon anda untuk memesan';
+    if (_standeeLanguage == 'en') {
+      switch (_selectedMode) {
+        case QrMode.wifi:
+          return 'Point phone camera to connect Wi-Fi';
+        case QrMode.promo:
+          return 'Scan with camera to redeem this promo';
+        case QrMode.queue:
+          return 'Scan with camera to join walk-in queue';
+        case QrMode.table:
+          return 'Scan with camera to order directly to table';
+        case QrMode.storefront:
+          return 'Point phone camera to order';
+      }
+    } else {
+      switch (_selectedMode) {
+        case QrMode.wifi:
+          return 'Halakan kamera telefon untuk sambung WiFi';
+        case QrMode.promo:
+          return 'Imbas kamera untuk tebus tawaran ini';
+        case QrMode.queue:
+          return 'Imbas kamera untuk ambil giliran walk-in';
+        case QrMode.table:
+          return 'Imbas kamera untuk pesan terus ke meja';
+        case QrMode.storefront:
+          return 'Halakan kamera telefon anda untuk memesan';
+      }
     }
+  }
+
+  String _getTableBadgeText() {
+    final raw = _tableCtrl.text.trim();
+    final clean = raw.toUpperCase().replaceAll('TABLE', '').replaceAll('MEJA', '').trim();
+    final tableNum = clean.isEmpty ? '1' : clean;
+    return _standeeLanguage == 'en' ? 'TABLE $tableNum' : 'MEJA $tableNum';
+  }
+
+  String _getPromoBadgeText() {
+    final code = _promoCodeCtrl.text.trim().toUpperCase();
+    final discount = _promoDiscountCtrl.text.trim();
+    final prefix = _standeeLanguage == 'en' ? 'CODE' : 'KOD';
+    if (discount.isNotEmpty) {
+      return '$prefix: $code ($discount)';
+    }
+    return '$prefix: $code';
+  }
+
+  String _getWifiBadgeText() {
+    final ssid = _wifiSsidCtrl.text.trim().isEmpty ? 'WiFi' : _wifiSsidCtrl.text.trim();
+    final pass = _wifiPasswordCtrl.text.trim();
+    final passLabel = _standeeLanguage == 'en' ? 'Pass' : 'K.Laluan';
+    if (pass.isNotEmpty) {
+      return 'WiFi: $ssid  |  $passLabel: $pass';
+    }
+    return 'WiFi: $ssid';
+  }
+
+  String _getFooterText() {
+    return _standeeLanguage == 'en' ? 'Powered by Ngam' : 'Dikuasakan oleh Ngam';
   }
 
   Widget _buildWifiCustomizerCard() {
@@ -1618,6 +1733,187 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             focusColor: const Color(0xFFF59E0B),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStandeeLanguageToggle() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildLanguagePillItem('ms', '🇲🇾 Bahasa Melayu'),
+          const SizedBox(width: 4),
+          _buildLanguagePillItem('en', '🇬🇧 English'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguagePillItem(String code, String label) {
+    final bool isSelected = _standeeLanguage == code;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _standeeLanguage = code;
+          if (_includeCustomTagline) {
+            if (code == 'en' &&
+                (_customTaglineCtrl.text.trim().isEmpty ||
+                    _customTaglineCtrl.text == 'Imbas Untuk Pesan & Bayar Terus')) {
+              _customTaglineCtrl.text = 'Scan to Order & Pay Directly';
+            } else if (code == 'ms' &&
+                (_customTaglineCtrl.text.trim().isEmpty ||
+                    _customTaglineCtrl.text == 'Scan to Order & Pay Directly')) {
+              _customTaglineCtrl.text = 'Imbas Untuk Pesan & Bayar Terus';
+            }
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? _accentColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            color: isSelected ? Colors.white : Colors.white60,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageCustomizerCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141424),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: HugeIcon(icon: HugeIcons.strokeRoundedTranslate, color: _accentColor, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Bahasa Standee (Language)',
+                style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _buildLanguageOptionCard(
+                  code: 'ms',
+                  flag: '🇲🇾',
+                  title: 'Bahasa Melayu',
+                  subtitle: 'Gaya tempatan & mesra',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildLanguageOptionCard(
+                  code: 'en',
+                  flag: '🇬🇧',
+                  title: 'English',
+                  subtitle: 'Tourist / global standard',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLanguageOptionCard({
+    required String code,
+    required String flag,
+    required String title,
+    required String subtitle,
+  }) {
+    final bool isSelected = _standeeLanguage == code;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _standeeLanguage = code;
+          if (_includeCustomTagline) {
+            if (code == 'en' &&
+                (_customTaglineCtrl.text.trim().isEmpty ||
+                    _customTaglineCtrl.text == 'Imbas Untuk Pesan & Bayar Terus')) {
+              _customTaglineCtrl.text = 'Scan to Order & Pay Directly';
+            } else if (code == 'ms' &&
+                (_customTaglineCtrl.text.trim().isEmpty ||
+                    _customTaglineCtrl.text == 'Scan to Order & Pay Directly')) {
+              _customTaglineCtrl.text = 'Imbas Untuk Pesan & Bayar Terus';
+            }
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? _accentColor.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? _accentColor : Colors.white.withValues(alpha: 0.1),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(flag, style: const TextStyle(fontSize: 20)),
+                if (isSelected)
+                  Icon(Icons.check_circle_rounded, color: _accentColor, size: 16),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: GoogleFonts.inter(
+                color: Colors.white54,
+                fontSize: 10.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

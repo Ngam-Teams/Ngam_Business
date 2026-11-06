@@ -1782,7 +1782,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   border: Border.all(color: Colors.black12),
                 ),
                 child: QrImageView(
-                  data: 'WIFI:T:WPA;S:WarungNgam_Guest;P:ngamsedap2026;;',
+                  data: 'WIFI:T:WPA;S:${(BusinessService.cachedProfile?["settings"] as Map?)?["wifi_ssid"]?.toString() ?? "WiFi_Kedai"};P:${(BusinessService.cachedProfile?["settings"] as Map?)?["wifi_password"]?.toString() ?? ""};;',
                   version: QrVersions.auto,
                   size: _paperWidth == 58 ? 68 : 80,
                   eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
@@ -1795,7 +1795,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
-                'SSID: WarungNgam_Guest',
+                'SSID: ${(BusinessService.cachedProfile?["settings"] as Map?)?["wifi_ssid"]?.toString() ?? "WiFi_Kedai"}',
                 style: _getReceiptFont(color: Colors.black45, fontSize: 7.0),
               ),
             ],
