@@ -105,6 +105,107 @@ class _LoginPageState extends State<LoginPage>
     });
   }
 
+  String _sanitizeAuthError(dynamic e) {
+    if (e == null) return '';
+    final msg = e.toString();
+    final lower = msg.toLowerCase();
+
+    if (lower.contains('invalid login credentials') ||
+        lower.contains('invalid_credentials') ||
+        lower.contains('invalid credentials') ||
+        lower.contains('invalid email or password')) {
+      return 'E-mel atau kata laluan tidak sah. Sila semak semula.';
+    }
+    if (lower.contains('email not confirmed') || lower.contains('email_not_confirmed')) {
+      return 'E-mel anda belum disahkan. Sila periksa peti masuk e-mel anda.';
+    }
+    if (lower.contains('user not found') || lower.contains('user_not_found')) {
+      return 'Akaun dengan e-mel ini tidak dijumpai.';
+    }
+    if (lower.contains('already registered') ||
+        lower.contains('already exists') ||
+        lower.contains('user_already_exists')) {
+      return 'E-mel ini telah didaftarkan. Sila log masuk ke akaun anda.';
+    }
+    if (lower.contains('password should be at least') || lower.contains('weak_password')) {
+      return 'Kata laluan mestilah sekurang-kurangnya 6 aksara.';
+    }
+    if (lower.contains('rate limit') ||
+        lower.contains('over_request_rate_limit') ||
+        lower.contains('too many requests')) {
+      return 'Terlalu banyak percubaan. Sila tunggu sebentar sebelum cuba lagi.';
+    }
+    if (lower.contains('socketexception') ||
+        lower.contains('network') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('connection refused') ||
+        lower.contains('clientexception')) {
+      return 'Masalah sambungan internet. Sila semak sambungan anda.';
+    }
+
+    final match = RegExp(r'message:\s*([^,\)]+)').firstMatch(msg);
+    if (match != null) {
+      final clean = match.group(1)?.trim();
+      if (clean != null && clean.isNotEmpty) {
+        if (clean.toLowerCase().contains('invalid login credentials')) {
+          return 'E-mel atau kata laluan tidak sah. Sila semak semula.';
+        }
+        return clean;
+      }
+    }
+
+    final cleanStr = msg
+        .replaceAll(RegExp(r'^(AuthApiException|AuthException|Exception):\s*'), '')
+        .replaceAll(RegExp(r',\s*statusCode:\s*\d+.*$'), '')
+        .trim();
+
+    return cleanStr.isNotEmpty ? cleanStr : 'Log masuk gagal. Sila semak maklumat anda dan cuba lagi.';
+  }
+
+  Widget _buildErrorBanner(String error) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.error_outline_rounded,
+              color: Color(0xFFFF5252),
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              error,
+              style: GoogleFonts.inter(
+                color: const Color(0xFFFF6B6B),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleLogin() async {
     if (!_loginFormKey.currentState!.validate()) return;
     setState(() {
@@ -121,7 +222,7 @@ class _LoginPageState extends State<LoginPage>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
+          _error = _sanitizeAuthError(e);
           _loading = false;
         });
       }
@@ -155,7 +256,7 @@ class _LoginPageState extends State<LoginPage>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
+          _error = _sanitizeAuthError(e);
           _loading = false;
         });
       }
@@ -206,7 +307,7 @@ class _LoginPageState extends State<LoginPage>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
+          _error = _sanitizeAuthError(e);
           _loading = false;
         });
       }
@@ -226,7 +327,7 @@ class _LoginPageState extends State<LoginPage>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
+          _error = _sanitizeAuthError(e);
           _loading = false;
         });
       }
@@ -673,19 +774,8 @@ class _LoginPageState extends State<LoginPage>
               const SizedBox(height: 24),
 
               // Error Message
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
-                    _error!,
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFFFF5252),
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+              if (_error != null && _error!.isNotEmpty)
+                _buildErrorBanner(_error!),
 
               // Sign In Button
               SizedBox(
@@ -878,19 +968,8 @@ class _LoginPageState extends State<LoginPage>
                     const SizedBox(height: 24),
 
                     // Error Message
-                    if (_error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Text(
-                          _error!,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFFFF5252),
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+                    if (_error != null && _error!.isNotEmpty)
+                      _buildErrorBanner(_error!),
 
                     // Submit Button
                     SizedBox(
@@ -1208,19 +1287,8 @@ class _LoginPageState extends State<LoginPage>
           const SizedBox(height: 20),
 
           // Error Message
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                _error!,
-                style: GoogleFonts.inter(
-                  color: const Color(0xFFFF5252),
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
+          if (_error != null && _error!.isNotEmpty)
+            _buildErrorBanner(_error!),
 
           // Submit Button
           SizedBox(
