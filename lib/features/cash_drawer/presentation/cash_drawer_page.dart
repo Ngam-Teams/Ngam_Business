@@ -706,7 +706,7 @@ Status: Syif Ditutup & Disahkan ke Cloud
         ),
       ],
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 68, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

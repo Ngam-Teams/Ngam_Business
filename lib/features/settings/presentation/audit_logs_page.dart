@@ -98,11 +98,16 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
-          child: Column(
-            children: [
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 68),
+              ),
               // Search & Filter Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   children: [
                     TextField(
@@ -159,22 +164,37 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                   ],
                 ),
               ),
+              ),
 
-              const SizedBox(height: 8),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 8),
+              ),
 
               // Logs List
-              Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
-                    : _logs.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                            itemCount: _logs.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 10),
-                            itemBuilder: (context, i) => _buildLogCard(_logs[i]),
-                          ),
-              ),
+              if (_loading)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5))),
+                )
+              else if (_logs.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _buildEmptyState(),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) {
+                        if (i.isOdd) return const SizedBox(height: 10);
+                        final itemIdx = i ~/ 2;
+                        return _buildLogCard(_logs[itemIdx]);
+                      },
+                      childCount: _logs.isEmpty ? 0 : (_logs.length * 2 - 1),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),

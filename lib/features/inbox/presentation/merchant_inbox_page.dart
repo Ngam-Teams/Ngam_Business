@@ -243,7 +243,10 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
             onTap: () => _callCustomer(_activeThread!['phone'] as String),
           ),
       ],
-      body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+      body: Padding(
+        padding: const EdgeInsets.only(top: 68),
+        child: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+      ),
     );
   }
 

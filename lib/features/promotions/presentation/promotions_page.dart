@@ -231,8 +231,9 @@ class _PromotionsPageState extends State<PromotionsPage> {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
             slivers: [
-
-
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 68),
+              ),
               // Metrics Bar
               SliverToBoxAdapter(
                 child: Padding(

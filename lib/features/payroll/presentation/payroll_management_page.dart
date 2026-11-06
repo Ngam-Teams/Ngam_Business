@@ -383,7 +383,7 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
 
   Widget _buildPayrollRunTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 120, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -605,7 +605,7 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
 
   Widget _buildSettingsTab() {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 120, 16, 16),
       itemCount: _settings.length,
       itemBuilder: (ctx, idx) {
         final s = _settings[idx];

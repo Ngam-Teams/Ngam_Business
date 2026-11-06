@@ -508,7 +508,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
               child: CircularProgressIndicator(color: Color(0xFF42A5F5)),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0).copyWith(bottom: 120),
+              padding: const EdgeInsets.fromLTRB(20, 68, 20, 120),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 680),

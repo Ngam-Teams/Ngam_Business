@@ -467,21 +467,17 @@ class DashboardScaffold extends StatelessWidget {
     final double hPad = isDesktop ? 20.0 : 16.0;
     final double topPad = isDesktop ? 20.0 : 16.0;
     final double rPad = isDesktop ? 24.0 : 16.0;
-    final double bPad = isDesktop ? 20.0 : 0.0;
     final bool hasSubtitle = pageSubtitle.trim().isNotEmpty;
-    final double headerHeight = hasSubtitle ? 68.0 : 54.0;
 
     return Stack(
       children: [
-        // Content Area underneath top bar
+        // Content Area occupies the full Stack from top: 0 to bottom so content
+        // glides smoothly beneath the floating top bar!
         Positioned.fill(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(hPad, topPad + headerHeight, rPad, bPad),
-            child: child,
-          ),
+          child: child,
         ),
 
-        // Floating Top Bar with transparent parent container so glassmorphic buttons shine
+        // Floating Top Bar with transparent parent container and liquid frosted glass components
         Positioned(
           top: topPad,
           left: hPad,
@@ -492,35 +488,12 @@ class DashboardScaffold extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        pageTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.5,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (hasSubtitle) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          pageSubtitle,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.45),
-                            fontSize: 13,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
+                Flexible(
+                  child: GlassTitlePill(
+                    title: pageTitle,
+                    subtitle: hasSubtitle ? pageSubtitle : null,
+                    centerTitle: false,
+                    height: 44,
                   ),
                 ),
                 const SizedBox(width: 12),

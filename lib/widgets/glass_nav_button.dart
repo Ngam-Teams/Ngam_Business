@@ -653,9 +653,6 @@ class GlassScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool effectiveDark =
         isDark ?? (Theme.of(context).brightness == Brightness.dark);
-    final double computedTopPadding =
-        bottomTabBar != null ? (contentTopPadding + 52.0) : contentTopPadding;
-
     return Scaffold(
       backgroundColor: backgroundColor ??
           (effectiveDark ? const Color(0xFF0A0A14) : const Color(0xFFF8FAFC)),
@@ -664,11 +661,10 @@ class GlassScaffold extends StatelessWidget {
       body: SafeArea(
         child: Stack(
           children: [
+            // Body fills the full stack from top: 0 to bottom so scrolling content
+            // glides seamlessly beneath the floating top bar!
             Positioned.fill(
-              child: Padding(
-                padding: EdgeInsets.only(top: computedTopPadding),
-                child: body,
-              ),
+              child: body,
             ),
             FloatingTopBar(
               title: title,

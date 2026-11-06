@@ -247,7 +247,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
       title: 'Subscription & Plans',
       subtitle: 'Pelan langganan & keupayaan',
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 68, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

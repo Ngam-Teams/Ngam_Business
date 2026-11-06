@@ -600,7 +600,7 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
 
   Widget _buildOverviewTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 120, 20, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -864,7 +864,7 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
 
   Widget _buildHistoryTab() {
     return ListView.builder(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 120, 20, 20),
       itemCount: _settlementHistory.length,
       itemBuilder: (context, index) {
         final item = _settlementHistory[index];

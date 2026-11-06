@@ -411,7 +411,9 @@ class _KdsPageState extends State<KdsPage> {
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFFF9C80E)),
             )
-          : LayoutBuilder(
+          : Padding(
+              padding: const EdgeInsets.only(top: 68),
+              child: LayoutBuilder(
               builder: (context, constraints) {
                 final isMultiColumn = constraints.maxWidth >= 900;
 
@@ -459,6 +461,7 @@ class _KdsPageState extends State<KdsPage> {
                   );
                 }
               },
+            ),
             ),
     );
   }

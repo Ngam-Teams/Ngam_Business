@@ -165,89 +165,94 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
-          : Column(
-              children: [
-                // ─── Search and Filter Header ────────────────────────
-                Container(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  color: const Color(0xFF10101A),
-                  child: Column(
-                    children: [
-                      // Search Bar
-                      TextField(
-                        controller: _searchController,
-                        onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: 'Search products, services, SKU or categories...',
-                          hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                          prefixIcon: const Icon(Icons.search, color: Colors.white54, size: 20),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, color: Colors.white54, size: 18),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                )
-                              : null,
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: 0.05),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: Color(0xFF42A5F5)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Filter Pills (All / Products / Services)
-                      Row(
+          : RefreshIndicator(
+              color: const Color(0xFF42A5F5),
+              onRefresh: _loadProducts,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                slivers: [
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 68),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Column(
                         children: [
-                          _buildFilterChip('all', 'All (${_products.length})'),
-                          const SizedBox(width: 8),
-                          _buildFilterChip('product', '📦 Products ($productCount)'),
-                          const SizedBox(width: 8),
-                          _buildFilterChip('service', '✂️ Services ($serviceCount)'),
+                          // Search Bar
+                          TextField(
+                            controller: _searchController,
+                            onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            decoration: InputDecoration(
+                              hintText: 'Search products, services, SKU or categories...',
+                              hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                              prefixIcon: const Icon(Icons.search, color: Colors.white54, size: 20),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear, color: Colors.white54, size: 18),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                  : null,
+                              filled: true,
+                              fillColor: Colors.white.withValues(alpha: 0.05),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: const BorderSide(color: Color(0xFF42A5F5)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Filter Pills (All / Products / Services)
+                          Row(
+                            children: [
+                              _buildFilterChip('all', 'All (${_products.length})'),
+                              const SizedBox(width: 8),
+                              _buildFilterChip('product', '📦 Products ($productCount)'),
+                              const SizedBox(width: 8),
+                              _buildFilterChip('service', '✂️ Services ($serviceCount)'),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-
-                // ─── Products & Services Grid ────────────────────────
-                Expanded(
-                  child: filtered.isEmpty
-                      ? _buildEmptyState()
-                      : RefreshIndicator(
-                          color: const Color(0xFF42A5F5),
-                          onRefresh: _loadProducts,
-                          child: GridView.builder(
-                            padding: const EdgeInsets.all(16).copyWith(bottom: 100),
-                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 220,
-                              crossAxisSpacing: 14,
-                              mainAxisSpacing: 14,
-                              childAspectRatio: 0.72,
-                            ),
-                            itemCount: filtered.length,
-                            itemBuilder: (context, index) {
-                              final item = filtered[index];
-                              return _buildProductCard(item);
-                            },
-                          ),
+                  if (filtered.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildEmptyState(),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 220,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio: 0.72,
                         ),
-                ),
-              ],
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => _buildProductCard(filtered[index]),
+                          childCount: filtered.length,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
     );
   }

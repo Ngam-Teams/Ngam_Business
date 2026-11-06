@@ -191,7 +191,7 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
           : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.fromLTRB(20, 68, 20, 40),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 580),

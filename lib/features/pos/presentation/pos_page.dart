@@ -1061,7 +1061,9 @@ class _PosPageState extends State<PosPage> {
         final isWide = constraints.maxWidth >= 700;
 
         if (isWide) {
-          return Row(
+          return Padding(
+            padding: const EdgeInsets.only(top: 72),
+            child: Row(
             children: [
               Expanded(flex: 3, child: _buildProductGrid()),
               const SizedBox(width: 20),
@@ -1070,12 +1072,15 @@ class _PosPageState extends State<PosPage> {
                 child: _buildCart(),
               ),
             ],
+          ),
           );
         }
 
-        return Stack(
-          children: [
-            _buildProductGrid(),
+        return Padding(
+          padding: const EdgeInsets.only(top: 72),
+          child: Stack(
+            children: [
+              _buildProductGrid(),
             if (_cart.isNotEmpty)
               Positioned(
                 bottom: 90,
@@ -1098,6 +1103,7 @@ class _PosPageState extends State<PosPage> {
                 ),
               ),
           ],
+        ),
         );
       },
     );

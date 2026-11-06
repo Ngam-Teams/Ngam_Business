@@ -347,7 +347,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 Expanded(
                   flex: 6,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(left: 24, right: 20, top: 16, bottom: 40),
+                    padding: const EdgeInsets.only(left: 24, right: 20, top: 68, bottom: 40),
                     child: _buildControlsColumn(),
                   ),
                 ),

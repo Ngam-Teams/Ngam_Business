@@ -192,10 +192,15 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
       backgroundColor: const Color(0xFF0A0A14),
       title: 'Customer Insights & VIPs',
       subtitle: 'Analisis pelanggan setia & VIP',
-      body: Column(
-        children: [
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 68),
+          ),
           // Top Stat Summary Banner
-            Padding(
+          SliverToBoxAdapter(
+            child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(
                 children: [
@@ -258,9 +263,11 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
                 ],
               ),
             ),
+          ),
 
-            // Search Bar
-            Padding(
+          // Search Bar
+          SliverToBoxAdapter(
+            child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
               child: TextField(
                 controller: _searchCtrl,
@@ -277,111 +284,117 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
                 ),
               ),
             ),
+          ),
 
-            // Customer List
-            Expanded(
-              child: _filteredCustomers.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.people_outline_rounded, size: 48, color: Colors.white.withValues(alpha: 0.3)),
-                          const SizedBox(height: 14),
-                          const Text('No customers found', style: TextStyle(color: Colors.white70, fontSize: 15)),
-                        ],
+          // Customer List
+          if (_filteredCustomers.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.people_outline_rounded, size: 48, color: Colors.white.withValues(alpha: 0.3)),
+                    const SizedBox(height: 14),
+                    const Text('No customers found', style: TextStyle(color: Colors.white70, fontSize: 15)),
+                  ],
+                ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final cust = _filteredCustomers[index];
+                    final tier = cust['tier'] as String;
+                    final tierCol = _tierColor(tier);
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                       ),
-                    )
-                  : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
-                      itemCount: _filteredCustomers.length,
-                      itemBuilder: (context, index) {
-                        final cust = _filteredCustomers[index];
-                        final tier = cust['tier'] as String;
-                        final tierCol = _tierColor(tier);
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: tierCol.withValues(alpha: 0.15),
-                                    child: Icon(Icons.person, color: tierCol, size: 20),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: tierCol.withValues(alpha: 0.15),
+                                child: Icon(Icons.person, color: tierCol, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
                                       children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              cust['name'],
-                                              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: tierCol.withValues(alpha: 0.15),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                tier,
-                                                style: TextStyle(color: tierCol, fontSize: 10, fontWeight: FontWeight.bold),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 2),
                                         Text(
-                                          cust['phone'],
-                                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                          cust['name'],
+                                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: tierCol.withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            tier,
+                                            style: TextStyle(color: tierCol, fontSize: 10, fontWeight: FontWeight.bold),
+                                          ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.card_giftcard_rounded, color: Color(0xFF42A5F5), size: 22),
-                                    tooltip: 'Send VIP Reward Voucher',
-                                    onPressed: () => _sendPerk(cust),
-                                  ),
-                                ],
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      cust['phone'],
+                                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 12),
-                              Divider(color: Colors.white.withValues(alpha: 0.06), height: 1),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '${cust['visits']} visits · RM ${(cust['totalSpent'] as double).toStringAsFixed(2)} spent',
-                                    style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
-                                  ),
-                                  Text(
-                                    'Last: ${cust['lastVisit']}',
-                                    style: const TextStyle(color: Colors.white38, fontSize: 11),
-                                  ),
-                                ],
+                              IconButton(
+                                icon: const Icon(Icons.card_giftcard_rounded, color: Color(0xFF42A5F5), size: 22),
+                                tooltip: 'Send VIP Reward Voucher',
+                                onPressed: () => _sendPerk(cust),
                               ),
                             ],
                           ),
-                        );
-                      },
-                    ),
+                          const SizedBox(height: 12),
+                          Divider(color: Colors.white.withValues(alpha: 0.06), height: 1),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${cust['visits']} visits · RM ${(cust['totalSpent'] as double).toStringAsFixed(2)} spent',
+                                style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'Last: ${cust['lastVisit']}',
+                                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  childCount: _filteredCustomers.length,
+                ),
+              ),
             ),
-          ],
-        ),
+        ],
+      ),
     );
   }
 }

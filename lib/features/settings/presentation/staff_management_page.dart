@@ -265,7 +265,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
               color: const Color(0xFF42A5F5),
               onRefresh: _loadStaff,
               child: ListView.builder(
-                padding: const EdgeInsets.all(16).copyWith(bottom: 120),
+                padding: const EdgeInsets.fromLTRB(16, 68, 16, 120),
                 itemCount: _staffList.isEmpty ? 3 : _staffList.length + 2,
                 itemBuilder: (context, index) {
                   if (index == 0) {

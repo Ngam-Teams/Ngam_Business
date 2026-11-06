@@ -258,7 +258,7 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
               color: const Color(0xFFEC4899),
               backgroundColor: const Color(0xFF161626),
               child: ListView(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, isPhone ? 90 : 40),
+                padding: EdgeInsets.fromLTRB(16, 68, 16, isPhone ? 90 : 40),
                 children: [
                   _buildMetricHeader(),
                   const SizedBox(height: 16),

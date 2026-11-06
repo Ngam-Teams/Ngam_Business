@@ -451,7 +451,7 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
           : ListView(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
+                  padding: const EdgeInsets.fromLTRB(20, 68, 20, 80),
                   children: [
                     // Rush Hour Mode Banner
                     Container(

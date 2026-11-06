@@ -137,11 +137,16 @@ class _InventoryPageState extends State<InventoryPage> {
             return true;
           }).toList();
 
-          return Column(
-            children: [
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 68),
+              ),
               // Low Stock / Out of Stock Warning Banner
-                if (lowStockCount > 0 || outOfStockCount > 0)
-                  Container(
+              if (lowStockCount > 0 || outOfStockCount > 0)
+                SliverToBoxAdapter(
+                  child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -167,8 +172,10 @@ class _InventoryPageState extends State<InventoryPage> {
                     ),
                   ),
 
-                // Search Bar
-                Padding(
+              ),
+              // Search Bar
+              SliverToBoxAdapter(
+                child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
                   child: TextField(
                     controller: _searchCtrl,
@@ -186,8 +193,10 @@ class _InventoryPageState extends State<InventoryPage> {
                   ),
                 ),
 
-                // Filter Chips
-                SizedBox(
+              ),
+              // Filter Chips
+              SliverToBoxAdapter(
+                child: SizedBox(
                   height: 38,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
@@ -249,38 +258,43 @@ class _InventoryPageState extends State<InventoryPage> {
                     },
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 14),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 14),
+              ),
 
-                // Inventory List
-                Expanded(
-                  child: snapshot.connectionState == ConnectionState.waiting && allItems.isEmpty
-                      ? const Center(
-                          child: CircularProgressIndicator(color: Color(0xFF42A5F5)),
-                        )
-                      : filteredItems.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.inventory_2_outlined, size: 48, color: Colors.white.withValues(alpha: 0.3)),
-                                  const SizedBox(height: 14),
-                                  const Text('Tiada produk dijumpai', style: TextStyle(color: Colors.white70, fontSize: 15)),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _searchQuery.isNotEmpty
-                                        ? 'Cuba cari dengan kata kunci lain'
-                                        : 'Tambah produk fizikal di Katalog untuk mula jejaki stok',
-                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
-                              itemCount: filteredItems.length,
-                              itemBuilder: (context, index) {
+              // Inventory List
+              if (snapshot.connectionState == ConnectionState.waiting && allItems.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: CircularProgressIndicator(color: Color(0xFF42A5F5)),
+                  ),
+                )
+              else if (filteredItems.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 54, color: Colors.white.withValues(alpha: 0.3)),
+                        const SizedBox(height: 14),
+                        Text(
+                          _searchQuery.isNotEmpty ? 'Tiada item sepadan dengan carian' : 'Tiada item dalam kategori ini',
+                          style: const TextStyle(color: Colors.white70, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 80),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
                                 final product = filteredItems[index];
                                 final int stock = product.stock;
                                 final bool isLow = product.trackInventory && product.isLowStock;
@@ -543,12 +557,14 @@ class _InventoryPageState extends State<InventoryPage> {
                                   ),
                                 );
                               },
+                              childCount: filteredItems.length,
                             ),
-                ),
-              ],
-            );
-          },
-        ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
     );
   }
 }

@@ -162,10 +162,15 @@ class _CustomerReviewsPageState extends State<CustomerReviewsPage> {
       backgroundColor: const Color(0xFF0A0A14),
       title: 'Customer Reviews',
       subtitle: 'Maklum balas & ulasan pelanggan',
-      body: Column(
-        children: [
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 68),
+          ),
           // Rating Overview Banner
-            Container(
+          SliverToBoxAdapter(
+            child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -223,11 +228,15 @@ class _CustomerReviewsPageState extends State<CustomerReviewsPage> {
                 ],
               ),
             ),
+          ),
 
-            const SizedBox(height: 8),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 8),
+          ),
 
-            // Filter Chips
-            SizedBox(
+          // Filter Chips
+          SliverToBoxAdapter(
+            child: SizedBox(
               height: 40,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
@@ -265,27 +274,33 @@ class _CustomerReviewsPageState extends State<CustomerReviewsPage> {
                 },
               ),
             ),
+          ),
 
-            const SizedBox(height: 14),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 14),
+          ),
 
-            // Reviews List
-            Expanded(
-              child: _filteredReviews.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.chat_bubble_outline_rounded, size: 48, color: Colors.white.withValues(alpha: 0.3)),
-                          const SizedBox(height: 14),
-                          const Text('No reviews found in this category', style: TextStyle(color: Colors.white70, fontSize: 15)),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
-                      itemCount: _filteredReviews.length,
-                      itemBuilder: (context, index) {
+          // Reviews List
+          if (_filteredReviews.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.chat_bubble_outline_rounded, size: 48, color: Colors.white.withValues(alpha: 0.3)),
+                    const SizedBox(height: 14),
+                    const Text('No reviews found in this category', style: TextStyle(color: Colors.white70, fontSize: 15)),
+                  ],
+                ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
                         final rev = _filteredReviews[index];
                         final String id = rev['id'];
                         final bool hasReply = rev['merchantReply'] != null;
@@ -445,11 +460,13 @@ class _CustomerReviewsPageState extends State<CustomerReviewsPage> {
                             ],
                           ),
                         );
-                      },
-                    ),
+                  },
+                  childCount: _filteredReviews.length,
+                ),
+              ),
             ),
-          ],
-        ),
+        ],
+      ),
     );
   }
 }

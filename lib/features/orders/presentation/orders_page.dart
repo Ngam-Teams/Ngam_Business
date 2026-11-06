@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -738,116 +739,17 @@ class _OrdersPageState extends State<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        // Top Segmented Switcher: Pesanan (Orders) vs Tempahan (Bookings)
-        Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedMainTab = 0),
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _selectedMainTab == 0 ? const Color(0xFF42A5F5) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: _selectedMainTab == 0
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        HugeIcon(
-                          icon: HugeIcons.strokeRoundedInvoice01,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Pesanan Kedai',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedMainTab = 1),
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _selectedMainTab == 1 ? const Color(0xFF42A5F5) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: _selectedMainTab == 1
-                          ? [
-                              BoxShadow(
-                                color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        HugeIcon(
-                          icon: HugeIcons.strokeRoundedCalendar01,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          'Tempahan & Slots',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Body Content based on selected tab
-        Expanded(
+        // Body Content based on selected tab — occupies full Stack so content glides beneath floating switcher & top bar!
+        Positioned.fill(
           child: _selectedMainTab == 1
               ? const AppointmentsPage(isEmbedded: true)
               : StreamBuilder<List<OrderModel>>(
                   stream: _ordersStream,
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
-                      return Center(child: Text('Error loading orders: ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)));
+                      return Center(child: Text('Error loading orders: ', style: const TextStyle(color: Colors.redAccent)));
                     }
 
                     if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
@@ -871,133 +773,307 @@ class _OrdersPageState extends State<OrdersPage> {
                         o.status == 'completed' || o.status == 'cancelled').toList();
 
                     if (allOrders.isEmpty) {
-                      return _buildEmptyState();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 126),
+                        child: _buildEmptyState(),
+                      );
                     }
 
                     return ListView(
-                      padding: const EdgeInsets.all(16).copyWith(bottom: 100),
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 126, 16, 100),
                       children: [
                         // Kitchen Display (KDS) Quick Access Banner
-            InkWell(
-              onTap: () => context.push('/kds'),
-              borderRadius: BorderRadius.circular(16),
+                        InkWell(
+                          onTap: () => context.push('/kds'),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFFF9C80E).withValues(alpha: 0.15),
+                                  const Color(0xFF10B981).withValues(alpha: 0.08),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFF9C80E).withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF9C80E).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const HugeIcon(
+                                    icon: HugeIcons.strokeRoundedTv01,
+                                    color: Color(0xFFF9C80E),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Buka Live Order Board',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        'Paparan langsung status penyediaan & giliran pesanan',
+                                        style: TextStyle(
+                                          color: Colors.white60,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 14),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // QR Pickup Code Verifier Button
+                        InkWell(
+                          onTap: () => _openPickupQrVerifier(allOrders),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00E5FF).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF00E5FF).withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF00E5FF), size: 22),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Sahkan QR Ambil Pesanan',
+                                        style: TextStyle(
+                                          color: Color(0xFF00E5FF),
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      SizedBox(height: 2),
+                                      Text(
+                                        'Imbas kod QR pada resit/aplikasi pelanggan untuk serahan pantas',
+                                        style: TextStyle(
+                                          color: Colors.white60,
+                                          fontSize: 11.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF00E5FF), size: 14),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Section: Aktif (Pending, Preparing, Ready)
+                        if (pendingOrders.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF42A5F5),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'PESANAN AKTIF ()',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ...pendingOrders.map((o) => _buildOrderCard(o)),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Section: Selesai / Dibatalkan
+                        if (completedOrders.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'SELESAI / SEJARAH ()',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ...completedOrders.map((o) => _buildOrderCard(o)),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+        ),
+
+        // Floating Frosted Glass Segmented Switcher (Pesanan Kedai vs Tempahan & Slots)
+        Positioned(
+          top: 68,
+          left: 16,
+          right: 16,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      const Color(0xFFF9C80E).withValues(alpha: 0.15),
-                      const Color(0xFF10B981).withValues(alpha: 0.08),
-                    ],
-                  ),
+                  color: Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFF9C80E).withValues(alpha: 0.35),
-                  ),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9C80E).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const HugeIcon(
-                        icon: HugeIcons.strokeRoundedTv01,
-                        color: Color(0xFFF9C80E),
-                        size: 20,
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedMainTab = 0),
+                        behavior: HitTestBehavior.opaque,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _selectedMainTab == 0 ? const Color(0xFF42A5F5) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: _selectedMainTab == 0
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : null,
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              HugeIcon(
+                                icon: HugeIcons.strokeRoundedInvoice01,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Pesanan Kedai',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Buka Live Order Board',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedMainTab = 1),
+                        behavior: HitTestBehavior.opaque,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _selectedMainTab == 1 ? const Color(0xFF42A5F5) : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: _selectedMainTab == 1
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : null,
                           ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Paparan langsung status penyediaan & giliran pesanan',
-                            style: TextStyle(
-                              color: Colors.white60,
-                              fontSize: 12,
-                            ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              HugeIcon(
+                                icon: HugeIcons.strokeRoundedCalendar01,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Tempahan & Slots',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Color(0xFFF9C80E),
-                      size: 16,
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            InkWell(
-              onTap: () => _openPickupQrVerifier(allOrders),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E5FF).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: 0.35)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF00E5FF), size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      'Imbas / Sahkan Kod QR Pengambilan Pelanggan (NGAM-ORDER)',
-                      style: TextStyle(
-                        color: Color(0xFF00E5FF),
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            if (pendingOrders.isNotEmpty) ...[
-              const Text(
-                'New / Pending',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              ...pendingOrders.map((o) => _buildOrderCard(o)),
-              const SizedBox(height: 24),
-            ],
-            
-            if (completedOrders.isNotEmpty) ...[
-              const Text(
-                'Completed / History',
-                style: TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              ...completedOrders.map((o) => _buildOrderCard(o)),
-            ],
-          ],
-        );
-      },
-    ),
-    ),
-    ],
+          ),
+        ),
+      ],
     );
   }
+
 
   Widget _buildEmptyState() {
     return Center(

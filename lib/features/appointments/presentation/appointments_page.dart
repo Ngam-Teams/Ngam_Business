@@ -1460,7 +1460,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
         child: Stack(
           children: [
             Padding(
-              padding: EdgeInsets.only(top: !widget.isEmbedded ? 64 : 0),
+              padding: EdgeInsets.only(top: widget.isEmbedded ? 126 : 68),
               child: Column(
                 children: [
                   // QR Check-In Bar

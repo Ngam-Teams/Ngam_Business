@@ -700,7 +700,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                 Expanded(
                   flex: 6,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(left: 24, right: 20, top: 20, bottom: 40),
+                    padding: const EdgeInsets.only(left: 24, right: 20, top: 68, bottom: 40),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
