@@ -526,7 +526,7 @@ class _OrdersPageState extends State<OrdersPage> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                     ),
-                    child: cachedItems != null
+                    child: (cachedItems != null && cachedItems.isNotEmpty)
                         ? Column(
                             children: cachedItems.map((item) {
                               final name = item['product_name'] ?? 'Item';
@@ -567,32 +567,29 @@ class _OrdersPageState extends State<OrdersPage> {
                               );
                             }).toList(),
                           )
-                        : FutureBuilder<List<Map<String, dynamic>>>(
-                            future: _ordersService.fetchOrderItems(order.id),
-                            builder: (context, itemSnap) {
-                              if (itemSnap.connectionState == ConnectionState.waiting) {
-                                return const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(16),
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)),
-                                  ),
-                                );
-                              }
-                              final items = itemSnap.data ?? [];
-                              if (items.isNotEmpty) {
-                                _orderItemsCache[order.id] = items;
-                              }
-                              if (items.isEmpty) {
-                                return const Padding(
-                                  padding: EdgeInsets.all(8),
-                                  child: Text('1x Pesanan Am', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                                );
-                              }
-                              return Column(
-                                children: items.map((item) {
-                                  final name = item['product_name'] ?? 'Item';
-                                  final qty = item['quantity'] ?? 1;
-                                  final subtotal = (item['subtotal'] as num?)?.toDouble() ?? 0.0;
+                        : (cachedItems != null && cachedItems.isEmpty)
+                            ? _buildFallbackOrderItemRow(order, fmt)
+                            : FutureBuilder<List<Map<String, dynamic>>>(
+                                future: _ordersService.fetchOrderItems(order.id),
+                                builder: (context, itemSnap) {
+                                  if (itemSnap.connectionState == ConnectionState.waiting) {
+                                    return const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16),
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)),
+                                      ),
+                                    );
+                                  }
+                                  final items = itemSnap.data ?? [];
+                                  _orderItemsCache[order.id] = items;
+                                  if (items.isEmpty) {
+                                    return _buildFallbackOrderItemRow(order, fmt);
+                                  }
+                                  return Column(
+                                    children: items.map((item) {
+                                      final name = item['product_name'] ?? 'Item';
+                                      final qty = item['quantity'] ?? 1;
+                                      final subtotal = (item['subtotal'] as num?)?.toDouble() ?? 0.0;
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 6),
                                     child: Row(
@@ -803,6 +800,190 @@ class _OrdersPageState extends State<OrdersPage> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildFallbackOrderItemRow(OrderModel order, NumberFormat fmt) {
+    final fallbackName = order.notes != null && order.notes!.isNotEmpty
+        ? (order.notes!.replaceAll(RegExp(r'\[.*?\]'), '').trim().isNotEmpty
+            ? order.notes!.replaceAll(RegExp(r'\[.*?\]'), '').trim()
+            : (order.source == 'table' ? 'Pesanan Meja' : (order.source == 'pre_order' ? 'Pre-Order' : 'Pesanan Am')))
+        : (order.source == 'table' ? 'Pesanan Meja' : (order.source == 'pre_order' ? 'Pre-Order' : 'Pesanan Am'));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Text(
+              '1x',
+              style: TextStyle(
+                color: Color(0xFF42A5F5),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              fallbackName,
+              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text(
+            fmt.format(order.total),
+            style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardItemsPreview(OrderModel order, NumberFormat fmt) {
+    final cached = _orderItemsCache[order.id];
+    if (cached != null) {
+      if (cached.isEmpty) {
+        return _buildFallbackOrderItemRow(order, fmt);
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...cached.take(3).map((item) {
+            final name = item['product_name'] ?? 'Item';
+            final qty = item['quantity'] ?? 1;
+            final subtotal = (item['subtotal'] as num?)?.toDouble() ?? 0.0;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2.5),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      '${qty}x',
+                      style: const TextStyle(
+                        color: Color(0xFF42A5F5),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w500),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    fmt.format(subtotal),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            );
+          }),
+          if (cached.length > 3)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '+${cached.length - 3} item lagi',
+                style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.w600),
+              ),
+            ),
+        ],
+      );
+    }
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _ordersService.fetchOrderItems(order.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF42A5F5)),
+                ),
+                SizedBox(width: 8),
+                Text('Memuatkan item...', style: TextStyle(color: Colors.white38, fontSize: 11)),
+              ],
+            ),
+          );
+        }
+        final items = snapshot.data ?? [];
+        _orderItemsCache[order.id] = items;
+        if (items.isEmpty) {
+          return _buildFallbackOrderItemRow(order, fmt);
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ...items.take(3).map((item) {
+              final name = item['product_name'] ?? 'Item';
+              final qty = item['quantity'] ?? 1;
+              final subtotal = (item['subtotal'] as num?)?.toDouble() ?? 0.0;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2.5),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${qty}x',
+                        style: const TextStyle(
+                          color: Color(0xFF42A5F5),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      fmt.format(subtotal),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            if (items.length > 3)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '+${items.length - 3} item lagi',
+                  style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.w600),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -1360,6 +1541,19 @@ class _OrdersPageState extends State<OrdersPage> {
             ],
           ),
           
+          // Items Breakdown Container
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.03),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+            ),
+            child: _buildCardItemsPreview(order, fmt),
+          ),
+
           if (order.notes != null && order.notes!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
