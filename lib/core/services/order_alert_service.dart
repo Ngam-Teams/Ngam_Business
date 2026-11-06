@@ -28,6 +28,13 @@ class OrderAlertService {
   bool _isModalShowing = false;
   void Function(int index)? onSwitchTab;
 
+  bool _isAwaitingOnlinePayment(Map<String, dynamic> order) {
+    final source = (order['source'] ?? 'pos').toString().toLowerCase();
+    final payMethod = (order['payment_method'] ?? 'cash').toString().toLowerCase();
+    final payStatus = (order['payment_status'] ?? '').toString().toLowerCase();
+    return source != 'pos' && payMethod != 'cash' && payStatus == 'pending';
+  }
+
   /// Initializes the listener for incoming orders
   Future<void> initialize({
     required String businessId,
@@ -42,17 +49,17 @@ class OrderAlertService {
       onSwitchTab = onTabSwitch;
     }
 
-    // 1. Seed existing order IDs to avoid alerting on app startup
+    // 1. Seed existing order IDs to avoid alerting on app startup (kecuali pesanan yang masih menunggu bayaran online)
     try {
       final existing = await Supabase.instance.client
           .from('orders')
-          .select('id')
+          .select('id, source, payment_method, payment_status, status')
           .eq('business_id', businessId)
           .order('created_at', ascending: false)
           .limit(60);
 
       for (final item in existing) {
-        if (item['id'] != null) {
+        if (item['id'] != null && !_isAwaitingOnlinePayment(item)) {
           _knownOrderIds.add(item['id'].toString());
         }
       }
@@ -60,7 +67,7 @@ class OrderAlertService {
       debugPrint('[OrderAlertService] Error prefetching orders: $e');
     }
 
-    // 2. Realtime Postgres Changes Subscription
+    // 2. Realtime Postgres Changes Subscription (INSERT + UPDATE apabila bayaran online selesai!)
     try {
       _channel?.unsubscribe();
       _channel = Supabase.instance.client
@@ -78,6 +85,22 @@ class OrderAlertService {
               final newRecord = payload.newRecord;
               if (newRecord.isNotEmpty) {
                 _onNewOrderReceived(newRecord);
+              }
+            },
+          )
+          .onPostgresChanges(
+            event: PostgresChangeEvent.update,
+            schema: 'public',
+            table: 'orders',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'business_id',
+              value: businessId,
+            ),
+            callback: (payload) {
+              final updatedRecord = payload.newRecord;
+              if (updatedRecord.isNotEmpty) {
+                _onNewOrderReceived(updatedRecord);
               }
             },
           )
@@ -113,17 +136,21 @@ class OrderAlertService {
     if (id.isEmpty) return;
 
     if (_knownOrderIds.contains(id)) return;
-    _knownOrderIds.add(id);
 
     final status = order['status']?.toString().toLowerCase();
     // Hanya beri alert untuk pesanan berstatus 'pending'
     if (status != 'pending') return;
 
+    // JANGAN beri alert jika pelanggan masih di skrin gerbang pembayaran online & belum selesai bayar!
+    if (_isAwaitingOnlinePayment(order)) return;
+
+    _knownOrderIds.add(id);
+
     final String source = order['source']?.toString().toLowerCase() ?? 'pos';
-    // PENTING: Hanya pesanan dari pelanggan luar (Ngam App: online, pre_order, table) yang mencetuskan alert.
+    // PENTING: Hanya pesanan dari pelanggan luar (Ngam App: online, pre_order, table, delivery) yang mencetuskan alert.
     // Pesanan yang dibuat oleh cashier/juruwang di kaunter POS (source == 'pos') TIDAK BOLEH hantar alert/ringtone.
     final bool isFromCustomerApp = source != 'pos' &&
-        (source == 'online' || source == 'pre_order' || source == 'table');
+        (source == 'online' || source == 'pre_order' || source == 'table' || source == 'delivery');
     if (!isFromCustomerApp) return;
 
     // Dispatch Native Browser / OS Push Notification

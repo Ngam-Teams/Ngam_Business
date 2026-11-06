@@ -79,6 +79,23 @@ class OrdersService {
       : _client = client ?? Supabase.instance.client,
         _businessService = businessService ?? BusinessService(client: client ?? Supabase.instance.client);
 
+  static bool isOrderReadyForMerchant(Map<String, dynamic> json) {
+    final source = (json['source'] ?? 'pos').toString().toLowerCase();
+    final payMethod = (json['payment_method'] ?? 'cash').toString().toLowerCase();
+    final payStatus = (json['payment_status'] ?? '').toString().toLowerCase();
+    final status = (json['status'] ?? '').toString().toLowerCase();
+
+    // Sembunyikan draf pesanan online yang masih belum dibayar di gerbang CHIP
+    if (source != 'pos' && payMethod != 'cash' && payStatus == 'pending') {
+      return false;
+    }
+    // Sembunyikan draf pesanan online yang dibatalkan sebelum bayaran dibuat
+    if (status == 'cancelled' && payStatus == 'pending') {
+      return false;
+    }
+    return true;
+  }
+
   /// Fetch all orders for the current business
   Future<List<OrderModel>> fetchOrders() async {
     try {
@@ -93,6 +110,7 @@ class OrdersService {
       final response = await query.order('created_at', ascending: false);
 
       return (response as List)
+          .where((json) => isOrderReadyForMerchant(json as Map<String, dynamic>))
           .map((json) => OrderModel.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
@@ -134,7 +152,10 @@ class OrdersService {
             .order('created_at', ascending: false);
 
     yield* baseStream.map((list) {
-      final orders = list.map((json) => OrderModel.fromJson(json)).toList();
+      final orders = list
+          .where((json) => isOrderReadyForMerchant(json))
+          .map((json) => OrderModel.fromJson(json))
+          .toList();
 
       unawaited(CacheService.set<List<OrderModel>>(
         key: cacheKey,

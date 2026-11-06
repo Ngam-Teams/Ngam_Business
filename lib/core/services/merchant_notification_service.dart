@@ -72,17 +72,20 @@ class MerchantNotificationService {
       }
     } catch (_) {}
 
-    // 2. Prefetch recent bookings to avoid alerting on already existing records
+    // 2. Prefetch recent bookings to avoid alerting on already existing records (kecuali yang masih 'holding' / belum selesai bayar)
     try {
       final existingBookings = await Supabase.instance.client
           .from('bookings')
-          .select('id')
+          .select('id, status, booking_metadata')
           .eq('business_id', businessId)
           .order('created_at', ascending: false)
           .limit(40);
 
       for (final b in existingBookings) {
-        if (b['id'] != null) {
+        final status = (b['status'] ?? '').toString().toLowerCase();
+        final meta = b['booking_metadata'] is Map ? b['booking_metadata'] as Map : const {};
+        final payStatus = (meta['payment_status'] ?? '').toString().toLowerCase();
+        if (b['id'] != null && status != 'holding' && payStatus != 'pending') {
           _knownBookingIds.add(b['id'].toString());
         }
       }
@@ -169,6 +172,18 @@ class MerchantNotificationService {
     if (id.isEmpty) return;
 
     if (_knownBookingIds.contains(id)) return;
+
+    final status = (booking['status'] ?? '').toString().toLowerCase();
+    final meta = booking['booking_metadata'] is Map
+        ? booking['booking_metadata'] as Map
+        : const {};
+    final payStatus = (meta['payment_status'] ?? '').toString().toLowerCase();
+
+    // JANGAN beri alert jika pelanggan baru berada di Step 1 ('holding') atau masih di skrin bayaran online ('pending')!
+    if (status == 'holding' || status == 'cancelled' || payStatus == 'pending') {
+      return;
+    }
+
     _knownBookingIds.add(id);
 
     final customerName =
@@ -179,8 +194,8 @@ class MerchantNotificationService {
         booking['service_name']?.toString() ??
         booking['category']?.toString() ??
         'Slot Perkhidmatan';
-    final date = booking['date']?.toString() ?? 'Hari ini';
-    final time = booking['time']?.toString() ?? '';
+    final date = (booking['booking_date'] ?? booking['date'])?.toString() ?? 'Hari ini';
+    final time = (booking['booking_time'] ?? booking['time'])?.toString() ?? '';
 
     // Play chime audio
     SoundService.instance.playOrderChime();
@@ -208,8 +223,18 @@ class MerchantNotificationService {
   }
 
   void _onBookingUpdated(Map<String, dynamic> booking) {
+    final id = booking['id']?.toString() ?? '';
     final status = booking['status']?.toString().toLowerCase();
-    if (status == 'cancelled') {
+
+    // Apabila tempahan bertukar daripada 'holding' kepada 'pending' selepas pelanggan sahkan & selesai bayar:
+    if (status == 'pending' && id.isNotEmpty && !_knownBookingIds.contains(id)) {
+      _onNewBookingReceived(booking);
+      return;
+    }
+
+    // Hanya paparkan notifikasi pembatalan jika tempahan tersebut pernah disahkan (bukan pelepasan slot 'holding' Step 1)
+    if (status == 'cancelled' && id.isNotEmpty && _knownBookingIds.contains(id)) {
+      _knownBookingIds.remove(id);
       final customerName =
           booking['customer_name']?.toString() ??
           booking['user_name']?.toString() ??

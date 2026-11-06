@@ -120,12 +120,16 @@ class _KdsPageState extends State<KdsPage> {
     try {
       final initial = await Supabase.instance.client
           .from('orders')
-          .select('id')
+          .select('id, source, payment_method, payment_status')
           .eq('business_id', businessId)
           .order('created_at', ascending: false)
           .limit(50);
       for (final row in initial) {
-        if (row['id'] != null) {
+        final src = (row['source'] ?? 'pos').toString().toLowerCase();
+        final pm = (row['payment_method'] ?? 'cash').toString().toLowerCase();
+        final ps = (row['payment_status'] ?? '').toString().toLowerCase();
+        final awaitingOnline = src != 'pos' && pm != 'cash' && ps == 'pending';
+        if (row['id'] != null && !awaitingOnline) {
           _knownOrderIds.add(row['id'].toString());
         }
       }
@@ -152,6 +156,13 @@ class _KdsPageState extends State<KdsPage> {
   Future<void> _processOrdersStream(List<Map<String, dynamic>> rows) async {
     final activeRows = rows.where((r) {
       final status = (r['status'] ?? '').toString().toLowerCase();
+      final src = (r['source'] ?? 'pos').toString().toLowerCase();
+      final pm = (r['payment_method'] ?? 'cash').toString().toLowerCase();
+      final ps = (r['payment_status'] ?? '').toString().toLowerCase();
+      // Jangan paparkan pesanan online yang masih belum selesai bayar di gerbang CHIP
+      if (src != 'pos' && pm != 'cash' && ps == 'pending') {
+        return false;
+      }
       return status == 'pending' ||
           status == 'preparing' ||
           status == 'in_progress' ||

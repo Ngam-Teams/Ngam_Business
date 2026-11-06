@@ -40,58 +40,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   @override
   void initState() {
     super.initState();
-    // Generalized multi-industry appointment examples
-    _appointments = [
-      {
-        'id': 'BK-1082',
-        'customerName': 'Amirul Hakim',
-        'phone': '+60 17-234 5678',
-        'service': 'Sesi Konsultasi & Khidmat Nasihat',
-        'dateTime': 'Hari Ini, 2:30 PM',
-        'staff': 'En. Farid (Perunding)',
-        'price': 80.00,
-        'deposit': 25.00,
-        'status': AppointmentStatus.pending,
-        'notes': 'Sesi perbincangan perancangan projek perniagaan.',
-      },
-      {
-        'id': 'BK-1081',
-        'customerName': 'Sarah Lee',
-        'phone': '+60 12-889 1234',
-        'service': 'Sesi Rawatan & Terapi Kesihatan',
-        'dateTime': 'Hari Ini, 4:00 PM',
-        'staff': 'Cik Nurul (Ahli Terapi)',
-        'price': 95.00,
-        'deposit': 30.00,
-        'status': AppointmentStatus.confirmed,
-        'notes': 'Pelanggan memohon bilik rawatan 02.',
-      },
-      {
-        'id': 'BK-1080',
-        'customerName': 'Zulhilmi Rahman',
-        'phone': '+60 19-334 9988',
-        'service': 'Servis Penyelenggaraan & Pemeriksaan',
-        'dateTime': 'Hari Ini, 11:00 AM',
-        'staff': 'Ruang Servis / Bay 01',
-        'price': 120.00,
-        'deposit': 30.00,
-        'status': AppointmentStatus.completed,
-        'notes': 'Selesai diservis dan dibayar tunai di kaunter.',
-      },
-      {
-        'id': 'BK-1079',
-        'customerName': 'Jessica Wong',
-        'phone': '+60 16-555 4321',
-        'service': 'Tempahan Meja Khas / Ruang Acara',
-        'dateTime': 'Esok, 12:30 PM',
-        'staff': 'Meja VIP 05',
-        'price': 150.00,
-        'deposit': 50.00,
-        'status': AppointmentStatus.confirmed,
-        'notes': 'Keluarga 6 orang. Memerlukan kerusi bayi.',
-      },
-    ];
-
+    _appointments = [];
     _subscribeToLiveBookings();
   }
 
@@ -108,8 +57,11 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
         if (!mounted) return;
 
         final relevantBookings = data.where((b) {
-          final isHolding = b['status'] == 'holding';
-          if (isHolding) return false;
+          final status = (b['status'] ?? '').toString().toLowerCase();
+          if (status == 'holding') return false;
+          final meta = b['booking_metadata'] is Map ? b['booking_metadata'] as Map : const {};
+          final payStatus = (meta['payment_status'] ?? '').toString().toLowerCase();
+          if (payStatus == 'pending') return false;
           if (_businessId != null && _businessId!.isNotEmpty) {
             return b['business_id'] == _businessId;
           }
