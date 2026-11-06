@@ -11,6 +11,7 @@ import '../data/orders_service.dart';
 import 'package:flutter/services.dart';
 import '../../appointments/presentation/appointments_page.dart';
 
+import '../../../core/services/sound_service.dart';
 import 'widgets/order_pickup_qr_scanner_screen.dart';
 import '../../../widgets/glass_toast.dart';
 
@@ -108,8 +109,193 @@ class _OrdersPageState extends State<OrdersPage> {
     );
 
     if (matched != null && mounted) {
-      _showOrderDetailsModal(matched);
+      await _handlePickupQrVerification(matched);
     }
+  }
+
+  Future<void> _handlePickupQrVerification(OrderModel order) async {
+    final shortId = order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase();
+    final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
+
+    // 1. JIKA PESANAN SUDAH BERSTATUS 'READY' (Alur Sah Pengesahan Pengambilan di Kaunter):
+    if (order.status == 'ready') {
+      final success = await _ordersService.updateOrderStatus(order.id, 'completed', paymentStatus: 'paid');
+      if (!mounted) return;
+
+      if (success) {
+        await SoundService.instance.playOrderChime();
+        await HapticFeedback.heavyImpact();
+        if (!mounted) return;
+
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
+              color: Color(0xFF141724),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border(top: BorderSide(color: Color(0xFF00E676), width: 1.5)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.check_circle_rounded, color: Color(0xFF00E676), size: 36),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Pengambilan Pesanan Disahkan!',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Pesanan #$shortId (${order.customerName ?? "Pelanggan"}) telah berjaya diambil dan ditandakan SELESAI.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Jumlah Bayaran:', style: TextStyle(color: Colors.white60, fontSize: 13)),
+                      Text(fmt.format(order.total), style: const TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.w900, fontSize: 15)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00E676),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Selesai', style: TextStyle(fontWeight: FontWeight.w900)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        showGlassToast(context, 'Gagal mengesahkan pengambilan pesanan.', isError: true);
+      }
+      return;
+    }
+
+    // 2. JIKA PESANAN MASIH BELUM SIAP DIMASAK ('pending' / 'preparing'):
+    if (order.status == 'pending' || order.status == 'preparing' || order.status == 'in_progress') {
+      final statusLabel = order.status == 'pending' ? 'Diterima (Belum Dimasak)' : 'Sedang Dimasak di Dapur';
+      
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          padding: const EdgeInsets.all(24),
+          decoration: const BoxDecoration(
+            color: Color(0xFF141724),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(top: BorderSide(color: Colors.amber, width: 1.5)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 32),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Pesanan Belum Sedia di Dapur!',
+                style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Pesanan #$shortId masih dalam status "$statusLabel" dan belum ditandakan "Sedia".\n\nAdakah pesanan sudah siap dan anda ingin terus serahkan kepada pelanggan sekarang?',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        side: const BorderSide(color: Colors.white24),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Batal (Biar di Dapur)', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00E5FF),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await _updateStatus(order, 'completed', paymentStatus: 'paid');
+                        if (mounted) {
+                          showGlassToast(context, 'Pesanan #$shortId disahkan selesai diambil!', type: GlassToastType.success);
+                        }
+                      },
+                      child: const Text('Terus Sahkan Ambil', style: TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+
+    // 3. JIKA PESANAN SUDAH SELESAI ATAU DIBATALKAN:
+    if (order.status == 'completed') {
+      showGlassToast(context, 'Pesanan #$shortId telah pun selesai diambil sebelum ini.', type: GlassToastType.info);
+      return;
+    }
+
+    if (order.status == 'cancelled') {
+      showGlassToast(context, 'Pesanan #$shortId ini telah dibatalkan.', isError: true);
+      return;
+    }
+
+    // Fallback paparan butiran
+    _showOrderDetailsModal(order);
   }
 
   void _showOrderDetailsModal(OrderModel order) {
