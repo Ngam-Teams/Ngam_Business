@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -739,10 +738,109 @@ class _OrdersPageState extends State<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return Column(
       children: [
-        // Body Content based on selected tab — occupies full Stack so content glides beneath floating switcher & top bar!
-        Positioned.fill(
+        // Top Segmented Switcher: Pesanan (Orders) vs Tempahan (Bookings)
+        Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedMainTab = 0),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _selectedMainTab == 0 ? const Color(0xFF42A5F5) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: _selectedMainTab == 0
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        HugeIcon(
+                          icon: HugeIcons.strokeRoundedInvoice01,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Pesanan Kedai',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _selectedMainTab = 1),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _selectedMainTab == 1 ? const Color(0xFF42A5F5) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: _selectedMainTab == 1
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        HugeIcon(
+                          icon: HugeIcons.strokeRoundedCalendar01,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          'Tempahan & Slots',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Body Content based on selected tab
+        Expanded(
           child: _selectedMainTab == 1
               ? const AppointmentsPage(isEmbedded: true)
               : StreamBuilder<List<OrderModel>>(
@@ -773,15 +871,12 @@ class _OrdersPageState extends State<OrdersPage> {
                         o.status == 'completed' || o.status == 'cancelled').toList();
 
                     if (allOrders.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 126),
-                        child: _buildEmptyState(),
-                      );
+                      return _buildEmptyState();
                     }
 
                     return ListView(
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 126, 16, 100),
+                      padding: const EdgeInsets.only(bottom: 100),
                       children: [
                         // Kitchen Display (KDS) Quick Access Banner
                         InkWell(
@@ -954,126 +1049,9 @@ class _OrdersPageState extends State<OrdersPage> {
                   },
                 ),
         ),
-
-        // Floating Frosted Glass Segmented Switcher (Pesanan Kedai vs Tempahan & Slots)
-        Positioned(
-          top: 68,
-          left: 16,
-          right: 16,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedMainTab = 0),
-                        behavior: HitTestBehavior.opaque,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: _selectedMainTab == 0 ? const Color(0xFF42A5F5) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: _selectedMainTab == 0
-                                ? [
-                                    BoxShadow(
-                                      color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ]
-                                : null,
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              HugeIcon(
-                                icon: HugeIcons.strokeRoundedInvoice01,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Pesanan Kedai',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedMainTab = 1),
-                        behavior: HitTestBehavior.opaque,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: _selectedMainTab == 1 ? const Color(0xFF42A5F5) : Colors.transparent,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: _selectedMainTab == 1
-                                ? [
-                                    BoxShadow(
-                                      color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ]
-                                : null,
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              HugeIcon(
-                                icon: HugeIcons.strokeRoundedCalendar01,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Tempahan & Slots',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
-
 
   Widget _buildEmptyState() {
     return Center(

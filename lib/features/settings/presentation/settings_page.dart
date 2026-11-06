@@ -207,7 +207,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 width: leftWidth,
                 height: constraints.maxHeight,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(0, 72, 0, 40),
+                  padding: const EdgeInsets.only(bottom: 40),
                   physics: const ClampingScrollPhysics(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -225,7 +225,7 @@ class _SettingsPageState extends State<SettingsPage> {
               // Scrollable Right Column: All other settings
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(0, 72, 0, 120),
+                  padding: const EdgeInsets.only(bottom: 120),
                   physics: const BouncingScrollPhysics(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -249,7 +249,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
         // Mobile / Portrait Single-column scrollable
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 72, 16, 120),
+          padding: const EdgeInsets.only(bottom: 120),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

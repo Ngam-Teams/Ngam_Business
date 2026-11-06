@@ -1412,12 +1412,12 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
         child: Stack(
           children: [
             Padding(
-              padding: EdgeInsets.only(top: widget.isEmbedded ? 126 : 68),
+              padding: EdgeInsets.only(top: widget.isEmbedded ? 0 : 68),
               child: Column(
                 children: [
                   // QR Check-In Bar
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+                    padding: EdgeInsets.fromLTRB(widget.isEmbedded ? 0 : 20, 4, widget.isEmbedded ? 0 : 20, 10),
                     child: InkWell(
                       onTap: _openBookingQrCheckIn,
                       borderRadius: BorderRadius.circular(14),
@@ -1451,7 +1451,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
               height: 40,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: EdgeInsets.symmetric(horizontal: widget.isEmbedded ? 0 : 20),
                 itemCount: _filters.length,
                 itemBuilder: (context, idx) {
                   final isSelected = _selectedFilterIndex == idx;
@@ -1511,7 +1511,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                     )
                   : ListView.builder(
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
+                      padding: EdgeInsets.fromLTRB(widget.isEmbedded ? 0 : 20, 0, widget.isEmbedded ? 0 : 20, 80),
                       itemCount: _filteredAppointments.length,
                       itemBuilder: (context, index) {
                         final appt = _filteredAppointments[index];

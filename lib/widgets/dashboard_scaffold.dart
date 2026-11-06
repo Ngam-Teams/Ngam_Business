@@ -464,45 +464,61 @@ class DashboardScaffold extends StatelessWidget {
   // Content Area
   // ---------------------------------------------------------------------------
   Widget _buildContent(BuildContext context, bool isDesktop) {
-    final double hPad = isDesktop ? 20.0 : 16.0;
-    final double topPad = isDesktop ? 20.0 : 16.0;
-    final double rPad = isDesktop ? 24.0 : 16.0;
     final bool hasSubtitle = pageSubtitle.trim().isNotEmpty;
-
-    return Stack(
-      children: [
-        // Content Area occupies the full Stack from top: 0 to bottom so content
-        // glides smoothly beneath the floating top bar!
-        Positioned.fill(
-          child: child,
-        ),
-
-        // Floating Top Bar with transparent parent container and liquid frosted glass components
-        Positioned(
-          top: topPad,
-          left: hPad,
-          right: rPad,
-          child: Container(
-            color: Colors.transparent, // Explicitly transparent parent container
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: GlassTitlePill(
-                    title: pageTitle,
-                    subtitle: hasSubtitle ? pageSubtitle : null,
-                    centerTitle: false,
-                    height: 44,
-                  ),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 20 : 16,
+        isDesktop ? 20 : 16,
+        isDesktop ? 20 : 16,
+        isDesktop ? 20 : 0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top bar
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pageTitle,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (hasSubtitle) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        pageSubtitle,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.4),
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(width: 12),
-                const _TopBarActions(),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              const _TopBarActions(),
+            ],
           ),
-        ),
-      ],
+
+          const SizedBox(height: 12),
+
+          Expanded(child: child),
+        ],
+      ),
     );
   }
 }

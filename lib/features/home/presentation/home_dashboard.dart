@@ -221,9 +221,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             if (isLandscape) {
               // Full-viewport non-scrolling layout when height is sufficient
               if (height >= 360) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 72),
-                  child: Column(
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (showBanner) _buildProfileIncompleteBanner(context),
@@ -246,13 +244,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                     ),
                   ],
-                ),
                 );
               }
 
               // Ultra-short landscape screen (< 360px height)
               return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(0, 72, 0, 40),
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 40),
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,7 +291,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
               color: const Color(0xFF42A5F5),
               backgroundColor: const Color(0xFF141424),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 72, 16, 100),
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 100),
                 physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
