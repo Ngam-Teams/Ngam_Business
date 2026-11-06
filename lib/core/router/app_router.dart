@@ -94,23 +94,76 @@ class _UnauthorizedScreen extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Main app shell — houses all 4 tabs
+// Global AppShell Tab Switcher Helper
+// ---------------------------------------------------------------------------
+void Function(int index)? _appShellTabSwitcher;
+
+/// Global helper to switch the primary AppShell tab without throwing routing errors
+/// 0: Overview, 1: Orders, 2: POS, 3: Analytics, 4: Settings
+void switchAppShellTab(int index) {
+  if (_appShellTabSwitcher != null) {
+    _appShellTabSwitcher!(index);
+  } else {
+    switch (index) {
+      case 1:
+        appRouter.go('/orders');
+        break;
+      case 2:
+        appRouter.go('/pos');
+        break;
+      case 3:
+        appRouter.go('/analytics');
+        break;
+      case 4:
+        appRouter.go('/settings');
+        break;
+      default:
+        appRouter.go('/');
+        break;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main app shell — houses all tabs
 // ---------------------------------------------------------------------------
 class _AppShell extends StatefulWidget {
-  const _AppShell();
+  final int initialTab;
+  const _AppShell({this.initialTab = 0});
 
   @override
   State<_AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends State<_AppShell> {
-  int _selectedIndex = 0;
-  final Set<int> _activatedTabs = {0}; // Lazy tab cache: only active tab is mounted initially
+  late int _selectedIndex;
+  late final Set<int> _activatedTabs;
 
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialTab;
+    _activatedTabs = {widget.initialTab};
+    _appShellTabSwitcher = (index) {
+      if (mounted) {
+        setState(() {
+          _selectedIndex = index;
+          _activatedTabs.add(index);
+        });
+      }
+    };
     _initOrderAlerts();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AppShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialTab != oldWidget.initialTab) {
+      setState(() {
+        _selectedIndex = widget.initialTab;
+        _activatedTabs.add(widget.initialTab);
+      });
+    }
   }
 
   Future<void> _initOrderAlerts() async {
@@ -256,7 +309,23 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/home',
-      builder: (context, state) => const _AppShell(),
+      builder: (context, state) => const _AppShell(initialTab: 0),
+    ),
+    GoRoute(
+      path: '/orders',
+      builder: (context, state) => const _AppShell(initialTab: 1),
+    ),
+    GoRoute(
+      path: '/pos',
+      builder: (context, state) => const _AppShell(initialTab: 2),
+    ),
+    GoRoute(
+      path: '/analytics',
+      builder: (context, state) => const _AppShell(initialTab: 3),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const _AppShell(initialTab: 4),
     ),
     GoRoute(
       path: '/login',

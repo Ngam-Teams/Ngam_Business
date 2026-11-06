@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/stat_card.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
 import '../../analytics/data/analytics_service.dart';
 import '../../orders/data/orders_service.dart';
@@ -169,7 +170,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             icon: HugeIcons.strokeRoundedMoney01,
             accentColor: const Color(0xFF42A5F5),
             sparklineData: const [2.5, 3.8, 3.2, 5.0, 5.8, 7.2, 6.9, 8.8, 9.5],
-            onTap: () => context.push('/analytics'),
+            onTap: () => switchAppShellTab(3),
           ),
           StatCard(
             label: "Today's Orders",
@@ -180,7 +181,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             icon: HugeIcons.strokeRoundedShoppingBag01,
             accentColor: const Color(0xFF44CF6C),
             sparklineData: const [1.2, 2.5, 3.0, 2.2, 4.5, 5.2, 4.8, 6.5, 7.8],
-            onTap: () => context.push('/orders'),
+            onTap: () => switchAppShellTab(1),
           ),
           StatCard(
             label: 'Pending Orders',
@@ -193,7 +194,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             sparklineData: pendingOrders > 0
                 ? const [1.0, 2.5, 3.2, 2.8, 4.0, 3.5, 5.0]
                 : const [4.5, 3.5, 2.8, 2.0, 1.2, 0.4, 0.0],
-            onTap: () => context.push('/orders'),
+            onTap: () => switchAppShellTab(1),
           ),
           StatCard(
             label: 'Monthly Revenue',
@@ -204,7 +205,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             icon: HugeIcons.strokeRoundedChartIncrease,
             accentColor: const Color(0xFF8B5CF6),
             sparklineData: const [1.5, 2.5, 3.8, 4.2, 5.5, 6.8, 8.0, 9.2, 10.5],
-            onTap: () => context.push('/analytics'),
+            onTap: () => switchAppShellTab(3),
           ),
         ];
 
