@@ -103,9 +103,7 @@ class _StatCardState extends State<StatCard> {
                   ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: Stack(
+            child: Stack(
                 children: [
                   // 1. Ambient decorative mini sparkline curve in bottom-right corner
                   // Compact width & height ensures perfect responsive layout on mobile/phones
@@ -255,7 +253,6 @@ class _StatCardState extends State<StatCard> {
                   ),
                 ],
               ),
-            ),
           ),
         ),
       ),
