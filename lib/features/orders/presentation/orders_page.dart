@@ -33,10 +33,14 @@ class _OrdersPageState extends State<OrdersPage> {
   final Map<String, List<Map<String, dynamic>>> _orderItemsCache = {};
 
 
+  void _initOrdersStream() {
+    _ordersStream = _ordersService.streamOrders();
+  }
+
   @override
   void initState() {
     super.initState();
-    _ordersStream = _ordersService.streamOrders();
+    _initOrdersStream();
   }
 
   void _checkForNewOrders(List<OrderModel> orders) {
@@ -1132,16 +1136,33 @@ class _OrdersPageState extends State<OrdersPage> {
           ),
         ),
 
-        // Body Content based on selected tab
+        // Body Content based on selected tab (IndexedStack preserves state & stream across tabs)
         Expanded(
-          child: _selectedMainTab == 1
-              ? const AppointmentsPage(isEmbedded: true)
-              : StreamBuilder<List<OrderModel>>(
-                  stream: _ordersStream,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error loading orders: ', style: const TextStyle(color: Colors.redAccent)));
-                    }
+          child: IndexedStack(
+            index: _selectedMainTab,
+            children: [
+              StreamBuilder<List<OrderModel>>(
+                stream: _ordersStream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Error loading orders: ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _initOrdersStream();
+                              });
+                            },
+                            child: const Text('Cuba Semula'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
 
                     if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)));
@@ -1341,6 +1362,9 @@ class _OrdersPageState extends State<OrdersPage> {
                     );
                   },
                 ),
+              const AppointmentsPage(isEmbedded: true),
+            ],
+          ),
         ),
       ],
     );

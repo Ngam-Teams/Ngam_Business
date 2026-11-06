@@ -119,7 +119,11 @@ class OrdersService {
   }
 
   /// Stream orders for real-time updates (ditapis mengikut business_id peniaga)
-  Stream<List<OrderModel>> streamOrders() async* {
+  Stream<List<OrderModel>> streamOrders() {
+    return _streamOrdersInternal().asBroadcastStream();
+  }
+
+  Stream<List<OrderModel>> _streamOrdersInternal() async* {
     String? businessId = BusinessService.cachedProfile?['id']?.toString();
     if (businessId == null || businessId.isEmpty) {
       try {
