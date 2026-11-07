@@ -1,9 +1,11 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../settings/data/business_service.dart';
+import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_nav_button.dart';
 import '../../../widgets/glass_toast.dart';
-
+import '../../settings/data/business_service.dart';
 // ============================================================
 // CustomerInsightsPage — Loyal Customers & VIP Tiers
 // ============================================================
@@ -186,12 +188,64 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
     }
   }
 
+  Future<void> _exportCustomerCsv() async {
+    showGlassToast(context, 'export.preparing'.tr());
+    try {
+      final bizService = BusinessService();
+      final profile = await bizService.getBusinessProfile();
+      final bizName = profile?['business_name']?.toString() ?? 'Perniagaan Ngam';
+
+      final fmt = DateFormat('yyyy-MM-dd_HHmm');
+      final nowStr = fmt.format(DateTime.now());
+
+      final buffer = StringBuffer();
+      buffer.writeln('SENARAI PELANGGAN & STATUS KEAHLIAN - $bizName');
+      buffer.writeln('Tarikh Dijana: ${DateTime.now().toLocal()}');
+      buffer.writeln('Jumlah Pelanggan: ${_customers.length}');
+      buffer.writeln('');
+      buffer.writeln('ID_Pelanggan,Nama_Pelanggan,Nombor_Telefon,Kategori_Status,Jumlah_Pesanan,Jumlah_Belanja_RM,Mata_Ganjaran_Cop,Kunjungan_Terakhir');
+
+      for (final c in _customers) {
+        final id = (c['id'] ?? '-').toString().replaceAll(',', ' ');
+        final name = (c['name'] ?? 'Pelanggan').toString().replaceAll(',', ' ');
+        final phone = (c['phone'] ?? '-').toString().replaceAll(',', ' ');
+        final tier = (c['tier'] ?? 'Standard').toString().replaceAll(',', ' ');
+        final orders = c['orders'] ?? 0;
+        final spent = ((c['totalSpent'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+        final stamps = c['stamps'] ?? 0;
+        final last = (c['lastVisit'] ?? '-').toString().replaceAll(',', ' ');
+
+        buffer.writeln('$id,$name,$phone,$tier,$orders,$spent,$stamps,$last');
+      }
+
+      await saveAndDownloadCsv(
+        csvContent: buffer.toString(),
+        fileName: 'Senarai_Pelanggan_VIP_$nowStr.csv',
+      );
+
+      if (mounted) {
+        showGlassToast(context, 'export.csv_success'.tr());
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'export.export_failed'.tr(), isError: true);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
       title: 'Customer Insights & VIPs',
       subtitle: 'Analisis pelanggan setia & VIP',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedDownload01,
+          tooltip: 'export.customers_title'.tr(),
+          onTap: _exportCustomerCsv,
+        ),
+      ],
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [

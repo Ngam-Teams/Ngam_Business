@@ -1,3 +1,4 @@
+import '../../../../core/utils/file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -1478,11 +1479,16 @@ Terima kasih! Sila datang lagi.
                     onPressed: () async {
                       final text = _buildPlainTextReceipt();
                       await Clipboard.setData(ClipboardData(text: text));
+                      final safeId = ref.replaceAll('#', '').replaceAll(' ', '_');
+                      await saveAndDownloadText(
+                        textContent: text,
+                        fileName: 'Resit_POS_$safeId.txt',
+                      );
                       if (context.mounted) {
                         Navigator.pop(context);
                         showGlassToast(
                           context,
-                          'Arahan cetakan ESC/POS dihantar ke pencetak thermal!',
+                          'Arahan cetakan dihantar & fail resit berjaya dimuat turun!',
                           customColor: const Color(0xFF00C853),
                         );
                       }

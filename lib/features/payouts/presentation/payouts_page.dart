@@ -1,6 +1,8 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/utils/file_saver/file_saver.dart';
 import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/glass_nav_button.dart';
@@ -564,6 +566,57 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
     );
   }
 
+  Future<void> _exportPayoutStatement() async {
+    showGlassToast(context, 'export.preparing'.tr());
+    try {
+      final bizService = BusinessService();
+      final profile = await bizService.getBusinessProfile();
+      final bizName = profile?['business_name']?.toString() ?? 'Perniagaan Ngam';
+
+      final fmt = DateFormat('yyyy-MM-dd_HHmm');
+      final nowStr = fmt.format(DateTime.now());
+
+      final buffer = StringBuffer();
+      buffer.writeln('PENYATA PENYELESAIAN KEWANGAN & PENGELUARAN - $bizName');
+      buffer.writeln('Tarikh Dijana: ${DateTime.now().toLocal()}');
+      buffer.writeln('Baki Tersedia: RM ${_availableBalance.toStringAsFixed(2)}');
+      buffer.writeln('Dalam Proses: RM ${_pendingClearance.toStringAsFixed(2)}');
+      buffer.writeln('Jumlah Kumulatif Dikeluarkan: RM ${_lifetimePayout.toStringAsFixed(2)}');
+      buffer.writeln('');
+      buffer.writeln('ID_Penyelesaian,Tarikh,Rujukan_Transaksi,Nama_Bank,Nombor_Akaun,Jumlah_Kasar_RM,Yuran_Proses_RM,Jumlah_Bersih_RM,Status');
+
+      for (final s in _settlementHistory) {
+        final id = s['id'] ?? '';
+        final date = (s['date'] ?? '').toString().replaceAll(',', ' ');
+        final ref = s['reference'] ?? '';
+        final bank = (s['bankName'] ?? '').toString().replaceAll(',', ' ');
+        final acc = s['accountNumber'] ?? '';
+        final amt = (s['amount'] as num?)?.toDouble() ?? 0.0;
+        final fee = (s['fee'] as num?)?.toDouble() ?? 0.0;
+        final net = amt - fee;
+        final st = s['status'] == PayoutStatus.completed
+            ? 'Selesai'
+            : s['status'] == PayoutStatus.processing
+                ? 'Sedang Diproses'
+                : 'Ditangguhkan';
+        buffer.writeln('$id,$date,$ref,$bank,$acc,${amt.toStringAsFixed(2)},${fee.toStringAsFixed(2)},${net.toStringAsFixed(2)},$st');
+      }
+
+      await saveAndDownloadCsv(
+        csvContent: buffer.toString(),
+        fileName: 'Penyata_Kewangan_Payout_$nowStr.csv',
+      );
+
+      if (mounted) {
+        showGlassToast(context, 'export.csv_success'.tr());
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'export.export_failed'.tr(), isError: true);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
@@ -573,8 +626,8 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
       actionItems: [
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedDownload01,
-          tooltip: 'Export Statement',
-          onTap: () => showGlassToast(context, 'Monthly financial statement exported (PDF/CSV)'),
+          tooltip: 'export.payout_title'.tr(),
+          onTap: _exportPayoutStatement,
         ),
       ],
       bottomTabBar: TabBar(

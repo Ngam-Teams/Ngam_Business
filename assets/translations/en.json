@@ -929,5 +929,22 @@
         "desc": "Banquet hall rental, wedding decorations, sound system, and stage setup"
       }
     }
+  },
+  "export": {
+    "preparing": "Preparing file for download...",
+    "csv_success": "Excel / CSV file downloaded successfully!",
+    "report_success": "Report downloaded successfully!",
+    "receipt_success": "Digital receipt downloaded successfully!",
+    "inventory_title": "Export Inventory CSV",
+    "customers_title": "Export Customers CSV",
+    "orders_title": "Export Orders CSV",
+    "payout_title": "Export Financial Statement",
+    "payroll_title": "Export Payroll Summary",
+    "zreport_title": "Download Z-Report",
+    "download_receipt": "Download Receipt",
+    "executive_report": "Executive Report",
+    "raw_csv": "Excel / CSV Raw Data",
+    "wa_digest": "WhatsApp Manager Digest",
+    "export_failed": "Failed to download file. Please try again."
   }
 }

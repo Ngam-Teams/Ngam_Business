@@ -11,6 +11,10 @@ import '../data/orders_service.dart';
 import 'package:flutter/services.dart';
 import '../../appointments/presentation/appointments_page.dart';
 
+import '../../../core/utils/file_saver/file_saver.dart';
+
+import '../../settings/data/business_service.dart';
+
 import '../../../core/services/sound_service.dart';
 import 'widgets/order_pickup_qr_scanner_screen.dart';
 import '../../../widgets/glass_toast.dart';
@@ -300,6 +304,118 @@ class _OrdersPageState extends State<OrdersPage> {
 
     // Fallback paparan butiran
     _showOrderDetailsModal(order);
+  }
+
+  Future<void> _exportOrdersCsv(List<OrderModel> orders) async {
+    showGlassToast(context, 'export.preparing'.tr());
+    try {
+      final bizService = BusinessService();
+      final profile = await bizService.getBusinessProfile();
+      final bizName = profile?['business_name']?.toString() ?? 'Perniagaan Ngam';
+
+      final fmt = DateFormat('yyyy-MM-dd_HHmm');
+      final nowStr = fmt.format(DateTime.now());
+
+      final buffer = StringBuffer();
+      buffer.writeln('LAPORAN PESANAN & TRANSAKSI - $bizName');
+      buffer.writeln('Tarikh Dijana: ${DateTime.now().toLocal()}');
+      buffer.writeln('Jumlah Pesanan: ${orders.length}');
+      buffer.writeln('');
+      buffer.writeln('ID_Pesanan,Tarikh_Masa,Pelanggan,Telefon,Kaedah_Bayaran,Status_Pesanan,Status_Bayaran,Jumlah_RM,Sumber,Nota');
+
+      double totalRev = 0.0;
+      for (final o in orders) {
+        final id = o.id.replaceAll(',', ' ');
+        final date = o.createdAt.toIso8601String();
+        final cust = (o.customerName ?? 'Pelanggan').replaceAll(',', ' ');
+        final phone = (o.customerPhone ?? '-').replaceAll(',', ' ');
+        final method = o.paymentMethod.replaceAll(',', ' ');
+        final status = o.status;
+        final payStatus = o.paymentStatus;
+        final tot = o.total;
+        totalRev += tot;
+        final source = o.source;
+        final notes = (o.notes ?? '').replaceAll('\n', ' ').replaceAll(',', ' ');
+
+        buffer.writeln('$id,$date,$cust,$phone,$method,$status,$payStatus,${tot.toStringAsFixed(2)},$source,$notes');
+      }
+
+      buffer.writeln('');
+      buffer.writeln('JUMLAH HASIL KESELURUHAN (RM),,,,,,,$totalRev,,');
+
+      await saveAndDownloadCsv(
+        csvContent: buffer.toString(),
+        fileName: 'Laporan_Pesanan_$nowStr.csv',
+      );
+
+      if (mounted) {
+        showGlassToast(context, 'export.csv_success'.tr());
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'export.export_failed'.tr(), isError: true);
+      }
+    }
+  }
+
+  Future<void> _downloadOrderReceipt(OrderModel order, List<Map<String, dynamic>>? items) async {
+    showGlassToast(context, 'export.preparing'.tr());
+    try {
+      final bizService = BusinessService();
+      final profile = await bizService.getBusinessProfile();
+      final bizName = profile?['business_name']?.toString() ?? 'Perniagaan Ngam';
+      final bizPhone = profile?['business_phone']?.toString() ?? '';
+      final bizAddress = profile?['address_line']?.toString() ?? '';
+      final shortId = order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase();
+      final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
+
+      final buffer = StringBuffer();
+      buffer.writeln('========================================');
+      buffer.writeln('             RESIT RASMI                ');
+      buffer.writeln('========================================');
+      buffer.writeln(bizName.toUpperCase());
+      if (bizAddress.isNotEmpty) buffer.writeln(bizAddress);
+      if (bizPhone.isNotEmpty) buffer.writeln('Tel: $bizPhone');
+      buffer.writeln('----------------------------------------');
+      buffer.writeln('No. Pesanan : #$shortId');
+      buffer.writeln('Tarikh      : ${DateFormat('dd/MM/yyyy hh:mm a').format(order.createdAt.toLocal())}');
+      buffer.writeln('Pelanggan   : ${order.customerName ?? "Pelanggan"}');
+      buffer.writeln('Bayaran     : ');
+      buffer.writeln('Status      :  - ');
+      buffer.writeln('----------------------------------------');
+      buffer.writeln('SENARAI ITEM:');
+
+      final orderItems = items ?? _orderItemsCache[order.id];
+      if (orderItems != null && orderItems.isNotEmpty) {
+        for (final it in orderItems) {
+          final name = it['product_name'] ?? 'Item';
+          final qty = it['quantity'] ?? 1;
+          final sub = (it['subtotal'] as num?)?.toDouble() ?? 0.0;
+          buffer.writeln('${qty}x $name - ${fmt.format(sub)}');
+        }
+      } else {
+        buffer.writeln('1x ${order.notes ?? "Pesanan Jualan"} - ${fmt.format(order.total)}');
+      }
+
+      buffer.writeln('----------------------------------------');
+      buffer.writeln('JUMLAH KESELURUHAN : ${fmt.format(order.total)}');
+      buffer.writeln('========================================');
+      buffer.writeln('Terima kasih atas sokongan anda!');
+      buffer.writeln('Dijana oleh Platform Ngam Business');
+
+      await saveAndDownloadText(
+        textContent: buffer.toString(),
+        fileName: 'Resit_Pesanan_$shortId.txt',
+      );
+
+      if (mounted) {
+        showGlassToast(context, 'export.receipt_success'.tr());
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'export.export_failed'.tr(), isError: true);
+      }
+    }
   }
 
   void _showOrderDetailsModal(OrderModel order) {
@@ -694,6 +810,38 @@ class _OrdersPageState extends State<OrdersPage> {
                   ),
 
                   const SizedBox(height: 20),
+
+                  SizedBox(
+
+                    width: double.infinity,
+
+                    child: OutlinedButton.icon(
+
+                      style: OutlinedButton.styleFrom(
+
+                        foregroundColor: const Color(0xFF42A5F5),
+
+                        side: const BorderSide(color: Color(0xFF42A5F5)),
+
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+
+                      ),
+
+                      icon: const Icon(Icons.receipt_long_rounded, size: 18),
+
+                      label: Text('export.download_receipt'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+
+                      onPressed: () => _downloadOrderReceipt(order, cachedItems),
+
+                    ),
+
+                  ),
+
+                  const SizedBox(height: 12),
+
+
 
                   // Actions (4-Stage Lifecycle: pending -> preparing -> ready -> completed)
                   Column(
@@ -1240,6 +1388,64 @@ class _OrdersPageState extends State<OrdersPage> {
                                       SizedBox(height: 2),
                                       Text(
                                         'Paparan langsung status penyediaan & giliran pesanan',
+                                        style: TextStyle(
+                                          color: Colors.white60,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 14),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Export Orders CSV Button
+                        InkWell(
+                          onTap: () => _exportOrdersCsv(allOrders),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF44CF6C).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF44CF6C).withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF44CF6C).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const HugeIcon(
+                                    icon: HugeIcons.strokeRoundedDownload01,
+                                    color: Color(0xFF44CF6C),
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'export.orders_title'.tr(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        'Muat turun semua pesanan hari ini dalam format Excel / CSV',
                                         style: TextStyle(
                                           color: Colors.white60,
                                           fontSize: 12,

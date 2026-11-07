@@ -929,5 +929,22 @@
         "desc": "Sewa dewan jamuan berhawa dingin, hiasan pelamin dewan perkahwinan, dan sistem audio pentas"
       }
     }
+  },
+  "export": {
+    "preparing": "Menyediakan fail untuk dimuat turun...",
+    "csv_success": "Fail Excel / CSV berjaya dimuat turun!",
+    "report_success": "Laporan berjaya dimuat turun!",
+    "receipt_success": "Resit digital berjaya dimuat turun!",
+    "inventory_title": "Eksport Stok CSV",
+    "customers_title": "Eksport Pelanggan CSV",
+    "orders_title": "Eksport Pesanan CSV",
+    "payout_title": "Eksport Penyata Kewangan",
+    "payroll_title": "Eksport Penyata Gaji",
+    "zreport_title": "Muat Turun Laporan Z-Report",
+    "download_receipt": "Muat Turun Resit",
+    "executive_report": "Laporan Eksekutif",
+    "raw_csv": "Data Mentah Excel / CSV",
+    "wa_digest": "Ringkasan WhatsApp Pengurus",
+    "export_failed": "Gagal memuat turun fail. Sila cuba lagi."
   }
 }

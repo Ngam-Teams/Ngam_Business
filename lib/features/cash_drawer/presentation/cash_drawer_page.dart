@@ -1,9 +1,10 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/audit_service.dart';
+import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_nav_button.dart';
@@ -528,6 +529,79 @@ Status: Syif Ditutup & Disahkan ke Cloud
     }
   }
 
+  Future<void> _downloadZReportReceipt() async {
+    showGlassToast(context, 'export.preparing'.tr());
+    try {
+      final bizService = BusinessService();
+      final profile = await bizService.getBusinessProfile();
+      final bizName = profile?['business_name']?.toString() ?? 'Perniagaan Ngam';
+      final counted = double.tryParse(_countedCashCtrl.text) ?? 0.0;
+      final fmt = DateFormat('yyyy-MM-dd_HHmm');
+      final nowStr = fmt.format(DateTime.now());
+
+      final buffer = StringBuffer();
+      buffer.writeln('========================================');
+      buffer.writeln('       LAPORAN Z-REPORT PENUTUPAN SYIF  ');
+      buffer.writeln('========================================');
+      buffer.writeln('Perniagaan : $bizName');
+      buffer.writeln('No. Syif   : #$_shiftNumber');
+      buffer.writeln('Juruwang   : $_cashierName');
+      buffer.writeln('Masa Mula  : $_shiftStartTime');
+      buffer.writeln('Masa Tamat : ${DateFormat('dd/MM/yyyy hh:mm a').format(DateTime.now())}');
+      buffer.writeln('----------------------------------------');
+      buffer.writeln('RINGKASAN TUNAI LACI (DRAWER):');
+      buffer.writeln('- Baki Awal Float     : RM ${_openingFloat.toStringAsFixed(2)}');
+      buffer.writeln('- Jualan Tunai        : RM ${_cashSales.toStringAsFixed(2)}');
+      buffer.writeln('- Wang Runcit Keluar  : - RM ${_totalPettyCashOut.toStringAsFixed(2)}');
+      buffer.writeln('----------------------------------------');
+      buffer.writeln('Tunai Dijangka        : RM ${_expectedCashInDrawer.toStringAsFixed(2)}');
+      buffer.writeln('Tunai Sebenar Dikira  : RM ${counted.toStringAsFixed(2)}');
+      buffer.writeln('Perbezaan (Variance)  : RM ${_cashDiscrepancy.toStringAsFixed(2)} (${_cashDiscrepancy >= 0 ? "Tepat/Lebihan" : "Kurangan"})');
+      buffer.writeln('----------------------------------------');
+      buffer.writeln('SALURAN PEMBAYARAN BUKAN TUNAI:');
+      buffer.writeln('- DuitNow QR E-Wallet : RM ${_qrSales.toStringAsFixed(2)}');
+      buffer.writeln('- Kad Debit / Kredit  : RM ${_cardSales.toStringAsFixed(2)}');
+      buffer.writeln('========================================');
+      buffer.writeln('JUMLAH HASIL KESELURUHAN: RM ${_totalShiftRevenue.toStringAsFixed(2)}');
+      buffer.writeln('========================================');
+      buffer.writeln('Dijana oleh Sistem POS Ngam Business.');
+
+      await saveAndDownloadText(
+        textContent: buffer.toString(),
+        fileName: 'Z_Report_Syif_${_shiftNumber}_$nowStr.txt',
+      );
+
+      // Also generate CSV format for Excel bookkeeping
+      final csvBuffer = StringBuffer();
+      csvBuffer.writeln('Kategori,Butiran,Jumlah_RM');
+      csvBuffer.writeln('Maklumat,Perniagaan,$bizName');
+      csvBuffer.writeln('Maklumat,No_Syif,#$_shiftNumber');
+      csvBuffer.writeln('Maklumat,Juruwang,$_cashierName');
+      csvBuffer.writeln('Tunai,Baki_Awal_Float,${_openingFloat.toStringAsFixed(2)}');
+      csvBuffer.writeln('Tunai,Jualan_Tunai,${_cashSales.toStringAsFixed(2)}');
+      csvBuffer.writeln('Tunai,Wang_Runcit_Keluar,-${_totalPettyCashOut.toStringAsFixed(2)}');
+      csvBuffer.writeln('Tunai,Tunai_Dijangka,${_expectedCashInDrawer.toStringAsFixed(2)}');
+      csvBuffer.writeln('Tunai,Tunai_Dikira,${counted.toStringAsFixed(2)}');
+      csvBuffer.writeln('Tunai,Perbezaan_Variance,${_cashDiscrepancy.toStringAsFixed(2)}');
+      csvBuffer.writeln('Digital,DuitNow_QR,${_qrSales.toStringAsFixed(2)}');
+      csvBuffer.writeln('Digital,Kad_Bank,${_cardSales.toStringAsFixed(2)}');
+      csvBuffer.writeln('Ringkasan,JUMLAH_HASIL,${_totalShiftRevenue.toStringAsFixed(2)}');
+
+      await saveAndDownloadCsv(
+        csvContent: csvBuffer.toString(),
+        fileName: 'Z_Report_Syif_${_shiftNumber}_$nowStr.csv',
+      );
+
+      if (mounted) {
+        showGlassToast(context, 'export.report_success'.tr());
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'export.export_failed'.tr(), isError: true);
+      }
+    }
+  }
+
   void _showZReportDialog() {
     showModalBottomSheet(
       context: context,
@@ -606,9 +680,7 @@ Status: Syif Ditutup & Disahkan ke Cloud
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        onPressed: () {
-                          showGlassToast(context, 'Printing physical Z-Report receipt...');
-                        },
+                        onPressed: _downloadZReportReceipt,
                         icon: const HugeIcon(icon: HugeIcons.strokeRoundedPrinter, color: Colors.white, size: 16),
                         label: const FittedBox(fit: BoxFit.scaleDown, child: Text('Cetak Resit', style: TextStyle(fontSize: 12))),
                       ),

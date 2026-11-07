@@ -2,9 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'package:easy_localization/easy_localization.dart';
+
+import '../../../../core/utils/file_saver/file_saver.dart';
 
 import '../../../../core/services/chip_payment_service.dart';
 import '../../../../core/services/sound_service.dart';
@@ -1211,6 +1214,32 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
     );
   }
 
+  String _buildReceiptPlainText(NumberFormat fmt, String methodLabel) {
+    final itemSummary = (widget.itemLines != null && widget.itemLines!.isNotEmpty)
+        ? widget.itemLines!.map((l) => '• $l').join('\n')
+        : '• 1x Jualan POS (${fmt.format(widget.amount)})';
+
+    return '''
+========================================
+         RESIT PEMBAYARAN POS          
+========================================
+Perniagaan : Ngam Business
+No. Rujukan: ${widget.orderTitle}
+Tarikh     : ${DateFormat('dd/MM/yyyy hh:mm a').format(DateTime.now())}
+Pelanggan  : ${widget.customerName ?? 'Pelanggan Kaunter'}
+----------------------------------------
+ITEM PESANAN:
+$itemSummary
+----------------------------------------
+JUMLAH BESAR : ${fmt.format(widget.amount)}
+KAEDAH       : $methodLabel
+STATUS       : LULUS (Disahkan)
+========================================
+Terima kasih! Sila datang lagi.
+Dijana oleh Sistem POS Ngam Business
+''';
+  }
+
   // ===========================================================================
   // 1. THERMAL PRINTER RECEIPT DIALOG (ESC/POS 58mm / 80mm Preview)
   // ===========================================================================
@@ -1368,18 +1397,51 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
 
                 const SizedBox(height: 16),
 
-                // Action Buttons
+                // Action Buttons: Muat Turun Fail & Cetak Thermal
                 Row(
                   children: [
                     Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final text = _buildReceiptPlainText(fmt, methodLabel);
+                          final shortRef = widget.orderTitle.replaceAll('#', '').replaceAll(' ', '_');
+                          await saveAndDownloadText(
+                            textContent: text,
+                            fileName: 'Resit_POS_$shortRef.txt',
+                          );
+                          if (context.mounted) {
+                            Navigator.of(ctx).pop();
+                            showGlassToast(context, 'export.receipt_success'.tr());
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF42A5F5),
+                          side: const BorderSide(color: Color(0xFF42A5F5)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.download_rounded, size: 18),
+                        label: const Text('Muat Turun Resit', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          showGlassToast(context, 'Menghantar perintah cetakan ke pencetak thermal (58mm/80mm)...', customColor: const Color(0xFF10B981));
+                        onPressed: () async {
+                          final text = _buildReceiptPlainText(fmt, methodLabel);
+                          final shortRef = widget.orderTitle.replaceAll('#', '').replaceAll(' ', '_');
+                          await saveAndDownloadText(
+                            textContent: text,
+                            fileName: 'Resit_POS_$shortRef.txt',
+                          );
+                          if (context.mounted) {
+                            Navigator.of(ctx).pop();
+                            showGlassToast(context, 'Menghantar perintah cetakan & resit dimuat turun!', customColor: const Color(0xFF10B981));
+                          }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF42A5F5),
-                          foregroundColor: Colors.white,
+                          backgroundColor: const Color(0xFF44CF6C),
+                          foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),

@@ -1,8 +1,12 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_nav_button.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../pos/models/product_model.dart';
 import '../../products/data/product_service.dart';
+import '../../settings/data/business_service.dart';
 
 // ============================================================
 // InventoryPage — Real-Time Stock Levels & Low Stock Alerts
@@ -104,12 +108,73 @@ class _InventoryPageState extends State<InventoryPage> {
     );
   }
 
+  Future<void> _exportInventoryCsv(List<ProductModel> items) async {
+    showGlassToast(context, 'export.preparing'.tr());
+    try {
+      final bizService = BusinessService();
+      final profile = await bizService.getBusinessProfile();
+      final bizName = profile?['business_name']?.toString() ?? 'Perniagaan Ngam';
+
+      final fmt = DateFormat('yyyy-MM-dd_HHmm');
+      final nowStr = fmt.format(DateTime.now());
+
+      final buffer = StringBuffer();
+      buffer.writeln('LAPORAN INVENTORI & BAKI STOK - $bizName');
+      buffer.writeln('Tarikh Dijana: ${DateTime.now().toLocal()}');
+      buffer.writeln('Jumlah Jenis Produk: ${items.length}');
+      buffer.writeln('');
+      buffer.writeln('ID_Produk,SKU,Nama_Produk,Kategori,Harga_Jual_RM,Baki_Stok,Unit,Had_Minima_Stok,Status_Inventori');
+
+      for (final p in items) {
+        final id = p.id.replaceAll(',', ' ');
+        final sku = (p.sku ?? '-').replaceAll(',', ' ');
+        final name = p.name.replaceAll(',', ' ');
+        final cat = (p.category ?? 'Umum').replaceAll(',', ' ');
+        final price = p.price.toStringAsFixed(2);
+        final stock = p.stock;
+        final unit = p.unit.replaceAll(',', ' ');
+        final minStock = p.lowStockThreshold;
+        final status = p.isOutOfStock
+            ? 'Habis Stok'
+            : p.isLowStock
+                ? 'Stok Rendah'
+                : 'Mencukupi';
+
+        buffer.writeln('$id,$sku,$name,$cat,$price,$stock,$unit,$minStock,$status');
+      }
+
+      await saveAndDownloadCsv(
+        csvContent: buffer.toString(),
+        fileName: 'Laporan_Inventori_Stok_$nowStr.csv',
+      );
+
+      if (mounted) {
+        showGlassToast(context, 'export.csv_success'.tr());
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'export.export_failed'.tr(), isError: true);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
       title: 'Inventori & Stok',
       subtitle: 'Pemantauan stok masa nyata',
+      actionItems: [
+        GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedDownload01,
+          tooltip: 'export.inventory_title'.tr(),
+          onTap: () async {
+            final items = await _productService.fetchAllProducts();
+            final physical = items.where((p) => p.isProduct).toList();
+            await _exportInventoryCsv(physical);
+          },
+        ),
+      ],
       body: StreamBuilder<List<ProductModel>>(
         stream: _productService.streamAllProducts(),
         builder: (context, snapshot) {

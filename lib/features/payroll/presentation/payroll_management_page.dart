@@ -1,12 +1,12 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:intl/intl.dart';
-
+import '../../../core/utils/file_saver/file_saver.dart';
+import '../../../widgets/glass_nav_button.dart';
+import '../../../widgets/glass_toast.dart';
+import '../../settings/data/business_service.dart';
 import '../data/payroll_service.dart';
 import '../models/staff_payroll_model.dart';
-import '../../../widgets/glass_toast.dart';
-import '../../../widgets/glass_nav_button.dart';
-
 class PayrollManagementPage extends StatefulWidget {
   const PayrollManagementPage({super.key});
 
@@ -346,6 +346,60 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
     );
   }
 
+  Future<void> _exportPayrollCsv() async {
+    showGlassToast(context, 'export.preparing'.tr());
+    try {
+      final bizService = BusinessService();
+      final profile = await bizService.getBusinessProfile();
+      final bizName = profile?['business_name']?.toString() ?? 'Perniagaan Ngam';
+
+      final fmt = DateFormat('yyyy-MM-dd_HHmm');
+      final nowStr = fmt.format(DateTime.now());
+
+      final buffer = StringBuffer();
+      buffer.writeln('RINGKASAN PENYATA GAJI & KOMISEN STAF - $bizName');
+      buffer.writeln('Tarikh Dijana: ${DateTime.now().toLocal()}');
+      buffer.writeln('Jumlah Bersih Penggajian: RM ${_totalNetPayout.toStringAsFixed(2)}');
+      buffer.writeln('Jumlah Komisen Jualan: RM ${_totalCommissions.toStringAsFixed(2)}');
+      buffer.writeln('Jumlah Caruman Majikan: RM ${_totalEmployerStatutory.toStringAsFixed(2)}');
+      buffer.writeln('');
+      buffer.writeln('ID_Staf,Nama_Pekerja,Jawatan,Gaji_Pokok_RM,Komisen_Servis_RM,Komisen_Produk_RM,Elaun_RM,KWSP_Pekerja_RM,PERKESO_Pekerja_RM,SIP_Pekerja_RM,Gaji_Bersih_RM,Status_Bayaran');
+
+      for (final item in _payrollItems) {
+        final id = item.staffCode.replaceAll(',', ' ');
+        final name = item.staffName.replaceAll(',', ' ');
+        final desig = item.designation.replaceAll(',', ' ');
+        final base = item.baseSalary.toStringAsFixed(2);
+        final commSvc = item.serviceCommission.toStringAsFixed(2);
+        final commProd = item.productCommission.toStringAsFixed(2);
+        final allowance = item.bonusOrAllowance.toStringAsFixed(2);
+        final epf = item.epfEmployee.toStringAsFixed(2);
+        final socso = item.socsoEmployee.toStringAsFixed(2);
+        final eis = item.eisEmployee.toStringAsFixed(2);
+        final net = item.netPay.toStringAsFixed(2);
+        final status = item.status == 'paid' ? 'Sudah Dibayar' : 'Menunggu Bayaran';
+
+        buffer.writeln('$id,$name,$desig,$base,$commSvc,$commProd,$allowance,$epf,$socso,$eis,$net,$status');
+      }
+
+      buffer.writeln('');
+      buffer.writeln('JUMLAH KESELURUHAN (RM),,,,,,,,,,$_totalNetPayout,');
+
+      await saveAndDownloadCsv(
+        csvContent: buffer.toString(),
+        fileName: 'Laporan_Penyata_Gaji_$nowStr.csv',
+      );
+
+      if (mounted) {
+        showGlassToast(context, 'export.csv_success'.tr());
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'export.export_failed'.tr(), isError: true);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
@@ -355,8 +409,8 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
       actionItems: [
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedDownload04,
-          tooltip: 'Eksport Penyata Gaji',
-          onTap: () => showGlassToast(context, 'Mengeksport ringkasan gaji PDF/CSV...'),
+          tooltip: 'export.payroll_title'.tr(),
+          onTap: _exportPayrollCsv,
         ),
       ],
       bottomTabBar: TabBar(
