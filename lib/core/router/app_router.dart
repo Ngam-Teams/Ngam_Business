@@ -15,6 +15,7 @@ import '../../features/pos/presentation/pos_page.dart';
 import '../../features/analytics/presentation/analytics_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/settings/presentation/business_profile_page.dart';
+import '../../features/settings/presentation/business_type_page.dart';
 import '../../features/products/presentation/product_catalogue_page.dart';
 import '../../features/settings/presentation/staff_management_page.dart';
 import '../../features/appointments/presentation/appointments_page.dart';
@@ -358,6 +359,12 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/business-profile',
       builder: (context, state) => const BusinessProfilePage(),
+    ),
+    GoRoute(
+      path: '/business-type',
+      builder: (context, state) => BusinessTypePage(
+        initialSelectedId: state.uri.queryParameters['current'],
+      ),
     ),
     GoRoute(
       path: '/product-catalogue',

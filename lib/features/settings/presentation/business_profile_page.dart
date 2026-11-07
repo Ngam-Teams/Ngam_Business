@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
@@ -9,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/map_picker_screen.dart';
 import '../data/business_service.dart';
+import '../models/business_type_catalog.dart';
 import '../../../widgets/glass_nav_button.dart';
 
 class BusinessProfilePage extends StatefulWidget {
@@ -69,81 +71,6 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   String? _selectedBank;
   final _accountHolderController = TextEditingController();
   final _accountNumberController = TextEditingController();
-
-  static final List<Map<String, dynamic>> _industries = [
-    {
-      'id': 'fnb',
-      'label': 'Food & Beverage',
-      'icon': HugeIcons.strokeRoundedRestaurant01,
-      'subtitle': 'Restaurants, Cafes, Bakeries & Stalls',
-    },
-    {
-      'id': 'barber',
-      'label': 'Barber & Salon',
-      'icon': HugeIcons.strokeRoundedScissor,
-      'subtitle': 'Barbershops, Hair Salons & Grooming',
-    },
-    {
-      'id': 'beauty',
-      'label': 'Beauty, Spa & Wellness',
-      'icon': HugeIcons.strokeRoundedSparkles,
-      'subtitle': 'Spas, Massages, Skincare & Aesthetics',
-    },
-    {
-      'id': 'auto',
-      'label': 'Automotive & Workshop',
-      'icon': HugeIcons.strokeRoundedCar01,
-      'subtitle': 'Carwash, Detailing, Workshops & Tyres',
-    },
-    {
-      'id': 'retail',
-      'label': 'Retail & Shopping',
-      'icon': HugeIcons.strokeRoundedShoppingBag01,
-      'subtitle': 'Boutiques, Marts, Fashion & Stores',
-    },
-    {
-      'id': 'clinic',
-      'label': 'Clinic & Healthcare',
-      'icon': HugeIcons.strokeRoundedFirstAidKit,
-      'subtitle': 'Clinics, Dental, Pharmacy & Optical',
-    },
-    {
-      'id': 'fitness',
-      'label': 'Sports & Fitness',
-      'icon': HugeIcons.strokeRoundedActivity01,
-      'subtitle': 'Gyms, Badmintons, Futsal & Studios',
-    },
-    {
-      'id': 'cleaning',
-      'label': 'Home & Cleaning',
-      'icon': HugeIcons.strokeRoundedClean,
-      'subtitle': 'Housekeeping, Aircond, Plumbing & Handyman',
-    },
-    {
-      'id': 'electronics',
-      'label': 'Gadget & Tech Repair',
-      'icon': HugeIcons.strokeRoundedSmartPhone01,
-      'subtitle': 'Phone Repair, Computers & IT Services',
-    },
-    {
-      'id': 'events',
-      'label': 'Events & Photography',
-      'icon': HugeIcons.strokeRoundedCamera01,
-      'subtitle': 'Studios, Photographers & Party Planners',
-    },
-    {
-      'id': 'education',
-      'label': 'Education & Classes',
-      'icon': HugeIcons.strokeRoundedBook01,
-      'subtitle': 'Tuitions, Daycares, Academies & Lessons',
-    },
-    {
-      'id': 'services',
-      'label': 'Services & Professional',
-      'icon': HugeIcons.strokeRoundedBriefcase02,
-      'subtitle': 'Consulting, Agency, Printing & General',
-    },
-  ];
 
   static const List<String> _malaysianStates = [
     'Kuala Lumpur',
@@ -208,11 +135,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       _isHandleCustomized = false;
     }
 
-    final industry = (data['business_industry'] as String? ?? 'services').toLowerCase();
-    if (_industries.any((i) => i['id'] == industry)) {
-      _selectedIndustry = industry;
+    final industry = (data['business_industry'] as String? ?? 'restaurant').toLowerCase();
+    final matched = BusinessTypeCatalog.findById(industry);
+    if (matched != null) {
+      _selectedIndustry = matched.id;
     } else {
-      _selectedIndustry = 'services';
+      _selectedIndustry = 'restaurant';
     }
 
     _regNoController.text = data['business_registration_number'] ?? '';
@@ -1291,113 +1219,141 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   }
 
   Widget _buildIndustrySelector() {
+    final active = BusinessTypeCatalog.findById(_selectedIndustry) ?? BusinessTypeCatalog.allTypes.first;
+    const brandGreen = Color(0xFF44CF6C);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
-            'Business Category *',
-            style: TextStyle(
+            'business_type.title'.tr(),
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // Adaptive cross-axis count: 3 on wide views/desktop, 2 on mobile
-            final int crossAxisCount = constraints.maxWidth > 700 ? 3 : 2;
-            // Compact uniform aspect ratio to keep all card heights equal and sleek
-            final double childAspectRatio = constraints.maxWidth > 700 ? 3.3 : 2.9;
-
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: childAspectRatio,
+        InkWell(
+          onTap: () async {
+            final result = await context.push<String>('/business-type?current=$_selectedIndustry');
+            if (result != null && mounted) {
+              setState(() {
+                _selectedIndustry = result;
+              });
+            }
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: brandGreen.withValues(alpha: 0.35),
+                width: 1.2,
               ),
-              itemCount: _industries.length,
-              itemBuilder: (context, index) {
-                final item = _industries[index];
-                final isSelected = _selectedIndustry == item['id'];
-
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedIndustry = item['id']),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF42A5F5).withValues(alpha: 0.15)
-                          : Colors.white.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(0xFF42A5F5)
-                            : Colors.white.withValues(alpha: 0.08),
-                        width: isSelected ? 1.5 : 1.0,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFF42A5F5).withValues(alpha: 0.2)
-                                : Colors.white.withValues(alpha: 0.04),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: HugeIcon(
-                              icon: item['icon'],
-                              color: isSelected ? const Color(0xFF42A5F5) : Colors.white60,
-                              size: 17,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item['label'],
-                                style: TextStyle(
-                                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.85),
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 1),
-                              Text(
-                                item['subtitle'],
-                                style: TextStyle(
-                                  color: isSelected ? Colors.white70 : Colors.white.withValues(alpha: 0.38),
-                                  fontSize: 9.5,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: brandGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: HugeIcon(
+                      icon: active.icon,
+                      color: brandGreen,
+                      size: 22,
                     ),
                   ),
-                );
-              },
-            );
-          },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              active.nameKey.tr(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: brandGreen.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'business_type.categories.${active.categoryGroup}'.tr(),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: brandGreen,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        active.descKey.tr(),
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          fontSize: 11.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: brandGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: brandGreen.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'business_type.change_type'.tr(),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: brandGreen,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 11,
+                        color: brandGreen,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );

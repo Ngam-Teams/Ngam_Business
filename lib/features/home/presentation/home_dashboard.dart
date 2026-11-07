@@ -95,60 +95,59 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   List<({Color color, String event, dynamic icon, String time, VoidCallback? onTap})> _getDefaultActivities(BuildContext context) {
-    final isMs = context.locale.languageCode == 'ms';
     return [
       (
-        time: isMs ? 'Baru sahaja' : 'Just now',
-        event: isMs ? 'Pesanan #2041 selesai — RM 32.00' : 'Order #2041 completed — RM 32.00',
+        time: 'dashboard.just_now'.tr(),
+        event: 'dashboard.act_order_completed'.tr(args: ['2041', '32.00']),
         icon: HugeIcons.strokeRoundedShoppingBag01,
         color: const Color(0xFF42A5F5),
         onTap: () => switchAppShellTab(1),
       ),
       (
-        time: isMs ? '12 min lalu' : '12 min ago',
-        event: isMs ? 'Produk baharu ditambah: Laksa' : 'New product added: Laksa',
+        time: 'dashboard.time_min_ago'.tr(args: ['12']),
+        event: 'dashboard.act_product_added'.tr(args: ['Laksa']),
         icon: HugeIcons.strokeRoundedAdd01,
         color: const Color(0xFF44CF6C),
         onTap: () => context.push('/product-catalogue'),
       ),
       (
-        time: isMs ? '1j lalu' : '1h ago',
-        event: isMs ? 'Pesanan #2040 selesai — RM 18.50' : 'Order #2040 completed — RM 18.50',
+        time: 'dashboard.time_hour_ago'.tr(args: ['1']),
+        event: 'dashboard.act_order_completed'.tr(args: ['2040', '18.50']),
         icon: HugeIcons.strokeRoundedShoppingBag01,
         color: const Color(0xFF42A5F5),
         onTap: () => switchAppShellTab(1),
       ),
       (
-        time: isMs ? '2j lalu' : '2h ago',
-        event: isMs ? 'Stok dikemas kini: Nasi Lemak 50 unit' : 'Stock updated: Nasi Lemak 50 units',
+        time: 'dashboard.time_hour_ago'.tr(args: ['2']),
+        event: 'dashboard.act_stock_updated'.tr(args: ['Nasi Lemak 50']),
         icon: HugeIcons.strokeRoundedPackageDelivered,
         color: const Color(0xFF42A5F5),
         onTap: () => context.push('/inventory'),
       ),
       (
-        time: isMs ? '3j lalu' : '3h ago',
-        event: isMs ? 'Pesanan #2039 selesai — RM 24.00' : 'Order #2039 completed — RM 24.00',
+        time: 'dashboard.time_hour_ago'.tr(args: ['3']),
+        event: 'dashboard.act_order_completed'.tr(args: ['2039', '24.00']),
         icon: HugeIcons.strokeRoundedShoppingBag01,
         color: const Color(0xFF42A5F5),
         onTap: () => switchAppShellTab(1),
       ),
       (
-        time: isMs ? '4j lalu' : '4h ago',
-        event: isMs ? 'Ulasan pelanggan diterima: 5.0 ⭐' : 'Customer review received: 5.0 ⭐',
+        time: 'dashboard.time_hour_ago'.tr(args: ['4']),
+        event: 'dashboard.act_review_received'.tr(args: ['5.0']),
         icon: HugeIcons.strokeRoundedStar,
         color: const Color(0xFFFFA726),
         onTap: () => context.push('/customer-reviews'),
       ),
       (
-        time: isMs ? '5j lalu' : '5h ago',
-        event: isMs ? 'Pesanan #2038 selesai — RM 45.00' : 'Order #2038 completed — RM 45.00',
+        time: 'dashboard.time_hour_ago'.tr(args: ['5']),
+        event: 'dashboard.act_order_completed'.tr(args: ['2038', '45.00']),
         icon: HugeIcons.strokeRoundedShoppingBag01,
         color: const Color(0xFF42A5F5),
         onTap: () => switchAppShellTab(1),
       ),
       (
-        time: isMs ? '6j lalu' : '6h ago',
-        event: isMs ? 'Penyata pengeluaran RM 380.00 diproses' : 'Payout settlement RM 380.00 processed',
+        time: 'dashboard.time_hour_ago'.tr(args: ['6']),
+        event: 'dashboard.act_payout_processed'.tr(args: ['380.00']),
         icon: HugeIcons.strokeRoundedCoins01,
         color: const Color(0xFF10B981),
         onTap: () => context.push('/payouts'),
@@ -699,13 +698,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   String _formatRelativeTime(String isoString, BuildContext context) {
     final dt = DateTime.tryParse(isoString)?.toLocal();
-    final isMs = context.locale.languageCode == 'ms';
-    if (dt == null) return isMs ? 'Baru sahaja' : 'Just now';
+    if (dt == null) return 'dashboard.just_now'.tr();
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return isMs ? 'Baru sahaja' : 'Just now';
-    if (diff.inMinutes < 60) return isMs ? '${diff.inMinutes}m lalu' : '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return isMs ? '${diff.inHours}j lalu' : '${diff.inHours}h ago';
-    return isMs ? '${diff.inDays}h lalu' : '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return 'dashboard.just_now'.tr();
+    if (diff.inMinutes < 60) return 'dashboard.time_min_ago'.tr(args: [diff.inMinutes.toString()]);
+    if (diff.inHours < 24) return 'dashboard.time_hour_ago'.tr(args: [diff.inHours.toString()]);
+    return 'dashboard.time_day_ago'.tr(args: [diff.inDays.toString()]);
   }
 
   Widget _buildRecentActivity({bool isDesktop = false, List<dynamic>? liveRaw}) {

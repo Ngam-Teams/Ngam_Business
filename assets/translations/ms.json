@@ -88,7 +88,15 @@
     "rush_mode_active": "Mod Waktu Puncak Aktif",
     "recent_activity": "Aktiviti Terkini",
     "live_feed": "Suapan Langsung",
-    "just_now": "Baru sahaja"
+    "just_now": "Sebentar tadi",
+    "act_order_completed": "Pesanan #{} selesai — RM {}",
+    "act_product_added": "Produk baharu ditambah: {}",
+    "act_stock_updated": "Stok dikemas kini: {}",
+    "act_review_received": "Ulasan pelanggan diterima: {} ⭐",
+    "act_payout_processed": "Penyelesaian pengeluaran RM {} diproses",
+    "time_min_ago": "{} min lalu",
+    "time_hour_ago": "{}j lalu",
+    "time_day_ago": "{} hari lalu"
   },
   "orders": {
     "title": "Pesanan",
@@ -481,7 +489,8 @@
     "app_version": "Versi Ngam Business",
     "sign_out": "Log Keluar",
     "sign_out_confirm": "Adakah anda pasti ingin log keluar dari akaun perniagaan ini?",
-    "signing_out": "Sedang log keluar..."
+    "signing_out": "Sedang log keluar...",
+    "business_type": "Jenis & Kategori Perniagaan"
   },
   "business_profile": {
     "title": "Profil Perniagaan",
@@ -676,5 +685,249 @@
     "back_to_login": "Kembali ke Log Masuk",
     "signing_out": "Sedang log keluar...",
     "sign_out_confirm": "Adakah anda pasti ingin log keluar dari akaun perniagaan ini?"
+  },
+  "business_type": {
+    "title": "Jenis & Kategori Perniagaan",
+    "subtitle": "Pilih industri dan kategori utama yang paling tepat menggambarkan operasi kedai anda",
+    "current_selected": "Jenis Perniagaan Semasa",
+    "change_type": "Tukar Jenis Perniagaan",
+    "search_hint": "Cari jenis perniagaan, kategori atau servis...",
+    "all_categories": "Semua Sektor",
+    "no_results_title": "Tiada jenis perniagaan ditemui",
+    "no_results_desc": "Cuba cari menggunakan kata kunci lain atau pilih daripada tab kategori di atas.",
+    "save_selection": "Simpan Jenis Perniagaan",
+    "save_success": "Jenis perniagaan berjaya dikemas kini!",
+    "save_error": "Gagal mengemas kini jenis perniagaan. Sila cuba lagi.",
+    "categories": {
+      "all": "Semua",
+      "pets": "Haiwan Peliharaan",
+      "fnb": "Makanan & Minuman",
+      "beauty": "Kecantikan & Dandanan",
+      "automotive": "Automotif & Kenderaan",
+      "home_services": "Servis Rumah & Penjagaan",
+      "sports": "Sukan & Rekreasi",
+      "health": "Kesihatan & Terapi",
+      "education": "Pendidikan & Pembelajaran",
+      "retail": "Runcit & Barangan",
+      "professional": "Profesional & Kreatif"
+    },
+    "items": {
+      "pet_hotel": {
+        "name": "Hotel & Asrama Kucing",
+        "desc": "Penjagaan harian, bilik penginapan berhawa dingin, dan asrama kucing selamat"
+      },
+      "pet_grooming": {
+        "name": "Dandanan & Spa Haiwan",
+        "desc": "Mandian wangi, potong bulu kemas, cuci telinga, dan dandanan haiwan kesayangan"
+      },
+      "pet_clinic": {
+        "name": "Klinik Haiwan & Veterinar",
+        "desc": "Pemeriksaan kesihatan haiwan, suntikan vaksin, rawatan surgeri, dan ubatan"
+      },
+      "pet_shop": {
+        "name": "Makanan & Aksesori Haiwan",
+        "desc": "Makanan kibbles, snek lazat, pasir kucing, sangkar, dan mainan haiwan"
+      },
+      "pet_cafe": {
+        "name": "Kafe Kucing & Haiwan Santai",
+        "desc": "Pengalaman santai menikmati hidangan sambil bermanja dengan kucing jinak"
+      },
+      "restaurant": {
+        "name": "Restoran & Masakan Panas",
+        "desc": "Hidangan meja, masakan panas terus dari dapur, dan santapan keluarga"
+      },
+      "cafe_bakery": {
+        "name": "Kafe & Bakeri Pastri",
+        "desc": "Kopi segar, roti ban panas, kek hari jadi, pastri rangup, dan pencuci mulut"
+      },
+      "food_stall": {
+        "name": "Gerai Makan & Warung Selera",
+        "desc": "Gerai makan komuniti, medan selera hawker, dan hidangan pantas popular"
+      },
+      "food_truck": {
+        "name": "Trak Makanan Bergerak",
+        "desc": "Dapur bergerak menyajikan hidangan segera di tapak acara dan pasar malam"
+      },
+      "catering": {
+        "name": "Katering Majlis & Kenduri",
+        "desc": "Hidangan bufet, sajian kenduri kahwin, katering korporat, dan jamuan"
+      },
+      "dessert_drinks": {
+        "name": "Minuman Boba & Pencuci Mulut",
+        "desc": "Minuman teh boba, jus buah segar, ais kepal, wafel rangup, dan aiskrim"
+      },
+      "barbershop": {
+        "name": "Kedai Gunting Rambut Lelaki",
+        "desc": "Guntingan rambut bergaya, kemasan janggut misai, cukuran tuala panas, dan pomade"
+      },
+      "muslimah_salon": {
+        "name": "Salun Rambut & Hijab Muslimah",
+        "desc": "Ruang tertutup khas wanita untuk rawatan kulit kepala, cucian, dan potongan rambut"
+      },
+      "spa_massage": {
+        "name": "Spa Tradisional & Urutan Badan",
+        "desc": "Urutan relaksasi seluruh badan, aromaterapi herba, refleksologi kaki, dan lulur"
+      },
+      "nail_lash": {
+        "name": "Salun Kuku & Bulu Mata",
+        "desc": "Manikur pedikur kemas, seni lukisan kuku, dan sambungan bulu mata lentik"
+      },
+      "aesthetic_clinic": {
+        "name": "Klinik Kecantikan & Estetik Kulit",
+        "desc": "Rawatan kulit cerah, facial mendalam, terapi jerawat, dan pencegahan penuaan"
+      },
+      "carwash": {
+        "name": "Cuci Kereta & Motosikal",
+        "desc": "Cucian buih salji, vakum dalaman teliti, kilat rim tayar, dan wax pantas"
+      },
+      "detailing": {
+        "name": "Salutan Seramik & Perapian Kereta",
+        "desc": "Salutan seramik tahan calar, gilap kilat warna cat, dan sanitasi ruang kabin"
+      },
+      "workshop": {
+        "name": "Bengkel Enjin & Pembaikan Kereta",
+        "desc": "Diagnosis komputer kenderaan, servis minyak hitam, dan pembaikan mekanikal enjin"
+      },
+      "tyre_battery": {
+        "name": "Pusat Tayar & Bateri Kenderaan",
+        "desc": "Imbangan dan jajaran roda, tukar tayar baharu, tampal bocor, dan pasang bateri"
+      },
+      "tint_accessories": {
+        "name": "Aksesori & Filem Penapis Haba",
+        "desc": "Pemasangan tinted penepis haba cermin, dashcam keselamatan, dan sistem audio"
+      },
+      "motorcycle_shop": {
+        "name": "Bengkel Motosikal & Alat Ganti",
+        "desc": "Servis berkala motorsikal, rantai sproket, minyak enjin, dan helmet aksesori"
+      },
+      "aircond_service": {
+        "name": "Servis Penyaman Udara",
+        "desc": "Cucian kimia menyeluruh, tambah gas sejuk, servis kompresor, dan pasang baru"
+      },
+      "home_cleaning": {
+        "name": "Pembersihan Rumah & Pejabat",
+        "desc": "Pembersihan mendalam rumah kediaman, cuci sofa tilam, dan sanitasi bangunan"
+      },
+      "plumbing_electric": {
+        "name": "Juruelektrik & Paip Saliran",
+        "desc": "Baiki paip bocor tersumbat, selesaikan masalah litar elektrik terputus, dan suis"
+      },
+      "laundry_dobi": {
+        "name": "Dobi Layan Diri & Cucian Kering",
+        "desc": "Mesin basuh layan diri syiling, dobi lipat basuh harian, dan cucian kering sut"
+      },
+      "renovation_contractor": {
+        "name": "Kontraktor Ubah Suai Rumah",
+        "desc": "Sambung dapur rumah, siling plaster moden, kerja cat, pasang jubin, dan kabinet"
+      },
+      "pest_control": {
+        "name": "Kawalan Serangga & Makhluk Perosak",
+        "desc": "Umpan anai-anai berkesan, kawalan lipas, semburan nyamuk, dan pencegahan tikus"
+      },
+      "badminton_court": {
+        "name": "Gelanggang Badminton & Futsal",
+        "desc": "Sewa gelanggang permainan setiap jam, pasang tali raket, dan penganjuran kejohanan"
+      },
+      "pickleball_court": {
+        "name": "Gelanggang Pickleball & Tenis",
+        "desc": "Tempahan gelanggang riadah, sewaan raket paddle bola, dan sesi bimbingan jurulatih"
+      },
+      "fitness_gym": {
+        "name": "Pusat Gimnasium & Kecergasan",
+        "desc": "Peralatan angkat berat moden, mesin kardio lengkap, dan bimbingan jurulatih peribadi"
+      },
+      "yoga_pilates": {
+        "name": "Studio Yoga & Pilates",
+        "desc": "Kelas pilates reformer bertenaga, yoga mat fleksibiliti, dan senaman teras badan"
+      },
+      "swimming_academy": {
+        "name": "Akademi Renang & Akuatik",
+        "desc": "Kelas renang kanak-kanak, perbaiki teknik kayuhan dewasa, dan latihan keselamatan"
+      },
+      "medical_clinic": {
+        "name": "Klinik Perubatan Am",
+        "desc": "Rawatan pesakit luar harian, pemeriksaan kesihatan badan, ubat demam, dan ujian darah"
+      },
+      "dental_clinic": {
+        "name": "Klinik Pergigian",
+        "desc": "Cuci karang gigi, rawatan pendakap gigi braces, tampalan estetik, dan pemutihan"
+      },
+      "physiotherapy": {
+        "name": "Terapi Fizikal & Kiropraktik",
+        "desc": "Rawatan jajaran tulang belakang, pemulihan kecederaan sukan, dan hilangkan sakit sendi"
+      },
+      "optical_shop": {
+        "name": "Kedai Optometri & Cermin Mata",
+        "desc": "Pemeriksaan mata pakar optometri, bingkai cermin mata bergaya, dan kanta lekap"
+      },
+      "pharmacy": {
+        "name": "Farmasi Komuniti",
+        "desc": "Bekalan ubat preskripsi doktor, suplemen kesihatan, vitamin, dan kit pertolongan cemas"
+      },
+      "acupuncture_hijama": {
+        "name": "Rawatan Bekam & Terapi Herba",
+        "desc": "Rawatan bekam sunnah angin darah, akupunktur jarum halus, dan kesejahteraan badan"
+      },
+      "tuition_center": {
+        "name": "Pusat Tuisyen Akademik",
+        "desc": "Bimbingan subjek sekolah rendah dan menengah, kelas intensif peperiksaan, dan latih tubi"
+      },
+      "quran_class": {
+        "name": "Kelas Mengaji & Bimbingan Al-Quran",
+        "desc": "Pengajian hukum tajwid, kelas bimbingan asas Iqra, fardhu ain, dan hafazan"
+      },
+      "kindergarten_daycare": {
+        "name": "Tadika & Taska Kanak-Kanak",
+        "desc": "Pendidikan awal kanak-kanak berperingkat, aktiviti prasekolah ceria, dan asuhan harian"
+      },
+      "music_art": {
+        "name": "Studio Muzik Seni & Vokal",
+        "desc": "Kelas piano klasik, gitar akustik, latihan vokal suara, dan bengkel lukisan kanvas"
+      },
+      "driving_school": {
+        "name": "Institut Latihan Memandu",
+        "desc": "Lesen memandu kereta manual dan automatik, kelas teori berkomputer, dan litar latihan"
+      },
+      "minimarket": {
+        "name": "Pasar Mini & Kedai Runcit",
+        "desc": "Barangan runcit harian, snek makanan berbungkus, minuman sejuk, dan sabun pencuci"
+      },
+      "fresh_market": {
+        "name": "Pasar Bahan Mentah & Segar",
+        "desc": "Daging ayam segar disembelih halal, ikan laut segar, sayuran hijau, dan buah-buahan"
+      },
+      "florist": {
+        "name": "Kedai Bunga & Gubahan Hadiah",
+        "desc": "Gubahan jambangan bunga segar, jambangan wang kertas kejutan, dan hamper perayaan"
+      },
+      "boutique_fashion": {
+        "name": "Butik Busana & Fesyen Muslimah",
+        "desc": "Koleksi baju kurung moden, tudung bawal selendang eksklusif, dan busana santai"
+      },
+      "jewelry_gold": {
+        "name": "Kedai Emas & Barangan Kemas",
+        "desc": "Jualan emas jongkong pelaburan, rantai leher gelang emas tulen, dan cincin perkahwinan"
+      },
+      "photography_studio": {
+        "name": "Studio Fotografi & Produksi Video",
+        "desc": "Foto pasport rasmi, penggambaran konvokesyen graduan, video komersial, dan majlis kahwin"
+      },
+      "printing_banner": {
+        "name": "Percetakan Digital & Papan Tanda",
+        "desc": "Cetakan banner kain rentang iklan, kad perniagaan kemas, pelekat produk, dan risalah"
+      },
+      "gadget_repair": {
+        "name": "Pembaikan Telefon & Komputer",
+        "desc": "Ganti skrin pecah paparan telefon, baiki kerosakan motherboard, dan tukar bateri baharu"
+      },
+      "coworking_space": {
+        "name": "Ruang Kerja Bersama & Bilik Seminar",
+        "desc": "Meja kerja individu sewa harian, bilik mesyuarat perbincangan, WiFi laju, dan dewan seminar"
+      },
+      "event_hall": {
+        "name": "Dewan Acara & Penganjuran Majlis",
+        "desc": "Sewa dewan jamuan berhawa dingin, hiasan pelamin dewan perkahwinan, dan sistem audio pentas"
+      }
+    }
   }
 }

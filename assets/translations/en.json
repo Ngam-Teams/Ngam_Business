@@ -88,7 +88,15 @@
     "rush_mode_active": "Rush Mode Active",
     "recent_activity": "Recent Activity",
     "live_feed": "Live Feed",
-    "just_now": "Just now"
+    "just_now": "Just now",
+    "act_order_completed": "Order #{} completed — RM {}",
+    "act_product_added": "New product added: {}",
+    "act_stock_updated": "Stock updated: {}",
+    "act_review_received": "Customer review received: {} ⭐",
+    "act_payout_processed": "Payout settlement RM {} processed",
+    "time_min_ago": "{} min ago",
+    "time_hour_ago": "{}h ago",
+    "time_day_ago": "{}d ago"
   },
   "orders": {
     "title": "Orders",
@@ -481,7 +489,8 @@
     "app_version": "Ngam Business Version",
     "sign_out": "Sign Out",
     "sign_out_confirm": "Are you sure you want to sign out of this business account?",
-    "signing_out": "Signing out..."
+    "signing_out": "Signing out...",
+    "business_type": "Business Type & Category"
   },
   "business_profile": {
     "title": "Business Profile",
@@ -676,5 +685,249 @@
     "back_to_login": "Back to Login",
     "signing_out": "Signing out...",
     "sign_out_confirm": "Are you sure you want to sign out of this business account?"
+  },
+  "business_type": {
+    "title": "Business Type & Category",
+    "subtitle": "Select the primary category and industry that best represents your store operations",
+    "current_selected": "Current Business Type",
+    "change_type": "Change Business Type",
+    "search_hint": "Search business type, category, or service...",
+    "all_categories": "All Sectors",
+    "no_results_title": "No business type found",
+    "no_results_desc": "Try searching with other keywords or choose from the categories above.",
+    "save_selection": "Save Business Type",
+    "save_success": "Business type updated successfully!",
+    "save_error": "Failed to update business type. Please try again.",
+    "categories": {
+      "all": "All",
+      "pets": "Pets & Animals",
+      "fnb": "Food & Beverage",
+      "beauty": "Beauty & Wellness",
+      "automotive": "Automotive & Transport",
+      "home_services": "Home Services & Care",
+      "sports": "Sports & Recreation",
+      "health": "Healthcare & Therapy",
+      "education": "Education & Learning",
+      "retail": "Retail & Groceries",
+      "professional": "Professional & Creative"
+    },
+    "items": {
+      "pet_hotel": {
+        "name": "Cat Hotel & Pet Boarding",
+        "desc": "Daycare, boarding suites, and overnight care for cats and pets"
+      },
+      "pet_grooming": {
+        "name": "Pet Grooming & Spa",
+        "desc": "Bathing, fur trimming, ear cleaning, and styling for pets"
+      },
+      "pet_clinic": {
+        "name": "Veterinary Clinic",
+        "desc": "Animal health consultations, vaccinations, surgery, and medication"
+      },
+      "pet_shop": {
+        "name": "Pet Supplies & Food",
+        "desc": "Kibbles, pet snacks, accessories, cages, and toys"
+      },
+      "pet_cafe": {
+        "name": "Pet Cafe & Cat Lounge",
+        "desc": "Cafe dining experience with live cat and pet interactions"
+      },
+      "restaurant": {
+        "name": "Dine-in Restaurant",
+        "desc": "Cooked food, family dining, and full table ordering service"
+      },
+      "cafe_bakery": {
+        "name": "Cafe & Artisan Bakery",
+        "desc": "Brewed coffee, specialty drinks, sourdough bread, cakes, and pastries"
+      },
+      "food_stall": {
+        "name": "Food Stall & Warung",
+        "desc": "Street food stall, hawker lot, and quick community dining"
+      },
+      "food_truck": {
+        "name": "Food Truck",
+        "desc": "Mobile kitchen serving fast food and festival events"
+      },
+      "catering": {
+        "name": "Catering & Event Dining",
+        "desc": "Buffet catering, corporate lunches, and wedding feasts"
+      },
+      "dessert_drinks": {
+        "name": "Desserts & Specialty Drinks",
+        "desc": "Boba tea, fruit juices, shaved ice, waffles, and ice cream"
+      },
+      "barbershop": {
+        "name": "Barbershop",
+        "desc": "Gentlemen haircuts, beard trims, hot towel shaves, and styling"
+      },
+      "muslimah_salon": {
+        "name": "Muslimah Hair Salon",
+        "desc": "Private salon for hair styling, scalp treatments, and washing"
+      },
+      "spa_massage": {
+        "name": "Spa & Body Massage",
+        "desc": "Full body relaxation, aromatherapy, foot reflexology, and scrubs"
+      },
+      "nail_lash": {
+        "name": "Nails & Lashes Studio",
+        "desc": "Manicure, pedicure, nail art, and eyelash extensions"
+      },
+      "aesthetic_clinic": {
+        "name": "Aesthetic & Facial Clinic",
+        "desc": "Skin brightening, facial treatments, acne therapy, and anti-aging"
+      },
+      "carwash": {
+        "name": "Car & Bike Wash",
+        "desc": "Snow wash, interior vacuum, rim cleaning, and quick waxing"
+      },
+      "detailing": {
+        "name": "Auto Detailing & Coating",
+        "desc": "Ceramic coating, paint correction, interior disinfection, and polish"
+      },
+      "workshop": {
+        "name": "Auto Repair & Engine Service",
+        "desc": "Vehicle diagnostics, engine overhauls, oil change, and mechanical repairs"
+      },
+      "tyre_battery": {
+        "name": "Tyres & Battery Service",
+        "desc": "Wheel balancing, alignment, puncture repair, and car battery jump"
+      },
+      "tint_accessories": {
+        "name": "Auto Tint & Accessories",
+        "desc": "Solar heat rejection films, dashcam installation, and audio upgrades"
+      },
+      "motorcycle_shop": {
+        "name": "Motorcycle Specialist",
+        "desc": "Bike service, fork repair, chain sprocket, and helmet accessories"
+      },
+      "aircond_service": {
+        "name": "Aircond Service & Repair",
+        "desc": "Chemical wash, gas refill, compressor maintenance, and new installations"
+      },
+      "home_cleaning": {
+        "name": "Home & Office Cleaning",
+        "desc": "Deep house cleaning, move-in sanitization, sofa, and mattress washing"
+      },
+      "plumbing_electric": {
+        "name": "Plumbing & Electrical",
+        "desc": "Pipe leak repair, circuit tripping, water heater, and switch repairs"
+      },
+      "laundry_dobi": {
+        "name": "Laundromat & Dry Cleaning",
+        "desc": "Self-service coin laundry, drop-off wash fold, and formal suit dry clean"
+      },
+      "renovation_contractor": {
+        "name": "Renovation & Contractor",
+        "desc": "Kitchen extension, plaster ceiling, painting, tiling, and carpentry"
+      },
+      "pest_control": {
+        "name": "Pest Control Specialist",
+        "desc": "Termite treatment, cockroach, mosquito fogging, and rodent prevention"
+      },
+      "badminton_court": {
+        "name": "Badminton & Futsal Arena",
+        "desc": "Indoor court hourly rental, racquet stringing, and tournament venues"
+      },
+      "pickleball_court": {
+        "name": "Pickleball & Tennis Court",
+        "desc": "Sports court booking, paddle equipment rentals, and coach sparring"
+      },
+      "fitness_gym": {
+        "name": "Gym & Fitness Center",
+        "desc": "Weightlifting equipment, cardio machines, and personal trainer coaching"
+      },
+      "yoga_pilates": {
+        "name": "Yoga & Pilates Studio",
+        "desc": "Reformer pilates, mat yoga classes, flexibility, and core training"
+      },
+      "swimming_academy": {
+        "name": "Swimming Academy",
+        "desc": "Kids swim lessons, adult stroke correction, and lifesaving courses"
+      },
+      "medical_clinic": {
+        "name": "General Practice Clinic",
+        "desc": "Outpatient treatments, health screening, fever diagnosis, and blood tests"
+      },
+      "dental_clinic": {
+        "name": "Dental Clinic",
+        "desc": "Teeth scaling, braces orthodontics, fillings, whitening, and extractions"
+      },
+      "physiotherapy": {
+        "name": "Physiotherapy & Chiropractic",
+        "desc": "Spine alignment, sports injury rehabilitation, and joint pain recovery"
+      },
+      "optical_shop": {
+        "name": "Eyewear & Optometry",
+        "desc": "Prescription eye testing, spectacles, contact lenses, and sunglasses"
+      },
+      "pharmacy": {
+        "name": "Community Pharmacy",
+        "desc": "Prescription dispensing, vitamins, supplements, and first aid supplies"
+      },
+      "acupuncture_hijama": {
+        "name": "Hijama & Complementary Therapy",
+        "desc": "Sunnah cupping therapy, acupuncture, and traditional body wellness"
+      },
+      "tuition_center": {
+        "name": "Academic Tuition Centre",
+        "desc": "Primary and secondary school syllabus tuition, revision, and exam prep"
+      },
+      "quran_class": {
+        "name": "Quran & Islamic Studies",
+        "desc": "Tajweed classes, Iqra guidance, fardhu ain, and tahfiz coaching"
+      },
+      "kindergarten_daycare": {
+        "name": "Kindergarten & Child Daycare",
+        "desc": "Early childhood education, preschool programs, and toddler daily care"
+      },
+      "music_art": {
+        "name": "Music & Visual Art Studio",
+        "desc": "Piano, acoustic guitar, vocal lessons, and canvas drawing workshops"
+      },
+      "driving_school": {
+        "name": "Driving Academy",
+        "desc": "Manual and automatic car driving licenses, theory exams, and test tracks"
+      },
+      "minimarket": {
+        "name": "Minimarket & Grocer",
+        "desc": "Daily sundries, packaged snacks, beverages, and household toiletries"
+      },
+      "fresh_market": {
+        "name": "Fresh Meat & Produce Market",
+        "desc": "Fresh poultry, local fish, chilled beef, organic vegetables, and fruits"
+      },
+      "florist": {
+        "name": "Florist & Gift Boutique",
+        "desc": "Flower bouquets, money garlands, surprise delivery, and celebration hampers"
+      },
+      "boutique_fashion": {
+        "name": "Fashion & Apparel Boutique",
+        "desc": "Modern modest wear, tudung scarves, baju kurung, and accessories"
+      },
+      "jewelry_gold": {
+        "name": "Jewelry & Gold Shop",
+        "desc": "Gold bars, necklaces, wedding rings, gemstones, and custom jewelry"
+      },
+      "photography_studio": {
+        "name": "Photography & Video Studio",
+        "desc": "Passport portraits, graduation photoshoots, commercial video, and weddings"
+      },
+      "printing_banner": {
+        "name": "Digital Printing & Signage",
+        "desc": "Promotional banners, business cards, merchandise stickers, and flyers"
+      },
+      "gadget_repair": {
+        "name": "Phone & Laptop Repair",
+        "desc": "Broken screen replacement, motherboard repairs, and battery changes"
+      },
+      "coworking_space": {
+        "name": "Coworking & Seminar Space",
+        "desc": "Hot desks, private discussion rooms, high-speed WiFi, and workshop halls"
+      },
+      "event_hall": {
+        "name": "Event Hall & Wedding Planning",
+        "desc": "Banquet hall rental, wedding decorations, sound system, and stage setup"
+      }
+    }
   }
 }

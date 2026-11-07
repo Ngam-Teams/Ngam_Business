@@ -341,6 +341,15 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
+            label: 'settings.business_type'.tr(),
+            icon: HugeIcons.strokeRoundedStore03,
+            onTap: () async {
+              await context.push('/business-type');
+              _loadBusiness();
+            },
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
             label: 'settings.staff_management'.tr(),
             icon: HugeIcons.strokeRoundedUserGroup,
             onTap: () => context.push('/staff-management'),
