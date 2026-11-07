@@ -1072,7 +1072,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
                     _buildField(
                       label: 'Full Name *',
                       controller: _nameController,
-                      hint: 'e.g. Siti Nurhaliza',
+                      hint: 'e.g. Nur Aisyah',
                       validator: (val) => val == null || val.trim().isEmpty ? 'Name required' : null,
                     ),
                     const SizedBox(height: 14),
@@ -1081,7 +1081,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
                     _buildField(
                       label: 'Email (Used to log in on Ngam Teams) *',
                       controller: _emailController,
-                      hint: 'e.g. siti@example.com or siti@ngam.dev',
+                      hint: 'e.g. staff@example.com or staff@ngam.dev',
                       keyboardType: TextInputType.emailAddress,
                       validator: (val) {
                         if (val == null || val.trim().isEmpty) return 'Email required';

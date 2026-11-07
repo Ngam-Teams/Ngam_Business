@@ -8,31 +8,9 @@ class QueueService {
   final SupabaseClient _client;
   final BusinessService _businessService;
 
-  // Local fallback cache for smooth offline/in-memory demo if table not migrated yet
-  static final List<QueueTicketModel> _localDemoTickets = [
-    QueueTicketModel(
-      id: 'demo-queue-1',
-      businessId: 'demo-shop',
-      ticketNumber: 'A001',
-      customerName: 'Ahmad (Walk-In)',
-      stationOrChair: 'Kaunter 1',
-      status: 'calling',
-      notes: 'Gunting Rambut & Cuci',
-      calledAt: DateTime.now().subtract(const Duration(minutes: 2)),
-      createdAt: DateTime.now().subtract(const Duration(minutes: 15)),
-    ),
-    QueueTicketModel(
-      id: 'demo-queue-2',
-      businessId: 'demo-shop',
-      ticketNumber: 'A002',
-      customerName: 'Siti Nurhaliza',
-      stationOrChair: 'Sedang Menunggu',
-      status: 'waiting',
-      notes: 'Rawatan Rambut',
-      createdAt: DateTime.now().subtract(const Duration(minutes: 8)),
-    ),
-  ];
-  static int _ticketSequence = 3;
+  // Local in-memory queue tickets cache (e.g. for offline or locally created tickets)
+  static final List<QueueTicketModel> _localDemoTickets = [];
+  static int _ticketSequence = 1;
 
   /// Reset in-memory queue demo tickets and sequence (e.g. on sign out)
   static void reset() {

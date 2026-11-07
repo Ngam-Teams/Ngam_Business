@@ -37,65 +37,8 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
   @override
   void initState() {
     super.initState();
-    _threads = [
-      {
-        'id': 'TH-01',
-        'customerName': 'Amirul Hakim',
-        'phone': '+60 17-234 5678',
-        'type': 'Bookings',
-        'orderRef': 'Booking #BK-1082 (Today, 2:30 PM)',
-        'unread': 2,
-        'lastTime': '2m ago',
-        'messages': [
-          {'from': 'customer', 'text': 'Salam bos, saya dah buat tempahan untuk 2:30 petang ni.', 'time': '2:15 PM'},
-          {'from': 'customer', 'text': 'Boleh request meja dekat tingkap tak?', 'time': '2:16 PM'},
-        ],
-      },
-      {
-        'id': 'TH-02',
-        'customerName': 'Nurul Huda',
-        'phone': '+60 19-876 5432',
-        'type': 'Order Inquiries',
-        'orderRef': 'Table #04 (Dine-in Order #NG-4029)',
-        'unread': 0,
-        'lastTime': '15m ago',
-        'messages': [
-          {'from': 'customer', 'text': 'Nasi lemak rendang tu pedas sangat ke?', 'time': '12:20 PM'},
-          {'from': 'merchant', 'text': 'Pedas sedap sederhana kak, sambal manis pedas ala Melaka!', 'time': '12:22 PM'},
-          {'from': 'customer', 'text': 'Baik terima kasih, dah submit order guna QR.', 'time': '12:25 PM'},
-        ],
-      },
-      {
-        'id': 'TH-03',
-        'customerName': 'Jason Tan',
-        'phone': '+60 12-334 1122',
-        'type': 'Support',
-        'orderRef': 'Takeaway #NG-4015',
-        'unread': 0,
-        'lastTime': '1h ago',
-        'messages': [
-          {'from': 'customer', 'text': 'Hi, is parking available nearby?', 'time': '11:00 AM'},
-          {'from': 'merchant', 'text': 'Yes Jason, free parking available at the back alley!', 'time': '11:02 AM'},
-          {'from': 'customer', 'text': 'Awesome, on my way now.', 'time': '11:05 AM'},
-        ],
-      },
-      {
-        'id': 'TH-04',
-        'customerName': 'Siti Khadijah',
-        'phone': '+60 13-909 8811',
-        'type': 'Bookings',
-        'orderRef': 'Family Dinner (Tomorrow, 8:00 PM)',
-        'unread': 0,
-        'lastTime': '3h ago',
-        'messages': [
-          {'from': 'customer', 'text': 'Hai, esok boleh sediakan 2 baby chair untuk meja kami?', 'time': '09:30 AM'},
-          {'from': 'merchant', 'text': 'Boleh puan, kami dah reserve siap-siap!', 'time': '09:32 AM'},
-        ],
-      },
-    ];
-
-    // Default to first thread
-    _activeThread = _threads.first;
+    _threads = [];
+    _activeThread = null;
     _loadLiveThreads();
   }
 
@@ -170,10 +113,12 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
         });
       }
 
-      if (liveThreads.isNotEmpty && mounted) {
+      if (mounted) {
         setState(() {
-          _threads = [...liveThreads, ..._threads];
-          _activeThread = _threads.first;
+          _threads = liveThreads;
+          if (_threads.isNotEmpty) {
+            _activeThread = _threads.first;
+          }
         });
       }
     } catch (_) {}
@@ -320,6 +265,30 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
 
   Widget _buildThreadList() {
     final list = _filteredThreads;
+    if (list.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white24, size: 40),
+              const SizedBox(height: 12),
+              const Text(
+                'Tiada mesej pelanggan',
+                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Pertanyaan atau tempahan pelanggan akan dipaparkan di sini.',
+                style: TextStyle(color: Colors.white38, fontSize: 11),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: list.length,

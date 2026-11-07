@@ -75,44 +75,7 @@ class LoyaltyService {
 
   /// Fetches customer cards
   Future<List<CustomerLoyaltyCardModel>> fetchCustomerCards() async {
-    if (_localCards.isEmpty) {
-      // Seed realistic demo data
-      _localCards.addAll([
-        CustomerLoyaltyCardModel(
-          id: 'card_1',
-          programId: 'prog_default',
-          businessId: 'biz_1',
-          customerName: 'Ahmad Danial',
-          customerPhone: '012-3456789',
-          currentStamps: 5, // Reward ready!
-          totalStampsRequired: 5,
-          totalRewardsRedeemed: 1,
-          lastStampedAt: DateTime.now().subtract(const Duration(days: 2)),
-        ),
-        CustomerLoyaltyCardModel(
-          id: 'card_2',
-          programId: 'prog_default',
-          businessId: 'biz_1',
-          customerName: 'Muhammad Harith',
-          customerPhone: '017-9876543',
-          currentStamps: 3,
-          totalStampsRequired: 5,
-          totalRewardsRedeemed: 0,
-          lastStampedAt: DateTime.now().subtract(const Duration(days: 5)),
-        ),
-        CustomerLoyaltyCardModel(
-          id: 'card_3',
-          programId: 'prog_default',
-          businessId: 'biz_1',
-          customerName: 'Siti Nurhaliza',
-          customerPhone: '019-2233445',
-          currentStamps: 4,
-          totalStampsRequired: 5,
-          totalRewardsRedeemed: 2,
-          lastStampedAt: DateTime.now().subtract(const Duration(hours: 4)),
-        ),
-      ]);
-    }
+// Only fetch real customer loyalty cards from database
 
     try {
       final businessId = await _getShopId();

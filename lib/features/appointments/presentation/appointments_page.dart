@@ -1072,7 +1072,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
                       labelText: 'Nama Pelanggan *',
-                      hintText: 'Cth: Amirul Hakim / Siti Nurhaliza / Syarikat ABC',
+                      hintText: 'Cth: Amirul Hakim / Syarikat ABC',
                       hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
