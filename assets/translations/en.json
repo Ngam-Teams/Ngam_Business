@@ -85,7 +85,10 @@
     "live_counter": "Live Counter",
     "open_store": "Store Open",
     "close_store": "Store Closed",
-    "rush_mode_active": "Rush Mode Active"
+    "rush_mode_active": "Rush Mode Active",
+    "recent_activity": "Recent Activity",
+    "live_feed": "Live Feed",
+    "just_now": "Just now"
   },
   "orders": {
     "title": "Orders",
@@ -193,7 +196,10 @@
     "no_waiting": "No customers waiting in queue",
     "ticket_issued_success": "Ticket issued successfully",
     "ticket_called": "Calling ticket number",
-    "ticket_completed": "Ticket served and completed"
+    "ticket_completed": "Ticket served and completed",
+    "qr_standee": "Walk-In QR Standee",
+    "custom_service_hint": "Or type custom service name...",
+    "chair_prefix": "Chair {}"
   },
   "appointments": {
     "title": "Appointments",
@@ -494,7 +500,27 @@
     "prep_time": "Average Preparation Time",
     "prep_time_minutes": "{} Minutes",
     "save_profile": "Save Business Profile",
-    "profile_saved": "Business profile updated successfully"
+    "profile_saved": "Business profile updated successfully",
+    "service_modes_title": "Store Service Modes",
+    "service_modes_subtitle": "Choose which features are active for your customers. You can start with Walk-In only and enable Booking or Order anytime later.",
+    "quick_preset_label": "Quick Mode Presets:",
+    "preset_walkin_only": "Walk-In Only",
+    "preset_walkin_booking": "Walk-In + Booking",
+    "preset_order_only": "Order / Menu Only",
+    "preset_all_modes": "All Modes Active",
+    "mode_walkin_title": "Walk-In & Smart Queue",
+    "mode_walkin_desc": "Customers scan QR or tap Walk-In to get a live queue ticket number without physical waiting.",
+    "mode_booking_title": "Appointment Slot Booking",
+    "mode_booking_desc": "Customers book specific date & time slots in advance.",
+    "mode_order_title": "Direct Menu & Catalog Order",
+    "mode_order_desc": "Customers browse your product catalog, add to cart, and place dine-in or takeaway orders.",
+    "mode_active_badge": "ACTIVE",
+    "mode_reserved_badge": "RESERVED / STANDBY",
+    "min_one_mode_toast": "At least one service mode must remain active.",
+    "walkin_wait_label": "Est. Walk-In Time per Customer",
+    "chairs_capacity_label": "Service Capacity / Chairs",
+    "slot_duration_label": "Booking Slot Duration",
+    "reserved_settings_note": "Settings for disabled modes are safely saved and reserved for when you activate them later."
   },
   "operating_hours": {
     "title": "Operating Hours",

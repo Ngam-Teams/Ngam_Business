@@ -94,56 +94,67 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
   }
 
-  static const _activities = [
-    (
-      time: 'Just now',
-      event: 'Order #2041 completed — RM 32.00',
-      icon: HugeIcons.strokeRoundedShoppingBag01,
-      color: Color(0xFF42A5F5),
-    ),
-    (
-      time: '12 min ago',
-      event: 'New product added: Laksa',
-      icon: HugeIcons.strokeRoundedAdd01,
-      color: Color(0xFF44CF6C),
-    ),
-    (
-      time: '1h ago',
-      event: 'Order #2040 completed — RM 18.50',
-      icon: HugeIcons.strokeRoundedShoppingBag01,
-      color: Color(0xFF42A5F5),
-    ),
-    (
-      time: '2h ago',
-      event: 'Stock updated: Nasi Lemak (50 units)',
-      icon: HugeIcons.strokeRoundedPackageDelivered,
-      color: Color(0xFF42A5F5),
-    ),
-    (
-      time: '3h ago',
-      event: 'Order #2039 completed — RM 24.00',
-      icon: HugeIcons.strokeRoundedShoppingBag01,
-      color: Color(0xFF42A5F5),
-    ),
-    (
-      time: '4h ago',
-      event: 'Customer review received: 5.0 ⭐',
-      icon: HugeIcons.strokeRoundedStar,
-      color: Color(0xFFFFA726),
-    ),
-    (
-      time: '5h ago',
-      event: 'Order #2038 completed — RM 45.00',
-      icon: HugeIcons.strokeRoundedShoppingBag01,
-      color: Color(0xFF42A5F5),
-    ),
-    (
-      time: '6h ago',
-      event: 'Payout settlement RM 380.00 processed',
-      icon: HugeIcons.strokeRoundedCoins01,
-      color: Color(0xFF10B981),
-    ),
-  ];
+  List<({Color color, String event, dynamic icon, String time, VoidCallback? onTap})> _getDefaultActivities(BuildContext context) {
+    final isMs = context.locale.languageCode == 'ms';
+    return [
+      (
+        time: isMs ? 'Baru sahaja' : 'Just now',
+        event: isMs ? 'Pesanan #2041 selesai — RM 32.00' : 'Order #2041 completed — RM 32.00',
+        icon: HugeIcons.strokeRoundedShoppingBag01,
+        color: const Color(0xFF42A5F5),
+        onTap: () => switchAppShellTab(1),
+      ),
+      (
+        time: isMs ? '12 min lalu' : '12 min ago',
+        event: isMs ? 'Produk baharu ditambah: Laksa' : 'New product added: Laksa',
+        icon: HugeIcons.strokeRoundedAdd01,
+        color: const Color(0xFF44CF6C),
+        onTap: () => context.push('/product-catalogue'),
+      ),
+      (
+        time: isMs ? '1j lalu' : '1h ago',
+        event: isMs ? 'Pesanan #2040 selesai — RM 18.50' : 'Order #2040 completed — RM 18.50',
+        icon: HugeIcons.strokeRoundedShoppingBag01,
+        color: const Color(0xFF42A5F5),
+        onTap: () => switchAppShellTab(1),
+      ),
+      (
+        time: isMs ? '2j lalu' : '2h ago',
+        event: isMs ? 'Stok dikemas kini: Nasi Lemak 50 unit' : 'Stock updated: Nasi Lemak 50 units',
+        icon: HugeIcons.strokeRoundedPackageDelivered,
+        color: const Color(0xFF42A5F5),
+        onTap: () => context.push('/inventory'),
+      ),
+      (
+        time: isMs ? '3j lalu' : '3h ago',
+        event: isMs ? 'Pesanan #2039 selesai — RM 24.00' : 'Order #2039 completed — RM 24.00',
+        icon: HugeIcons.strokeRoundedShoppingBag01,
+        color: const Color(0xFF42A5F5),
+        onTap: () => switchAppShellTab(1),
+      ),
+      (
+        time: isMs ? '4j lalu' : '4h ago',
+        event: isMs ? 'Ulasan pelanggan diterima: 5.0 ⭐' : 'Customer review received: 5.0 ⭐',
+        icon: HugeIcons.strokeRoundedStar,
+        color: const Color(0xFFFFA726),
+        onTap: () => context.push('/customer-reviews'),
+      ),
+      (
+        time: isMs ? '5j lalu' : '5h ago',
+        event: isMs ? 'Pesanan #2038 selesai — RM 45.00' : 'Order #2038 completed — RM 45.00',
+        icon: HugeIcons.strokeRoundedShoppingBag01,
+        color: const Color(0xFF42A5F5),
+        onTap: () => switchAppShellTab(1),
+      ),
+      (
+        time: isMs ? '6j lalu' : '6h ago',
+        event: isMs ? 'Penyata pengeluaran RM 380.00 diproses' : 'Payout settlement RM 380.00 processed',
+        icon: HugeIcons.strokeRoundedCoins01,
+        color: const Color(0xFF10B981),
+        onTap: () => context.push('/payouts'),
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -686,18 +697,19 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
   }
 
-  String _formatRelativeTime(String isoString) {
+  String _formatRelativeTime(String isoString, BuildContext context) {
     final dt = DateTime.tryParse(isoString)?.toLocal();
-    if (dt == null) return 'Baru sahaja';
+    final isMs = context.locale.languageCode == 'ms';
+    if (dt == null) return isMs ? 'Baru sahaja' : 'Just now';
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Baru sahaja';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m lalu';
-    if (diff.inHours < 24) return '${diff.inHours}j lalu';
-    return '${diff.inDays}h lalu';
+    if (diff.inMinutes < 1) return isMs ? 'Baru sahaja' : 'Just now';
+    if (diff.inMinutes < 60) return isMs ? '${diff.inMinutes}m lalu' : '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return isMs ? '${diff.inHours}j lalu' : '${diff.inHours}h ago';
+    return isMs ? '${diff.inDays}h lalu' : '${diff.inDays}d ago';
   }
 
   Widget _buildRecentActivity({bool isDesktop = false, List<dynamic>? liveRaw}) {
-    final List<({Color color, String event, dynamic icon, String time})> displayActivities;
+    final List<({Color color, String event, dynamic icon, String time, VoidCallback? onTap})> displayActivities;
     if (liveRaw != null && liveRaw.isNotEmpty) {
       displayActivities = liveRaw.map((item) {
         final map = item as Map<String, dynamic>;
@@ -714,18 +726,21 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ? HugeIcons.strokeRoundedCalendar01
             : HugeIcons.strokeRoundedShoppingBag01;
         return (
-          time: _formatRelativeTime((map['created_at'] ?? '').toString()),
+          time: _formatRelativeTime((map['created_at'] ?? '').toString(), context),
           event: (map['event'] ?? '').toString(),
           icon: ic,
           color: c,
+          onTap: isBooking
+              ? () => context.push('/appointments')
+              : () => switchAppShellTab(1),
         );
       }).toList();
     } else {
-      displayActivities = _activities;
+      displayActivities = _getDefaultActivities(context);
     }
 
     return _buildPanel(
-      title: 'dashboard.recent_orders'.tr(),
+      title: 'dashboard.recent_activity'.tr(),
       icon: HugeIcons.strokeRoundedActivity01,
       expand: isDesktop,
       trailing: Container(
@@ -749,9 +764,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
               ),
             ),
             const SizedBox(width: 5),
-            const Text(
-              'Live Feed',
-              style: TextStyle(
+            Text(
+              'dashboard.live_feed'.tr(),
+              style: const TextStyle(
                 color: Color(0xFF44CF6C),
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
@@ -784,48 +799,64 @@ class _HomeDashboardState extends State<HomeDashboard> {
     );
   }
 
-  Widget _buildActivityItem(({Color color, String event, dynamic icon, String time}) act) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: act.color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: HugeIcon(
-            icon: act.icon,
-            color: act.color,
-            size: 16,
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildActivityItem(({Color color, String event, dynamic icon, String time, VoidCallback? onTap}) act) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: act.onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: Row(
             children: [
-              Text(
-                act.event,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: act.color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                act.time,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.35),
-                  fontSize: 11,
+                child: HugeIcon(
+                  icon: act.icon,
+                  color: act.color,
+                  size: 16,
                 ),
               ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      act.event,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      act.time,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.35),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (act.onTap != null)
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: Colors.white.withValues(alpha: 0.25),
+                ),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 

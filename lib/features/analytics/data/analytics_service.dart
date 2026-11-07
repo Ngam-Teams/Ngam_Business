@@ -153,7 +153,7 @@ class AnalyticsService {
         recentActivities.add({
           'type': 'booking',
           'status': st,
-          'event': 'Tempahan $svc ($cust) — ${st.toUpperCase()}',
+          'event': 'Tempahan $svc • $cust — ${st.toUpperCase()}',
           'created_at': (rb['created_at'] ?? '').toString(),
         });
       }

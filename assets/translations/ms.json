@@ -85,7 +85,10 @@
     "live_counter": "Kaunter Langsung",
     "open_store": "Kedai Dibuka",
     "close_store": "Kedai Ditutup",
-    "rush_mode_active": "Mod Waktu Puncak Aktif"
+    "rush_mode_active": "Mod Waktu Puncak Aktif",
+    "recent_activity": "Aktiviti Terkini",
+    "live_feed": "Suapan Langsung",
+    "just_now": "Baru sahaja"
   },
   "orders": {
     "title": "Pesanan",
@@ -193,7 +196,10 @@
     "no_waiting": "Tiada pelanggan sedang menunggu giliran",
     "ticket_issued_success": "Tiket berjaya dikeluarkan",
     "ticket_called": "Memanggil nombor tiket",
-    "ticket_completed": "Tiket selesai dilayan"
+    "ticket_completed": "Tiket selesai dilayan",
+    "qr_standee": "QR Standee Walk-In",
+    "custom_service_hint": "Atau taip nama servis lain...",
+    "chair_prefix": "Kerusi {}"
   },
   "appointments": {
     "title": "Janji Temu",
