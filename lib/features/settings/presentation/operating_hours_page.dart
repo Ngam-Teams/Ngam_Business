@@ -22,6 +22,7 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
 
   bool _isRushMode = false;
   String _rushModeDuration = '30 minutes';
+  Map<String, dynamic> _existingOperatingHours = {};
 
   late List<Map<String, dynamic>> _schedule;
   List<Map<String, dynamic>> _specialHolidays = [];
@@ -62,7 +63,8 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
         final settings = profile['settings'] as Map<String, dynamic>?;
 
         if (settings != null && settings['operating_hours'] is Map) {
-          final op = settings['operating_hours'] as Map<String, dynamic>;
+          final op = Map<String, dynamic>.from(settings['operating_hours'] as Map);
+          _existingOperatingHours = Map<String, dynamic>.from(op);
 
           if (op['is_rush_mode'] != null) {
             _isRushMode = op['is_rush_mode'] == true;
@@ -179,15 +181,19 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
       final openStr = _formatTimeOfDay(firstOpen['open'] as TimeOfDay);
       final closeStr = _formatTimeOfDay(firstOpen['close'] as TimeOfDay);
 
+      final mergedOp = <String, dynamic>{
+        ..._existingOperatingHours,
+        'open_time': openStr,
+        'close_time': closeStr,
+        'is_rush_mode': _isRushMode,
+        'rush_mode_duration': _rushModeDuration,
+        'weekly_schedule': weeklySerialized,
+        'special_holidays': _specialHolidays,
+      };
+      _existingOperatingHours = mergedOp;
+
       final payload = {
-        'operating_hours': {
-          'open_time': openStr,
-          'close_time': closeStr,
-          'is_rush_mode': _isRushMode,
-          'rush_mode_duration': _rushModeDuration,
-          'weekly_schedule': weeklySerialized,
-          'special_holidays': _specialHolidays,
-        }
+        'operating_hours': mergedOp,
       };
 
       await BusinessService().saveBusinessSettings(_businessId!, payload);

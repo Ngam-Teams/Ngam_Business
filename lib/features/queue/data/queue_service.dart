@@ -127,7 +127,16 @@ class QueueService {
               .order('created_at', ascending: true)
               .listen(
                 (rows) {
-                  latestQueueTickets = rows.map((j) => QueueTicketModel.fromJson(j)).toList();
+                  final now = DateTime.now();
+                  final startOfToday = DateTime(now.year, now.month, now.day);
+                  latestQueueTickets = rows
+                      .map((j) => QueueTicketModel.fromJson(j))
+                      .where((t) =>
+                          t.createdAt.isAfter(startOfToday) ||
+                          t.status == 'waiting' ||
+                          t.status == 'calling' ||
+                          t.status == 'serving')
+                      .toList();
                   emitMerged();
                 },
                 onError: (_) {
@@ -179,13 +188,21 @@ class QueueService {
 
       // Fetch queue tickets
       try {
+        final now = DateTime.now();
+        final startOfToday = DateTime(now.year, now.month, now.day);
         final response = await _client
             .from('queue_tickets')
             .select()
             .eq('business_id', businessId)
             .order('created_at', ascending: true);
         result.addAll(
-          (response as List).map((json) => QueueTicketModel.fromJson(json as Map<String, dynamic>)),
+          (response as List)
+              .map((json) => QueueTicketModel.fromJson(json as Map<String, dynamic>))
+              .where((t) =>
+                  t.createdAt.isAfter(startOfToday) ||
+                  t.status == 'waiting' ||
+                  t.status == 'calling' ||
+                  t.status == 'serving'),
         );
       } catch (_) {
         result.addAll(_localDemoTickets);
@@ -219,12 +236,64 @@ class QueueService {
     String? assignedStaffName,
     String? notes,
   }) async {
-    final businessId = await _getShopId() ?? 'local_shop';
+    final profile = await _businessService.getBusinessProfile();
+    final businessId = profile?['id']?.toString() ?? 'local_shop';
+
+    int baseWaitMins = 15;
+    int totalChairs = 1;
+    if (profile?['settings'] is Map) {
+      final settings = profile!['settings'] as Map;
+      totalChairs = (settings['total_chairs'] as num?)?.toInt() ?? 1;
+      if (totalChairs < 1) totalChairs = 1;
+      final op = settings['operating_hours'];
+      if (op is Map && op['estimated_wait_minutes'] != null) {
+        baseWaitMins = (op['estimated_wait_minutes'] as num?)?.toInt() ?? 15;
+      }
+    }
+
+    int nextSeq = _ticketSequence;
+    int activeWaitingCount = 0;
+
+    if (businessId != 'local_shop') {
+      try {
+        final now = DateTime.now();
+        final startOfToday = DateTime(now.year, now.month, now.day).toIso8601String();
+        final todayRows = await _client
+            .from('queue_tickets')
+            .select('ticket_number, status')
+            .eq('business_id', businessId)
+            .gte('created_at', startOfToday);
+
+        final list = todayRows as List;
+        int maxNum = list.length;
+        for (final r in list) {
+          final st = r['status']?.toString() ?? '';
+          if (st == 'waiting' || st == 'calling') {
+            activeWaitingCount++;
+          }
+          final tNum = (r['ticket_number']?.toString() ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+          final parsed = int.tryParse(tNum);
+          if (parsed != null && parsed < 100 && parsed > maxNum) {
+            maxNum = parsed;
+          }
+        }
+        nextSeq = maxNum + 1;
+        if (nextSeq <= _ticketSequence) {
+          _ticketSequence = nextSeq + 1;
+        } else {
+          _ticketSequence = nextSeq + 1;
+        }
+      } catch (_) {
+        nextSeq = _ticketSequence++;
+      }
+    } else {
+      nextSeq = _ticketSequence++;
+    }
 
     // Generate next ticket number (e.g. A001, A002)
-    final numStr = _ticketSequence.toString().padLeft(3, '0');
+    final numStr = nextSeq.toString().padLeft(3, '0');
     final ticketNumber = 'A$numStr';
-    _ticketSequence++;
+    final estimatedWait = ((activeWaitingCount ~/ totalChairs) + 1) * baseWaitMins;
 
     final newTicketData = {
       'business_id': businessId,
@@ -237,7 +306,7 @@ class QueueService {
       if (assignedStaffName != null) 'assigned_staff_name': assignedStaffName,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
       'status': 'waiting',
-      'estimated_wait_minutes': 15,
+      'estimated_wait_minutes': estimatedWait,
       'created_at': DateTime.now().toIso8601String(),
     };
 

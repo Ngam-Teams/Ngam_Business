@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -57,7 +58,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   TimeOfDay _openTime = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _closeTime = const TimeOfDay(hour: 22, minute: 0);
   int _slotDuration = 30;
+  int _estimatedWaitMinutes = 15;
   final _chairsController = TextEditingController(text: '1');
+  bool _enableWalkIn = true;
+  bool _enableBooking = true;
+  bool _enableOrder = true;
+  Map<String, dynamic> _existingOperatingHours = {};
 
   // Banking & Compliance
   String? _selectedBank;
@@ -241,6 +247,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
       final opHours = settings['operating_hours'];
       if (opHours is Map) {
+        _existingOperatingHours = Map<String, dynamic>.from(opHours);
         final openStr = opHours['open_time'] as String?;
         final closeStr = opHours['close_time'] as String?;
         if (openStr != null && openStr.contains(':')) {
@@ -250,6 +257,29 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         if (closeStr != null && closeStr.contains(':')) {
           final parts = closeStr.split(':');
           _closeTime = TimeOfDay(hour: int.tryParse(parts[0]) ?? 22, minute: int.tryParse(parts[1]) ?? 0);
+        }
+
+        if (opHours['estimated_wait_minutes'] != null) {
+          _estimatedWaitMinutes = (opHours['estimated_wait_minutes'] as num?)?.toInt() ?? 15;
+        }
+
+        if (opHours['service_modes'] is List) {
+          final modes = (opHours['service_modes'] as List)
+              .map((e) => e.toString().toLowerCase())
+              .toList();
+          _enableWalkIn = modes.contains('walkin');
+          _enableBooking = modes.contains('booking');
+          _enableOrder = modes.contains('order');
+        } else {
+          if (opHours.containsKey('enable_walkin')) {
+            _enableWalkIn = opHours['enable_walkin'] != false;
+          }
+          if (opHours.containsKey('enable_booking')) {
+            _enableBooking = opHours['enable_booking'] != false;
+          }
+          if (opHours.containsKey('enable_order')) {
+            _enableOrder = opHours['enable_order'] != false;
+          }
         }
       }
     }
@@ -348,15 +378,35 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       'business_cover_url': _coverUrl,
     };
 
+    if (!_enableWalkIn && !_enableBooking && !_enableOrder) {
+      setState(() => _enableWalkIn = true);
+    }
+
+    final serviceModesList = <String>[
+      if (_enableWalkIn) 'walkin',
+      if (_enableBooking) 'booking',
+      if (_enableOrder) 'order',
+    ];
+
+    final mergedOperatingHours = <String, dynamic>{
+      ..._existingOperatingHours,
+      'open_time': _formatTimeOfDay(_openTime),
+      'close_time': _formatTimeOfDay(_closeTime),
+      'days': _existingOperatingHours['days'] ??
+          ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      'service_modes': serviceModesList,
+      'enable_walkin': _enableWalkIn,
+      'enable_booking': _enableBooking,
+      'enable_order': _enableOrder,
+      'estimated_wait_minutes': _estimatedWaitMinutes,
+    };
+    _existingOperatingHours = mergedOperatingHours;
+
     final settingsData = {
       'is_halal': _isHalal,
       'slot_duration': _slotDuration,
       'total_chairs': int.tryParse(_chairsController.text.trim()) ?? 1,
-      'operating_hours': {
-        'open_time': _formatTimeOfDay(_openTime),
-        'close_time': _formatTimeOfDay(_closeTime),
-        'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-      },
+      'operating_hours': mergedOperatingHours,
     };
 
     final complianceData = {
@@ -679,7 +729,18 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
                         const SizedBox(height: 28),
 
-                        // Section 4: Operating Hours & Settings
+                        // Section 4A: Store Service Modes (Walk-In / Booking / Order)
+                        _buildSectionHeader(
+                          title: 'business_profile.service_modes_title'.tr(),
+                          subtitle: 'business_profile.service_modes_subtitle'.tr(),
+                          icon: HugeIcons.strokeRoundedTicket01,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildServiceModesSection(),
+
+                        const SizedBox(height: 28),
+
+                        // Section 4B: Operating Hours & Settings
                         _buildSectionHeader(
                           title: 'Operating Hours & Settings',
                           subtitle: 'Control business open hours, halal certification, and booking capacity',
@@ -726,24 +787,26 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           const Divider(color: Color(0x1AFFFFFF), height: 1),
                           const SizedBox(height: 20),
 
-                          // Booking & Capacity
+                          // Walk-In & Booking Capacity Settings
                           Row(
                             children: [
                               Expanded(
-                                child: _buildSlotDurationDropdown(),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
                                 child: _buildTextField(
-                                  label: 'Service Capacity / Chairs',
+                                  label: 'business_profile.chairs_capacity_label'.tr(),
                                   controller: _chairsController,
                                   icon: HugeIcons.strokeRoundedUserGroup,
                                   keyboardType: TextInputType.number,
                                   hint: '1',
                                 ),
                               ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: _buildEstimatedWaitDropdown(),
+                              ),
                             ],
                           ),
+                          const SizedBox(height: 16),
+                          _buildSlotDurationDropdown(),
                         ]),
 
                         const SizedBox(height: 28),
@@ -1459,6 +1522,356 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
             );
           }).toList(),
           onChanged: (val) => setState(() => _selectedBank = val),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServiceModesSection() {
+    final isWalkInOnly = _enableWalkIn && !_enableBooking && !_enableOrder;
+    final isWalkInBooking = _enableWalkIn && _enableBooking && !_enableOrder;
+    final isOrderOnly = !_enableWalkIn && !_enableBooking && _enableOrder;
+    final isAllActive = _enableWalkIn && _enableBooking && _enableOrder;
+
+    return _buildCardContainer([
+      Text(
+        'business_profile.quick_preset_label'.tr(),
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 10),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _buildPresetChip(
+            label: 'business_profile.preset_walkin_only'.tr(),
+            isSelected: isWalkInOnly,
+            color: const Color(0xFF10B981),
+            onTap: () => setState(() {
+              _enableWalkIn = true;
+              _enableBooking = false;
+              _enableOrder = false;
+            }),
+          ),
+          _buildPresetChip(
+            label: 'business_profile.preset_walkin_booking'.tr(),
+            isSelected: isWalkInBooking,
+            color: const Color(0xFF42A5F5),
+            onTap: () => setState(() {
+              _enableWalkIn = true;
+              _enableBooking = true;
+              _enableOrder = false;
+            }),
+          ),
+          _buildPresetChip(
+            label: 'business_profile.preset_order_only'.tr(),
+            isSelected: isOrderOnly,
+            color: const Color(0xFFF59E0B),
+            onTap: () => setState(() {
+              _enableWalkIn = false;
+              _enableBooking = false;
+              _enableOrder = true;
+            }),
+          ),
+          _buildPresetChip(
+            label: 'business_profile.preset_all_modes'.tr(),
+            isSelected: isAllActive,
+            color: const Color(0xFFA78BFA),
+            onTap: () => setState(() {
+              _enableWalkIn = true;
+              _enableBooking = true;
+              _enableOrder = true;
+            }),
+          ),
+        ],
+      ),
+      const SizedBox(height: 18),
+      _buildServiceModeCard(
+        title: 'business_profile.mode_walkin_title'.tr(),
+        subtitle: 'business_profile.mode_walkin_desc'.tr(),
+        icon: HugeIcons.strokeRoundedTicket01,
+        accentColor: const Color(0xFF10B981),
+        isEnabled: _enableWalkIn,
+        onToggle: (val) {
+          if (!val && !_enableBooking && !_enableOrder) {
+            showGlassToast(context, 'business_profile.min_one_mode_toast'.tr(), isError: true);
+            return;
+          }
+          setState(() => _enableWalkIn = val);
+        },
+      ),
+      const SizedBox(height: 12),
+      _buildServiceModeCard(
+        title: 'business_profile.mode_booking_title'.tr(),
+        subtitle: 'business_profile.mode_booking_desc'.tr(),
+        icon: HugeIcons.strokeRoundedCalendar03,
+        accentColor: const Color(0xFF42A5F5),
+        isEnabled: _enableBooking,
+        onToggle: (val) {
+          if (!val && !_enableWalkIn && !_enableOrder) {
+            showGlassToast(context, 'business_profile.min_one_mode_toast'.tr(), isError: true);
+            return;
+          }
+          setState(() => _enableBooking = val);
+        },
+      ),
+      const SizedBox(height: 12),
+      _buildServiceModeCard(
+        title: 'business_profile.mode_order_title'.tr(),
+        subtitle: 'business_profile.mode_order_desc'.tr(),
+        icon: HugeIcons.strokeRoundedShoppingBag01,
+        accentColor: const Color(0xFFF59E0B),
+        isEnabled: _enableOrder,
+        onToggle: (val) {
+          if (!val && !_enableWalkIn && !_enableBooking) {
+            showGlassToast(context, 'business_profile.min_one_mode_toast'.tr(), isError: true);
+            return;
+          }
+          setState(() => _enableOrder = val);
+        },
+      ),
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.shield_outlined, color: Color(0xFF42A5F5), size: 16),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'business_profile.reserved_settings_note'.tr(),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.55),
+                  fontSize: 11.5,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildPresetChip({
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : Colors.white.withValues(alpha: 0.1),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              size: 14,
+              color: isSelected ? color : Colors.white38,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white70,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServiceModeCard({
+    required String title,
+    required String subtitle,
+    required dynamic icon,
+    required Color accentColor,
+    required bool isEnabled,
+    required ValueChanged<bool> onToggle,
+  }) {
+    return GestureDetector(
+      onTap: () => onToggle(!isEnabled),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isEnabled
+              ? accentColor.withValues(alpha: 0.12)
+              : Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isEnabled
+                ? accentColor.withValues(alpha: 0.55)
+                : Colors.white.withValues(alpha: 0.08),
+            width: isEnabled ? 1.4 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isEnabled
+                    ? accentColor.withValues(alpha: 0.22)
+                    : Colors.white.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: HugeIcon(
+                icon: icon,
+                color: isEnabled ? accentColor : Colors.white54,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: isEnabled ? Colors.white : Colors.white70,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isEnabled
+                              ? accentColor.withValues(alpha: 0.25)
+                              : Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isEnabled
+                              ? 'business_profile.mode_active_badge'.tr()
+                              : 'business_profile.mode_reserved_badge'.tr(),
+                          style: TextStyle(
+                            color: isEnabled ? accentColor : Colors.white38,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: isEnabled ? 0.65 : 0.38),
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Switch.adaptive(
+              value: isEnabled,
+              activeColor: accentColor,
+              onChanged: onToggle,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEstimatedWaitDropdown() {
+    const waitOptions = [10, 15, 20, 30, 45, 60];
+    final currentVal = waitOptions.contains(_estimatedWaitMinutes) ? _estimatedWaitMinutes : 15;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'business_profile.walkin_wait_label'.tr(),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        DropdownButtonFormField<int>(
+          isExpanded: true,
+          value: currentVal,
+          dropdownColor: const Color(0xFF1A1A24),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.only(left: 10, right: 6),
+              child: HugeIcon(
+                icon: HugeIcons.strokeRoundedHourglass,
+                color: Colors.white.withValues(alpha: 0.5),
+                size: 18,
+              ),
+            ),
+            prefixIconConstraints: const BoxConstraints(minWidth: 34),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF10B981)),
+            ),
+          ),
+          items: waitOptions.map((mins) {
+            return DropdownMenuItem<int>(
+              value: mins,
+              child: Text(
+                'business_profile.prep_time_minutes'.tr(args: [mins.toString()]),
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) setState(() => _estimatedWaitMinutes = val);
+          },
         ),
       ],
     );

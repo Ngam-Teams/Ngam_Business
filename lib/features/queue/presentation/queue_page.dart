@@ -166,6 +166,11 @@ class _QueuePageState extends State<QueuePage> {
       subtitle: 'queue.subtitle'.tr(),
       actionItems: [
         GlassNavPillItem(
+          icon: HugeIcons.strokeRoundedQrCode,
+          tooltip: 'queue.qr_standee'.tr(),
+          onTap: () => context.push('/qr'),
+        ),
+        GlassNavPillItem(
           icon: HugeIcons.strokeRoundedTv01,
           tooltip: 'queue.open_tv_display'.tr(),
           onTap: () => context.push('/queue/tv'),
@@ -617,23 +622,37 @@ class _QueuePageState extends State<QueuePage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 48),
-      alignment: Center(
-        child: Column(
-          children: [
-            const Icon(Icons.confirmation_number_outlined, color: Colors.white24, size: 56),
-            const SizedBox(height: 12),
-            const Text(
-              'Tiada Tiket Giliran',
-              style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          const Icon(Icons.confirmation_number_outlined, color: Colors.white24, size: 56),
+          const SizedBox(height: 12),
+          Text(
+            'queue.no_waiting'.tr(),
+            style: const TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Tekan "+ ${'queue.issue_ticket'.tr()}" atau pamerkan QR Giliran untuk pelanggan imbas sendiri',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => context.push('/qr'),
+            icon: const HugeIcon(icon: HugeIcons.strokeRoundedQrCode, color: Color(0xFF42A5F5), size: 16),
+            label: Text(
+              'queue.qr_standee'.tr(),
+              style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold, fontSize: 12),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Tekan "+ Tiket Walk-In" untuk daftar pelanggan baharu',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: const Color(0xFF42A5F5).withValues(alpha: 0.5)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
-          ],
-        ),
-      ).alignment,
+          ),
+        ],
+      ),
     );
   }
 

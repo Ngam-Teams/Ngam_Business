@@ -1,5 +1,8 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../widgets/glass_toast.dart';
+import '../../../settings/data/business_service.dart';
 import '../../data/queue_service.dart';
 import '../../models/queue_ticket_model.dart';
 
@@ -33,7 +36,7 @@ class _IssueTicketModalState extends State<IssueTicketModal> {
   final _notesCtrl = TextEditingController();
   bool _submitting = false;
 
-  final List<String> _popularServices = [
+  List<String> _popularServices = [
     'Haircut & Styling',
     'Beard Trim & Shave',
     'Hair Wash & Massage',
@@ -41,13 +44,66 @@ class _IssueTicketModalState extends State<IssueTicketModal> {
     'Kids Haircut',
   ];
 
-  final List<String> _stationOptions = [
+  List<String> _stationOptions = [
     'Kerusi 1',
     'Kerusi 2',
     'Kerusi 3',
     'Kerusi 4',
     'Kaunter Utama',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStoreServicesAndChairs();
+  }
+
+  Future<void> _loadStoreServicesAndChairs() async {
+    try {
+      final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+      if (profile == null) return;
+      final shopId = profile['id']?.toString();
+
+      // 1. Dynamic chairs based on total_chairs in settings
+      if (profile['settings'] is Map) {
+        final settings = profile['settings'] as Map;
+        final totalChairs = (settings['total_chairs'] as num?)?.toInt() ?? 0;
+        if (totalChairs > 0) {
+          final chairs = List.generate(
+            totalChairs.clamp(1, 12),
+            (i) => 'queue.chair_prefix'.tr(args: [(i + 1).toString()]),
+          );
+          chairs.add('Kaunter Utama');
+          if (mounted) {
+            setState(() {
+              _stationOptions = chairs;
+              _chairCtrl.text = chairs.first;
+            });
+          }
+        }
+      }
+
+      // 2. Dynamic services from business_products
+      if (shopId != null && shopId.isNotEmpty) {
+        final rows = await Supabase.instance.client
+            .from('business_products')
+            .select('name, is_active')
+            .eq('shop_id', shopId)
+            .order('created_at', ascending: true);
+        final names = (rows as List)
+            .where((r) => r['is_active'] != false && (r['name']?.toString().trim().isNotEmpty ?? false))
+            .map((r) => r['name'].toString().trim())
+            .toSet()
+            .toList();
+        if (names.isNotEmpty && mounted) {
+          setState(() {
+            _popularServices = names;
+            _serviceCtrl.text = names.first;
+          });
+        }
+      }
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -198,6 +254,20 @@ class _IssueTicketModalState extends State<IssueTicketModal> {
                           },
                         );
                       }).toList(),
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _serviceCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'queue.custom_service_hint'.tr(),
+                        hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+                        filled: true,
+                        fillColor: const Color(0xFF1A1A2E),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      ),
                     ),
                     const SizedBox(height: 16),
 
