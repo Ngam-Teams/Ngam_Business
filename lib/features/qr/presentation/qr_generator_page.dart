@@ -718,7 +718,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                 Expanded(
                   flex: 6,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(left: 24, right: 20, top: 68, bottom: 40),
+                    padding: const EdgeInsets.only(left: 24, right: 20, top: 76, bottom: 40),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -754,7 +754,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                 Expanded(
                   flex: 5,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                    padding: const EdgeInsets.only(left: 24, right: 24, top: 76, bottom: 40),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
@@ -778,7 +778,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           } else {
             // ─── PORTRAIT / MOBILE DISPLAY (Neat Stacked Layout) ───
             return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 76, bottom: 40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
