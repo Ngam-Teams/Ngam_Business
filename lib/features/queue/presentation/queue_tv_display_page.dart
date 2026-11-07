@@ -304,7 +304,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
       case TvQueueLayoutMode.queueAndQr:
         return 'Giliran + QR';
       case TvQueueLayoutMode.threeColumn:
-        return 'Lengkap (3-Kolum)';
+        return 'Lengkap 3-Kolum';
       case TvQueueLayoutMode.adsAndQueue:
         return 'Iklan + Giliran';
       case TvQueueLayoutMode.queueOnly:
@@ -413,7 +413,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 mode: TvQueueLayoutMode.adsAndQueue,
                 icon: Icons.campaign_rounded,
                 badge: 'PROMOSI KEDAI',
-                title: '📢 Iklan + Giliran (Digital Signage)',
+                title: '📢 Iklan + Giliran Digital Signage',
                 subtitle: 'Kiri: Poster & Promosi Luas  •  Kanan: Senarai Giliran',
                 desc: 'Sesuai untuk kedai yang sudah meletakkan standee kod QR fizikal di meja/kaunter.',
               ),
@@ -425,7 +425,7 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
                 mode: TvQueueLayoutMode.queueOnly,
                 icon: Icons.fullscreen_rounded,
                 badge: 'FOKUS PENUH',
-                title: '🎯 Giliran Sahaja (Papan Penuh)',
+                title: '🎯 Giliran Sahaja Papan Penuh',
                 subtitle: '100% Skrin Penuh Untuk Panggilan & Senarai Nombor',
                 desc: 'Format bank / klinik: tiada gangguan iklan atau kod QR di skrin, fokus maksimum kepada nombor giliran.',
               ),
@@ -1196,7 +1196,7 @@ GlassNavButton.back(context: context, size: 44),
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'PAPAN GILIRAN KEDAI (LIVE QUEUE)',
+                    'PAPAN GILIRAN KEDAI LANGSUNG',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -1251,7 +1251,7 @@ GlassNavButton.back(context: context, size: 44),
                   color: _soundEnabled ? const Color(0xFF34D399) : Colors.white38,
                   size: 20,
                 ),
-                tooltip: _soundEnabled ? 'Bunyi Loceng Aktif (Ketik untuk senyap)' : 'Bunyi Senyap (Ketik untuk aktif)',
+                tooltip: _soundEnabled ? 'Bunyi Loceng Aktif' : 'Bunyi Loceng Senyap',
                 onPressed: _toggleSound,
               ),
 
@@ -2251,7 +2251,7 @@ GlassNavButton.back(context: context, size: 44),
               const Icon(Icons.hourglass_bottom_rounded, color: Color(0xFFF59E0B), size: 16),
               const SizedBox(width: 7),
               Text(
-                'GILIRAN SETERUSNYA (UP NEXT)',
+                'GILIRAN SETERUSNYA',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -2460,7 +2460,7 @@ GlassNavButton.back(context: context, size: 44),
               const Icon(Icons.people_alt_rounded, color: Color(0xFF10B981), size: 16),
               const SizedBox(width: 7),
               Text(
-                'SEDANG DILAYAN (NOW SERVING)',
+                'SEDANG DILAYAN',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

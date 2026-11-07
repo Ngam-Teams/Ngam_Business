@@ -558,16 +558,16 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                             children: [
                               Expanded(
                                 child: _buildTextField(
-                                  label: 'Registration Number (SSM)',
+                                  label: 'Registration Number SSM',
                                   controller: _regNoController,
                                   icon: HugeIcons.strokeRoundedBuilding03,
-                                  hint: 'e.g. 202401012345 (123456-X)',
+                                  hint: 'e.g. 202401012345 123456-X',
                                 ),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: _buildTextField(
-                                  label: 'SST Number (Optional)',
+                                  label: 'SST Number Optional',
                                   controller: _sstNoController,
                                   icon: HugeIcons.strokeRoundedInvoice01,
                                   hint: 'e.g. W10-1808-32000018',
@@ -1513,9 +1513,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
             DropdownMenuItem(value: 15, child: Text('15 Minutes', overflow: TextOverflow.ellipsis)),
             DropdownMenuItem(value: 30, child: Text('30 Minutes', overflow: TextOverflow.ellipsis)),
             DropdownMenuItem(value: 45, child: Text('45 Minutes', overflow: TextOverflow.ellipsis)),
-            DropdownMenuItem(value: 60, child: Text('60 Minutes (1 Hour)', overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 60, child: Text('60 Minutes 1 Hour', overflow: TextOverflow.ellipsis)),
             DropdownMenuItem(value: 90, child: Text('90 Minutes', overflow: TextOverflow.ellipsis)),
-            DropdownMenuItem(value: 120, child: Text('120 Minutes (2 Hours)', overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 120, child: Text('120 Minutes 2 Hours', overflow: TextOverflow.ellipsis)),
           ],
           onChanged: (val) {
             if (val != null) setState(() => _slotDuration = val);

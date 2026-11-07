@@ -236,7 +236,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
       actionItems: [
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedSmartPhone01,
-          tooltip: 'Hab Ngam Teams (Krew App)',
+          tooltip: 'Hab Krew Ngam Teams',
           onTap: () => NgamTeamsService.showTeamsHubModal(context, businessName: _businessName),
         ),
         GlassNavPillItem(
@@ -324,7 +324,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Aplikasi Operasi Krew (Ngam Teams)',
+                      'Aplikasi Operasi Krew Ngam Teams',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -1079,7 +1079,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
 
                     // Email
                     _buildField(
-                      label: 'Email (Used to log in on Ngam Teams) *',
+                      label: 'Email for Ngam Teams Login *',
                       controller: _emailController,
                       hint: 'e.g. staff@example.com or staff@ngam.dev',
                       keyboardType: TextInputType.emailAddress,
@@ -1096,7 +1096,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
                       children: [
                         Expanded(
                           child: _buildField(
-                            label: 'Phone (Optional)',
+                            label: 'Phone Optional',
                             controller: _phoneController,
                             hint: '+6012...',
                             keyboardType: TextInputType.phone,
@@ -1105,7 +1105,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildField(
-                            label: 'Staff Code (Optional)',
+                            label: 'Staff Code Optional',
                             controller: _staffCodeController,
                             hint: 'e.g. STF-001',
                           ),

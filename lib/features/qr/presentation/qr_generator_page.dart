@@ -678,7 +678,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
   void _showCustomQrColorPicker() {
     _showColorPickerDialog(
       title: 'Pilih Warna Kod QR (Petak)',
-      subtitle: 'Pilih warna untuk petak QR code (disyorkan warna berkontras tinggi).',
+      subtitle: 'Pilih warna untuk petak QR code dengan warna berkontras tinggi.',
       initialColor: _qrColor,
       onSelected: (color) {
         setState(() {
@@ -896,7 +896,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : const Icon(Icons.download_rounded, size: 20),
             label: Text(
-              _isDownloading ? 'Menjana Fail...' : 'Muat Turun Standee (HD)',
+              _isDownloading ? 'Menjana Fail...' : 'Muat Turun Standee HD',
               style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
             ),
           ),
@@ -1483,7 +1483,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 8),
             child: Text(
-              'Pilihan Pantas (Tekan untuk set terus):',
+              'Pilihan Pantas:',
               style: GoogleFonts.inter(color: Colors.white54, fontSize: 11.5, fontWeight: FontWeight.w600),
             ),
           ),
@@ -1663,7 +1663,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           const SizedBox(height: 16),
 
           _buildInputField(
-            label: 'Nama Rangkaian (SSID)',
+            label: 'Nama Rangkaian SSID',
             controller: _wifiSsidCtrl,
             icon: Icons.router_rounded,
             hint: 'Contoh: Cafe_Guest_WiFi',
@@ -1671,7 +1671,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           const SizedBox(height: 14),
 
           _buildInputField(
-            label: 'Kata Laluan WiFi (Password)',
+            label: 'Kata Laluan WiFi',
             controller: _wifiPasswordCtrl,
             icon: Icons.lock_outline_rounded,
             hint: 'Masukkan kata laluan WiFi',
@@ -1817,7 +1817,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
               ),
               const SizedBox(width: 10),
               Text(
-                'Bahasa Standee (Language)',
+                'Bahasa Standee',
                 style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
               ),
             ],
@@ -2099,7 +2099,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Warna Kod QR (Petak Standard)',
+                'Warna Kod QR Standard',
                 style: GoogleFonts.inter(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w600),
               ),
               GestureDetector(
@@ -2134,7 +2134,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Pilih warna untuk petak kod QR (disyorkan warna gelap berkontras tinggi agar mudah diimbas).',
+            'Pilih warna untuk petak kod QR dengan warna gelap berkontras tinggi agar mudah diimbas.',
             style: GoogleFonts.inter(color: Colors.white38, fontSize: 11.5),
           ),
           const SizedBox(height: 14),

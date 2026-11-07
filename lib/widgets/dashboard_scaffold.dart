@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -313,13 +314,13 @@ class DashboardScaffold extends StatelessWidget {
                           }
 
                           final tooltipText = businessName.isEmpty
-                              ? 'Profil Kedai'
+                              ? 'settings.business_profile'.tr()
                               : (handle != null && handle.isNotEmpty
-                                  ? '$businessName (@$handle)'
+                                  ? '$businessName @$handle'
                                   : businessName);
 
                           return Tooltip(
-                            message: '$tooltipText\n(Klik untuk profil)',
+                            message: tooltipText,
                             waitDuration: const Duration(milliseconds: 250),
                             child: _StoreAvatar(
                               size: 38,
@@ -391,17 +392,17 @@ class DashboardScaffold extends StatelessWidget {
                                 color: Colors.white.withValues(alpha: 0.1),
                               ),
                             ),
-                            title: const Row(
+                            title: Row(
                               children: [
-                                HugeIcon(
+                                const HugeIcon(
                                   icon: HugeIcons.strokeRoundedLogout02,
                                   color: Colors.redAccent,
                                   size: 22,
                                 ),
-                                SizedBox(width: 10),
+                                const SizedBox(width: 10),
                                 Text(
-                                  'Log Keluar',
-                                  style: TextStyle(
+                                  'settings.sign_out'.tr(),
+                                  style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -409,9 +410,9 @@ class DashboardScaffold extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            content: const Text(
-                              'Adakah anda pasti ingin log keluar dari akaun perniagaan ini?',
-                              style: TextStyle(
+                            content: Text(
+                              'settings.sign_out_confirm'.tr(),
+                              style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 14,
                               ),
@@ -419,9 +420,9 @@ class DashboardScaffold extends StatelessWidget {
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.of(ctx).pop(false),
-                                child: const Text(
-                                  'Batal',
-                                  style: TextStyle(color: Colors.white54),
+                                child: Text(
+                                  'common.cancel'.tr(),
+                                  style: const TextStyle(color: Colors.white54),
                                 ),
                               ),
                               ElevatedButton(
@@ -434,14 +435,14 @@ class DashboardScaffold extends StatelessWidget {
                                   ),
                                 ),
                                 onPressed: () => Navigator.of(ctx).pop(true),
-                                child: const Text('Log Keluar'),
+                                child: Text('settings.sign_out'.tr()),
                               ),
                             ],
                           ),
                         );
 
                         if (confirm == true && context.mounted) {
-                          showGlassToast(context, 'Sedang log keluar...');
+                          showGlassToast(context, 'settings.signing_out'.tr());
                           await AuthService().signOut();
                           if (context.mounted) {
                             context.go('/login');
@@ -799,7 +800,7 @@ class _TopBarActions extends StatelessWidget {
       children: [
         GlassNavButton(
           icon: HugeIcons.strokeRoundedNotification02,
-          tooltip: 'Pemberitahuan',
+          tooltip: 'nav.notifications'.tr(),
           size: 44,
           iconSize: 20,
                     onTap: () => context.push('/merchant-inbox'),

@@ -196,7 +196,7 @@ Langkah-langkah Mudah:
 
               const SizedBox(height: 18),
               const Text(
-                'TINDAKAN PANTAS (QUICK ACTIONS)',
+                'TINDAKAN PANTAS QUICK ACTIONS',
                 style: TextStyle(
                   color: Colors.white38,
                   fontSize: 11,

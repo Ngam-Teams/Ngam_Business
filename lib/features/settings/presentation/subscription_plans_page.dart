@@ -210,7 +210,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
   String _getPlanName(SubscriptionTier tier) {
     switch (tier) {
       case SubscriptionTier.starter:
-        return 'Ngam Starter (Free)';
+        return 'Ngam Starter Free';
       case SubscriptionTier.pro:
         return 'Ngam Pro';
       case SubscriptionTier.enterprise:
@@ -356,7 +356,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
               badge: 'MOST POPULAR • RECOMMENDED',
               badgeColor: const Color(0xFF42A5F5),
               price: _isAnnual ? 'RM 39' : 'RM 49',
-              billingNote: _isAnnual ? '/ month (Billed RM 468 / year)' : '/ month',
+              billingNote: _isAnnual ? '/ month Billed Annually RM 468' : '/ month',
               tagline: 'For fast-growing cafes, restaurants & retail shops',
               isHighlighted: true,
               features: [
@@ -390,7 +390,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
                 'Automated Customer WhatsApp/SMS Marketing',
                 '0% Platform Fee on Customer App Orders',
                 'Dedicated 24/7 Account Manager & WhatsApp VIP',
-                'Custom Data Export API (Excel/Accounting)',
+                'Custom Data Export API Excel Accounting',
               ],
               lockedFeatures: [],
             ),
@@ -414,7 +414,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
             const SizedBox(height: 8),
             _buildFaqTile(
               question: 'What payment methods are supported for subscriptions?',
-              answer: 'We support FPX online banking (all Malaysian banks), DuitNow QR, e-wallets, and Visa / MasterCard debit and credit cards.',
+              answer: 'We support FPX online banking all Malaysian banks, DuitNow QR, e-wallets, and Visa / MasterCard debit and credit cards.',
             ),
             const SizedBox(height: 40),
           ],
@@ -512,7 +512,7 @@ class _SubscriptionPlansPageState extends State<SubscriptionPlansPage> {
           children: [
             Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
             Text(
-              limit >= 999 ? '$used (Unlimited)' : display,
+              limit >= 999 ? '$used Unlimited' : display,
               style: TextStyle(color: isFull ? const Color(0xFFEF4444) : Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ],

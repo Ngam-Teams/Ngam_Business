@@ -433,7 +433,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
               // Voyager Option (Default Grab Style)
               _buildLayerOption(
                 type: MapLayerType.voyager,
-                title: 'Peta Jalan Bersih (CARTO Voyager)',
+                title: 'Peta Jalan Bersih CARTO Voyager',
                 subtitle: 'Gaya Grab: Peta jalan cerah, bersih & mudah dibaca',
                 icon: HugeIcons.strokeRoundedMapsLocation01,
                 badge: 'Disyorkan',
@@ -443,7 +443,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
               // OpenStreetMap Standard Option
               _buildLayerOption(
                 type: MapLayerType.osm,
-                title: 'Peta Komuniti (OpenStreetMap)',
+                title: 'Peta Komuniti OpenStreetMap',
                 subtitle: 'Peta jalan standard komuniti dunia (100% percuma & sah)',
                 icon: HugeIcons.strokeRoundedGlobe02,
               ),
@@ -452,7 +452,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
               // Dark Matter Option
               _buildLayerOption(
                 type: MapLayerType.darkMatter,
-                title: 'Peta Jalan Gelap (CARTO Dark)',
+                title: 'Peta Jalan Gelap CARTO Dark',
                 subtitle: 'Peta kontras tinggi tema gelap moden',
                 icon: HugeIcons.strokeRoundedMoon02,
               ),
@@ -461,7 +461,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
               // Pure Satellite (Esri)
               _buildLayerOption(
                 type: MapLayerType.satelliteEsri,
-                title: 'Satelit Foto Udara (Esri)',
+                title: 'Satelit Foto Udara Esri',
                 subtitle: 'Foto satelit fotografi resolusi tinggi',
                 icon: HugeIcons.strokeRoundedEarth,
               ),

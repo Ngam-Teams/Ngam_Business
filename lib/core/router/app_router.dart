@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -63,9 +64,9 @@ class _UnauthorizedScreen extends StatelessWidget {
               strokeWidth: 2.1,
             ),
             const SizedBox(height: 20),
-            const Text(
-              'Access Denied',
-              style: TextStyle(
+            Text(
+              'auth.unauthorized_title'.tr(),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -73,7 +74,7 @@ class _UnauthorizedScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Your account does not have business access.',
+              'auth.unauthorized_desc'.tr(),
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.5),
               ),
@@ -84,7 +85,7 @@ class _UnauthorizedScreen extends StatelessWidget {
                 await AuthService().signOut();
                 if (context.mounted) context.go('/login');
               },
-              child: const Text('Back to Login'),
+              child: Text('auth.back_to_login'.tr()),
             ),
           ],
         ),
@@ -194,21 +195,28 @@ class _AppShellState extends State<_AppShell> {
     super.dispose();
   }
 
-  static final _navItems = [
-    (icon: HugeIcons.strokeRoundedHome11, label: 'Overview'),
-    (icon: HugeIcons.strokeRoundedInvoice01, label: 'Orders'),
-    (icon: HugeIcons.strokeRoundedShoppingCart02, label: 'POS'),
-    (icon: HugeIcons.strokeRoundedAnalytics01, label: 'Analytics'),
-    (icon: HugeIcons.strokeRoundedSettings01, label: 'Settings'),
+  List<({dynamic icon, String label})> _getNavItems(BuildContext context) => [
+    (icon: HugeIcons.strokeRoundedHome11, label: 'nav.overview'.tr()),
+    (icon: HugeIcons.strokeRoundedInvoice01, label: 'nav.orders'.tr()),
+    (icon: HugeIcons.strokeRoundedShoppingCart02, label: 'nav.pos'.tr()),
+    (icon: HugeIcons.strokeRoundedAnalytics01, label: 'nav.analytics'.tr()),
+    (icon: HugeIcons.strokeRoundedSettings01, label: 'nav.settings'.tr()),
   ];
 
-  static const _titles = ['Overview', 'Orders', 'Point of Sale', 'Analytics', 'Settings'];
-  static const _subtitles = [
-    'Your business at a glance',
-    'Manage online and active orders',
-    'Create new orders in-store',
-    'Revenue & performance',
-    'Account & preferences',
+  List<String> _getTitles(BuildContext context) => [
+    'nav.overview'.tr(),
+    'nav.orders'.tr(),
+    'nav.pos'.tr(),
+    'nav.analytics'.tr(),
+    'nav.settings'.tr(),
+  ];
+
+  List<String> _getSubtitles(BuildContext context) => [
+    'nav.tagline_overview'.tr(),
+    'nav.tagline_orders'.tr(),
+    'nav.tagline_pos'.tr(),
+    'nav.tagline_analytics'.tr(),
+    'nav.tagline_settings'.tr(),
   ];
 
   Widget _buildTab(int index) {
@@ -233,15 +241,19 @@ class _AppShellState extends State<_AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final titles = _getTitles(context);
+    final subtitles = _getSubtitles(context);
+    final navItems = _getNavItems(context);
+
     return DashboardScaffold(
       selectedIndex: _selectedIndex,
       onNavTap: (i) => setState(() {
         _selectedIndex = i;
         _activatedTabs.add(i);
       }),
-      pageTitle: _titles[_selectedIndex],
-      pageSubtitle: _subtitles[_selectedIndex],
-      navItems: _navItems,
+      pageTitle: titles[_selectedIndex],
+      pageSubtitle: subtitles[_selectedIndex],
+      navItems: navItems,
       child: IndexedStack(
         index: _selectedIndex,
         children: List.generate(5, (index) => _buildTab(index)),

@@ -462,7 +462,7 @@ class _DynamicQrModalState extends State<DynamicQrModal> with SingleTickerProvid
                   ),
                 ),
                 icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                label: const Text('Buka Laman (Ujian)', style: TextStyle(fontSize: 12)),
+                label: const Text('Buka Laman Web', style: TextStyle(fontSize: 12)),
               ),
             ),
             const SizedBox(width: 10),

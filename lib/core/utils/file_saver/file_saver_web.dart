@@ -17,5 +17,5 @@ Future<String?> saveAndDownloadFile({
   html.document.body?.children.remove(anchor);
   html.Url.revokeObjectUrl(url);
 
-  return 'Folder Downloads Pelayar (Web)';
+  return 'Folder Downloads Pelayar Web';
 }

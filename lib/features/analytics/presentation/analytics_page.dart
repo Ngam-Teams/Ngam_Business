@@ -419,7 +419,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Daily Peak Rushes: 12:00 PM – 2:00 PM (Lunch) & 7:30 PM – 9:30 PM (Dinner)',
+                  'Daily Peak Rushes: 12:00 PM – 2:00 PM Lunch & 7:30 PM – 9:30 PM Dinner',
                   style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -511,7 +511,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         const SizedBox(height: 10),
         _buildProgressBarRow('DuitNow QR & E-Wallets', '54%', const Color(0xFFF9C80E), 0.54),
         const SizedBox(height: 8),
-        _buildProgressBarRow('Cash (Physical Drawer)', '31%', const Color(0xFF10B981), 0.31),
+        _buildProgressBarRow('Cash Physical Drawer', '31%', const Color(0xFF10B981), 0.31),
         const SizedBox(height: 8),
         _buildProgressBarRow('Credit / Debit Cards', '15%', const Color(0xFF3B82F6), 0.15),
       ],

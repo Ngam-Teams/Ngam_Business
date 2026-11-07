@@ -1,10 +1,10 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../widgets/glass_toast.dart';
@@ -175,7 +175,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
         final cards = [
           StatCard(
-            label: "Today's Revenue",
+            label: 'dashboard.today_revenue'.tr(),
             value: fmt.format(todayRev),
             isLoading: loading,
             subtitle: '↑ Today',
@@ -186,7 +186,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             onTap: () => switchAppShellTab(3),
           ),
           StatCard(
-            label: "Today's Orders",
+            label: 'dashboard.today_orders'.tr(),
             value: todayOrders.toString(),
             isLoading: loading,
             subtitle: todayOrders > 0 ? '$todayOrders Orders' : 'Active',
@@ -197,7 +197,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             onTap: () => switchAppShellTab(1),
           ),
           StatCard(
-            label: 'Pending Orders',
+            label: 'dashboard.pending_orders'.tr(),
             value: pendingOrders.toString(),
             isLoading: loading,
             subtitle: pendingOrders > 0 ? '$pendingOrders Action' : 'Cleared',
@@ -208,7 +208,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             onTap: () => switchAppShellTab(1),
           ),
           StatCard(
-            label: 'Monthly Revenue',
+            label: 'dashboard.monthly_revenue'.tr(),
             value: fmt.format(monthlyRev),
             isLoading: loading,
             subtitle: 'This Month',
@@ -536,10 +536,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Set Up Store Location & Details',
-                        style: TextStyle(
+                        'dashboard.location_banner_title'.tr(),
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -549,9 +549,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Pin your entrance on the map and add street address so customers can discover you on Ngam Explore.',
-                  style: TextStyle(
+                Text(
+                  'dashboard.location_banner_sub'.tr(),
+                  style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
                   ),
@@ -594,22 +594,22 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 ),
               ),
               const SizedBox(width: 14),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Set Up Your Store Location & Details',
-                      style: TextStyle(
+                      'dashboard.location_banner_title'.tr(),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
-                      'Pin your entrance on the map and add street address so customers can discover you on Ngam Explore.',
-                      style: TextStyle(
+                      'dashboard.location_banner_sub'.tr(),
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,
                       ),
@@ -725,7 +725,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
 
     return _buildPanel(
-      title: 'Recent Activity',
+      title: 'dashboard.recent_orders'.tr(),
       icon: HugeIcons.strokeRoundedActivity01,
       expand: isDesktop,
       trailing: Container(
@@ -844,7 +844,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onTap: () => context.push('/payroll'),
       ),
       (
-        label: 'Kad Cop Digital\n(Loyalty)',
+        label: 'Kad Cop Digital\nLoyalty',
         icon: HugeIcons.strokeRoundedAward01,
         color: const Color(0xFFF59E0B),
         onTap: () => context.push('/loyalty'),
@@ -958,25 +958,25 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onTap: () => _openWhatsAppMarketing(context),
       ),
       (
-        label: 'Eksport\nLaporan (Z)',
+        label: 'Eksport\nLaporan Z',
         icon: HugeIcons.strokeRoundedDownload04,
         color: const Color(0xFFF9C80E),
         onTap: () => _openDailyReportExport(context),
       ),
       (
-        label: 'Pusat Bantuan\n(Akan Datang)',
+        label: 'Pusat Bantuan\nSegera',
         icon: HugeIcons.strokeRoundedShield01,
         color: const Color(0xFF818CF8),
         onTap: () => showGlassToast(context, 'Pusat Bantuan akan hadir tidak lama lagi.'),
       ),
       (
-        label: 'Log Audit\n(Akan Datang)',
+        label: 'Log Audit\nKeselamatan',
         icon: HugeIcons.strokeRoundedClock01,
         color: const Color(0xFF38BDF8),
-        onTap: () => showGlassToast(context, 'Log Aktiviti & Audit akan hadir tidak lama lagi.'),
+        onTap: () => context.push('/audit-logs'),
       ),
       (
-        label: 'Custom Tool\n(Akan Datang)',
+        label: 'Peralatan\nKhusus',
         icon: HugeIcons.strokeRoundedSparkles,
         color: const Color(0xFFA78BFA),
         onTap: () => showGlassToast(context, 'Fungsi ini akan ditambah tidak lama lagi.'),
@@ -984,7 +984,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     ];
 
     return _buildPanel(
-      title: 'Quick Actions',
+      title: 'dashboard.quick_actions'.tr(),
       icon: HugeIcons.strokeRoundedZap,
       expand: isDesktop,
       trailing: Container(
@@ -1284,11 +1284,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           icon: const Icon(Icons.copy_rounded, size: 18),
-                          label: const Text('Salin Teks'),
+                          label: Text('dashboard.copy_text'.tr()),
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: textCtrl.text));
                             Navigator.pop(ctx);
-                            showGlassToast(context, 'Teks promosi telah disalin!', color: const Color(0xFF25D366));
+                            showGlassToast(context, 'dashboard.text_copied'.tr(), color: const Color(0xFF25D366));
                           },
                         ),
                       ),
@@ -1303,7 +1303,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           icon: const HugeIcon(icon: HugeIcons.strokeRoundedWhatsapp, color: Colors.black, size: 18),
-                          label: const Text('Buka WhatsApp', style: TextStyle(fontWeight: FontWeight.bold)),
+                          label: Text('dashboard.open_whatsapp'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                           onPressed: () async {
                             final text = Uri.encodeComponent(textCtrl.text);
                             final url = Uri.parse('https://wa.me/?text=$text');
@@ -1441,7 +1441,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           icon: const Icon(Icons.share_rounded, size: 18),
-                          label: const Text('Salin Ringkasan'),
+                          label: Text('dashboard.copy_summary'.tr()),
                           onPressed: () {
                             final reportText = '''
 📊 RINGKASAN JUALAN (Z-REPORT)
@@ -1455,7 +1455,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
 ''';
                             Clipboard.setData(ClipboardData(text: reportText));
                             Navigator.pop(ctx);
-                            showGlassToast(context, 'Ringkasan Z-Report telah disalin!');
+                            showGlassToast(context, 'dashboard.summary_copied'.tr());
                           },
                         ),
                       ),
@@ -1469,7 +1469,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           icon: const Icon(Icons.download_rounded, size: 18),
-                          label: const Text('Eksport CSV', style: TextStyle(fontWeight: FontWeight.bold)),
+                          label: Text('dashboard.export_csv'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                           onPressed: () async {
                             final buffer = StringBuffer();
                             buffer.writeln('ID_Pesanan,Tarikh,Pelanggan,Jumlah_RM,Status,Sumber');
@@ -1481,7 +1481,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                             await downloadStandeeImage(bytes: bytes, fileName: 'Z_Report_$safeDate.csv');
                             if (ctx.mounted) Navigator.pop(ctx);
                             if (context.mounted) {
-                              showGlassToast(context, 'Fail CSV berjaya dimuat turun!');
+                              showGlassToast(context, 'dashboard.csv_downloaded'.tr());
                             }
                           },
                         ),

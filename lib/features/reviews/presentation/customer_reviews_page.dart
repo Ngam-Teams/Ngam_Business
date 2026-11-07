@@ -384,7 +384,7 @@ class _CustomerReviewsPageState extends State<CustomerReviewsPage> {
                                               Icon(Icons.storefront_rounded, color: Color(0xFF42A5F5), size: 14),
                                               SizedBox(width: 6),
                                               Text(
-                                                'Your Response (Owner)',
+                                                'Your Response as Owner',
                                                 style: TextStyle(
                                                   color: Color(0xFF42A5F5),
                                                   fontWeight: FontWeight.bold,

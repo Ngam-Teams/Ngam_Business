@@ -104,11 +104,11 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
         severity: 'critical',
         targetType: 'auth',
         targetId: _factorId,
-        description: 'Pemilik akaun mengaktifkan Two-Factor Authentication (TOTP)',
+        description: 'Pemilik akaun mengaktifkan Two-Factor Authentication TOTP',
       );
 
       if (mounted) {
-        showGlassToast(context, 'Tahniah! Two-Factor Authentication (2FA) berjaya diaktifkan.');
+        showGlassToast(context, 'Tahniah! Two-Factor Authentication TOTP berjaya diaktifkan.');
         _codeController.clear();
         await _checkStatus();
       }
@@ -167,7 +167,7 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
         severity: 'warning',
         targetType: 'auth',
         targetId: _factorId,
-        description: 'Pemilik akaun mematikan Two-Factor Authentication (TOTP)',
+        description: 'Pemilik akaun mematikan Two-Factor Authentication TOTP',
       );
 
       if (mounted) {
@@ -187,7 +187,7 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
       title: 'Two-Factor Auth',
-      subtitle: 'Pengesahan 2-Faktor (2FA)',
+      subtitle: 'Pengesahan Dua Faktor TOTP',
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
           : SingleChildScrollView(
@@ -239,7 +239,7 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Two-Factor Authentication (TOTP) aktif. Log masuk memerlukan kod masa nyata dari aplikasi pengesah anda.',
+            'Two-Factor Authentication TOTP aktif. Log masuk memerlukan kod masa nyata dari aplikasi pengesah anda.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 14, height: 1.4),
           ),
@@ -285,7 +285,7 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
             icon: const Icon(Icons.lock_open_rounded, size: 18),
-            label: const Text('Matikan 2FA (Nyahaktifkan)', style: TextStyle(fontWeight: FontWeight.bold)),
+            label: const Text('Nyahaktifkan Pengesahan Dua Faktor', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -334,7 +334,7 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Lindungi pesanan, data jualan dan tetapan kedai daripada diceroboh menggunakan kod masa nyata (TOTP).',
+                      'Lindungi pesanan, data jualan dan tetapan kedai daripada diceroboh menggunakan kod pengesah masa nyata TOTP.',
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12.5),
                     ),
                   ],

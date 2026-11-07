@@ -66,7 +66,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   // Receipt Content Controllers
   final _storeNameCtrl = TextEditingController(text: 'WARUNG NGAM MELAKA');
   final _taglineCtrl = TextEditingController(text: 'Port Santai Makanan & Kopi Padu');
-  final _ssmCtrl = TextEditingController(text: 'SSM: 202401039821 (1560944-X)');
+  final _ssmCtrl = TextEditingController(text: 'SSM: 202401039821 1560944-X');
   final _sstCtrl = TextEditingController(text: 'SST ID: W10-1808-32000456');
   final _addressCtrl = TextEditingController(text: 'No 45, Jalan Hang Tuah, Bandar Hilir, Melaka');
   final _phoneCtrl = TextEditingController(text: '+60 17-234 5678');
@@ -324,7 +324,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       actionItems: [
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedDownload04,
-          tooltip: 'Muat Turun Resit Digital (HD)',
+          tooltip: 'Muat Turun Resit Digital HD',
           isLoading: _isDownloadingReceipt,
           onTap: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
         ),
@@ -391,7 +391,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                           const SizedBox(height: 6),
                           Text(
                             _paperWidth == 58
-                                ? 'Mod 58mm: Garisan pemisah dinamik 32-kolum (muat penuh tanpa turun line kedua).'
+                                ? 'Mod 58mm: Garisan pemisah dinamik 32-kolum muat penuh tanpa turun line kedua.'
                                 : 'Mod 80mm: Garisan pemisah lebar 46-kolum standard F&B.',
                             style: const TextStyle(color: Colors.white38, fontSize: 11),
                             textAlign: TextAlign.center,
@@ -436,15 +436,15 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 1. Paper Width Selector Card (58mm vs 80mm)
-        _buildSectionHeader('1. Saiz Kertas Pencetak (Roll Width)', HugeIcons.strokeRoundedReceiptText),
+        _buildSectionHeader('1. Saiz Kertas Pencetak Lebar Gulung', HugeIcons.strokeRoundedReceiptText),
         const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
               child: _buildPaperWidthTab(
                 width: 58,
-                title: '58mm (2-Inci)',
-                desc: 'Kompak, Bluetooth Mobile & Kiosk (32 Kolum Dinamik)',
+                title: '58mm 2 Inci',
+                desc: 'Kompak, Bluetooth Mobile & Kiosk 32 Kolum Dinamik',
                 icon: Icons.receipt_long_rounded,
               ),
             ),
@@ -452,8 +452,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             Expanded(
               child: _buildPaperWidthTab(
                 width: 80,
-                title: '80mm (3-Inci)',
-                desc: 'Standard F&B, Kaunter POS & Resit Penuh (46 Kolum)',
+                title: '80mm 3 Inci',
+                desc: 'Standard F&B, Kaunter POS & Resit Penuh 46 Kolum',
                 icon: Icons.receipt_rounded,
               ),
             ),
@@ -462,13 +462,13 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         const SizedBox(height: 24),
 
         // 2. Divider Style Customization (Dashed, Dotted, Solid Double, Stars)
-        _buildSectionHeader('2. Gaya Garisan Pemisah (Divider Bars)', HugeIcons.strokeRoundedSlidersHorizontal),
+        _buildSectionHeader('2. Gaya Garisan Pemisah', HugeIcons.strokeRoundedSlidersHorizontal),
         const SizedBox(height: 10),
         _buildDividerStyleSelector(),
         const SizedBox(height: 24),
 
         // 3. Font / Typography Customization
-        _buildSectionHeader('3. Pilihan Fon Resit (Typography)', HugeIcons.strokeRoundedTextFont),
+        _buildSectionHeader('3. Pilihan Fon Tipografi Resit', HugeIcons.strokeRoundedTextFont),
         const SizedBox(height: 10),
         _buildFontSelector(),
         const SizedBox(height: 24),
@@ -488,19 +488,19 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         // 6. Store Info & Legal Details
         _buildSectionHeader('6. Maklumat Rasmi Kedai & Cukai', HugeIcons.strokeRoundedBuilding02),
         const SizedBox(height: 12),
-        _buildTextField(controller: _storeNameCtrl, label: 'Nama Kedai / Syarikat (Kepala Resit)'),
+        _buildTextField(controller: _storeNameCtrl, label: 'Nama Kedai Syarikat Kepala Resit'),
         const SizedBox(height: 10),
         _buildTextFieldWithToggle(controller: _taglineCtrl, label: 'Slogan / Tagline Kedai', value: _showTagline, onChanged: (v) => setState(() => _showTagline = v)),
         const SizedBox(height: 10),
-        _buildTextFieldWithToggle(controller: _ssmCtrl, label: 'No. Pendaftaran Syarikat (SSM)', value: _showSsm, onChanged: (v) => setState(() => _showSsm = v)),
+        _buildTextFieldWithToggle(controller: _ssmCtrl, label: 'No. Pendaftaran Syarikat SSM', value: _showSsm, onChanged: (v) => setState(() => _showSsm = v)),
         const SizedBox(height: 10),
-        _buildTextFieldWithToggle(controller: _sstCtrl, label: 'No. Cukai SST (Jika Berdaftar)', value: _showSst, onChanged: (v) => setState(() => _showSst = v)),
+        _buildTextFieldWithToggle(controller: _sstCtrl, label: 'No. Cukai SST', value: _showSst, onChanged: (v) => setState(() => _showSst = v)),
         const SizedBox(height: 10),
         _buildTextFieldWithToggle(controller: _addressCtrl, label: 'Alamat Cawangan Kedai', value: _showAddress, onChanged: (v) => setState(() => _showAddress = v)),
         const SizedBox(height: 10),
         _buildTextFieldWithToggle(controller: _phoneCtrl, label: 'No. Telefon Hubungi / WhatsApp', value: _showPhone, onChanged: (v) => setState(() => _showPhone = v)),
         const SizedBox(height: 10),
-        _buildTextFieldWithToggle(controller: _socialCtrl, label: 'Akaun Media Sosial (IG / TikTok)', value: _showSocial, onChanged: (v) => setState(() => _showSocial = v)),
+        _buildTextFieldWithToggle(controller: _socialCtrl, label: 'Akaun Media Sosial Instagram TikTok', value: _showSocial, onChanged: (v) => setState(() => _showSocial = v)),
         const SizedBox(height: 24),
 
         // 7. Transaction & Pricing Toggles
@@ -510,7 +510,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         const SizedBox(height: 24),
 
         // 8. Bottom Code Customization (QR Receipt, Promo, WiFi, Barcode, None)
-        _buildSectionHeader('8. Kod Interaktif Bawah Resit (Bottom Code)', HugeIcons.strokeRoundedQrCode),
+        _buildSectionHeader('8. Kod Interaktif Bawah Resit', HugeIcons.strokeRoundedQrCode),
         const SizedBox(height: 10),
         _buildBottomCodeSelector(),
         const SizedBox(height: 24),
@@ -518,7 +518,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         // 9. Footer Notes & Return Policy
         _buildSectionHeader('9. Mesej Bawah & Dasar Pulangan', HugeIcons.strokeRoundedNote01),
         const SizedBox(height: 12),
-        _buildTextField(controller: _footerMsgCtrl, label: 'Ucapan Terima Kasih (Footer Note)'),
+        _buildTextField(controller: _footerMsgCtrl, label: 'Ucapan Terima Kasih Kaki Resit'),
         const SizedBox(height: 10),
         _buildTextField(controller: _policyCtrl, label: 'Syarat & Dasar Pertukaran / Bayaran Balik'),
         const SizedBox(height: 24),
@@ -717,7 +717,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Tipografi Resit (6 Pilihan Fon)',
+                'Tipografi Resit 6 Pilihan Fon',
                 style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
               ),
               Container(
@@ -852,10 +852,10 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildDividerOptionChip(DividerStyle.dashed, '- - - - (Putus-putus)'),
-              _buildDividerOptionChip(DividerStyle.dotted, '. . . . (Titik Dot)'),
-              _buildDividerOptionChip(DividerStyle.solidDouble, '════ (Garis Berganda)'),
-              _buildDividerOptionChip(DividerStyle.stars, '* * * * (Bintang)'),
+              _buildDividerOptionChip(DividerStyle.dashed, '- - - - Putus-putus'),
+              _buildDividerOptionChip(DividerStyle.dotted, '. . . . Titik Dot'),
+              _buildDividerOptionChip(DividerStyle.solidDouble, '════ Garis Berganda'),
+              _buildDividerOptionChip(DividerStyle.stars, '* * * * Bintang'),
             ],
           ),
         ],
@@ -897,11 +897,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       child: Row(
         children: [
           Expanded(
-            child: _buildAlignButton(TextAlign.center, 'Tengah (Center)', Icons.format_align_center_rounded),
+            child: _buildAlignButton(TextAlign.center, 'Tengah Seimbang', Icons.format_align_center_rounded),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: _buildAlignButton(TextAlign.left, 'Rapat Kiri (Left)', Icons.format_align_left_rounded),
+            child: _buildAlignButton(TextAlign.left, 'Rapat Kiri', Icons.format_align_left_rounded),
           ),
         ],
       ),
@@ -1007,7 +1007,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 const Text('Saiz Logo:', style: TextStyle(color: Colors.white54, fontSize: 12)),
                 const SizedBox(width: 10),
                 ChoiceChip(
-                  label: const Text('Kecil (36px)'),
+                  label: const Text('Kecil 36px'),
                   selected: _logoSize == LogoSize.small,
                   onSelected: (_) => setState(() => _logoSize = LogoSize.small),
                   selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
@@ -1017,7 +1017,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: const Text('Sedang (48px)'),
+                  label: const Text('Sedang 48px'),
                   selected: _logoSize == LogoSize.medium,
                   onSelected: (_) => setState(() => _logoSize = LogoSize.medium),
                   selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
@@ -1027,7 +1027,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: const Text('Besar (60px)'),
+                  label: const Text('Besar 60px'),
                   selected: _logoSize == LogoSize.large,
                   onSelected: (_) => setState(() => _logoSize = LogoSize.large),
                   selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
@@ -1095,7 +1095,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           const Divider(color: Colors.white10, height: 1),
           _buildCompactSwitchTile('Caj Servis (Service Charge 10%)', _showServiceCharge, (v) => setState(() => _showServiceCharge = v)),
           const Divider(color: Colors.white10, height: 1),
-          _buildCompactSwitchTile('Penyelarasan 5 Sen (Rounding Bancian)', _showRounding, (v) => setState(() => _showRounding = v)),
+          _buildCompactSwitchTile('Penyelarasan 5 Sen Penggenapan', _showRounding, (v) => setState(() => _showRounding = v)),
           const Divider(color: Colors.white10, height: 1),
           _buildCompactSwitchTile('Papar Kaedah Bayaran (DuitNow/Tunai/Kad)', _showPaymentMethod, (v) => setState(() => _showPaymentMethod = v)),
         ],

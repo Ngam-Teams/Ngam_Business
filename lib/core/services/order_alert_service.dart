@@ -226,7 +226,7 @@ class OrderAlertService {
 
     final String badgeText = isPreOrder
         ? '📅 PESANAN AWAL (PRE-ORDER)'
-        : (isTable ? '🍽️ PESANAN IMBAS MEJA (NGAM APP)' : '🔔 PESANAN ONLINE (NGAM APP)');
+        : (isTable ? '🍽️ PESANAN IMBAS MEJA (NGAM APP)' : '🔔 PESANAN ONLINE NGAM APP');
 
     showDialog(
       context: navContext,

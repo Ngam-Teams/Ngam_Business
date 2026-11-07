@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 // =============================================================================
 // main.dart
 // Entry point for Ngam Business – Merchant Portal.
@@ -18,6 +19,7 @@ import 'widgets/offline_banner.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
   setCleanUrlStrategy();
 
   // Initialize network connectivity monitoring
@@ -95,7 +97,16 @@ void main() async {
     );
   };
 
-  runApp(const NgamBusinessApp());
+  runApp(
+    EasyLocalization(
+      supportedLocales: const [Locale('en'), Locale('ms')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('ms'),
+      startLocale: const Locale('ms'),
+      useOnlyLangCode: true,
+      child: const NgamBusinessApp(),
+    ),
+  );
 }
 
 class NgamBusinessApp extends StatelessWidget {
@@ -107,6 +118,9 @@ class NgamBusinessApp extends StatelessWidget {
       title: 'Ngam Business',
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
       builder: (context, child) {
         return Stack(
           children: [

@@ -170,7 +170,7 @@ class _IssueTicketModalState extends State<IssueTicketModal> {
                     // Phone Number
                     _buildField(
                       controller: _phoneCtrl,
-                      label: 'Nombor Telefon (WhatsApp)',
+                      label: 'Nombor Telefon WhatsApp',
                       hint: 'Contoh: 012-3456789',
                       keyboardType: TextInputType.phone,
                     ),
@@ -229,7 +229,7 @@ class _IssueTicketModalState extends State<IssueTicketModal> {
                     // Notes
                     _buildField(
                       controller: _notesCtrl,
-                      label: 'Nota Tambahan (Pilihan)',
+                      label: 'Nota Tambahan Pilihan',
                       hint: 'Contoh: Potong nipis tepi, cuci rambut',
                       maxLines: 2,
                     ),

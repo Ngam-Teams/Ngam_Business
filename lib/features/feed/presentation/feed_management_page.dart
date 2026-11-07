@@ -1482,7 +1482,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                                 HugeIcon(icon: HugeIcons.strokeRoundedVideo01, color: Color(0xFFEC4899), size: 16),
                                 SizedBox(width: 6),
                                 Text(
-                                  'Media Suapan (Video / Gambar) *',
+                                  'Media Suapan Video atau Gambar *',
                                   style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.bold),
                                 ),
                               ],
@@ -1551,7 +1551,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                         const SizedBox(height: 14),
 
                         // Pilihan Butang Tindakan Khas (CTA)
-                        const Text('Butang Tindakan Pintas (CTA)', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        const Text('Butang Tindakan Pintas CTA', style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 6,
@@ -1981,7 +1981,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
-                                  _isAudioMuted ? 'Nyahbisu (Dengar Audio)' : 'Audio Hidup (100%)',
+                                  _isAudioMuted ? 'Nyahbisu Dengar Audio' : 'Audio Hidup Penuh',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 11,

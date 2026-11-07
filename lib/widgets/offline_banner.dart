@@ -134,7 +134,7 @@ class _OfflineBannerState extends State<OfflineBanner> {
                         if (showOffline) ...[
                           const SizedBox(height: 2),
                           Text(
-                            'Sesetengah fungsi (pesanan masa nyata & pembayaran) memerlukan talian.',
+                            'Sesetengah fungsi termasuk pesanan masa nyata dan pembayaran memerlukan talian.',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.65),
                               fontSize: 11,

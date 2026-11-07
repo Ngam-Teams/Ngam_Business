@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -76,17 +77,17 @@ class _SettingsPageState extends State<SettingsPage> {
             color: Colors.white.withValues(alpha: 0.1),
           ),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            HugeIcon(
+            const HugeIcon(
               icon: HugeIcons.strokeRoundedLogout02,
               color: Colors.redAccent,
               size: 22,
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Text(
-              'Log Keluar',
-              style: TextStyle(
+              'settings.sign_out'.tr(),
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -94,9 +95,9 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
         ),
-        content: const Text(
-          'Adakah anda pasti ingin log keluar dari akaun perniagaan ini?',
-          style: TextStyle(
+        content: Text(
+          'settings.sign_out_confirm'.tr(),
+          style: const TextStyle(
             color: Colors.white70,
             fontSize: 14,
           ),
@@ -104,9 +105,9 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text(
-              'Batal',
-              style: TextStyle(color: Colors.white54),
+            child: Text(
+              'common.cancel'.tr(),
+              style: const TextStyle(color: Colors.white54),
             ),
           ),
           ElevatedButton(
@@ -118,7 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Log Keluar'),
+            child: Text('settings.sign_out'.tr()),
           ),
         ],
       ),
@@ -304,18 +305,18 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildSecurityPanel() {
     return _buildPanel(
-      title: 'Security & Access Control',
+      title: 'settings.section_security'.tr(),
       icon: HugeIcons.strokeRoundedShield01,
       child: Column(
         children: [
           _buildNavRow(
-            label: 'Two-Factor Authentication (2FA / TOTP)',
+            label: 'settings.two_factor_auth'.tr(),
             icon: HugeIcons.strokeRoundedShield02,
             onTap: () => context.push('/mfa-setup'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Audit Trails & Security Logs',
+            label: 'settings.audit_logs'.tr(),
             icon: HugeIcons.strokeRoundedTask01,
             onTap: () => context.push('/audit-logs'),
           ),
@@ -326,12 +327,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildBusinessManagementPanel() {
     return _buildPanel(
-      title: 'Business Management',
+      title: 'settings.section_business'.tr(),
       icon: HugeIcons.strokeRoundedBuilding03,
       child: Column(
         children: [
           _buildNavRow(
-            label: 'Business Profile & Details',
+            label: 'settings.business_profile'.tr(),
             icon: HugeIcons.strokeRoundedNote01,
             onTap: () async {
               await context.push('/business-profile');
@@ -340,85 +341,85 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Staff & Ngam Teams',
+            label: 'settings.staff_management'.tr(),
             icon: HugeIcons.strokeRoundedUserGroup,
             onTap: () => context.push('/staff-management'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Items & Services',
+            label: 'settings.items_services'.tr(),
             icon: HugeIcons.strokeRoundedGridView,
             onTap: () => context.push('/product-catalogue'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Operating Hours & Rush Mode',
+            label: 'settings.operating_hours'.tr(),
             icon: HugeIcons.strokeRoundedTime02,
             onTap: () => context.push('/operating-hours'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Inventory & Stock Alerts',
+            label: 'settings.inventory'.tr(),
             icon: HugeIcons.strokeRoundedPackageDelivered,
             onTap: () => context.push('/inventory'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Ngam Feed & Post Studio',
+            label: 'settings.feed_studio'.tr(),
             icon: HugeIcons.strokeRoundedVideo01,
             onTap: () => context.push('/feed-studio'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Promotions & Vouchers',
+            label: 'settings.promotions'.tr(),
             icon: HugeIcons.strokeRoundedDiscountTag02,
             onTap: () => context.push('/promotions'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Customer Reviews',
+            label: 'settings.customer_reviews'.tr(),
             icon: HugeIcons.strokeRoundedStar,
             onTap: () => context.push('/customer-reviews'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Customer Insights & VIPs',
+            label: 'settings.customer_insights'.tr(),
             icon: HugeIcons.strokeRoundedUserGroup,
             onTap: () => context.push('/customers'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Payouts & Bank Settlement',
+            label: 'settings.payouts'.tr(),
             icon: HugeIcons.strokeRoundedMoneySend02,
             onTap: () => context.push('/payouts'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Live Order Board',
+            label: 'settings.kds_board'.tr(),
             icon: HugeIcons.strokeRoundedTv01,
             onTap: () => context.push('/kds'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Customer Messaging Inbox',
+            label: 'settings.inbox'.tr(),
             icon: HugeIcons.strokeRoundedChatting01,
             onTap: () => context.push('/merchant-inbox'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'QR & Standee Generator',
+            label: 'settings.qr_generator'.tr(),
             icon: HugeIcons.strokeRoundedQrCode,
             onTap: () => context.push('/qr-generator'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Cash Drawer & Z-Report',
+            label: 'settings.cash_drawer'.tr(),
             icon: HugeIcons.strokeRoundedMoney01,
             onTap: () => context.push('/cash-drawer'),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'Receipts & Thermal Printer',
+            label: 'settings.receipts'.tr(),
             icon: HugeIcons.strokeRoundedPrinter,
             onTap: () => context.push('/receipt-settings'),
           ),
@@ -428,11 +429,22 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildAppInfoPanel() {
+    final currentLangLabel = context.locale.languageCode == 'ms'
+        ? 'settings.lang_ms'.tr()
+        : 'settings.lang_en'.tr();
+
     return _buildPanel(
-      title: 'App',
+      title: 'settings.section_app'.tr(),
       icon: HugeIcons.strokeRoundedInformationCircle,
       child: Column(
         children: [
+          _buildNavRow(
+            label: 'settings.language'.tr(),
+            subtitle: currentLangLabel,
+            icon: HugeIcons.strokeRoundedGlobe02,
+            onTap: () => _showLanguageModal(context),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
           InkWell(
             onTap: () => AppUpdateService.checkManually(context),
             borderRadius: BorderRadius.circular(8),
@@ -442,7 +454,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   Expanded(
                     child: _buildInfoRow(
-                      label: 'Version',
+                      label: 'settings.app_version'.tr(),
                       value: 'v${AppUpdateService.currentVersion}',
                       icon: HugeIcons.strokeRoundedCode,
                       valueColor: const Color(0xFF44CF6C),
@@ -454,9 +466,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       color: const Color(0xFF44CF6C).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text(
-                      'Semak Kemas Kini',
-                      style: TextStyle(
+                    child: Text(
+                      'settings.check_updates'.tr(),
+                      style: const TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF44CF6C),
@@ -470,7 +482,7 @@ class _SettingsPageState extends State<SettingsPage> {
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildInfoRow(
             label: 'Build',
-            value: 'Oct 1 (Clean Rebuild)',
+            value: 'Oct 1 Clean Rebuild',
             icon: HugeIcons.strokeRoundedCalendar03,
             valueColor: const Color(0xFF42A5F5),
           ),
@@ -513,19 +525,19 @@ class _SettingsPageState extends State<SettingsPage> {
                   strokeWidth: 2,
                 ),
               )
-            : const Row(
+            : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  HugeIcon(
+                  const HugeIcon(
                     icon: HugeIcons.strokeRoundedLogout02,
                     color: Colors.redAccent,
                     size: 18,
                     strokeWidth: 2.1,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
-                    'Sign Out',
-                    style: TextStyle(
+                    'settings.sign_out'.tr(),
+                    style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                     ),
@@ -1051,6 +1063,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required String label,
     required dynamic icon,
     required VoidCallback onTap,
+    String? subtitle,
   }) {
     return Material(
       color: Colors.transparent,
@@ -1071,13 +1084,30 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(width: 14),
               Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: Color(0xFF42A5F5),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               HugeIcon(
@@ -1086,6 +1116,129 @@ class _SettingsPageState extends State<SettingsPage> {
                 size: 18,
                 strokeWidth: 2.1,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  void _showLanguageModal(BuildContext context) {
+    final currentLang = context.locale.languageCode;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF141420),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'settings.select_language'.tr(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildLanguageOption(
+                  ctx: ctx,
+                  code: 'ms',
+                  title: 'settings.lang_ms'.tr(),
+                  isSelected: currentLang == 'ms',
+                ),
+                const SizedBox(height: 10),
+                _buildLanguageOption(
+                  ctx: ctx,
+                  code: 'en',
+                  title: 'settings.lang_en'.tr(),
+                  isSelected: currentLang == 'en',
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageOption({
+    required BuildContext ctx,
+    required String code,
+    required String title,
+    required bool isSelected,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () async {
+          await context.setLocale(Locale(code));
+          if (ctx.mounted) Navigator.pop(ctx);
+          if (mounted) {
+            showGlassToast(
+              context,
+              'settings.language_changed'.tr(args: [title]),
+            );
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFF42A5F5).withValues(alpha: 0.12)
+                : Colors.white.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFF42A5F5)
+                  : Colors.white.withValues(alpha: 0.08),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(
+                code == 'ms' ? '🇲🇾' : '🇬🇧',
+                style: const TextStyle(fontSize: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? const Color(0xFF42A5F5) : Colors.white,
+                    fontSize: 15,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (isSelected)
+                const HugeIcon(
+                  icon: HugeIcons.strokeRoundedTick01,
+                  color: Color(0xFF42A5F5),
+                  size: 20,
+                  strokeWidth: 2.5,
+                ),
             ],
           ),
         ),

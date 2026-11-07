@@ -390,7 +390,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               icon: const Icon(Icons.playlist_add_check_rounded, size: 18),
-              label: const Text('Jana Log Percubaan (Test Log)'),
+              label: const Text('Jana Log Percubaan'),
             ),
           ],
         ),

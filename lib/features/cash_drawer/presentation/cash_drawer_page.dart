@@ -40,7 +40,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
       {
         'id': 'PC-01',
         'type': 'out',
-        'reason': 'Beli Ais Batu Tambahan (Kedai Runcit)',
+        'reason': 'Beli Ais Batu Tambahan Kedai Runcit',
         'amount': 15.00,
         'time': '10:45 AM',
         'author': 'Staf Kaunter',
@@ -48,7 +48,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
       {
         'id': 'PC-02',
         'type': 'out',
-        'reason': 'Tong Gas Memasak Petroleum (Ganti)',
+        'reason': 'Tong Gas Memasak Petroleum Penggantian',
         'amount': 42.00,
         'time': '01:15 PM',
         'author': 'Staf Kaunter',
@@ -214,7 +214,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Log petty cash payouts (expenses) or manual float top-ups.',
+                      'Log petty cash payouts and manual float top-ups.',
                       style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
                     ),
                     const SizedBox(height: 20),
@@ -234,7 +234,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                               ),
                               child: const Center(
                                 child: Text(
-                                  'Cash Out (Expense)',
+                                  'Cash Out Expense',
                                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                                 ),
                               ),
@@ -254,7 +254,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                               ),
                               child: const Center(
                                 child: Text(
-                                  'Cash In (Top-up)',
+                                  'Cash In Float',
                                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                                 ),
                               ),
@@ -285,7 +285,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                       decoration: InputDecoration(
                         prefixText: 'RM ',
                         prefixStyle: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
-                        labelText: 'Amount (RM)',
+                        labelText: 'Amount RM',
                         labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
                         filled: true,
                         fillColor: const Color(0xFF0F0F1B),
@@ -580,7 +580,7 @@ Status: Syif Ditutup & Disahkan ke Cloud
                       _buildZRow(
                         'Cash Discrepancy',
                         _cashDiscrepancy == 0
-                            ? 'RM 0.00 (Exact)'
+                            ? 'RM 0.00 Exact'
                             : '${_cashDiscrepancy > 0 ? "+" : ""}RM ${_cashDiscrepancy.toStringAsFixed(2)} (${_cashDiscrepancy > 0 ? "Surplus" : "Shortage"})',
                         color: _cashDiscrepancy == 0 ? const Color(0xFF10B981) : (_cashDiscrepancy > 0 ? const Color(0xFF42A5F5) : Colors.redAccent),
                         isBold: true,
@@ -899,7 +899,7 @@ Status: Syif Ditutup & Disahkan ke Cloud
                             fit: BoxFit.scaleDown,
                             child: Text(
                               _cashDiscrepancy == 0
-                                  ? 'RM 0.00 (Balanced)'
+                                  ? 'RM 0.00 Balanced'
                                   : '${_cashDiscrepancy > 0 ? "+" : ""}RM ${_cashDiscrepancy.toStringAsFixed(2)} (${_cashDiscrepancy > 0 ? "Surplus" : "Shortage"})',
                               style: TextStyle(
                                 color: _cashDiscrepancy == 0
@@ -925,7 +925,7 @@ Status: Syif Ditutup & Disahkan ke Cloud
               children: [
                 const Expanded(
                   child: Text(
-                    'Petty Cash Log (Expenses)',
+                    'Petty Cash Log Expenses',
                     style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                     overflow: TextOverflow.ellipsis,
                   ),

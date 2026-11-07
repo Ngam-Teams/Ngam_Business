@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -140,7 +141,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                 'price': price,
                 'deposit': isPaidOnline ? price : 0.0,
                 'payment_status': payStatus,
-                'payment_method': meta['payment_method']?.toString() ?? 'Bayar di Kedai (Tunai)',
+                'payment_method': meta['payment_method']?.toString() ?? 'Bayar Tunai di Kedai',
                 'pax': b['pax'] ?? meta['pax'] ?? 1,
                 'raw_meta': meta,
                 'status': apptStatus,
@@ -595,7 +596,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
           final dateTime = appt['dateTime']?.toString() ?? '';
           final staff = appt['staff']?.toString() ?? 'Staff';
           final notes = appt['notes']?.toString() ?? '';
-          final paymentMethod = appt['payment_method']?.toString() ?? 'Bayar di Kedai (Tunai)';
+          final paymentMethod = appt['payment_method']?.toString() ?? 'Bayar Tunai di Kedai';
           final pax = appt['pax']?.toString() ?? '1';
 
           return Container(
@@ -804,10 +805,10 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           icon: Icons.verified_outlined,
                           label: 'Status Bayaran',
                           value: appt['payment_status'] == 'paid'
-                              ? 'SUDAH DIBAYAR PENUH (ONLINE)'
+                              ? 'SUDAH DIBAYAR PENUH ONLINE'
                               : (appt['payment_status'] == 'refund_pending'
-                                  ? 'PEMULANGAN WANG (REFUND)'
-                                  : 'BELUM DIBAYAR (BAYAR DI KEDAI)'),
+                                  ? 'PEMULANGAN WANG SELESAI'
+                                  : 'BELUM DIBAYAR BAYAR DI KEDAI'),
                           valueColor: appt['payment_status'] == 'paid'
                               ? const Color(0xFF44CF6C)
                               : Colors.orangeAccent,
@@ -1089,7 +1090,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                     keyboardType: TextInputType.phone,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
-                      labelText: 'Nombor Telefon (WhatsApp) *',
+                      labelText: 'Nombor Telefon WhatsApp *',
                       hintText: 'Cth: 01115892468',
                       hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
                       labelStyle: const TextStyle(color: Colors.white70),
@@ -1147,7 +1148,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                     controller: staffCtrl,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: InputDecoration(
-                      labelText: 'Penyedia Khidmat / Meja / Bilik (Pilihan)',
+                      labelText: 'Penyedia Khidmat Meja Bilik Pilihan',
                       hintText: 'Cth: En. Farid / Meja 04 / Bilik 2 / Mana-mana staf sedia ada',
                       hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
                       labelStyle: const TextStyle(color: Colors.white70),
@@ -1212,7 +1213,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           style: const TextStyle(color: Colors.white, fontSize: 14),
                           decoration: InputDecoration(
-                            labelText: 'Harga Servis (RM) *',
+                            labelText: 'Harga Servis RM *',
                             labelStyle: const TextStyle(color: Colors.white70),
                             prefixText: 'RM ',
                             prefixStyle: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
@@ -1230,7 +1231,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           style: const TextStyle(color: Colors.white, fontSize: 14),
                           decoration: InputDecoration(
-                            labelText: 'Deposit Diterima (RM)',
+                            labelText: 'Deposit Diterima RM',
                             labelStyle: const TextStyle(color: Colors.white70),
                             prefixText: 'RM ',
                             prefixStyle: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold),
@@ -1250,7 +1251,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                     controller: notesCtrl,
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                     decoration: InputDecoration(
-                      labelText: 'Catatan Tambahan (Pilihan)',
+                      labelText: 'Catatan Tambahan Pilihan',
                       hintText: 'Cth: Permintaan khas pelanggan / sebarang butiran penting',
                       hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
                       labelStyle: const TextStyle(color: Colors.white54),
@@ -1434,7 +1435,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                             Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF42A5F5), size: 18),
                             SizedBox(width: 8),
                             Text(
-                              'Imbas / Sahkan QR Tiket Tempahan Pelanggan (RZRV)',
+                              'Imbas Sahkan QR Tiket Tempahan RZRV',
                               style: TextStyle(
                                 color: Color(0xFF42A5F5),
                                 fontSize: 12.5,

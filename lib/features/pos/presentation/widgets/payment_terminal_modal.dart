@@ -389,7 +389,7 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
 
         // Option 2: Tunai (Cash)
         _buildMethodCard(
-          title: 'Tunai (Cash)',
+          title: 'Tunai Kaunter',
           subtitle: 'Kira duit diterima & baki pulangan',
           badgeText: 'Kaunter',
           badgeColor: const Color(0xFF10B981),
@@ -421,7 +421,7 @@ class _PaymentTerminalModalState extends State<PaymentTerminalModal>
 
         // Option 3: Kad Bank (Debit / Kredit)
         _buildMethodCard(
-          title: 'Kad Bank (Tap to Pay)',
+          title: 'Kad Bank Tap to Pay',
           subtitle: 'Visa, Mastercard & MyDebit',
           badgeText: 'Kad',
           badgeColor: const Color(0xFF42A5F5),

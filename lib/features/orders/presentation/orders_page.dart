@@ -1,9 +1,9 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -256,7 +256,7 @@ class _OrdersPageState extends State<OrdersPage> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Batal (Biar di Dapur)', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('common.cancel'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -275,7 +275,7 @@ class _OrdersPageState extends State<OrdersPage> {
                           showGlassToast(context, 'Pesanan #$shortId disahkan selesai diambil!', type: GlassToastType.success);
                         }
                       },
-                      child: const Text('Terus Sahkan Ambil', style: TextStyle(fontWeight: FontWeight.w900)),
+                      child: Text('orders.order_pickup_verified'.tr(), style: const TextStyle(fontWeight: FontWeight.w900)),
                     ),
                   ),
                 ],
@@ -717,7 +717,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                     paymentStatus: order.paymentStatus.toLowerCase() == 'paid' ? 'refund_pending' : null,
                                   );
                                 },
-                                child: const Text('Batal Pesanan', style: TextStyle(fontWeight: FontWeight.bold)),
+                                child: Text('orders.reject_order'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -734,7 +734,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                   _updateStatus(order, 'preparing');
                                 },
                                 icon: const HugeIcon(icon: HugeIcons.strokeRoundedRestaurant01, color: Colors.white, size: 18),
-                                label: const Text('Terima & Sediakan', style: TextStyle(fontWeight: FontWeight.bold)),
+                                label: Text('orders.accept_order'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                               ),
                             ),
                           ],
@@ -755,7 +755,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                   _updateStatus(order, 'ready');
                                 },
                                 icon: const HugeIcon(icon: HugeIcons.strokeRoundedShoppingBag01, color: Colors.black, size: 18),
-                                label: const Text('Sedia Untuk Diambil (Ready)', style: TextStyle(fontWeight: FontWeight.w900)),
+                                label: Text('orders.mark_ready'.tr(), style: const TextStyle(fontWeight: FontWeight.w900)),
                               ),
                             ),
                           ],
@@ -1068,18 +1068,18 @@ class _OrdersPageState extends State<OrdersPage> {
                             ]
                           : null,
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        HugeIcon(
+                        const HugeIcon(
                           icon: HugeIcons.strokeRoundedInvoice01,
                           color: Colors.white,
                           size: 16,
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
-                          'Pesanan Kedai',
-                          style: TextStyle(
+                          'orders.title'.tr(),
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             fontSize: 13,
@@ -1110,18 +1110,18 @@ class _OrdersPageState extends State<OrdersPage> {
                             ]
                           : null,
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        HugeIcon(
+                        const HugeIcon(
                           icon: HugeIcons.strokeRoundedCalendar01,
                           color: Colors.white,
                           size: 16,
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
-                          'Tempahan & Slots',
-                          style: TextStyle(
+                          'appointments.title'.tr(),
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             fontSize: 13,
@@ -1316,7 +1316,7 @@ class _OrdersPageState extends State<OrdersPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'PESANAN AKTIF ()',
+                                'orders.filter_all'.tr().toUpperCase(),
                                 style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 12,
@@ -1345,7 +1345,7 @@ class _OrdersPageState extends State<OrdersPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'SELESAI / SEJARAH ()',
+                                'SELESAI SEJARAH',
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.5),
                                   fontSize: 12,

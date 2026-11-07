@@ -1,8 +1,8 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/queue_service.dart';
@@ -162,17 +162,17 @@ class _QueuePageState extends State<QueuePage> {
   Widget build(BuildContext context) {
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      title: 'Pengurusan Giliran (Queue)',
-      subtitle: 'Papan giliran walk-in & TV',
+      title: 'queue.title'.tr(),
+      subtitle: 'queue.subtitle'.tr(),
       actionItems: [
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedTv01,
-          tooltip: 'Buka Paparan TV Kedai',
+          tooltip: 'queue.open_tv_display'.tr(),
           onTap: () => context.push('/queue/tv'),
         ),
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedTicket01,
-          tooltip: 'Keluarkan Tiket Walk-In',
+          tooltip: 'queue.issue_ticket'.tr(),
           onTap: () => IssueTicketModal.show(context: context, queueService: _queueService),
         ),
       ],
@@ -215,8 +215,8 @@ class _QueuePageState extends State<QueuePage> {
         onPressed: () => IssueTicketModal.show(context: context, queueService: _queueService),
         backgroundColor: const Color(0xFF42A5F5),
         icon: const Icon(Icons.confirmation_number_outlined, color: Colors.white),
-        label: const Text(
-          '+ Tiket Walk-In',
+        label: Text(
+          'queue.issue_ticket'.tr(),
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
@@ -228,7 +228,7 @@ class _QueuePageState extends State<QueuePage> {
       children: [
         Expanded(
           child: _buildMetricTile(
-            label: 'Menunggu',
+            label: 'common.pending'.tr(),
             value: '$_waitingCount',
             icon: Icons.hourglass_top_rounded,
             color: const Color(0xFFF59E0B),
@@ -237,7 +237,7 @@ class _QueuePageState extends State<QueuePage> {
         const SizedBox(width: 8),
         Expanded(
           child: _buildMetricTile(
-            label: 'Dipanggil',
+            label: 'queue.ticket_called'.tr(),
             value: '$_callingCount',
             icon: Icons.campaign_rounded,
             color: const Color(0xFF42A5F5),
@@ -246,7 +246,7 @@ class _QueuePageState extends State<QueuePage> {
         const SizedBox(width: 8),
         Expanded(
           child: _buildMetricTile(
-            label: 'Sedang Servis',
+            label: 'queue.serve'.tr(),
             value: '$_servingCount',
             icon: Icons.content_cut_rounded,
             color: const Color(0xFF10B981),
@@ -255,7 +255,7 @@ class _QueuePageState extends State<QueuePage> {
         const SizedBox(width: 8),
         Expanded(
           child: _buildMetricTile(
-            label: 'Selesai',
+            label: 'common.completed'.tr(),
             value: '$_completedCount',
             icon: Icons.check_circle_rounded,
             color: const Color(0xFFA78BFA),
@@ -383,11 +383,11 @@ class _QueuePageState extends State<QueuePage> {
 
   Widget _buildFilterTabs() {
     final tabs = [
-      {'key': 'waiting', 'label': 'Menunggu ($_waitingCount)'},
-      {'key': 'calling', 'label': 'Dipanggil ($_callingCount)'},
-      {'key': 'serving', 'label': 'Sedang Servis ($_servingCount)'},
-      {'key': 'completed', 'label': 'Selesai'},
-      {'key': 'all', 'label': 'Semua (${_tickets.length})'},
+      {'key': 'waiting', 'label': '${'common.pending'.tr()} $_waitingCount'},
+      {'key': 'calling', 'label': '${'queue.ticket_called'.tr()} $_callingCount'},
+      {'key': 'serving', 'label': '${'queue.serve'.tr()} $_servingCount'},
+      {'key': 'completed', 'label': 'common.completed'.tr()},
+      {'key': 'all', 'label': '${'common.all'.tr()} ${_tickets.length}'},
     ];
 
     return SingleChildScrollView(

@@ -30,8 +30,8 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
     'Hari Raya Aidilfitri',
     'Tahun Baru Cina',
     'Deepavali',
-    'Hari Kebangsaan (31 Ogos)',
-    'Hari Malaysia (16 Sept)',
+    'Hari Kebangsaan 31 Ogos',
+    'Hari Malaysia 16 September',
     'Cuti Peristiwa Khas',
   ];
 
@@ -516,7 +516,7 @@ class _OperatingHoursPageState extends State<OperatingHoursPage> {
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
                       child: Text(
-                        'Jadual Mingguan Tetap (7 Hari)',
+                        'Jadual Mingguan Tetap 7 Hari',
                         style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                     ),
