@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
@@ -88,7 +89,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Kata laluan berjaya dikemas kini!',
+            'auth.password_changed'.tr(),
             style: GoogleFonts.inter(color: Colors.white),
           ),
           backgroundColor: const Color(0xFF10B981),
@@ -248,13 +249,68 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                         color: textPrimary,
                         size: 20,
                       ),
-                      tooltip: 'Back to Sign In',
+                      tooltip: 'auth.back_to_login'.tr(),
                       onPressed: () async {
                         await AuthService().signOut();
                         if (context.mounted) {
                           context.go('/login');
                         }
                       },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // ─── 2b. Top-Right Language Switcher ───
+            Positioned(
+              top: 24,
+              right: 24,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        width: 1,
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () {
+                        if (context.locale.languageCode == 'en') {
+                          context.setLocale(const Locale('ms'));
+                        } else {
+                          context.setLocale(const Locale('en'));
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const HugeIcon(
+                              icon: HugeIcons.strokeRoundedTranslate,
+                              color: textPrimary,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              context.locale.languageCode == 'en' ? 'EN' : 'BM',
+                              style: GoogleFonts.inter(
+                                color: textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -303,7 +359,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
 
                               // Title
                               Text(
-                                'SET NEW PASSWORD',
+                                'auth.reset_card_title'.tr(),
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.outfit(
                                   fontSize: 22,
@@ -314,7 +370,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Sila masukkan kata laluan baharu untuk akaun Ngam Business anda.',
+                                'auth.reset_card_subtitle'.tr(),
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
                                   fontSize: 12.5,
@@ -348,7 +404,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
 
                               // New Password
                               Text(
-                                'NEW PASSWORD',
+                                'auth.new_password'.tr().toUpperCase(),
                                 style: GoogleFonts.inter(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
@@ -365,7 +421,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                                   fontSize: 13.5,
                                 ),
                                 decoration: _inputDecoration(
-                                  hintText: 'Minimal 6 aksara',
+                                  hintText: 'auth.password_min_hint'.tr(),
                                   prefixIcon: Icons.lock_outline,
                                   isPassword: true,
                                   obscure: _obscureNew,
@@ -377,10 +433,10 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                                 ),
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Sila masukkan kata laluan baharu';
+                                    return 'auth.val_enter_password'.tr();
                                   }
                                   if (value.trim().length < 6) {
-                                    return 'Kata laluan sekurang-kurangnya 6 aksara';
+                                    return 'auth.val_password_min'.tr();
                                   }
                                   return null;
                                 },
@@ -389,7 +445,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
 
                               // Confirm Password
                               Text(
-                                'CONFIRM PASSWORD',
+                                'auth.confirm_password'.tr().toUpperCase(),
                                 style: GoogleFonts.inter(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
@@ -406,7 +462,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                                   fontSize: 13.5,
                                 ),
                                 decoration: _inputDecoration(
-                                  hintText: 'Ulang kata laluan baharu',
+                                  hintText: 'auth.confirm_password_hint'.tr(),
                                   prefixIcon: Icons.lock_outline,
                                   isPassword: true,
                                   obscure: _obscureConfirm,
@@ -418,11 +474,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                                 ),
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Sila sahkan kata laluan baharu anda';
+                                    return 'auth.val_confirm_password'.tr();
                                   }
                                   if (value.trim() !=
                                       _newPasswordController.text.trim()) {
-                                    return 'Kata laluan tidak sepadan';
+                                    return 'auth.val_password_match'.tr();
                                   }
                                   return null;
                                 },
@@ -472,7 +528,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                                             ),
                                           )
                                         : Text(
-                                            'UPDATE PASSWORD',
+                                            'auth.btn_update_password'.tr(),
                                             style: GoogleFonts.outfit(
                                               fontSize: 13.5,
                                               fontWeight: FontWeight.w800,
@@ -504,7 +560,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage>
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        'Back to Sign In',
+                                        'auth.back_to_login'.tr(),
                                         style: GoogleFonts.inter(
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w600,

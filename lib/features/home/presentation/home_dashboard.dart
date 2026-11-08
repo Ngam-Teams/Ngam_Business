@@ -237,10 +237,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
             final width = constraints.maxWidth;
             final height = constraints.maxHeight;
 
-            // Detect landscape or sufficiently wide window
-            final isLandscape = (width > height) ||
-                (MediaQuery.orientationOf(context) == Orientation.landscape) ||
-                (width >= 620);
+            // In PORTRAIT mode (orientation == portrait or tall window height > width with width < 960),
+            // ALWAYS use the portrait layout (2x2 cards, vertical scroll) so tablets in portrait never get squashed.
+            final orientation = MediaQuery.orientationOf(context);
+            final isPortrait = orientation == Orientation.portrait || (height > width && width < 960);
+            final isLandscape = !isPortrait && (orientation == Orientation.landscape || width > height);
 
             final showBanner = !_loadingBusiness &&
                 (!hasLocation || (_businessProfile?['address_line'] ?? '').isEmpty);
@@ -652,7 +653,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
   }
 
   Widget _buildStatCards(List<Widget> cards, double width, {bool isLandscape = false}) {
-    if (width >= 700 || isLandscape) {
+    // Only place 4 cards in 1 row if it is TRUE landscape and width is wide enough (>= 720px)
+    final bool useFourColumns = isLandscape && width >= 720;
+
+    if (useFourColumns) {
       return IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,

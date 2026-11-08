@@ -6,9 +6,8 @@ import 'skeleton_box.dart';
 
 // =============================================================================
 // StatCard
-// Frosted glass metric card styled like a high-end FinTech operations center.
 // Compact form-factor, ambient sparkline wave, glowing pulse status pill,
-// and smooth micro-interactions (no physical movement/lift on hover).
+// and zero-overflow metric display matching Ngam's signature design system.
 // =============================================================================
 
 class StatCard extends StatefulWidget {
@@ -69,8 +68,7 @@ class _StatCardState extends State<StatCard> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOut,
-            // Original compact vertical & horizontal padding (no minimum height constraint)
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -103,156 +101,155 @@ class _StatCardState extends State<StatCard> {
                   ),
               ],
             ),
-            child: Stack(
-                children: [
-                  // 1. Ambient decorative mini sparkline curve in bottom-right corner
-                  // Compact width & height ensures perfect responsive layout on mobile/phones
-                  Positioned(
-                    right: 4,
-                    bottom: 2,
-                    width: 78,
-                    height: 38,
-                    child: IgnorePointer(
-                      child: SizedBox(
-                        width: 78,
-                        height: 38,
-                        child: CustomPaint(
-                          size: const Size(78, 38),
-                          painter: _StatCardSparklinePainter(
-                            data: sparkline,
-                            color: widget.accentColor,
-                            isHovered: _isHovered,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final cardWidth = constraints.maxWidth;
+                final double sparklineWidth = (cardWidth * 0.36).clamp(50.0, 76.0);
+                final double sparklineHeight = (sparklineWidth * 0.42).clamp(20.0, 28.0);
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // 1. Top row: Icon box on left + Status pill badge on right
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: widget.accentColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: widget.accentColor.withValues(
+                                alpha: _isHovered ? 0.40 : 0.25,
+                              ),
+                              width: 1,
+                            ),
+                          ),
+                          child: widget.icon is IconData
+                              ? Icon(
+                                  widget.icon as IconData,
+                                  color: widget.accentColor,
+                                  size: 16,
+                                )
+                              : HugeIcon(
+                                  icon: widget.icon,
+                                  color: widget.accentColor,
+                                  size: 16,
+                                  strokeWidth: 2.1,
+                                ),
+                        ),
+                        if (widget.subtitle != null && widget.subtitle!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7.5,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: effectiveBadgeColor.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: effectiveBadgeColor.withValues(alpha: 0.32),
+                                width: 0.9,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 4.5,
+                                  height: 4.5,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: effectiveBadgeColor,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: effectiveBadgeColor.withValues(alpha: 0.8),
+                                        blurRadius: 3,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 4.5),
+                                Text(
+                                  widget.subtitle!,
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: effectiveBadgeColor,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+
+                    // 2. Middle: Metric Value on left + Sparkline Curve on right (SIDE-BY-SIDE)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: widget.isLoading || widget.value == '...'
+                              ? const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 2),
+                                  child: SkeletonBox(
+                                    width: 75,
+                                    height: 20,
+                                    borderRadius: BorderRadius.all(Radius.circular(6)),
+                                  ),
+                                )
+                              : FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    widget.value,
+                                    style: const TextStyle(
+                                      fontSize: 19.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: -0.5,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 6),
+                        SizedBox(
+                          width: sparklineWidth,
+                          height: sparklineHeight,
+                          child: CustomPaint(
+                            size: Size(sparklineWidth, sparklineHeight),
+                            painter: _StatCardSparklinePainter(
+                              data: sparkline,
+                              color: widget.accentColor,
+                              isHovered: _isHovered,
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+
+                    // 3. Bottom: Metric Label (Full width, guaranteed zero overlap)
+                    Text(
+                      widget.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Colors.white.withValues(alpha: 0.65),
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.1,
                       ),
                     ),
-                  ),
-
-                  // 2. Foreground metric content
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Top row: Icon box on left + Status pill badge on right
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: widget.accentColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(9),
-                              border: Border.all(
-                                color: widget.accentColor.withValues(
-                                  alpha: _isHovered ? 0.40 : 0.25,
-                                ),
-                                width: 1,
-                              ),
-                            ),
-                            child: widget.icon is IconData
-                                ? Icon(
-                                    widget.icon as IconData,
-                                    color: widget.accentColor,
-                                    size: 16,
-                                  )
-                                : HugeIcon(
-                                    icon: widget.icon,
-                                    color: widget.accentColor,
-                                    size: 16,
-                                    strokeWidth: 2.1,
-                                  ),
-                          ),
-                          if (widget.subtitle != null && widget.subtitle!.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7.5,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: effectiveBadgeColor.withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: effectiveBadgeColor.withValues(alpha: 0.32),
-                                  width: 0.9,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 4.5,
-                                    height: 4.5,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: effectiveBadgeColor,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: effectiveBadgeColor.withValues(alpha: 0.8),
-                                          blurRadius: 3,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4.5),
-                                  Text(
-                                    widget.subtitle!,
-                                    style: TextStyle(
-                                      fontSize: 9.5,
-                                      color: effectiveBadgeColor,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.1,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 7),
-
-                      // Middle: Metric Value (FittedBox guarantees zero overflow on phones)
-                      if (widget.isLoading || widget.value == '...')
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 2),
-                          child: SkeletonBox(
-                            width: 75,
-                            height: 20,
-                            borderRadius: BorderRadius.all(Radius.circular(6)),
-                          ),
-                        )
-                      else
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            widget.value,
-                            style: const TextStyle(
-                              fontSize: 19.5,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
-                              height: 1.1,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 2),
-
-                      // Bottom: Metric Label
-                      Text(
-                        widget.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: Colors.white.withValues(alpha: 0.65),
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -300,7 +297,9 @@ class _StatCardSparklinePainter extends CustomPainter {
     final path = Path();
     final fillPath = Path();
 
-    final stepX = size.width / (drawData.length - 1);
+    // Leave a small 4px margin on the right for the terminal pulse dot halo
+    final double drawWidth = math.max(1.0, size.width - 4.0);
+    final stepX = drawWidth / (drawData.length - 1);
 
     double getY(double val) {
       final normalized = (val - effMin) / range;
@@ -337,7 +336,7 @@ class _StatCardSparklinePainter extends CustomPainter {
       );
     }
 
-    fillPath.lineTo(size.width, size.height);
+    fillPath.lineTo(drawWidth, size.height);
     fillPath.close();
 
     final double fillAlpha = isAllZero
@@ -356,7 +355,7 @@ class _StatCardSparklinePainter extends CustomPainter {
           color.withValues(alpha: fillAlpha),
           color.withValues(alpha: 0.0),
         ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ).createShader(Rect.fromLTWH(0, 0, drawWidth, size.height))
       ..style = PaintingStyle.fill;
     canvas.drawPath(fillPath, fillPaint);
 
@@ -369,7 +368,7 @@ class _StatCardSparklinePainter extends CustomPainter {
     canvas.drawPath(path, linePaint);
 
     // 3. Terminal live pulse dot at the end of the sparkline
-    final lastPoint = Offset(size.width, getY(drawData.last));
+    final lastPoint = Offset(drawWidth, getY(drawData.last));
     final dotPaint = Paint()
       ..color = color.withValues(alpha: isHovered ? 1.0 : 0.85)
       ..style = PaintingStyle.fill;

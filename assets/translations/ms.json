@@ -684,7 +684,17 @@
     "unauthorized_desc": "Akaun anda tidak mempunyai kebenaran akses perniagaan.",
     "back_to_login": "Kembali ke Log Masuk",
     "signing_out": "Sedang log keluar...",
-    "sign_out_confirm": "Adakah anda pasti ingin log keluar dari akaun perniagaan ini?"
+    "sign_out_confirm": "Adakah anda pasti ingin log keluar dari akaun perniagaan ini?",
+    "reset_card_title": "TETAPKAN KATA LALUAN BAHARU",
+    "reset_card_subtitle": "Sila masukkan kata laluan baharu untuk akaun Ngam Business anda.",
+    "password_min_hint": "Minimal 6 aksara",
+    "confirm_password_hint": "Ulang kata laluan baharu",
+    "val_enter_password": "Sila masukkan kata laluan baharu",
+    "val_password_min": "Kata laluan sekurang-kurangnya 6 aksara",
+    "val_confirm_password": "Sila sahkan kata laluan baharu anda",
+    "val_password_match": "Kata laluan tidak sepadan",
+    "btn_update_password": "KEMAS KINI KATA LALUAN",
+    "tooltip_language": "Tukar Bahasa"
   },
   "business_type": {
     "title": "Jenis & Kategori Perniagaan",

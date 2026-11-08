@@ -684,7 +684,17 @@
     "unauthorized_desc": "Your account does not have business access permissions.",
     "back_to_login": "Back to Login",
     "signing_out": "Signing out...",
-    "sign_out_confirm": "Are you sure you want to sign out of this business account?"
+    "sign_out_confirm": "Are you sure you want to sign out of this business account?",
+    "reset_card_title": "SET NEW PASSWORD",
+    "reset_card_subtitle": "Please enter a new password for your Ngam Business account.",
+    "password_min_hint": "Minimum 6 characters",
+    "confirm_password_hint": "Re-enter new password",
+    "val_enter_password": "Please enter a new password",
+    "val_password_min": "Password must be at least 6 characters",
+    "val_confirm_password": "Please confirm your new password",
+    "val_password_match": "Passwords do not match",
+    "btn_update_password": "UPDATE PASSWORD",
+    "tooltip_language": "Change Language"
   },
   "business_type": {
     "title": "Business Type & Category",

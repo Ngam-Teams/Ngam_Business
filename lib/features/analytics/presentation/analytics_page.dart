@@ -400,7 +400,10 @@ Laporan dijana secara automatik oleh Ngam Business
                     ),
                   ];
 
-                  if (width >= 800) {
+                  final orientation = MediaQuery.orientationOf(context);
+                  final isLandscape = (orientation == Orientation.landscape && width >= 720) || width >= 960;
+
+                  if (isLandscape) {
                     return Row(
                       children: summaryCards
                           .asMap()
