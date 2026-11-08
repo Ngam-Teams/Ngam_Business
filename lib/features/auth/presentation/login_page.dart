@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -746,7 +747,7 @@ class _LoginPageState extends State<LoginPage>
                   GestureDetector(
                     onTap: () => _switchMode(AuthScreenMode.forgotPassword),
                     child: Text(
-                      'Forgot?',
+                      'auth.forgot_password'.tr(),
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
