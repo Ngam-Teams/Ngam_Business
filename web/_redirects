@@ -1,1 +1,4 @@
-/*    /index.html   200
+/privacypolicy    /privacypolicy.html   200
+/privacy_policy   /privacypolicy        301
+/privacy-policy   /privacypolicy        301
+/*                /index.html           200
