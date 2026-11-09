@@ -47,9 +47,13 @@ jobs:
       - name: Build Web Release
         run: flutter build web --release --no-tree-shake-icons
 
-      - name: Copy Cloudflare Redirects
+      - name: Copy Cloudflare Redirects & Static Pages
         run: |
           cp web/_redirects build/web/_redirects || true
+          cp -r web/privacypolicy build/web/ || true
+          cp -r web/privacy_policy build/web/ || true
+          cp web/privacypolicy.html build/web/ || true
+          cp web/privacy_policy.html build/web/ || true
         shell: bash
 
       - name: Deploy to Cloudflare Pages via Wrangler
