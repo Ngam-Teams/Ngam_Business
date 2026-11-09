@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../../../widgets/glass_nav_button.dart';
 import '../../../widgets/glass_toast.dart';
 import '../data/business_service.dart';
 import '../models/business_type_catalog.dart';
@@ -116,88 +117,54 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
 
     return Scaffold(
       backgroundColor: isDark ? bgDark : const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF111827) : Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => context.pop(_selectedId),
-        ),
-        title: Text(
-          'business_type.title'.tr(),
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: isDark ? Colors.white : const Color(0xFF0F172A),
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: borderColor,
-            height: 1,
-          ),
-        ),
+      appBar: GlassAppBar(
+        title: 'business_type.title'.tr(),
+        subtitle: 'business_type.subtitle'.tr(),
+        onBack: () => context.pop(_selectedId),
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // ─── Header & Search Section ──────────────────────────────────
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-              color: isDark ? const Color(0xFF111827).withValues(alpha: 0.6) : Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'business_type.subtitle'.tr(),
-                    style: TextStyle(
+            // ─── Search Section ──────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                ),
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'business_type.search_hint'.tr(),
+                    hintStyle: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                      color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
                     ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      size: 20,
+                      color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   ),
-                  const SizedBox(height: 14),
-
-                  // Search Bar
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'business_type.search_hint'.tr(),
-                        hintStyle: TextStyle(
-                          fontSize: 13,
-                          color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          size: 20,
-                          color: isDark ? Colors.white54 : const Color(0xFF64748B),
-                        ),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
 

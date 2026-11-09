@@ -6,7 +6,6 @@ import 'package:hugeicons/hugeicons.dart';
 
 import 'bottom_nav.dart';
 import 'glass_toast.dart';
-import 'glass_nav_button.dart';
 import '../features/auth/data/auth_service.dart';
 import '../features/settings/data/business_service.dart';
 
@@ -798,12 +797,15 @@ class _TopBarActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        GlassNavButton(
-          icon: HugeIcons.strokeRoundedNotification02,
+        IconButton(
+          icon: const HugeIcon(
+            icon: HugeIcons.strokeRoundedNotification02,
+            color: Colors.white54,
+            size: 20,
+            strokeWidth: 2.1,
+          ),
           tooltip: 'nav.notifications'.tr(),
-          size: 44,
-          iconSize: 20,
-                    onTap: () => context.push('/merchant-inbox'),
+          onPressed: () => context.push('/merchant-inbox'),
         ),
         const SizedBox(width: 8),
         ValueListenableBuilder<Map<String, dynamic>?>(
@@ -822,7 +824,7 @@ class _TopBarActions extends StatelessWidget {
             return Tooltip(
               message: 'Profil Kedai',
               child: _StoreAvatar(
-                size: 44,
+                size: 34,
                 logoUrl: logoUrl,
                 businessName: businessName,
                 showStatusDot: false,
