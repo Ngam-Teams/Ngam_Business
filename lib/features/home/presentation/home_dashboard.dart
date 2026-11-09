@@ -249,8 +249,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
             // In landscape or wide screens: ALWAYS keep Recent Activity & Quick Actions SIDE-BY-SIDE!
             if (isLandscape) {
-              // Full-viewport non-scrolling layout when height is sufficient
-              if (height >= 360) {
+              // Full-viewport non-scrolling layout ONLY when height is truly ample (>= 620px)
+              if (height >= 620) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -277,18 +277,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 );
               }
 
-              // Ultra-short landscape screen (< 360px height)
+              // Standard landscape screen (< 620px height) - scrollable to prevent any content clipping
               return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 40),
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 100),
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (showBanner) _buildProfileIncompleteBanner(context),
                     _buildStatCards(cards, width, isLandscape: true),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     SizedBox(
-                      height: 360,
+                      height: 380,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
