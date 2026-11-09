@@ -188,8 +188,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             label: 'dashboard.today_revenue'.tr(),
             value: fmt.format(todayRev),
             isLoading: loading,
-            subtitle: '↑ Today',
-            badgeColor: const Color(0xFF44CF6C),
+            subtitle: 'dashboard.stat_today'.tr(),
             icon: HugeIcons.strokeRoundedMoney01,
             accentColor: const Color(0xFF42A5F5),
             sparklineData: todayRevSpark,
@@ -199,8 +198,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
             label: 'dashboard.today_orders'.tr(),
             value: todayOrders.toString(),
             isLoading: loading,
-            subtitle: todayOrders > 0 ? '$todayOrders Orders' : 'Active',
-            badgeColor: const Color(0xFF42A5F5),
+            subtitle: todayOrders > 0
+                ? 'dashboard.stat_orders_count'.tr(args: [todayOrders.toString()])
+                : 'dashboard.stat_active'.tr(),
             icon: HugeIcons.strokeRoundedShoppingBag01,
             accentColor: const Color(0xFF44CF6C),
             sparklineData: todayOrdSpark,
@@ -210,7 +210,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
             label: 'dashboard.pending_orders'.tr(),
             value: pendingOrders.toString(),
             isLoading: loading,
-            subtitle: pendingOrders > 0 ? '$pendingOrders Action' : 'Cleared',
+            subtitle: pendingOrders > 0
+                ? 'dashboard.stat_action_needed'.tr(args: [pendingOrders.toString()])
+                : 'dashboard.stat_cleared'.tr(),
             badgeColor: pendingOrders > 0 ? const Color(0xFFF9C80E) : const Color(0xFF44CF6C),
             icon: HugeIcons.strokeRoundedTime02,
             accentColor: const Color(0xFFF9C80E),
@@ -221,10 +223,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
             label: 'dashboard.monthly_revenue'.tr(),
             value: fmt.format(monthlyRev),
             isLoading: loading,
-            subtitle: 'This Month',
-            badgeColor: const Color(0xFF8B5CF6),
+            subtitle: 'dashboard.stat_this_month'.tr(),
             icon: HugeIcons.strokeRoundedChartIncrease,
-            accentColor: const Color(0xFF8B5CF6),
+            accentColor: const Color(0xFFAB47BC),
             sparklineData: monthlyRevSpark,
             onTap: () => switchAppShellTab(3),
           ),
@@ -657,43 +658,37 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final bool useFourColumns = isLandscape && width >= 720;
 
     if (useFourColumns) {
-      return IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: 12),
-            Expanded(child: cards[1]),
-            const SizedBox(width: 12),
-            Expanded(child: cards[2]),
-            const SizedBox(width: 12),
-            Expanded(child: cards[3]),
-          ],
-        ),
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: cards[0]),
+          const SizedBox(width: 12),
+          Expanded(child: cards[1]),
+          const SizedBox(width: 12),
+          Expanded(child: cards[2]),
+          const SizedBox(width: 12),
+          Expanded(child: cards[3]),
+        ],
       );
     } else {
       return Column(
         children: [
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: cards[0]),
-                const SizedBox(width: 12),
-                Expanded(child: cards[1]),
-              ],
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: cards[0]),
+              const SizedBox(width: 12),
+              Expanded(child: cards[1]),
+            ],
           ),
           const SizedBox(height: 12),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: cards[2]),
-                const SizedBox(width: 12),
-                Expanded(child: cards[3]),
-              ],
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: cards[2]),
+              const SizedBox(width: 12),
+              Expanded(child: cards[3]),
+            ],
           ),
         ],
       );
