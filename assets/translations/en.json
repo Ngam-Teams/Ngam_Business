@@ -162,7 +162,12 @@
     "order_id_copied": "Order ID copied!",
     "no_customer_phone": "No customer phone number for this order",
     "cannot_open_whatsapp": "Unable to open WhatsApp",
-    "whatsapp_launch_error": "Error launching WhatsApp: {}"
+    "whatsapp_launch_error": "Error launching WhatsApp: {}",
+    "confirm_pickup_completed": "Verify Pickup & Complete",
+    "ordered_items_title": "Ordered Items",
+    "counter_customer": "Counter Customer",
+    "whatsapp_customer": "WhatsApp Customer",
+    "notes_title": "Order Notes & Modifiers:"
   },
   "pos": {
     "title": "Point of Sale",

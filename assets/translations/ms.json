@@ -162,7 +162,12 @@
     "order_id_copied": "ID Pesanan disalin!",
     "no_customer_phone": "Tiada nombor telefon pelanggan untuk pesanan ini",
     "cannot_open_whatsapp": "Tidak dapat membuka WhatsApp",
-    "whatsapp_launch_error": "Ralat melancarkan WhatsApp: {}"
+    "whatsapp_launch_error": "Ralat melancarkan WhatsApp: {}",
+    "confirm_pickup_completed": "Sahkan Pengambilan & Selesai",
+    "ordered_items_title": "Item Yang Dipesan",
+    "counter_customer": "Pelanggan Kaunter",
+    "whatsapp_customer": "WhatsApp Pelanggan",
+    "notes_title": "Nota & Mod Pesanan:"
   },
   "pos": {
     "title": "Daftar Tunai POS",
