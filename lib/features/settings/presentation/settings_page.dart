@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../widgets/glass_toast.dart';
 import '../../auth/data/auth_service.dart';
@@ -447,6 +448,21 @@ class _SettingsPageState extends State<SettingsPage> {
       icon: HugeIcons.strokeRoundedInformationCircle,
       child: Column(
         children: [
+          _buildNavRow(
+            label: 'settings.help_support'.tr(),
+            subtitle: '+60 11-1589 2468',
+            icon: HugeIcons.strokeRoundedCustomerService,
+            onTap: () async {
+              final text = Uri.encodeComponent('settings.merchant_support_msg'.tr());
+              final uri = Uri.parse('https://wa.me/601115892468?text=$text');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } else if (context.mounted) {
+                showGlassToast(context, 'orders.cannot_open_whatsapp'.tr(), isError: true);
+              }
+            },
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
             label: 'settings.language'.tr(),
             subtitle: currentLangLabel,

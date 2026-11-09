@@ -992,10 +992,18 @@ class _HomeDashboardState extends State<HomeDashboard> {
         onTap: () => _openDailyReportExport(context),
       ),
       (
-        label: 'Pusat Bantuan\nSegera',
+        label: 'dashboard.action_help_center'.tr(),
         icon: HugeIcons.strokeRoundedShield01,
         color: const Color(0xFF818CF8),
-        onTap: () => showGlassToast(context, 'Pusat Bantuan akan hadir tidak lama lagi.'),
+        onTap: () async {
+          final text = Uri.encodeComponent('dashboard.support_wa_message'.tr());
+          final uri = Uri.parse('https://wa.me/601115892468?text=$text');
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else if (context.mounted) {
+            showGlassToast(context, 'orders.cannot_open_whatsapp'.tr(), isError: true);
+          }
+        },
       ),
       (
         label: 'Log Audit\nKeselamatan',
