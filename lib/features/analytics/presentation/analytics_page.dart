@@ -263,13 +263,13 @@ Laporan dijana secara automatik oleh Ngam Business
   String _getPeriodLabel() {
     switch (_selectedPeriod) {
       case AnalyticsPeriod.today:
-        return 'Today';
+        return 'analytics.period_today'.tr();
       case AnalyticsPeriod.sevenDays:
-        return 'Last 7 Days';
+        return 'analytics.period_7_days'.tr();
       case AnalyticsPeriod.thirtyDays:
-        return 'Last 30 Days';
+        return 'analytics.period_30_days'.tr();
       case AnalyticsPeriod.thisYear:
-        return 'This Year';
+        return 'analytics.period_this_year'.tr();
     }
   }
 
@@ -363,38 +363,42 @@ Laporan dijana secara automatik oleh Ngam Business
 
                   final summaryCards = [
                     StatCard(
-                      label: '${_getPeriodLabel()} Revenue',
+                      label: 'analytics.revenue_period'.tr(args: [_getPeriodLabel()]),
                       value: fmt.format(displayedRevenue),
                       isLoading: loading,
                       subtitle: _getPeriodLabel(),
                       accentColor: const Color(0xFF42A5F5),
+                      badgeColor: const Color(0xFF42A5F5),
                       icon: HugeIcons.strokeRoundedMoney01,
                       sparklineData: revSpark,
                     ),
                     StatCard(
-                      label: '${_getPeriodLabel()} Orders',
+                      label: 'analytics.orders_period'.tr(args: [_getPeriodLabel()]),
                       value: displayedOrders.toString(),
                       isLoading: loading,
-                      subtitle: '$displayedOrders Total',
+                      subtitle: 'analytics.orders_total_badge'.tr(args: [displayedOrders.toString()]),
                       accentColor: const Color(0xFF44CF6C),
+                      badgeColor: const Color(0xFF44CF6C),
                       icon: HugeIcons.strokeRoundedShoppingBag01,
                       sparklineData: ordSpark,
                     ),
                     StatCard(
-                      label: 'Avg Order Value',
+                      label: 'analytics.average_ticket'.tr(),
                       value: fmt.format(avgOrder),
                       isLoading: loading,
-                      subtitle: 'Per Order',
+                      subtitle: 'analytics.per_order'.tr(),
                       accentColor: const Color(0xFFF9C80E),
+                      badgeColor: const Color(0xFFF9C80E),
                       icon: HugeIcons.strokeRoundedReceiptText,
                       sparklineData: const [28.0, 32.0, 30.5, 36.0, 34.2, 40.0, 38.5],
                     ),
                     StatCard(
-                      label: 'Active Catalogue',
-                      value: '${data?['productCount'] ?? 0} Items',
+                      label: 'analytics.active_catalogue'.tr(),
+                      value: 'analytics.items_count'.tr(args: [(data?['productCount'] ?? 0).toString()]),
                       isLoading: loading,
-                      subtitle: 'In Stock',
+                      subtitle: 'analytics.in_stock'.tr(),
                       accentColor: const Color(0xFFAB47BC),
+                      badgeColor: const Color(0xFFAB47BC),
                       icon: HugeIcons.strokeRoundedPackage,
                       sparklineData: const [12.0, 14.0, 15.0, 18.0, 17.5, 20.0, 22.0],
                     ),
@@ -405,21 +409,22 @@ Laporan dijana secara automatik oleh Ngam Business
 
                   if (isLandscape) {
                     return Row(
-                      children: summaryCards
-                          .asMap()
-                          .entries
-                          .map((e) => Expanded(
-                                child: Padding(
-                                  padding: EdgeInsets.only(left: e.key == 0 ? 0 : 16),
-                                  child: e.value,
-                                ),
-                              ))
-                          .toList(),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: summaryCards[0]),
+                        const SizedBox(width: 12),
+                        Expanded(child: summaryCards[1]),
+                        const SizedBox(width: 12),
+                        Expanded(child: summaryCards[2]),
+                        const SizedBox(width: 12),
+                        Expanded(child: summaryCards[3]),
+                      ],
                     );
                   }
                   return Column(
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(child: summaryCards[0]),
                           const SizedBox(width: 12),
@@ -428,6 +433,7 @@ Laporan dijana secara automatik oleh Ngam Business
                       ),
                       const SizedBox(height: 12),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(child: summaryCards[2]),
                           const SizedBox(width: 12),
@@ -444,23 +450,23 @@ Laporan dijana secara automatik oleh Ngam Business
 
           // Revenue Trend Chart Panel
           _buildPanel(
-            title: 'Revenue Trend (${_getPeriodLabel()})',
+            title: 'analytics.revenue_trend_period'.tr(args: [_getPeriodLabel()]),
             icon: HugeIcons.strokeRoundedAnalytics01,
             child: _buildRevenueChart(),
           ),
           const SizedBox(height: 24),
 
-          // Hourly Traffic & Peak Rush Heatmap (NEW FUNCTION)
+          // Hourly Traffic & Peak Rush Heatmap
           _buildPanel(
-            title: 'Hourly Peak Hours & Rush Heatmap',
+            title: 'analytics.hourly_peak_heatmap'.tr(),
             icon: HugeIcons.strokeRoundedClock01,
             child: _buildPeakHoursSection(),
           ),
           const SizedBox(height: 24),
 
-          // Sales Channels Breakdown & Payment Methods (NEW FUNCTION)
+          // Sales Channels Breakdown & Payment Methods
           _buildPanel(
-            title: 'Order Channels & Payment Distribution',
+            title: 'analytics.order_channels_payment'.tr(),
             icon: HugeIcons.strokeRoundedGridView,
             child: _buildChannelAndPaymentSection(),
           ),
@@ -474,7 +480,7 @@ Laporan dijana secara automatik oleh Ngam Business
               final loading = snapshot.connectionState == ConnectionState.waiting;
 
               return _buildPanel(
-                title: 'Top Selling Products',
+                title: 'analytics.top_selling_items'.tr(),
                 icon: HugeIcons.strokeRoundedAward01,
                 child: loading
                     ? const Center(
@@ -488,7 +494,7 @@ Laporan dijana secara automatik oleh Ngam Business
                             child: Padding(
                               padding: const EdgeInsets.all(24),
                               child: Text(
-                                'No data yet',
+                                'analytics.no_data_yet'.tr(),
                                 style: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
                               ),
                             ),
@@ -510,9 +516,9 @@ Laporan dijana secara automatik oleh Ngam Business
           ),
           const SizedBox(height: 24),
 
-          // AI Smart Business Insights & Projections (NEW FUNCTION)
+          // AI Smart Business Insights & Projections
           _buildPanel(
-            title: 'AI Smart Insights & Projections',
+            title: 'analytics.ai_smart_insights'.tr(),
             icon: HugeIcons.strokeRoundedIdea01,
             child: _buildAiInsightsCard(),
           ),
