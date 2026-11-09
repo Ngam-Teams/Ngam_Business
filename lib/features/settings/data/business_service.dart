@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/business_type_catalog.dart';
 
 class BusinessService {
   final SupabaseClient _client;
@@ -353,7 +354,7 @@ class BusinessService {
       'owner_user_id': user.id,
       'business_name': cleanName,
       'business_handle': cleanHandle,
-      'business_industry': businessIndustry.trim(),
+      'business_industry': BusinessTypeCatalog.toDbIndustry(businessIndustry),
       'business_registration_number': registrationNumber?.trim() ?? 'PENDING-REG',
       'address_line': addressLine?.trim() ?? '',
       'postcode': postcode?.trim() ?? '',
@@ -405,9 +406,13 @@ class BusinessService {
 
   /// Update / alter existing business details
   Future<void> updateBusinessProfile(String businessId, Map<String, dynamic> updates) async {
-    await _client.from('businesses').update(updates).eq('id', businessId);
+    final sanitized = Map<String, dynamic>.from(updates);
+    if (sanitized.containsKey('business_industry') && sanitized['business_industry'] != null) {
+      sanitized['business_industry'] = BusinessTypeCatalog.toDbIndustry(sanitized['business_industry'].toString());
+    }
+    await _client.from('businesses').update(sanitized).eq('id', businessId);
     if (_cachedProfile != null && _cachedProfile!['id'] == businessId) {
-      final updated = Map<String, dynamic>.from(_cachedProfile!)..addAll(updates);
+      final updated = Map<String, dynamic>.from(_cachedProfile!)..addAll(sanitized);
       await _saveProfileToCache(updated);
     }
   }

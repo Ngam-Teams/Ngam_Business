@@ -466,4 +466,54 @@ class BusinessTypeCatalog {
     'retail': 'minimarket',
     'services': 'home_cleaning',
   };
+
+  /// Converts any granular business type or category into one of the 4 strict
+  /// PostgreSQL CHECK constraint values: ('fnb', 'barber', 'retail', 'services').
+  static String toDbIndustry(String? typeOrCategory) {
+    if (typeOrCategory == null || typeOrCategory.trim().isEmpty) return 'services';
+    final lower = typeOrCategory.toLowerCase().trim();
+
+    // Direct matches with valid DB constraint
+    if (lower == 'fnb' || lower == 'barber' || lower == 'retail' || lower == 'services') {
+      return lower;
+    }
+
+    final item = findById(lower);
+    if (item != null) {
+      switch (item.categoryGroup) {
+        case 'fnb':
+          return 'fnb';
+        case 'beauty':
+          return 'barber';
+        case 'retail':
+          return 'retail';
+        case 'pets':
+          if (item.id == 'pet_shop') return 'retail';
+          if (item.id == 'pet_cafe') return 'fnb';
+          return 'services';
+        case 'automotive':
+        case 'home_services':
+        case 'sports':
+        case 'health':
+        case 'education':
+        case 'professional':
+        default:
+          return 'services';
+      }
+    }
+
+    // Heuristics fallback
+    if (lower.contains('food') || lower.contains('restaurant') || lower.contains('cafe') || lower.contains('fnb')) {
+      return 'fnb';
+    }
+    if (lower.contains('barber') || lower.contains('salon') || lower.contains('beauty') || lower.contains('spa')) {
+      return 'barber';
+    }
+    if (lower.contains('retail') || lower.contains('market') || lower.contains('shop') || lower.contains('store')) {
+      return 'retail';
+    }
+
+    return 'services';
+  }
 }
+

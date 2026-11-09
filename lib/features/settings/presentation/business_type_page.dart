@@ -74,9 +74,18 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
       final bizId = profile?['id']?.toString();
 
       if (bizId != null && bizId.isNotEmpty) {
+        final dbIndustry = BusinessTypeCatalog.toDbIndustry(_selectedId);
         await bizService.updateBusinessProfile(bizId, {
-          'business_industry': _selectedId,
+          'business_industry': dbIndustry,
         });
+
+        // Also preserve granular business_type in business_settings operating_hours
+        final existingSettings = profile?['settings'];
+        final opHours = (existingSettings is Map && existingSettings['operating_hours'] is Map)
+            ? Map<String, dynamic>.from(existingSettings['operating_hours'] as Map)
+            : <String, dynamic>{};
+        opHours['business_type'] = _selectedId;
+        await bizService.saveBusinessSettings(bizId, {'operating_hours': opHours});
       }
 
       if (mounted) {

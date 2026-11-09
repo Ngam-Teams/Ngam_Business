@@ -312,25 +312,25 @@ class GlassNavButton extends StatelessWidget {
 
     Widget button = ClipOval(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
           width: size,
           height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: effectiveDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white.withValues(alpha: 0.75),
+                ? const Color(0xFF161622).withValues(alpha: 0.88)
+                : Colors.white.withValues(alpha: 0.88),
             border: Border.all(
               color: effectiveDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.08),
+                  ? Colors.white.withValues(alpha: 0.18)
+                  : Colors.black.withValues(alpha: 0.10),
               width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: effectiveDark ? 0.25 : 0.06),
-                blurRadius: 10,
+                color: Colors.black.withValues(alpha: effectiveDark ? 0.35 : 0.08),
+                blurRadius: 12,
                 offset: const Offset(0, 3),
               ),
             ],
@@ -363,7 +363,7 @@ class GlassNavButton extends StatelessWidget {
   }
 }
 
-/// Centered frosted glass capsule for title and subtitle (height: 44px).
+/// Centered frosted glass capsule for title and subtitle.
 /// Uses default theme text colors for dark and light mode.
 class GlassTitlePill extends StatelessWidget {
   final String title;
@@ -390,30 +390,32 @@ class GlassTitlePill extends StatelessWidget {
     final textPrimary =
         effectiveDark ? Colors.white : const Color(0xFF0F172A);
     final textSecondary =
-        effectiveDark ? Colors.white60 : const Color(0xFF64748B);
+        effectiveDark ? Colors.white70 : const Color(0xFF64748B);
+    final bool hasSubtitle = subtitle != null && subtitle!.trim().isNotEmpty;
+    final double effectiveHeight = hasSubtitle ? (height < 48.0 ? 48.0 : height) : height;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(100),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
         child: Container(
-          height: height,
+          height: effectiveHeight,
           padding: padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(100),
             color: effectiveDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white.withValues(alpha: 0.75),
+                ? const Color(0xFF161622).withValues(alpha: 0.90)
+                : Colors.white.withValues(alpha: 0.90),
             border: Border.all(
               color: effectiveDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : Colors.black.withValues(alpha: 0.08),
+                  ? Colors.white.withValues(alpha: 0.18)
+                  : Colors.black.withValues(alpha: 0.10),
               width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: effectiveDark ? 0.25 : 0.06),
-                blurRadius: 10,
+                color: Colors.black.withValues(alpha: effectiveDark ? 0.30 : 0.08),
+                blurRadius: 12,
                 offset: const Offset(0, 3),
               ),
             ],
@@ -431,22 +433,24 @@ class GlassTitlePill extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: textPrimary,
-                  fontSize: (subtitle != null && subtitle!.isNotEmpty) ? 14 : 15,
+                  fontSize: hasSubtitle ? 13.5 : 15,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
                 ),
               ),
-              if (subtitle != null && subtitle!.isNotEmpty)
+              if (hasSubtitle) ...[
+                const SizedBox(height: 1),
                 Text(
                   subtitle!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: textSecondary,
-                    fontSize: 10,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
+              ],
             ],
           ),
         ),
@@ -665,6 +669,39 @@ class GlassScaffold extends StatelessWidget {
             // glides seamlessly beneath the floating top bar!
             Positioned.fill(
               child: body,
+            ),
+            // Header fade shroud to smoothly dissolve scrolling content beneath floating nav
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: bottomTabBar != null ? 120.0 : 76.0,
+              child: IgnorePointer(
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            (backgroundColor ??
+                                (effectiveDark ? const Color(0xFF0A0A14) : const Color(0xFFF8FAFC))),
+                            (backgroundColor ??
+                                    (effectiveDark ? const Color(0xFF0A0A14) : const Color(0xFFF8FAFC)))
+                                .withValues(alpha: 0.85),
+                            (backgroundColor ??
+                                    (effectiveDark ? const Color(0xFF0A0A14) : const Color(0xFFF8FAFC)))
+                                .withValues(alpha: 0.0),
+                          ],
+                          stops: const [0.0, 0.65, 1.0],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
             FloatingTopBar(
               title: title,

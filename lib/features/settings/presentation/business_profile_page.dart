@@ -135,8 +135,18 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       _isHandleCustomized = false;
     }
 
-    final industry = (data['business_industry'] as String? ?? 'restaurant').toLowerCase();
-    final matched = BusinessTypeCatalog.findById(industry);
+    // Load granular business_type if preserved in operating_hours, else fall back to business_industry
+    String? granularType;
+    if (data['settings'] != null && data['settings'] is Map) {
+      final s = data['settings'] as Map<String, dynamic>;
+      final op = s['operating_hours'];
+      if (op is Map && op['business_type'] != null) {
+        granularType = op['business_type']?.toString();
+      }
+    }
+
+    final rawIndustry = (granularType ?? data['business_industry'] as String? ?? 'restaurant').toLowerCase();
+    final matched = BusinessTypeCatalog.findById(rawIndustry);
     if (matched != null) {
       _selectedIndustry = matched.id;
     } else {
@@ -252,21 +262,21 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) {
-      showGlassToast(context, 'Please complete the required fields.', isError: true);
+      showGlassToast(context, 'business_profile.business_name_required'.tr(), isError: true);
       return;
     }
 
     final cleanHandle = _handleController.text.trim().replaceAll('@', '').toLowerCase();
     if (cleanHandle.isEmpty) {
-      showGlassToast(context, 'Sila masukkan business handle untuk kedai anda.', isError: true);
+      showGlassToast(context, 'business_profile.handle_empty_error'.tr(), isError: true);
       return;
     }
     if (cleanHandle.length < 3 || cleanHandle.length > 30) {
-      showGlassToast(context, 'Business handle mesti antara 3 hingga 30 aksara.', isError: true);
+      showGlassToast(context, 'business_profile.handle_length_error'.tr(), isError: true);
       return;
     }
     if (!RegExp(r'^[a-z0-9_-]+$').hasMatch(cleanHandle)) {
-      showGlassToast(context, 'Business handle hanya boleh mengandungi huruf kecil, nombor, tanda tolak (-) dan garis bawah (_).', isError: true);
+      showGlassToast(context, 'business_profile.handle_chars_error'.tr(), isError: true);
       return;
     }
 
@@ -277,15 +287,16 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     if (!isAvailable) {
       setState(() => _isSaving = false);
       if (mounted) {
-        showGlassToast(context, 'Handle "@$cleanHandle" telah digunakan oleh peniaga lain. Sila pilih handle lain.', isError: true);
+        showGlassToast(context, 'business_profile.handle_taken_error'.tr(args: [cleanHandle]), isError: true);
       }
       return;
     }
 
+    final dbIndustry = BusinessTypeCatalog.toDbIndustry(_selectedIndustry);
     final businessData = {
       'business_name': _nameController.text.trim(),
       'business_handle': cleanHandle,
-      'business_industry': _selectedIndustry,
+      'business_industry': dbIndustry,
       'business_registration_number': _regNoController.text.trim().isNotEmpty
           ? _regNoController.text.trim()
           : 'PENDING-REG',
@@ -318,6 +329,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
     final mergedOperatingHours = <String, dynamic>{
       ..._existingOperatingHours,
+      'business_type': _selectedIndustry,
       'open_time': _formatTimeOfDay(_openTime),
       'close_time': _formatTimeOfDay(_closeTime),
       'days': _existingOperatingHours['days'] ??
@@ -352,13 +364,14 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       );
 
       if (mounted) {
-        showGlassToast(context, 'Business details saved successfully!');
+        showGlassToast(context, 'business_profile.save_success'.tr());
         // Refresh profile state
         await _loadProfile();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Failed to save business details: $e\n$stack');
       if (mounted) {
-        showGlassToast(context, 'Failed to save details: $e', isError: true);
+        showGlassToast(context, 'business_profile.save_error'.tr(), isError: true);
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -403,13 +416,16 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         });
 
         if (mounted) {
-          showGlassToast(context, '${type == 'logo' ? 'Logo' : 'Cover'} berjaya dimampatkan & dimuat naik!');
+          final label = type == 'logo'
+              ? 'business_profile.logo_name'.tr()
+              : 'business_profile.cover_name'.tr();
+          showGlassToast(context, 'business_profile.upload_success'.tr(args: [label]));
         }
       } else {
-        if (mounted) showGlassToast(context, 'Upload failed. Storage bucket error.', isError: true);
+        if (mounted) showGlassToast(context, 'business_profile.upload_failed'.tr(), isError: true);
       }
     } catch (e) {
-      if (mounted) showGlassToast(context, 'Upload failed: $e', isError: true);
+      if (mounted) showGlassToast(context, 'business_profile.upload_error'.tr(args: [e.toString()]), isError: true);
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -471,12 +487,14 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      title: isNewBusiness ? 'Add Business' : 'Business Profile',
-      subtitle: 'Maklumat & profil kedai',
+      title: isNewBusiness
+          ? 'business_profile.add_business_title'.tr()
+          : 'business_profile.title'.tr(),
+      subtitle: 'business_profile.subtitle'.tr(),
       actionItems: [
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedTick01,
-          tooltip: 'Simpan Profil',
+          tooltip: 'business_profile.save_tooltip'.tr(),
           isLoading: _isSaving,
           onTap: _isSaving ? null : _saveProfile,
         ),
@@ -486,7 +504,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
               child: CircularProgressIndicator(color: Color(0xFF42A5F5)),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 68, 20, 120),
+              padding: const EdgeInsets.fromLTRB(20, 80, 20, 120),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 680),
@@ -502,21 +520,21 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
                         // Section 1: Business Identity
                         _buildSectionHeader(
-                          title: 'Business Identity',
-                          subtitle: 'Your public business name, category, and legal registration',
+                          title: 'business_profile.identity_title'.tr(),
+                          subtitle: 'business_profile.identity_subtitle'.tr(),
                           icon: HugeIcons.strokeRoundedStore01,
                         ),
                         const SizedBox(height: 16),
                         _buildCardContainer([
                           // Business Name (Unlocked & Editable)
                           _buildTextField(
-                            label: 'Business Name *',
+                            label: 'business_profile.business_name_label'.tr(),
                             controller: _nameController,
                             icon: HugeIcons.strokeRoundedStore01,
-                            hint: 'e.g. Kedai Kopi Ngam',
+                            hint: 'business_profile.business_name_hint'.tr(),
                             validator: (val) {
                               if (val == null || val.trim().isEmpty) {
-                                return 'Business name is required';
+                                return 'business_profile.business_name_required'.tr();
                               }
                               return null;
                             },
@@ -536,19 +554,19 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                             children: [
                               Expanded(
                                 child: _buildTextField(
-                                  label: 'Registration Number SSM',
+                                  label: 'business_profile.ssm_label'.tr(),
                                   controller: _regNoController,
                                   icon: HugeIcons.strokeRoundedBuilding03,
-                                  hint: 'e.g. 202401012345 123456-X',
+                                  hint: 'business_profile.ssm_hint'.tr(),
                                 ),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: _buildTextField(
-                                  label: 'SST Number Optional',
+                                  label: 'business_profile.sst_label'.tr(),
                                   controller: _sstNoController,
                                   icon: HugeIcons.strokeRoundedInvoice01,
-                                  hint: 'e.g. W10-1808-32000018',
+                                  hint: 'business_profile.sst_hint'.tr(),
                                 ),
                               ),
                             ],
@@ -559,34 +577,34 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
                         // Section 2: Contact Info
                         _buildSectionHeader(
-                          title: 'Contact Information',
-                          subtitle: 'How customers reach you for orders, queries, and bookings',
+                          title: 'business_profile.contact_title'.tr(),
+                          subtitle: 'business_profile.contact_subtitle'.tr(),
                           icon: HugeIcons.strokeRoundedCall02,
                         ),
                         const SizedBox(height: 16),
                         _buildCardContainer([
                           _buildTextField(
-                            label: 'Business Phone / WhatsApp',
+                            label: 'business_profile.phone_label'.tr(),
                             controller: _phoneController,
                             icon: HugeIcons.strokeRoundedCall02,
                             keyboardType: TextInputType.phone,
-                            hint: 'e.g. +60123456789',
+                            hint: 'business_profile.phone_hint'.tr(),
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
-                            label: 'Business Email',
+                            label: 'business_profile.email_label'.tr(),
                             controller: _emailController,
                             icon: HugeIcons.strokeRoundedMail01,
                             keyboardType: TextInputType.emailAddress,
-                            hint: 'e.g. hello@kedaingam.dev',
+                            hint: 'business_profile.email_hint'.tr(),
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
-                            label: 'Website / Social Link',
+                            label: 'business_profile.website_label'.tr(),
                             controller: _websiteController,
                             icon: HugeIcons.strokeRoundedGlobe02,
                             keyboardType: TextInputType.url,
-                            hint: 'e.g. https://instagram.com/kedaingam',
+                            hint: 'business_profile.website_hint'.tr(),
                           ),
                         ]),
 
@@ -594,17 +612,17 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
                         // Section 3: Physical Address & Map Location Pin
                         _buildSectionHeader(
-                          title: 'Address & Store Location',
-                          subtitle: 'Used by customers on Ngam Explore to find your premises',
+                          title: 'business_profile.location_title'.tr(),
+                          subtitle: 'business_profile.location_subtitle'.tr(),
                           icon: HugeIcons.strokeRoundedLocation01,
                         ),
                         const SizedBox(height: 16),
                         _buildCardContainer([
                           _buildTextField(
-                            label: 'Street Address *',
+                            label: 'business_profile.street_label'.tr(),
                             controller: _addressLineController,
                             icon: HugeIcons.strokeRoundedLocation01,
-                            hint: 'e.g. Lot 3-12, Level 3, Pavilion Kuala Lumpur',
+                            hint: 'business_profile.street_hint'.tr(),
                           ),
                           const SizedBox(height: 16),
                           Row(
@@ -612,21 +630,21 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                               Expanded(
                                 flex: 2,
                                 child: _buildTextField(
-                                  label: 'Postcode',
+                                  label: 'business_profile.postcode_label'.tr(),
                                   controller: _postcodeController,
                                   icon: HugeIcons.strokeRoundedMailbox01,
                                   keyboardType: TextInputType.number,
-                                  hint: 'e.g. 55100',
+                                  hint: 'business_profile.postcode_hint'.tr(),
                                 ),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
                                 flex: 3,
                                 child: _buildTextField(
-                                  label: 'City',
+                                  label: 'business_profile.city_label'.tr(),
                                   controller: _cityController,
                                   icon: HugeIcons.strokeRoundedCity01,
-                                  hint: 'e.g. Kuala Lumpur',
+                                  hint: 'business_profile.city_hint'.tr(),
                                 ),
                               ),
                             ],
@@ -640,10 +658,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildTextField(
-                                  label: 'Country',
+                                  label: 'business_profile.country_label'.tr(),
                                   controller: _countryController,
                                   icon: HugeIcons.strokeRoundedGlobal,
-                                  hint: 'Malaysia',
+                                  hint: 'business_profile.country_default'.tr(),
                                 ),
                               ),
                             ],
@@ -670,8 +688,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
                         // Section 4B: Operating Hours & Settings
                         _buildSectionHeader(
-                          title: 'Operating Hours & Settings',
-                          subtitle: 'Control business open hours, halal certification, and booking capacity',
+                          title: 'business_profile.hours_section_title'.tr(),
+                          subtitle: 'business_profile.hours_section_subtitle'.tr(),
                           icon: HugeIcons.strokeRoundedTime02,
                         ),
                         const SizedBox(height: 16),
@@ -683,9 +701,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           const SizedBox(height: 20),
 
                           // Operating Hours Pickers
-                          const Text(
-                            'Daily Operating Hours',
-                            style: TextStyle(
+                          Text(
+                            'business_profile.daily_hours_title'.tr(),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -696,7 +714,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                             children: [
                               Expanded(
                                 child: _buildTimePickerTile(
-                                  label: 'Opening Time',
+                                  label: 'business_profile.opening_time_label'.tr(),
                                   time: _openTime,
                                   onTap: () => _selectTime(true),
                                 ),
@@ -704,7 +722,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                               const SizedBox(width: 14),
                               Expanded(
                                 child: _buildTimePickerTile(
-                                  label: 'Closing Time',
+                                  label: 'business_profile.closing_time_label'.tr(),
                                   time: _closeTime,
                                   onTap: () => _selectTime(false),
                                 ),
@@ -741,8 +759,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
                         // Section 5: Banking & Payout Info
                         _buildSectionHeader(
-                          title: 'Banking & Payout Account',
-                          subtitle: 'Bank details for customer settlement payouts and platform billing',
+                          title: 'business_profile.banking_section_title'.tr(),
+                          subtitle: 'business_profile.banking_section_subtitle'.tr(),
                           icon: HugeIcons.strokeRoundedCreditCard,
                         ),
                         const SizedBox(height: 16),
@@ -750,18 +768,18 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           _buildBankDropdown(),
                           const SizedBox(height: 16),
                           _buildTextField(
-                            label: 'Account Holder Name',
+                            label: 'business_profile.account_holder_label'.tr(),
                             controller: _accountHolderController,
                             icon: HugeIcons.strokeRoundedUser,
-                            hint: 'e.g. Syarikat Ngam Sdn Bhd',
+                            hint: 'business_profile.account_holder_hint'.tr(),
                           ),
                           const SizedBox(height: 16),
                           _buildTextField(
-                            label: 'Bank Account Number',
+                            label: 'business_profile.account_number_label'.tr(),
                             controller: _accountNumberController,
                             icon: HugeIcons.strokeRoundedInvoice02,
                             keyboardType: TextInputType.number,
-                            hint: 'e.g. 514012345678',
+                            hint: 'business_profile.account_number_hint'.tr(),
                           ),
                         ]),
 
@@ -783,10 +801,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                               elevation: 2,
                             ),
                             child: _isSaving
-                                ? const Row(
+                                ? Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      SizedBox(
+                                      const SizedBox(
                                         height: 20,
                                         width: 20,
                                         child: CircularProgressIndicator(
@@ -794,10 +812,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                                           strokeWidth: 2,
                                         ),
                                       ),
-                                      SizedBox(width: 12),
+                                      const SizedBox(width: 12),
                                       Text(
-                                        'Saving Details...',
-                                        style: TextStyle(
+                                        'business_profile.saving_details'.tr(),
+                                        style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16,
                                         ),
@@ -816,7 +834,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        isNewBusiness ? 'Add Business Details' : 'Save Business Changes',
+                                        isNewBusiness
+                                            ? 'business_profile.add_business_btn'.tr()
+                                            : 'business_profile.save_changes_btn'.tr(),
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16,
@@ -924,18 +944,18 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                   : null,
             ),
             child: _coverUrl == null
-                ? const Column(
+                ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      HugeIcon(
+                      const HugeIcon(
                         icon: HugeIcons.strokeRoundedCamera01,
                         color: Colors.white54,
                         size: 32,
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Text(
-                        'Tap to Upload Store Cover Banner',
-                        style: TextStyle(color: Colors.white54, fontSize: 13),
+                        'business_profile.upload_cover_hint'.tr(),
+                        style: const TextStyle(color: Colors.white54, fontSize: 13),
                       ),
                     ],
                   )
@@ -949,16 +969,16 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           color: Colors.black.withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            HugeIcon(
+                            const HugeIcon(
                               icon: HugeIcons.strokeRoundedEdit02,
                               color: Colors.white,
                               size: 14,
                             ),
-                            SizedBox(width: 4),
-                            Text('Change Cover', style: TextStyle(color: Colors.white, fontSize: 12)),
+                            const SizedBox(width: 4),
+                            Text('business_profile.change_cover'.tr(), style: const TextStyle(color: Colors.white, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -1034,11 +1054,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(left: 4, bottom: 8),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
               child: Text(
-                'Business Handle / Pautan Kedai *',
-                style: TextStyle(
+                'business_profile.handle_label'.tr(),
+                style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -1071,8 +1091,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                     const SizedBox(width: 4),
                     Text(
                       isValid
-                          ? 'Format Sah'
-                          : (!isValidLength ? '3-30 aksara' : 'a-z, 0-9, -, _ sahaja'),
+                          ? 'business_profile.handle_valid_format'.tr()
+                          : (!isValidLength
+                              ? 'business_profile.handle_length_rule'.tr()
+                              : 'business_profile.handle_chars_rule'.tr()),
                       style: TextStyle(
                         color: isValid ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
                         fontSize: 10.5,
@@ -1093,17 +1115,17 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           },
           validator: (val) {
             final clean = (val ?? '').trim().replaceAll('@', '').toLowerCase();
-            if (clean.isEmpty) return 'Business handle is required';
-            if (clean.length < 3 || clean.length > 30) return 'Handle must be between 3 and 30 characters';
+            if (clean.isEmpty) return 'business_profile.handle_empty_error'.tr();
+            if (clean.length < 3 || clean.length > 30) return 'business_profile.handle_length_error'.tr();
             if (!RegExp(r'^[a-z0-9_-]+$').hasMatch(clean)) {
-              return 'Only lowercase letters, numbers, hyphens (-) and underscores (_) allowed';
+              return 'business_profile.handle_chars_error'.tr();
             }
             return null;
           },
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            hintText: 'pisangkrispy',
+            hintText: 'business_profile.handle_hint'.tr(),
             hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13),
             prefixIcon: Container(
               padding: const EdgeInsets.only(left: 12, right: 8),
@@ -1123,7 +1145,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
             suffixIcon: rawHandle.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.auto_fix_high_rounded, color: Colors.white38, size: 16),
-                    tooltip: 'Jana semula dari nama kedai',
+                    tooltip: 'business_profile.handle_regen_tooltip'.tr(),
                     onPressed: () {
                       if (_nameController.text.trim().isNotEmpty) {
                         setState(() {
@@ -1170,7 +1192,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
               Expanded(
                 child: Text.rich(
                   TextSpan(
-                    text: 'Pautan Kedai: ',
+                    text: 'business_profile.store_link_prefix'.tr(),
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 12,
@@ -1200,7 +1222,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                   onTap: () {
                     final url = 'https://ngam.dev/@$rawHandle';
                     Clipboard.setData(ClipboardData(text: url));
-                    showGlassToast(context, 'Pautan kedai disalin: $url');
+                    showGlassToast(context, 'business_profile.link_copied_toast'.tr(args: [url]));
                   },
                   child: Container(
                     padding: const EdgeInsets.all(4),
@@ -1363,11 +1385,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
-            'State',
-            style: TextStyle(
+            'business_profile.state_label'.tr(),
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -1384,7 +1406,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            hintText: 'Select State',
+            hintText: 'business_profile.state_select'.tr(),
             hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13),
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 10, right: 6),
@@ -1426,11 +1448,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
-            'Bank Name',
-            style: TextStyle(
+            'business_profile.select_bank_label'.tr(),
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -1445,7 +1467,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           dropdownColor: const Color(0xFF1A1A24),
           style: const TextStyle(color: Colors.white, fontSize: 14),
           decoration: InputDecoration(
-            hintText: 'Select Payout Bank',
+            hintText: 'business_profile.select_bank_label'.tr(),
             hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2)),
             prefixIcon: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -1628,30 +1650,41 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.04),
+          color: isSelected
+              ? color.withValues(alpha: 0.18)
+              : Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? color : Colors.white.withValues(alpha: 0.1),
+            color: isSelected ? color : Colors.white.withValues(alpha: 0.10),
             width: isSelected ? 1.5 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.20),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
-              size: 14,
+              isSelected ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+              size: 15,
               color: isSelected ? color : Colors.white38,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.white70,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ],
@@ -1837,11 +1870,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
-            'Booking Slot Duration',
-            style: TextStyle(
+            'business_profile.booking_slot_duration'.tr(),
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -1878,13 +1911,13 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
               borderSide: const BorderSide(color: Color(0xFF42A5F5)),
             ),
           ),
-          items: const [
-            DropdownMenuItem(value: 15, child: Text('15 Minutes', overflow: TextOverflow.ellipsis)),
-            DropdownMenuItem(value: 30, child: Text('30 Minutes', overflow: TextOverflow.ellipsis)),
-            DropdownMenuItem(value: 45, child: Text('45 Minutes', overflow: TextOverflow.ellipsis)),
-            DropdownMenuItem(value: 60, child: Text('60 Minutes 1 Hour', overflow: TextOverflow.ellipsis)),
-            DropdownMenuItem(value: 90, child: Text('90 Minutes', overflow: TextOverflow.ellipsis)),
-            DropdownMenuItem(value: 120, child: Text('120 Minutes 2 Hours', overflow: TextOverflow.ellipsis)),
+          items: [
+            DropdownMenuItem(value: 15, child: Text('business_profile.prep_time_minutes'.tr(args: ['15']), overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 30, child: Text('business_profile.prep_time_minutes'.tr(args: ['30']), overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 45, child: Text('business_profile.prep_time_minutes'.tr(args: ['45']), overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 60, child: Text('business_profile.prep_time_minutes'.tr(args: ['60']), overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 90, child: Text('business_profile.prep_time_minutes'.tr(args: ['90']), overflow: TextOverflow.ellipsis)),
+            DropdownMenuItem(value: 120, child: Text('business_profile.prep_time_minutes'.tr(args: ['120']), overflow: TextOverflow.ellipsis)),
           ],
           onChanged: (val) {
             if (val != null) setState(() => _slotDuration = val);
@@ -1934,9 +1967,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                   spacing: 8,
                   runSpacing: 4,
                   children: [
-                    const Text(
-                      'Halal Certified / Muslim Friendly',
-                      style: TextStyle(
+                    Text(
+                      'business_profile.halal_title'.tr(),
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -1949,9 +1982,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           color: const Color(0xFF44CF6C),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Text(
-                          'HALAL',
-                          style: TextStyle(
+                        child: Text(
+                          'business_profile.halal_badge'.tr(),
+                          style: const TextStyle(
                             color: Colors.black,
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
@@ -1962,7 +1995,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Displays a Halal verified badge on customer app search and explore pages',
+                  'business_profile.halal_desc'.tr(),
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.45),
                     fontSize: 12,
@@ -2101,7 +2134,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (mounted) {
-          showGlassToast(context, 'GPS dimatikan. Sila hidupkan lokasi dalam tetapan.', isError: true);
+          showGlassToast(context, 'business_profile.gps_service_disabled'.tr(), isError: true);
         }
         await Geolocator.openLocationSettings();
         return;
@@ -2112,7 +2145,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           if (mounted) {
-            showGlassToast(context, 'Kebenaran GPS ditolak. Sila benarkan akses lokasi.', isError: true);
+            showGlassToast(context, 'business_profile.gps_permission_denied'.tr(), isError: true);
           }
           return;
         }
@@ -2120,7 +2153,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
-          showGlassToast(context, 'Kebenaran GPS disekat kekal. Sila benarkan dalam tetapan aplikasi.', isError: true);
+          showGlassToast(context, 'business_profile.gps_permission_permanent'.tr(), isError: true);
         }
         await Geolocator.openAppSettings();
         return;
@@ -2165,11 +2198,14 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       }
 
       if (mounted) {
-        showGlassToast(context, 'Lokasi GPS berjaya dikesan: ${currentPos.latitude.toStringAsFixed(4)}, ${currentPos.longitude.toStringAsFixed(4)}');
+        showGlassToast(context, 'business_profile.gps_success_toast'.tr(args: [
+          currentPos.latitude.toStringAsFixed(4),
+          currentPos.longitude.toStringAsFixed(4),
+        ]));
       }
     } catch (e) {
       if (mounted) {
-        showGlassToast(context, 'Satelit GPS lemah. Anda boleh buka peta untuk pin kedai secara manual.', isError: true);
+        showGlassToast(context, 'business_profile.gps_weak_toast'.tr(), isError: true);
       }
     } finally {
       if (mounted) setState(() => _detectingGps = false);
@@ -2182,11 +2218,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 4, bottom: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
-            'GPS Coordinates & Map Pin',
-            style: TextStyle(
+            'business_profile.gps_coordinates_label'.tr(),
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -2217,7 +2253,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                   });
                 }
                 if (mounted) {
-                  showGlassToast(context, 'Location pinned successfully!');
+                  showGlassToast(context, 'business_profile.location_pinned_toast'.tr());
                 }
               }
             },
@@ -2252,7 +2288,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          hasLocation ? 'Location Pinned' : 'Pin Business Location',
+                          hasLocation
+                              ? 'business_profile.location_pinned'.tr()
+                              : 'business_profile.pin_location'.tr(),
                           style: TextStyle(
                             color: hasLocation ? Colors.white : Colors.white70,
                             fontWeight: FontWeight.bold,
@@ -2263,7 +2301,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                         Text(
                           hasLocation
                               ? 'Lat: ${_latitude!.toStringAsFixed(5)}, Lng: ${_longitude!.toStringAsFixed(5)}'
-                              : 'Tap to open map and pinpoint store entrance',
+                              : 'business_profile.pin_location_hint'.tr(),
                           style: TextStyle(
                             color: hasLocation ? const Color(0xFF42A5F5) : Colors.white38,
                             fontSize: 12,
@@ -2298,7 +2336,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)))
                 : const HugeIcon(icon: HugeIcons.strokeRoundedNavigation03, color: Color(0xFF42A5F5), size: 18),
             label: Text(
-              _detectingGps ? 'Detecting current GPS...' : 'Auto-Detect Current GPS Location',
+              _detectingGps ? 'business_profile.detecting_gps'.tr() : 'business_profile.auto_gps_btn'.tr(),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ),
