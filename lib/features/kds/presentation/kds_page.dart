@@ -148,7 +148,12 @@ class _KdsPageState extends State<KdsPage> {
       },
       onError: (err) {
         debugPrint('[KDS] Stream error: $err');
-        if (mounted) setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+          Future.delayed(const Duration(seconds: 5), () {
+            if (mounted) _initOrdersStream();
+          });
+        }
       },
     );
   }

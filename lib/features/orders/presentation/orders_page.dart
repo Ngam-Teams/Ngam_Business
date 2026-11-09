@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
@@ -36,9 +37,15 @@ class _OrdersPageState extends State<OrdersPage> {
   int _selectedMainTab = 0; // 0: Pesanan Kedai, 1: Tempahan & Slots
   final Map<String, List<Map<String, dynamic>>> _orderItemsCache = {};
 
+  // Offline cache & resilience state
+  List<OrderModel>? _lastOrders;
+  bool _isReconnecting = false;
+  bool _hasShownOfflineToast = false;
 
   void _initOrdersStream() {
-    _ordersStream = _ordersService.streamOrders();
+    setState(() {
+      _ordersStream = _ordersService.streamOrders();
+    });
   }
 
   @override
@@ -78,7 +85,7 @@ class _OrdersPageState extends State<OrdersPage> {
         if (mounted) {
           showGlassToast(
             context,
-            'Pesanan Ngam App baru diterima!',
+            'orders.new_order_received'.tr(),
             type: GlassToastType.info,
             color: const Color(0xFF42A5F5),
           );
@@ -96,13 +103,13 @@ class _OrdersPageState extends State<OrdersPage> {
     if (success) {
       showGlassToast(
         context,
-        'Pesanan dikemaskini kepada status: $newStatus',
+        'orders.status_updated'.tr(args: [newStatus]),
         type: GlassToastType.success,
       );
     } else {
       showGlassToast(
         context,
-        'Gagal mengemaskini status pesanan',
+        'orders.status_update_failed'.tr(),
         isError: true,
       );
     }
@@ -204,7 +211,7 @@ class _OrdersPageState extends State<OrdersPage> {
           ),
         );
       } else {
-        showGlassToast(context, 'Gagal mengesahkan pengambilan pesanan.', isError: true);
+        showGlassToast(context, 'orders.verify_pickup_failed'.tr(), isError: true);
       }
       return;
     }
@@ -276,7 +283,7 @@ class _OrdersPageState extends State<OrdersPage> {
                         Navigator.pop(ctx);
                         await _updateStatus(order, 'completed', paymentStatus: 'paid');
                         if (mounted) {
-                          showGlassToast(context, 'Pesanan #$shortId disahkan selesai diambil!', type: GlassToastType.success);
+                          showGlassToast(context, 'orders.order_pickup_confirmed'.tr(args: [shortId]), type: GlassToastType.success);
                         }
                       },
                       child: Text('orders.order_pickup_verified'.tr(), style: const TextStyle(fontWeight: FontWeight.w900)),
@@ -293,12 +300,12 @@ class _OrdersPageState extends State<OrdersPage> {
 
     // 3. JIKA PESANAN SUDAH SELESAI ATAU DIBATALKAN:
     if (order.status == 'completed') {
-      showGlassToast(context, 'Pesanan #$shortId telah pun selesai diambil sebelum ini.', type: GlassToastType.info);
+      showGlassToast(context, 'orders.order_already_completed'.tr(args: [shortId]), type: GlassToastType.info);
       return;
     }
 
     if (order.status == 'cancelled') {
-      showGlassToast(context, 'Pesanan #$shortId ini telah dibatalkan.', isError: true);
+      showGlassToast(context, 'orders.order_already_cancelled'.tr(args: [shortId]), isError: true);
       return;
     }
 
@@ -485,7 +492,7 @@ class _OrdersPageState extends State<OrdersPage> {
                           GestureDetector(
                             onTap: () {
                               Clipboard.setData(ClipboardData(text: '#$shortId'));
-                              showGlassToast(context, 'ID Pesanan disalin!');
+                              showGlassToast(context, 'orders.order_id_copied'.tr());
                             },
                             child: Row(
                               children: [
@@ -1153,7 +1160,7 @@ class _OrdersPageState extends State<OrdersPage> {
     }
 
     if (rawPhone == null || rawPhone.isEmpty) {
-      showGlassToast(context, 'Tiada nombor telefon pelanggan untuk pesanan ini', isError: true);
+      showGlassToast(context, 'orders.no_customer_phone'.tr(), isError: true);
       return;
     }
 
@@ -1174,10 +1181,10 @@ class _OrdersPageState extends State<OrdersPage> {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);
       } else {
-        if (mounted) showGlassToast(context, 'Tidak dapat membuka WhatsApp', isError: true);
+        if (mounted) showGlassToast(context, 'orders.cannot_open_whatsapp'.tr(), isError: true);
       }
     } catch (e) {
-      if (mounted) showGlassToast(context, 'Ralat melancarkan WhatsApp: $e', isError: true);
+      if (mounted) showGlassToast(context, 'orders.whatsapp_launch_error'.tr(args: [e.toString()]), isError: true);
     }
   }
 
@@ -1292,54 +1299,69 @@ class _OrdersPageState extends State<OrdersPage> {
               StreamBuilder<List<OrderModel>>(
                 stream: _ordersStream,
                 builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('Error loading orders: ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                _initOrdersStream();
-                              });
-                            },
-                            child: const Text('Cuba Semula'),
-                          ),
-                        ],
-                      ),
-                    );
+                  if (snapshot.hasData && snapshot.data != null) {
+                    _lastOrders = snapshot.data;
+                    _hasShownOfflineToast = false;
                   }
 
-                    if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)));
+                  final allOrders = (snapshot.hasData && snapshot.data != null)
+                      ? snapshot.data!
+                      : (_lastOrders ?? []);
+
+                  final isOffline = snapshot.hasError;
+
+                  // 1. Jika ralat berlaku tetapi data cache wujud, maklumkan peniaga dengan glass toast
+                  if (isOffline && allOrders.isNotEmpty) {
+                    if (!_hasShownOfflineToast) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted && !_hasShownOfflineToast) {
+                          _hasShownOfflineToast = true;
+                          showGlassToast(
+                            context,
+                            'orders.connection_offline_toast'.tr(),
+                            type: GlassToastType.warning,
+                            customIcon: Icons.wifi_off_rounded,
+                          );
+                        }
+                      });
                     }
+                  }
 
-                    final allOrders = snapshot.data ?? [];
-                    
-                    // Check for new incoming orders to trigger sound
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _checkForNewOrders(allOrders);
-                    });
+                  // 2. Jika ralat DAN tiada sebarang data (offline sepenuhnya & cache kosong)
+                  if (isOffline && allOrders.isEmpty) {
+                    return _buildGlassErrorState();
+                  }
 
-                    // Group by active lifecycle vs completed/cancelled
-                    final pendingOrders = allOrders.where((o) =>
-                        o.status == 'pending' ||
-                        o.status == 'preparing' ||
-                        o.status == 'in_progress' ||
-                        o.status == 'ready').toList();
-                    final completedOrders = allOrders.where((o) =>
-                        o.status == 'completed' || o.status == 'cancelled').toList();
+                  // 3. Masih menunggu muatan pertama dan tiada data cache
+                  if (snapshot.connectionState == ConnectionState.waiting && allOrders.isEmpty) {
+                    return const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)));
+                  }
 
-                    if (allOrders.isEmpty) {
-                      return _buildEmptyState();
-                    }
+                  // Check for new incoming orders to trigger sound
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _checkForNewOrders(allOrders);
+                  });
 
-                    return ListView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.only(bottom: 100),
-                      children: [
+                  // Group by active lifecycle vs completed/cancelled
+                  final pendingOrders = allOrders.where((o) =>
+                      o.status == 'pending' ||
+                      o.status == 'preparing' ||
+                      o.status == 'in_progress' ||
+                      o.status == 'ready').toList();
+                  final completedOrders = allOrders.where((o) =>
+                      o.status == 'completed' || o.status == 'cancelled').toList();
+
+                  if (allOrders.isEmpty) {
+                    return _buildEmptyState();
+                  }
+
+                  return ListView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 100),
+                    children: [
+                      // Offline Cache Status Banner (muncul jika sambungan terputus tetapi pesanan cache dipaparkan)
+                      if (isOffline)
+                        _buildOfflineCacheBanner(),
                         // Kitchen Display (KDS) Quick Access Banner
                         InkWell(
                           onTap: () => context.push('/kds'),
@@ -1576,6 +1598,261 @@ class _OrdersPageState extends State<OrdersPage> {
     );
   }
 
+  Widget _buildOfflineCacheBanner() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E2235),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFF39C12).withValues(alpha: 0.4),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFF39C12).withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF39C12).withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.wifi_off_rounded,
+              color: Color(0xFFF39C12),
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'orders.offline_cache_notice'.tr(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'orders.offline_cache_subnotice'.tr(),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.65),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () {
+              _initOrdersStream();
+              showGlassToast(
+                context,
+                'orders.retrying'.tr(),
+                type: GlassToastType.info,
+              );
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.15),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.refresh_rounded,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'orders.retry_button'.tr(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: const Color(0xFF141724).withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Glowing Frosted Icon Badge
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF39C12).withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFF39C12).withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFF39C12).withValues(alpha: 0.15),
+                          blurRadius: 20,
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.wifi_off_rounded,
+                        color: Color(0xFFF39C12),
+                        size: 32,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'orders.connection_error_title'.tr(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'orders.connection_error_desc'.tr(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 13,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Modern Glass Retry Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _isReconnecting
+                          ? null
+                          : () async {
+                              setState(() {
+                                _isReconnecting = true;
+                              });
+                              _initOrdersStream();
+                              await Future.delayed(const Duration(milliseconds: 1000));
+                              if (mounted) {
+                                setState(() {
+                                  _isReconnecting = false;
+                                });
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: _isReconnecting
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'orders.retrying'.tr(),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.refresh_rounded, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'orders.retry_button'.tr(),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -1588,7 +1865,7 @@ class _OrdersPageState extends State<OrdersPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            'No orders yet',
+            'orders.no_orders_found'.tr(),
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.5),
               fontSize: 16,

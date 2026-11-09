@@ -153,6 +153,13 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
           });
           _checkForNewBookings(relevantBookings);
         }
+      }, onError: (e) {
+        debugPrint('Error in bookings subscription: $e');
+        if (mounted) {
+          Future.delayed(const Duration(seconds: 5), () {
+            if (mounted) _subscribeToLiveBookings();
+          });
+        }
       });
     } catch (e) {
       debugPrint('Error subscribing to bookings: $e');

@@ -119,56 +119,140 @@ class OrdersService {
   }
 
   /// Stream orders for real-time updates (ditapis mengikut business_id peniaga)
+  /// Dilengkapi perlindungan cache, HTTP fallback, dan auto-reconnect automatik
   Stream<List<OrderModel>> streamOrders() {
-    return _streamOrdersInternal().asBroadcastStream();
-  }
+    late StreamController<List<OrderModel>> controller;
+    StreamSubscription? realtimeSubscription;
+    Timer? reconnectTimer;
+    List<OrderModel> lastEmittedOrders = [];
+    bool isCancelled = false;
 
-  Stream<List<OrderModel>> _streamOrdersInternal() async* {
-    String? businessId = BusinessService.cachedProfile?['id']?.toString();
-    if (businessId == null || businessId.isEmpty) {
-      try {
-        final profile = await _businessService.getBusinessProfile();
-        businessId = profile?['id']?.toString();
-      } catch (_) {}
-    }
-
-    final cacheKey = 'orders_list_cache_${businessId ?? "default"}';
-
-    final cached = await CacheService.get<List<OrderModel>>(
-      key: cacheKey,
-      fromJson: (jsonList) => (jsonList as List)
-          .map((item) => OrderModel.fromJson(item as Map<String, dynamic>))
-          .toList(),
-    );
-    if (cached != null && cached.isNotEmpty) {
-      yield cached;
-    }
-
-    final baseStream = (businessId != null && businessId.isNotEmpty)
-        ? _client
-            .from('orders')
-            .stream(primaryKey: ['id'])
-            .eq('business_id', businessId)
-            .order('created_at', ascending: false)
-        : _client
-            .from('orders')
-            .stream(primaryKey: ['id'])
-            .order('created_at', ascending: false);
-
-    yield* baseStream.map((list) {
-      final orders = list
-          .where((json) => isOrderReadyForMerchant(json))
-          .map((json) => OrderModel.fromJson(json))
-          .toList();
-
+    Future<void> emitData(List<OrderModel> orders, String cacheKey) async {
+      if (isCancelled || controller.isClosed) return;
+      lastEmittedOrders = orders;
+      controller.add(orders);
       unawaited(CacheService.set<List<OrderModel>>(
         key: cacheKey,
         data: orders,
         toJson: (items) => items.map((o) => o.toJson()).toList(),
       ));
+    }
 
-      return orders;
-    });
+    Future<void> connect(String? businessId, String cacheKey) async {
+      if (isCancelled || controller.isClosed) return;
+
+      // 1. Dapatkan cache terkini serta-merta (L1 / L2, benarkan expired jika offline)
+      try {
+        final cached = await CacheService.get<List<OrderModel>>(
+          key: cacheKey,
+          fromJson: (jsonList) => (jsonList as List)
+              .map((item) => OrderModel.fromJson(item as Map<String, dynamic>))
+              .toList(),
+          allowExpired: true,
+        );
+        if (cached != null && cached.isNotEmpty && lastEmittedOrders.isEmpty) {
+          await emitData(cached, cacheKey);
+        }
+      } catch (e) {
+        debugPrint('[OrdersService] Error reading orders cache: $e');
+      }
+
+      // 2. HTTP Fetch fallback (SWR - pastikan data segar dari REST API)
+      try {
+        final httpOrders = await fetchOrders();
+        if (httpOrders.isNotEmpty) {
+          await emitData(httpOrders, cacheKey);
+        }
+      } catch (e) {
+        debugPrint('[OrdersService] HTTP fallback fetch error: $e');
+      }
+
+      // 3. Pasang sambungan Supabase Realtime Stream
+      try {
+        await realtimeSubscription?.cancel();
+
+        final baseStream = (businessId != null && businessId.isNotEmpty)
+            ? _client
+                .from('orders')
+                .stream(primaryKey: ['id'])
+                .eq('business_id', businessId)
+                .order('created_at', ascending: false)
+            : _client
+                .from('orders')
+                .stream(primaryKey: ['id'])
+                .order('created_at', ascending: false);
+
+        realtimeSubscription = baseStream.listen(
+          (list) {
+            final orders = list
+                .where((json) => isOrderReadyForMerchant(json))
+                .map((json) => OrderModel.fromJson(json))
+                .toList();
+            emitData(orders, cacheKey);
+          },
+          onError: (error) async {
+            debugPrint('[OrdersService] Realtime stream error: $error');
+
+            // Cuba ambil data melalui REST jika socket gagal
+            try {
+              final httpOrders = await fetchOrders();
+              if (httpOrders.isNotEmpty) {
+                await emitData(httpOrders, cacheKey);
+              }
+            } catch (_) {}
+
+            // Jika benar-benar tiada data (cache kosong, HTTP gagal, socket gagal)
+            if (lastEmittedOrders.isEmpty && !controller.isClosed) {
+              controller.addError(error);
+            }
+
+            // Auto-reconnect automatik setiap 5 saat
+            if (!isCancelled && (reconnectTimer == null || !reconnectTimer!.isActive)) {
+              reconnectTimer = Timer(const Duration(seconds: 5), () {
+                if (!isCancelled && !controller.isClosed) {
+                  connect(businessId, cacheKey);
+                }
+              });
+            }
+          },
+          cancelOnError: false,
+        );
+      } catch (e) {
+        debugPrint('[OrdersService] Error establishing realtime stream: $e');
+        if (lastEmittedOrders.isEmpty && !controller.isClosed) {
+          controller.addError(e);
+        }
+        if (!isCancelled && (reconnectTimer == null || !reconnectTimer!.isActive)) {
+          reconnectTimer = Timer(const Duration(seconds: 5), () {
+            if (!isCancelled && !controller.isClosed) {
+              connect(businessId, cacheKey);
+            }
+          });
+        }
+      }
+    }
+
+    controller = StreamController<List<OrderModel>>.broadcast(
+      onListen: () async {
+        isCancelled = false;
+        String? businessId = BusinessService.cachedProfile?['id']?.toString();
+        if (businessId == null || businessId.isEmpty) {
+          try {
+            final profile = await _businessService.getBusinessProfile();
+            businessId = profile?['id']?.toString();
+          } catch (_) {}
+        }
+        final cacheKey = 'orders_list_cache_${businessId ?? "default"}';
+        await connect(businessId, cacheKey);
+      },
+      onCancel: () {
+        isCancelled = true;
+        reconnectTimer?.cancel();
+        realtimeSubscription?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   /// Update the status of an order

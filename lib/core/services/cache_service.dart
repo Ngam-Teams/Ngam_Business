@@ -59,10 +59,11 @@ class CacheService {
   static Future<T?> get<T>({
     required String key,
     required T Function(dynamic json) fromJson,
+    bool allowExpired = false,
   }) async {
     // 1. Semak L1 Memory dahulu (0 ms)
     final mem = _memoryCache[key];
-    if (mem != null && !mem.isExpired) {
+    if (mem != null && (!mem.isExpired || allowExpired)) {
       return mem.data as T?;
     }
 
@@ -77,8 +78,8 @@ class CacheService {
         final expiryMs = decoded['expiry'] as int? ?? 0;
         final expiry = DateTime.fromMillisecondsSinceEpoch(expiryMs);
 
-        // Jika tamat tempoh, padam cache lama
-        if (DateTime.now().isAfter(expiry)) {
+        // Jika tamat tempoh dan tidak membenarkan expired, padam cache lama
+        if (!allowExpired && DateTime.now().isAfter(expiry)) {
           unawaited(prefs.remove('$_keyPrefix$key'));
           _memoryCache.remove(key);
           return null;
@@ -99,9 +100,9 @@ class CacheService {
   // ──────────────────────────────────────────────────────────
   // 3. Akses Segera L1 Memory Cache (Synchronous - Tiada async)
   // ──────────────────────────────────────────────────────────
-  static T? getMemory<T>(String key) {
+  static T? getMemory<T>(String key, {bool allowExpired = false}) {
     final mem = _memoryCache[key];
-    if (mem != null && !mem.isExpired) {
+    if (mem != null && (!mem.isExpired || allowExpired)) {
       return mem.data as T?;
     }
     return null;
