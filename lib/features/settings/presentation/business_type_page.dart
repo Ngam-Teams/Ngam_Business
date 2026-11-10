@@ -91,7 +91,11 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
 
       if (mounted) {
         showGlassToast(context, 'business_type.save_success'.tr());
-        context.pop(_selectedId);
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(_selectedId);
+        } else {
+          GlassNavButton.safeNavBack(context, fallbackRoute: '/settings');
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -115,13 +119,30 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
     final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
     final brandGreen = const Color(0xFF44CF6C);
 
-    return Scaffold(
-      backgroundColor: isDark ? bgDark : const Color(0xFFF8FAFC),
-      appBar: GlassAppBar(
-        title: 'business_type.title'.tr(),
-        subtitle: 'business_type.subtitle'.tr(),
-        onBack: () => context.pop(_selectedId),
-      ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(_selectedId);
+        } else {
+          GlassNavButton.safeNavBack(context, fallbackRoute: '/settings');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: isDark ? bgDark : const Color(0xFFF8FAFC),
+        appBar: GlassAppBar(
+          title: 'business_type.title'.tr(),
+          subtitle: 'business_type.subtitle'.tr(),
+          fallbackRoute: '/settings',
+          onBack: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop(_selectedId);
+            } else {
+              GlassNavButton.safeNavBack(context, fallbackRoute: '/settings');
+            }
+          },
+        ),
       body: SafeArea(
         child: Column(
           children: [
@@ -528,6 +549,7 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

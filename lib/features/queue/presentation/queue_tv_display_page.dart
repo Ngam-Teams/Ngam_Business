@@ -858,36 +858,43 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   Widget build(BuildContext context) {
     final current = _currentCallingTicket;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF080811),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            // Pengesanan mod skrin: Lebar < 768px (Telefon mudah alih / Portrait) vs Skrin TV/Desktop
-            final isMobile = constraints.maxWidth < 768;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        GlassNavButton.safeNavBack(context, fallbackRoute: '/queue');
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF080811),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Pengesanan mod skrin: Lebar < 768px (Telefon mudah alih / Portrait) vs Skrin TV/Desktop
+              final isMobile = constraints.maxWidth < 768;
 
-            return Padding(
-              padding: EdgeInsets.all(isMobile ? 10 : 16),
-              child: Column(
-                children: [
-                  // 1. Bar Tajuk Header (Disesuaikan mengikut Mobile / TV)
-                  isMobile ? _buildMobileHeader() : _buildTvHeader(),
-                  SizedBox(height: isMobile ? 8 : 12),
+              return Padding(
+                padding: EdgeInsets.all(isMobile ? 10 : 16),
+                child: Column(
+                  children: [
+                    // 1. Bar Tajuk Header (Disesuaikan mengikut Mobile / TV)
+                    isMobile ? _buildMobileHeader() : _buildTvHeader(),
+                    SizedBox(height: isMobile ? 8 : 12),
 
-                  // 2. Bahagian Paparan Utama (Mobile Stack vs Widescreen Columns)
-                  Expanded(
-                    child: isMobile
-                        ? _buildMobileLayoutBody(current)
-                        : _buildWidescreenLayoutBody(current),
-                  ),
+                    // 2. Bahagian Paparan Utama (Mobile Stack vs Widescreen Columns)
+                    Expanded(
+                      child: isMobile
+                          ? _buildMobileLayoutBody(current)
+                          : _buildWidescreenLayoutBody(current),
+                    ),
 
-                  SizedBox(height: isMobile ? 8 : 12),
-                  // 3. Bar Ticker Footer TV
-                  _buildTvFooter(isMobile: isMobile),
-                ],
-              ),
-            );
-          },
+                    SizedBox(height: isMobile ? 8 : 12),
+                    // 3. Bar Ticker Footer TV
+                    _buildTvFooter(isMobile: isMobile),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -1181,7 +1188,11 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         children: [
           Row(
             children: [
-GlassNavButton.back(context: context, size: 44),
+              GlassNavButton.back(
+                context: context,
+                size: 44,
+                fallbackRoute: '/queue',
+              ),
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.all(8),
@@ -1308,7 +1319,11 @@ GlassNavButton.back(context: context, size: 44),
       ),
       child: Row(
         children: [
-GlassNavButton.back(context: context, size: 44),
+          GlassNavButton.back(
+            context: context,
+            size: 44,
+            fallbackRoute: '/queue',
+          ),
           const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.all(6),

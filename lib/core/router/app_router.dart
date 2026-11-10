@@ -39,8 +39,10 @@ import '../../features/settings/presentation/mfa_setup_page.dart';
 import '../../features/settings/presentation/audit_logs_page.dart';
 import '../../features/feed/presentation/feed_management_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
+import '../../widgets/glass_toast.dart';
 import '../services/merchant_notification_service.dart';
 import '../../features/settings/data/business_service.dart';
+import 'package:flutter/services.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -120,7 +122,7 @@ void switchAppShellTab(int index) {
         appRouter.go('/settings');
         break;
       default:
-        appRouter.go('/');
+        appRouter.go('/home');
         break;
     }
   }
@@ -138,20 +140,21 @@ class _AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<_AppShell> {
+  static const _tabPaths = ['/home', '/orders', '/pos', '/analytics', '/settings'];
+
   late int _selectedIndex;
   late final Set<int> _activatedTabs;
+  final List<int> _tabHistory = [];
+  DateTime? _lastBackPressTime;
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialTab;
-    _activatedTabs = {widget.initialTab};
+    _selectedIndex = widget.initialTab.clamp(0, 4);
+    _activatedTabs = {_selectedIndex};
     _appShellTabSwitcher = (index) {
       if (mounted) {
-        setState(() {
-          _selectedIndex = index;
-          _activatedTabs.add(index);
-        });
+        _onTabSelected(index, updateRoute: true);
       }
     };
     _initOrderAlerts();
@@ -160,11 +163,29 @@ class _AppShellState extends State<_AppShell> {
   @override
   void didUpdateWidget(covariant _AppShell oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialTab != oldWidget.initialTab) {
+    if (widget.initialTab != oldWidget.initialTab && widget.initialTab != _selectedIndex) {
+      final newIndex = widget.initialTab.clamp(0, 4);
+      if (_selectedIndex != newIndex) {
+        _tabHistory.add(_selectedIndex);
+      }
       setState(() {
-        _selectedIndex = widget.initialTab;
-        _activatedTabs.add(widget.initialTab);
+        _selectedIndex = newIndex;
+        _activatedTabs.add(newIndex);
       });
+    }
+  }
+
+  void _onTabSelected(int index, {bool updateRoute = true}) {
+    if (index < 0 || index >= _tabPaths.length) return;
+    if (_selectedIndex != index) {
+      _tabHistory.add(_selectedIndex);
+      setState(() {
+        _selectedIndex = index;
+        _activatedTabs.add(index);
+      });
+    }
+    if (updateRoute && mounted) {
+      context.go(_tabPaths[index]);
     }
   }
 
@@ -177,10 +198,7 @@ class _AppShellState extends State<_AppShell> {
           businessId: businessId,
           onTabSwitch: (index) {
             if (mounted) {
-              setState(() {
-                _selectedIndex = index;
-                _activatedTabs.add(index);
-              });
+              _onTabSelected(index, updateRoute: true);
             }
           },
         );
@@ -246,18 +264,58 @@ class _AppShellState extends State<_AppShell> {
     final subtitles = _getSubtitles(context);
     final navItems = _getNavItems(context);
 
-    return DashboardScaffold(
-      selectedIndex: _selectedIndex,
-      onNavTap: (i) => setState(() {
-        _selectedIndex = i;
-        _activatedTabs.add(i);
-      }),
-      pageTitle: titles[_selectedIndex],
-      pageSubtitle: subtitles[_selectedIndex],
-      navItems: navItems,
-      child: IndexedStack(
-        index: _selectedIndex,
-        children: List.generate(5, (index) => _buildTab(index)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        // 1. Pop back through previously visited tabs in history
+        while (_tabHistory.isNotEmpty) {
+          final previousTab = _tabHistory.removeLast();
+          if (previousTab != _selectedIndex && previousTab >= 0 && previousTab < _tabPaths.length) {
+            setState(() {
+              _selectedIndex = previousTab;
+              _activatedTabs.add(previousTab);
+            });
+            context.go(_tabPaths[previousTab]);
+            return;
+          }
+        }
+
+        // 2. If user is on a tab other than Home (0), return to Home first
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+            _activatedTabs.add(0);
+          });
+          context.go(_tabPaths[0]);
+          return;
+        }
+
+        // 3. User is on Home (Overview) tab. Protect against accidental exit
+        final now = DateTime.now();
+        if (_lastBackPressTime == null || now.difference(_lastBackPressTime!) > const Duration(seconds: 2)) {
+          _lastBackPressTime = now;
+          showGlassToast(
+            context,
+            'common.press_back_again_to_exit'.tr(),
+          );
+          return;
+        }
+
+        // 4. Double-tap back confirmed: exit cleanly
+        SystemNavigator.pop();
+      },
+      child: DashboardScaffold(
+        selectedIndex: _selectedIndex,
+        onNavTap: (i) => _onTabSelected(i),
+        pageTitle: titles[_selectedIndex],
+        pageSubtitle: subtitles[_selectedIndex],
+        navItems: navItems,
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: List.generate(5, (index) => _buildTab(index)),
+        ),
       ),
     );
   }

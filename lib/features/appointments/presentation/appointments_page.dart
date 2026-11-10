@@ -1406,7 +1406,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: widget.isEmbedded ? Colors.transparent : const Color(0xFF0A0A14),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF42A5F5),
@@ -1745,14 +1745,24 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
               ),
             ),
             if (!widget.isEmbedded)
-              FloatingTopBar(
+              const FloatingTopBar(
                 title: 'Tempahan & Temu Janji',
                 subtitle: 'Slot temu janji & servis',
-                onBack: () => Navigator.pop(context),
+                fallbackRoute: '/home',
               ),
           ],
         ),
       ),
+    );
+
+    if (widget.isEmbedded) return scaffold;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        GlassNavButton.safeNavBack(context, fallbackRoute: '/home');
+      },
+      child: scaffold,
     );
   }
 }

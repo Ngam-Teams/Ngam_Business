@@ -43,7 +43,8 @@
     "this_week": "Minggu Ini",
     "this_month": "Bulan Ini",
     "sign_out": "Log Keluar",
-    "offline_notice": "Anda sedang luar talian. Tindakan masa nyata memerlukan sambungan internet."
+    "offline_notice": "Anda sedang luar talian. Tindakan masa nyata memerlukan sambungan internet.",
+    "press_back_again_to_exit": "Tekan sekali lagi untuk keluar"
   },
   "nav": {
     "overview": "Ringkasan",

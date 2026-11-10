@@ -43,7 +43,8 @@
     "this_week": "This Week",
     "this_month": "This Month",
     "sign_out": "Sign Out",
-    "offline_notice": "You are currently offline. Real-time actions require internet access."
+    "offline_notice": "You are currently offline. Real-time actions require internet access.",
+    "press_back_again_to_exit": "Press back again to exit"
   },
   "nav": {
     "overview": "Overview",

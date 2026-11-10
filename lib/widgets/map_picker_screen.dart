@@ -8,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:latlong2/latlong.dart';
+import 'glass_nav_button.dart';
 import 'glass_toast.dart';
 import 'ngam_maps_dialog.dart';
 
@@ -577,11 +578,17 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
-      child: Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        GlassNavButton.safeNavBack(context, fallbackRoute: '/business-profile');
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: Colors.transparent,
+        ),
+        child: Scaffold(
         backgroundColor: Colors.white,
         body: Stack(
           children: [
@@ -768,7 +775,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
                       // Back Button (Circular White Button)
                       _buildCircularWhiteBtn(
                         icon: Icons.arrow_back_rounded,
-                        onTap: () => Navigator.of(context).pop(),
+                        onTap: () => GlassNavButton.safeNavBack(context, fallbackRoute: '/business-profile'),
                         tooltip: 'Kembali',
                       ),
                       const SizedBox(width: 10),
@@ -1038,7 +1045,11 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
                         height: 52,
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pop(context, _currentCenter);
+                            if (Navigator.of(context).canPop()) {
+                              Navigator.pop(context, _currentCenter);
+                            } else {
+                              GlassNavButton.safeNavBack(context, fallbackRoute: '/business-profile');
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF00B14F), // Vibrant Grab Green
@@ -1066,8 +1077,9 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildCircularWhiteBtn({
     required IconData icon,

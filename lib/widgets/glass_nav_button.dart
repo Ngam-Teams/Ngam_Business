@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 // =============================================================================
 // NGAM BUSINESS — DESIGN SYSTEM: FLOATING GLASS NAVIGATION & TOP BAR
@@ -194,6 +195,81 @@ class GlassNavButton extends StatelessWidget {
     this.badge,
   });
 
+  /// Safely navigates back without throwing GoRouter errors, leaving the app,
+  /// or unexpectedly dropping out to Google Search.
+  static void safeNavBack(
+    BuildContext context, {
+    VoidCallback? onBack,
+    String? fallbackRoute,
+  }) {
+    if (onBack != null) {
+      onBack();
+      return;
+    }
+
+    // 1. Try popping the nearest or root Navigator (for dialogs, modal sheets, stacked routes)
+    if (Navigator.of(context, rootNavigator: false).canPop()) {
+      Navigator.of(context, rootNavigator: false).pop();
+      return;
+    }
+    if (Navigator.of(context, rootNavigator: true).canPop()) {
+      Navigator.of(context, rootNavigator: true).pop();
+      return;
+    }
+
+    // 2. Try GoRouter canPop
+    try {
+      if (context.canPop()) {
+        context.pop();
+        return;
+      }
+    } catch (_) {}
+
+    // 3. Intelligently determine fallback parent route based on current path
+    String resolvedFallback = fallbackRoute ?? '/home';
+    if (fallbackRoute == null) {
+      try {
+        final currentPath = GoRouterState.of(context).uri.path;
+        if (const {
+          '/business-profile',
+          '/business-type',
+          '/staff-management',
+          '/product-catalogue',
+          '/operating-hours',
+          '/inventory',
+          '/feed-studio',
+          '/promotions',
+          '/customer-reviews',
+          '/customers',
+          '/payouts',
+          '/receipt-settings',
+          '/subscription-plans',
+          '/mfa-setup',
+          '/audit-logs',
+          '/payroll',
+          '/loyalty',
+        }.contains(currentPath)) {
+          resolvedFallback = '/settings';
+        } else if (currentPath == '/kds') {
+          resolvedFallback = '/orders';
+        } else if (currentPath == '/cash-drawer') {
+          resolvedFallback = '/pos';
+        } else if (currentPath == '/queue/tv') {
+          resolvedFallback = '/queue';
+        } else {
+          resolvedFallback = '/home';
+        }
+      } catch (_) {
+        resolvedFallback = '/home';
+      }
+    }
+
+    // 4. Safely return to parent route
+    if (context.mounted) {
+      context.go(resolvedFallback);
+    }
+  }
+
   /// Factory constructor for a standard circular back button
   factory GlassNavButton.back({
     Key? key,
@@ -203,26 +279,20 @@ class GlassNavButton extends StatelessWidget {
     double size = 44.0,
     double iconSize = 20.0,
     EdgeInsetsGeometry? margin,
+    String? fallbackRoute,
   }) {
     return GlassNavButton(
       key: key,
       icon: HugeIcons.strokeRoundedArrowLeft01,
-      onTap: onBack ??
-          () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              try {
-                context.pop();
-              } catch (_) {
-                Navigator.maybePop(context);
-              }
-            }
-          },
+      onTap: () => GlassNavButton.safeNavBack(
+        context,
+        onBack: onBack,
+        fallbackRoute: fallbackRoute,
+      ),
       isDark: isDark,
       size: size,
       iconSize: iconSize,
-      tooltip: 'Kembali',
+      tooltip: 'common.back'.tr(),
       margin: margin,
     );
   }
@@ -236,26 +306,20 @@ class GlassNavButton extends StatelessWidget {
     double size = 44.0,
     double iconSize = 20.0,
     EdgeInsetsGeometry? margin,
+    String? fallbackRoute,
   }) {
     return GlassNavButton(
       key: key,
       icon: HugeIcons.strokeRoundedCancel01,
-      onTap: onClose ??
-          () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              try {
-                context.pop();
-              } catch (_) {
-                Navigator.maybePop(context);
-              }
-            }
-          },
+      onTap: () => GlassNavButton.safeNavBack(
+        context,
+        onBack: onClose,
+        fallbackRoute: fallbackRoute,
+      ),
       isDark: isDark,
       size: size,
       iconSize: iconSize,
-      tooltip: 'Tutup',
+      tooltip: 'common.close'.tr(),
       margin: margin,
     );
   }
@@ -489,8 +553,11 @@ class FloatingTopBar extends StatelessWidget {
     this.centerTitle = true,
     this.onBack,
     this.showBack = true,
+    this.fallbackRoute,
     this.bottomTabBar,
   });
+
+  final String? fallbackRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -536,6 +603,7 @@ class FloatingTopBar extends StatelessWidget {
         context: context,
         isDark: effectiveDark,
         onBack: onBack,
+        fallbackRoute: fallbackRoute,
         size: 44,
         iconSize: 20,
       );
@@ -623,6 +691,7 @@ class GlassScaffold extends StatelessWidget {
   final Widget? leading;
   final bool showBack;
   final VoidCallback? onBack;
+  final String? fallbackRoute;
   final List<GlassNavPillItem>? actionItems;
   final List<Widget>? actions;
   final Widget body;
@@ -641,6 +710,7 @@ class GlassScaffold extends StatelessWidget {
     this.leading,
     this.showBack = true,
     this.onBack,
+    this.fallbackRoute,
     this.actionItems,
     this.actions,
     required this.body,
@@ -657,7 +727,7 @@ class GlassScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool effectiveDark =
         isDark ?? (Theme.of(context).brightness == Brightness.dark);
-    return Scaffold(
+    final scaffold = Scaffold(
       backgroundColor: backgroundColor ??
           (effectiveDark ? const Color(0xFF0A0A14) : const Color(0xFFF8FAFC)),
       floatingActionButton: floatingActionButton,
@@ -709,6 +779,7 @@ class GlassScaffold extends StatelessWidget {
               leading: leading,
               showBack: showBack,
               onBack: onBack,
+              fallbackRoute: fallbackRoute,
               actionItems: actionItems,
               actions: actions,
               isDark: effectiveDark,
@@ -718,6 +789,19 @@ class GlassScaffold extends StatelessWidget {
           ],
         ),
       ),
+    );
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        GlassNavButton.safeNavBack(
+          context,
+          onBack: onBack,
+          fallbackRoute: fallbackRoute,
+        );
+      },
+      child: scaffold,
     );
   }
 }
@@ -729,6 +813,7 @@ class GlassTopBar extends StatelessWidget {
   final Widget? leading;
   final bool showBack;
   final VoidCallback? onBack;
+  final String? fallbackRoute;
   final List<Widget>? actions;
   final List<GlassNavPillItem>? actionItems;
   final bool? isDark;
@@ -742,6 +827,7 @@ class GlassTopBar extends StatelessWidget {
     this.leading,
     this.showBack = true,
     this.onBack,
+    this.fallbackRoute,
     this.actions,
     this.actionItems,
     this.isDark,
@@ -793,6 +879,7 @@ class GlassTopBar extends StatelessWidget {
         context: context,
         isDark: effectiveDark,
         onBack: onBack,
+        fallbackRoute: fallbackRoute,
         size: 44,
         iconSize: 20,
       );
@@ -848,6 +935,7 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
   final bool showBack;
   final VoidCallback? onBack;
+  final String? fallbackRoute;
   final List<Widget>? actions;
   final List<GlassNavPillItem>? actionItems;
   final bool? isDark;
@@ -862,6 +950,7 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.leading,
     this.showBack = true,
     this.onBack,
+    this.fallbackRoute,
     this.actions,
     this.actionItems,
     this.isDark,
@@ -918,6 +1007,7 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
         context: context,
         isDark: effectiveDark,
         onBack: onBack,
+        fallbackRoute: fallbackRoute,
         size: 44,
         iconSize: 20,
       );
