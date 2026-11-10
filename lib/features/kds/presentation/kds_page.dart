@@ -151,7 +151,7 @@ class _KdsPageState extends State<KdsPage> {
         if (mounted) {
           setState(() => _isLoading = false);
           Future.delayed(const Duration(seconds: 5), () {
-            if (mounted) _initOrdersStream();
+            if (mounted) _initLiveKds();
           });
         }
       },

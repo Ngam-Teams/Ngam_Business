@@ -169,7 +169,18 @@
     "ordered_items_title": "Item Yang Dipesan",
     "counter_customer": "Pelanggan Kaunter",
     "whatsapp_customer": "WhatsApp Pelanggan",
-    "notes_title": "Nota & Mod Pesanan:"
+    "notes_title": "Nota & Mod Pesanan:",
+    "table_order": "Ngam App (Meja)",
+    "online_order": "Ngam App",
+    "counter_order": "Kaunter POS",
+    "date_and_time": "Tarikh & Masa",
+    "order_source": "Saluran Pesanan",
+    "more_items": "+{} item lagi",
+    "loading_items": "Memuatkan item...",
+    "payment_amount": "Jumlah Bayaran:",
+    "action_cook": "Masak",
+    "action_ready": "Sedia",
+    "action_done": "Selesai"
   },
   "pos": {
     "title": "Daftar Tunai POS",

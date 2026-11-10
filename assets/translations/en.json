@@ -169,7 +169,18 @@
     "ordered_items_title": "Ordered Items",
     "counter_customer": "Counter Customer",
     "whatsapp_customer": "WhatsApp Customer",
-    "notes_title": "Order Notes & Modifiers:"
+    "notes_title": "Order Notes & Modifiers:",
+    "table_order": "Ngam App (Table)",
+    "online_order": "Ngam App",
+    "counter_order": "Counter POS",
+    "date_and_time": "Date & Time",
+    "order_source": "Order Channel",
+    "more_items": "+{} more items",
+    "loading_items": "Loading items...",
+    "payment_amount": "Payment Amount:",
+    "action_cook": "Cook",
+    "action_ready": "Ready",
+    "action_done": "Done"
   },
   "pos": {
     "title": "Point of Sale",
