@@ -69,7 +69,28 @@
       }
     ]
   }
+  </script>
 
+  <script>
+    // Search engine crawler preservation:
+    // Ensures Googlebot and other crawlers index the full title link with pipe and descriptive subtitle
+    (function() {
+      var isBot = /bot|googlebot|crawler|spider|robot|crawling/i.test(navigator.userAgent);
+      if (isBot) {
+        try {
+          var fullTitle = 'Ngam Business | Portal Peniaga & Operasi Kedai';
+          document.title = fullTitle;
+          Object.defineProperty(document, 'title', {
+            get: function() { return fullTitle; },
+            set: function() {},
+            configurable: true
+          });
+        } catch (e) {}
+      }
+    })();
+  </script>
+
+  <script>
     // Universal Web / PWA Push Notification Bridge
     window.isNotificationSupported = function() {
       return ('Notification' in window);
@@ -413,6 +434,12 @@
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
 <body style="background-color: #000000;">
+  <!-- Semantic Header for Search Engine Indexing (Googlebot & Web Crawlers) -->
+  <header style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;" aria-hidden="false">
+    <h1>Ngam Business | Portal Peniaga &amp; Operasi Kedai</h1>
+    <p>Sistem operasi kedai moden untuk rakan niaga Ngam. Urus pesanan QR, giliran pintar dan pantau jualan harian dalam satu platform.</p>
+  </header>
+
   <div id="ngam-splash">
     <img src="icons/Icon-192.png" alt="Ngam Business" class="splash-logo">
   </div>
