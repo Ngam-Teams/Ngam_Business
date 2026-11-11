@@ -167,6 +167,20 @@ class GlassNavPill extends StatelessWidget {
   }
 }
 
+/// Top-level helper function allowing direct invocation:
+/// `safeNavBack(context, fallbackRoute: '/home');`
+void safeNavBack(
+  BuildContext context, {
+  VoidCallback? onBack,
+  String? fallbackRoute,
+}) {
+  GlassNavButton.safeNavBack(
+    context,
+    onBack: onBack,
+    fallbackRoute: fallbackRoute,
+  );
+}
+
 /// A circular 44x44 frosted glass navigation button with backdrop blur and border.
 /// Follows Ngam theme: icon is white in dark mode, black/charcoal in light mode.
 class GlassNavButton extends StatelessWidget {
