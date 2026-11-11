@@ -43,7 +43,7 @@ enum ReceiptFont {
   robotoCondensed('Roboto Condensed', 'receipt.font_cat_tight', '123 ABC Quick Order'),
 
   // Klasik POS / Mesin Taip
-  jetbrainsMono('JetBrains Mono', 'receipt.font_cat_precision', '123 ABC High Precision'),
+  jetBrainsMono('JetBrains Mono', 'receipt.font_cat_precision', '123 ABC High Precision'),
   spaceMono('Space Mono', 'receipt.font_cat_classic_pos', '123 ABC Classic POS'),
   courierPrime('Courier Prime', 'receipt.font_cat_typewriter', '123 ABC Typewriter Retro'),
   vt323('VT323 Pixel', 'receipt.font_cat_dot_matrix', '123 ABC 80s Thermal');
@@ -785,8 +785,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           letterSpacing: letterSpacing,
           height: height,
         );
-      case ReceiptFont.jetbrainsMono:
-        return GoogleFonts.jetbrainsMono(
+      case ReceiptFont.jetBrainsMono:
+        return GoogleFonts.jetBrainsMono(
           color: color,
           fontSize: fontSize,
           fontWeight: fontWeight,
