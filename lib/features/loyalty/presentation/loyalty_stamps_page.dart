@@ -271,7 +271,7 @@ class _LoyaltyStampsPageState extends State<LoyaltyStampsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 68, 16, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

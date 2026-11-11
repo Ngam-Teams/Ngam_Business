@@ -376,25 +376,25 @@ class GlassNavButton extends StatelessWidget {
 
     Widget button = ClipOval(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           width: size,
           height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: effectiveDark
-                ? const Color(0xFF161622).withValues(alpha: 0.88)
-                : Colors.white.withValues(alpha: 0.88),
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.70),
             border: Border.all(
               color: effectiveDark
-                  ? Colors.white.withValues(alpha: 0.18)
-                  : Colors.black.withValues(alpha: 0.10),
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.08),
               width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: effectiveDark ? 0.35 : 0.08),
-                blurRadius: 12,
+                color: Colors.black.withValues(alpha: effectiveDark ? 0.25 : 0.06),
+                blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
             ],
@@ -461,25 +461,25 @@ class GlassTitlePill extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(100),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           height: effectiveHeight,
           padding: padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(100),
             color: effectiveDark
-                ? const Color(0xFF161622).withValues(alpha: 0.90)
-                : Colors.white.withValues(alpha: 0.90),
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.white.withValues(alpha: 0.75),
             border: Border.all(
               color: effectiveDark
-                  ? Colors.white.withValues(alpha: 0.18)
-                  : Colors.black.withValues(alpha: 0.10),
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.08),
               width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: effectiveDark ? 0.30 : 0.08),
-                blurRadius: 12,
+                color: Colors.black.withValues(alpha: effectiveDark ? 0.25 : 0.06),
+                blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
             ],
@@ -697,6 +697,7 @@ class GlassScaffold extends StatelessWidget {
   final Widget body;
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
+  final Widget? bottomSheet;
   final PreferredSizeWidget? bottomTabBar;
   final bool? isDark;
   final Color? backgroundColor;
@@ -716,6 +717,7 @@ class GlassScaffold extends StatelessWidget {
     required this.body,
     this.floatingActionButton,
     this.bottomNavigationBar,
+    this.bottomSheet,
     this.bottomTabBar,
     this.isDark,
     this.backgroundColor,
@@ -732,6 +734,7 @@ class GlassScaffold extends StatelessWidget {
           (effectiveDark ? const Color(0xFF0A0A14) : const Color(0xFFF8FAFC)),
       floatingActionButton: floatingActionButton,
       bottomNavigationBar: bottomNavigationBar,
+      bottomSheet: bottomSheet,
       body: SafeArea(
         child: Stack(
           children: [
@@ -740,39 +743,7 @@ class GlassScaffold extends StatelessWidget {
             Positioned.fill(
               child: body,
             ),
-            // Header fade shroud to smoothly dissolve scrolling content beneath floating nav
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: bottomTabBar != null ? 120.0 : 76.0,
-              child: IgnorePointer(
-                child: ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            (backgroundColor ??
-                                (effectiveDark ? const Color(0xFF0A0A14) : const Color(0xFFF8FAFC))),
-                            (backgroundColor ??
-                                    (effectiveDark ? const Color(0xFF0A0A14) : const Color(0xFFF8FAFC)))
-                                .withValues(alpha: 0.85),
-                            (backgroundColor ??
-                                    (effectiveDark ? const Color(0xFF0A0A14) : const Color(0xFFF8FAFC)))
-                                .withValues(alpha: 0.0),
-                          ],
-                          stops: const [0.0, 0.65, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            // Floating Top Bar with zero fill / 100% transparent background matching Ngam!
             FloatingTopBar(
               title: title,
               subtitle: subtitle,

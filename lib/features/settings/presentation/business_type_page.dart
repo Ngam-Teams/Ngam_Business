@@ -119,33 +119,67 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
     final borderColor = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
     final brandGreen = const Color(0xFF44CF6C);
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
+    return GlassScaffold(
+      backgroundColor: isDark ? bgDark : const Color(0xFFF8FAFC),
+      title: 'business_type.title'.tr(),
+      subtitle: 'business_type.subtitle'.tr(),
+      fallbackRoute: '/settings',
+      onBack: () {
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).pop(_selectedId);
         } else {
           GlassNavButton.safeNavBack(context, fallbackRoute: '/settings');
         }
       },
-      child: Scaffold(
-        backgroundColor: isDark ? bgDark : const Color(0xFFF8FAFC),
-        appBar: GlassAppBar(
-          title: 'business_type.title'.tr(),
-          subtitle: 'business_type.subtitle'.tr(),
-          fallbackRoute: '/settings',
-          onBack: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop(_selectedId);
-            } else {
-              GlassNavButton.safeNavBack(context, fallbackRoute: '/settings');
-            }
-          },
+      bottomSheet: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF111827) : Colors.white,
+          border: Border(top: BorderSide(color: borderColor)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
         ),
-      body: SafeArea(
-        child: Column(
-          children: [
+        child: SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: ElevatedButton(
+            onPressed: _isSaving ? null : _handleSave,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: brandGreen,
+              foregroundColor: Colors.black,
+              disabledBackgroundColor: brandGreen.withValues(alpha: 0.4),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                    ),
+                  )
+                : Text(
+                    'business_type.save_selection'.tr(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          const SizedBox(height: 68),
             // ─── Search Section ──────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -502,54 +536,6 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
             ),
           ],
         ),
-      ),
-      bottomSheet: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF111827) : Colors.white,
-          border: Border(top: BorderSide(color: borderColor)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton(
-            onPressed: _isSaving ? null : _handleSave,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: brandGreen,
-              foregroundColor: Colors.black,
-              disabledBackgroundColor: brandGreen.withValues(alpha: 0.4),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: _isSaving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                    ),
-                  )
-                : Text(
-                    'business_type.save_selection'.tr(),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-          ),
-        ),
-      ),
-    ),
-  );
-}
+      );
+  }
 }

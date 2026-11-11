@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../widgets/glass_nav_button.dart';
 import 'package:intl/intl.dart';
@@ -1176,14 +1177,18 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   // ===========================================================================
 
   Widget _buildTvHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141424),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
@@ -1302,6 +1307,8 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
           ),
         ],
       ),
+        ),
+      ),
     );
   }
 
@@ -1310,14 +1317,18 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
   // ===========================================================================
 
   Widget _buildMobileHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141424),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          child: Row(
         children: [
           GlassNavButton.back(
             context: context,
@@ -1396,6 +1407,8 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
             onPressed: _toggleSound,
           ),
         ],
+      ),
+        ),
       ),
     );
   }
