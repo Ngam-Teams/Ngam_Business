@@ -181,7 +181,16 @@
     "payment_amount": "Payment Amount:",
     "action_cook": "Cook",
     "action_ready": "Ready",
-    "action_done": "Done"
+    "action_done": "Done",
+    "action_live_board_short": "Live Board",
+    "action_live_board_title": "Live Order Board",
+    "action_live_board_desc": "Real-time kitchen prep & queue display",
+    "action_export_csv_short": "Export CSV",
+    "action_export_csv_title": "Export Orders CSV",
+    "action_export_csv_desc": "Download today's orders in Excel / CSV",
+    "action_scan_qr_short": "Scan QR",
+    "action_scan_qr_title": "Verify Pickup QR",
+    "action_scan_qr_desc": "Scan customer QR for fast handover"
   },
   "pos": {
     "title": "Point of Sale",

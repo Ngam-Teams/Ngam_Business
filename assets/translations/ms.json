@@ -181,7 +181,16 @@
     "payment_amount": "Jumlah Bayaran:",
     "action_cook": "Masak",
     "action_ready": "Sedia",
-    "action_done": "Selesai"
+    "action_done": "Selesai",
+    "action_live_board_short": "Live Board",
+    "action_live_board_title": "Buka Live Board",
+    "action_live_board_desc": "Paparan status penyediaan & giliran",
+    "action_export_csv_short": "Eksport CSV",
+    "action_export_csv_title": "Eksport Pesanan CSV",
+    "action_export_csv_desc": "Muat turun pesanan hari ini dalam Excel/CSV",
+    "action_scan_qr_short": "Sahkan QR",
+    "action_scan_qr_title": "Sahkan QR Ambil",
+    "action_scan_qr_desc": "Imbas kod QR pelanggan untuk serahan pantas"
   },
   "pos": {
     "title": "Daftar Tunai POS",

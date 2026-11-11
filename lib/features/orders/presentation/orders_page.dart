@@ -1593,172 +1593,8 @@ class _OrdersPageState extends State<OrdersPage> {
                       // Offline Cache Status Banner (muncul jika sambungan terputus tetapi pesanan cache dipaparkan)
                       if (isOffline)
                         _buildOfflineCacheBanner(),
-                        // Kitchen Display (KDS) Quick Access Banner
-                        InkWell(
-                          onTap: () => context.push('/kds'),
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xFFF9C80E).withValues(alpha: 0.15),
-                                  const Color(0xFF10B981).withValues(alpha: 0.08),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFF9C80E).withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF9C80E).withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const HugeIcon(
-                                    icon: HugeIcons.strokeRoundedTv01,
-                                    color: Color(0xFFF9C80E),
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                const Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Buka Live Order Board',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      SizedBox(height: 2),
-                                      Text(
-                                        'Paparan langsung status penyediaan & giliran pesanan',
-                                        style: TextStyle(
-                                          color: Colors.white60,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 14),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Export Orders CSV Button
-                        InkWell(
-                          onTap: () => _exportOrdersCsv(allOrders),
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF44CF6C).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFF44CF6C).withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF44CF6C).withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: const HugeIcon(
-                                    icon: HugeIcons.strokeRoundedDownload01,
-                                    color: Color(0xFF44CF6C),
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'export.orders_title'.tr(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      const Text(
-                                        'Muat turun semua pesanan hari ini dalam format Excel / CSV',
-                                        style: TextStyle(
-                                          color: Colors.white60,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 14),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // QR Pickup Code Verifier Button
-                        InkWell(
-                          onTap: () => _openPickupQrVerifier(allOrders),
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00E5FF).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFF00E5FF).withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF00E5FF), size: 22),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Sahkan QR Ambil Pesanan',
-                                        style: TextStyle(
-                                          color: Color(0xFF00E5FF),
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      SizedBox(height: 2),
-                                      Text(
-                                        'Imbas kod QR pada resit/aplikasi pelanggan untuk serahan pantas',
-                                        style: TextStyle(
-                                          color: Colors.white60,
-                                          fontSize: 11.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF00E5FF), size: 14),
-                              ],
-                            ),
-                          ),
-                        ),
+                        // 1-Row Quick Action Buttons (Live Board, Export CSV, Verify QR)
+                        _buildQuickActionsRow(allOrders),
                         const SizedBox(height: 16),
 
                         // Section: Aktif (Pending, Preparing, Ready)
@@ -2079,6 +1915,179 @@ class _OrdersPageState extends State<OrdersPage> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsRow(List<OrderModel> allOrders) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isWide = constraints.maxWidth >= 640;
+
+        return Row(
+          children: [
+            // 1. Kitchen Display (KDS) Live Board
+            Expanded(
+              child: _buildQuickActionButton(
+                icon: HugeIcons.strokeRoundedTv01,
+                color: const Color(0xFFF9C80E),
+                shortLabel: 'orders.action_live_board_short'.tr(),
+                title: 'orders.action_live_board_title'.tr(),
+                subtitle: 'orders.action_live_board_desc'.tr(),
+                isWide: isWide,
+                onTap: () => context.push('/kds'),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // 2. Export Orders CSV
+            Expanded(
+              child: _buildQuickActionButton(
+                icon: HugeIcons.strokeRoundedDownload01,
+                color: const Color(0xFF44CF6C),
+                shortLabel: 'orders.action_export_csv_short'.tr(),
+                title: 'orders.action_export_csv_title'.tr(),
+                subtitle: 'orders.action_export_csv_desc'.tr(),
+                isWide: isWide,
+                onTap: () => _exportOrdersCsv(allOrders),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // 3. Scan & Verify Pickup QR
+            Expanded(
+              child: _buildQuickActionButton(
+                icon: Icons.qr_code_scanner_rounded,
+                color: const Color(0xFF00E5FF),
+                shortLabel: 'orders.action_scan_qr_short'.tr(),
+                title: 'orders.action_scan_qr_title'.tr(),
+                subtitle: 'orders.action_scan_qr_desc'.tr(),
+                isWide: isWide,
+                onTap: () => _openPickupQrVerifier(allOrders),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickActionButton({
+    required dynamic icon,
+    required Color color,
+    required String shortLabel,
+    required String title,
+    required String subtitle,
+    required bool isWide,
+    required VoidCallback onTap,
+  }) {
+    if (isWide) {
+      // ─── WIDE SCREEN: 1 Row with full title, subtitle details, & badge ───
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withValues(alpha: 0.35),
+              width: 1.0,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.20),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: icon is IconData
+                    ? Icon(icon, color: color, size: 18)
+                    : HugeIcon(icon: icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 11,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: color.withValues(alpha: 0.45),
+                size: 12,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // ─── COMPACT / MOBILE SCREEN: 1 Row with icon + simple label (space-saving) ───
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: color.withValues(alpha: 0.35),
+            width: 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon is IconData)
+              Icon(icon, color: color, size: 17)
+            else
+              HugeIcon(icon: icon, color: color, size: 17),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                shortLabel,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
