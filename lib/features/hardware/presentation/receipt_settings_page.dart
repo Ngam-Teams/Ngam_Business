@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -20,17 +21,37 @@ import '../../../widgets/glass_nav_button.dart';
 // =============================================================================
 
 enum ReceiptFont {
-  spaceMono('Space Mono', 'Klasik POS', '123 ABC Monospace'),
-  courierPrime('Courier Prime', 'Mesin Taip', '123 ABC Typewriter'),
-  inconsolata('Inconsolata', 'Kompak Tech', '123 ABC Compact Mono'),
-  robotoMono('Roboto Mono', 'Moden Digital', '123 ABC Clean Mono'),
-  vt323('VT323 Pixel', 'Dot Matrix', '123 ABC 80s Pixel'),
-  inter('Inter Sans', 'Minimalis', '123 ABC Clean Sans');
+  // Moden Sans
+  poppins('Poppins', 'receipt.font_cat_modern', '123 ABC Modern Cafe'),
+  plusJakartaSans('Plus Jakarta Sans', 'receipt.font_cat_contemporary', '123 ABC Port Kopi'),
+  inter('Inter Sans', 'receipt.font_cat_minimal', '123 ABC Kopi Padu'),
+  montserrat('Montserrat', 'receipt.font_cat_urban', '123 ABC Santai Cafe'),
+  dmSans('DM Sans', 'receipt.font_cat_retail', '123 ABC Fresh Mart'),
+  outfit('Outfit', 'receipt.font_cat_sleek', '123 ABC Street Food'),
+
+  // Kafe & Santai
+  quicksand('Quicksand', 'receipt.font_cat_friendly', '123 ABC Bakery & Pastry'),
+  nunito('Nunito', 'receipt.font_cat_casual', '123 ABC Dessert Bar'),
+
+  // Butik & Mewah
+  playfairDisplay('Playfair Display', 'receipt.font_cat_boutique', '123 ABC Fine Dining'),
+  lora('Lora Serif', 'receipt.font_cat_fine_dining', '123 ABC Artisan Kitchen'),
+  merriweather('Merriweather', 'receipt.font_cat_heritage', '123 ABC Heritage Food'),
+
+  // Kompak & Pantas
+  oswald('Oswald', 'receipt.font_cat_condensed', '123 ABC Fast Casual'),
+  robotoCondensed('Roboto Condensed', 'receipt.font_cat_tight', '123 ABC Quick Order'),
+
+  // Klasik POS / Mesin Taip
+  jetbrainsMono('JetBrains Mono', 'receipt.font_cat_precision', '123 ABC High Precision'),
+  spaceMono('Space Mono', 'receipt.font_cat_classic_pos', '123 ABC Classic POS'),
+  courierPrime('Courier Prime', 'receipt.font_cat_typewriter', '123 ABC Typewriter Retro'),
+  vt323('VT323 Pixel', 'receipt.font_cat_dot_matrix', '123 ABC 80s Thermal');
 
   final String name;
-  final String tag;
+  final String tagKey;
   final String previewText;
-  const ReceiptFont(this.name, this.tag, this.previewText);
+  const ReceiptFont(this.name, this.tagKey, this.previewText);
 }
 
 enum DividerStyle { dashed, dotted, solidDouble, stars }
@@ -53,7 +74,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   int _paperWidth = 80; // 58mm or 80mm
 
   // Layout & Alignment Customization
-  ReceiptFont _selectedFont = ReceiptFont.spaceMono;
+  ReceiptFont _selectedFont = ReceiptFont.poppins;
   TextAlign _headerAlign = TextAlign.center;
   DividerStyle _dividerStyle = DividerStyle.dashed;
   LogoSize _logoSize = LogoSize.medium;
@@ -347,7 +368,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 Expanded(
                   flex: 6,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(left: 24, right: 20, top: 68, bottom: 40),
+                    padding: const EdgeInsets.only(left: 24, right: 20, top: 76, bottom: 40),
                     child: _buildControlsColumn(),
                   ),
                 ),
@@ -361,7 +382,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   child: Container(
                     color: const Color(0xFF07070F),
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                      padding: const EdgeInsets.fromLTRB(24, 76, 24, 40),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -411,7 +432,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
 
           // ─── PORTRAIT / MOBILE LAYOUT ───
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 76, 16, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -468,7 +489,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         const SizedBox(height: 24),
 
         // 3. Font / Typography Customization
-        _buildSectionHeader('3. Pilihan Fon Tipografi Resit', HugeIcons.strokeRoundedTextFont),
+        _buildSectionHeader('receipt.font_section_header'.tr(), HugeIcons.strokeRoundedTextFont),
         const SizedBox(height: 10),
         _buildFontSelector(),
         const SizedBox(height: 24),
@@ -637,6 +658,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   // DIVIDER STYLE SELECTOR
   // ===========================================================================
   TextStyle _getReceiptFont({
+    ReceiptFont? fontOverride,
     Color? color,
     double? fontSize,
     FontWeight? fontWeight,
@@ -644,7 +666,134 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
     double? letterSpacing,
     double? height,
   }) {
-    switch (_selectedFont) {
+    final font = fontOverride ?? _selectedFont;
+    switch (font) {
+      case ReceiptFont.poppins:
+        return GoogleFonts.poppins(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.plusJakartaSans:
+        return GoogleFonts.plusJakartaSans(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.inter:
+        return GoogleFonts.inter(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.montserrat:
+        return GoogleFonts.montserrat(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.dmSans:
+        return GoogleFonts.dmSans(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.outfit:
+        return GoogleFonts.outfit(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.quicksand:
+        return GoogleFonts.quicksand(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.nunito:
+        return GoogleFonts.nunito(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.playfairDisplay:
+        return GoogleFonts.playfairDisplay(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.lora:
+        return GoogleFonts.lora(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.merriweather:
+        return GoogleFonts.merriweather(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.oswald:
+        return GoogleFonts.oswald(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.robotoCondensed:
+        return GoogleFonts.robotoCondensed(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case ReceiptFont.jetbrainsMono:
+        return GoogleFonts.jetbrainsMono(
+          color: color,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          fontStyle: fontStyle,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
       case ReceiptFont.spaceMono:
         return GoogleFonts.spaceMono(
           color: color,
@@ -663,37 +812,10 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           letterSpacing: letterSpacing,
           height: height,
         );
-      case ReceiptFont.inconsolata:
-        return GoogleFonts.inconsolata(
-          color: color,
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          fontStyle: fontStyle,
-          letterSpacing: letterSpacing,
-          height: height,
-        );
-      case ReceiptFont.robotoMono:
-        return GoogleFonts.robotoMono(
-          color: color,
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          fontStyle: fontStyle,
-          letterSpacing: letterSpacing,
-          height: height,
-        );
       case ReceiptFont.vt323:
         return GoogleFonts.vt323(
           color: color,
           fontSize: fontSize != null ? (fontSize * 1.35) : null,
-          fontWeight: fontWeight,
-          fontStyle: fontStyle,
-          letterSpacing: letterSpacing,
-          height: height,
-        );
-      case ReceiptFont.inter:
-        return GoogleFonts.inter(
-          color: color,
-          fontSize: fontSize,
           fontWeight: fontWeight,
           fontStyle: fontStyle,
           letterSpacing: letterSpacing,
@@ -704,10 +826,10 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
 
   Widget _buildFontSelector() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
@@ -716,9 +838,13 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Tipografi Resit 6 Pilihan Fon',
-                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+              Text(
+                'receipt.font_selector_title'.tr(),
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -727,105 +853,192 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  _selectedFont.name,
-                  style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold, fontSize: 11),
+                  'receipt.font_selector_badge'.tr(),
+                  style: const TextStyle(
+                    color: Color(0xFF42A5F5),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10.5,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              mainAxisExtent: 76,
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFF42A5F5).withValues(alpha: 0.35),
+                width: 1.0,
+              ),
             ),
-            itemCount: ReceiptFont.values.length,
-            itemBuilder: (context, i) {
-              final font = ReceiptFont.values[i];
-              final isSelected = _selectedFont == font;
-
-              TextStyle previewStyle;
-              switch (font) {
-                case ReceiptFont.spaceMono:
-                  previewStyle = _getReceiptFont();
-                  break;
-                case ReceiptFont.courierPrime:
-                  previewStyle = GoogleFonts.courierPrime();
-                  break;
-                case ReceiptFont.inconsolata:
-                  previewStyle = GoogleFonts.inconsolata();
-                  break;
-                case ReceiptFont.robotoMono:
-                  previewStyle = GoogleFonts.robotoMono();
-                  break;
-                case ReceiptFont.vt323:
-                  previewStyle = GoogleFonts.vt323(fontSize: 16);
-                  break;
-                case ReceiptFont.inter:
-                  previewStyle = GoogleFonts.inter();
-                  break;
-              }
-
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedFont = font;
-                  });
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<ReceiptFont>(
+                value: _selectedFont,
+                isExpanded: true,
+                dropdownColor: const Color(0xFF141424),
+                borderRadius: BorderRadius.circular(16),
+                menuMaxHeight: 400,
+                itemHeight: 56.0,
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Color(0xFF42A5F5),
+                  size: 22,
+                ),
+                selectedItemBuilder: (BuildContext context) {
+                  return ReceiptFont.values.map<Widget>((ReceiptFont font) {
+                    return Row(
+                      children: [
+                        const Icon(
+                          Icons.font_download_rounded,
+                          size: 18,
+                          color: Color(0xFF42A5F5),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    font.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF42A5F5)
+                                          .withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      font.tagKey.tr(),
+                                      style: const TextStyle(
+                                        color: Color(0xFF42A5F5),
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 9.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                font.previewText,
+                                style: _getReceiptFont(
+                                  fontOverride: font,
+                                  color: Colors.white54,
+                                  fontSize: font == ReceiptFont.vt323 ? 12 : 10.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList();
                 },
-                borderRadius: BorderRadius.circular(14),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF42A5F5).withValues(alpha: 0.15)
-                        : Colors.white.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFF42A5F5)
-                          : Colors.white.withValues(alpha: 0.08),
-                      width: isSelected ? 1.5 : 1.0,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                items: ReceiptFont.values.map((ReceiptFont font) {
+                  final isSelected = _selectedFont == font;
+                  return DropdownMenuItem<ReceiptFont>(
+                    value: font,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
                         children: [
-                          Text(
-                            font.name,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.white70,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12.5,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      font.name,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? const Color(0xFF42A5F5)
+                                            : Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? const Color(0xFF42A5F5)
+                                                .withValues(alpha: 0.2)
+                                            : Colors.white
+                                                .withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        font.tagKey.tr(),
+                                        style: TextStyle(
+                                          color: isSelected
+                                              ? const Color(0xFF42A5F5)
+                                              : Colors.white60,
+                                          fontSize: 9.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  font.previewText,
+                                  style: _getReceiptFont(
+                                    fontOverride: font,
+                                    color: isSelected
+                                        ? const Color(0xFF42A5F5)
+                                        : Colors.white38,
+                                    fontSize: font == ReceiptFont.vt323 ? 13 : 10.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
                           ),
                           if (isSelected)
-                            const Icon(Icons.check_circle_rounded, color: Color(0xFF42A5F5), size: 14),
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              color: Color(0xFF42A5F5),
+                              size: 16,
+                            ),
                         ],
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        font.previewText,
-                        style: previewStyle.copyWith(
-                          color: isSelected ? const Color(0xFF42A5F5) : Colors.white38,
-                          fontSize: font == ReceiptFont.vt323 ? 13 : 10.5,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+                    ),
+                  );
+                }).toList(),
+                onChanged: (ReceiptFont? newFont) {
+                  if (newFont != null) {
+                    setState(() {
+                      _selectedFont = newFont;
+                    });
+                  }
+                },
+              ),
+            ),
           ),
         ],
       ),
