@@ -41,11 +41,14 @@ class DashboardScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth >= 800;
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+        final isShortHeight = constraints.maxHeight < 500;
+        final useSidebar = constraints.maxWidth >= 768 || (isLandscape && constraints.maxWidth >= 500);
+
         return Scaffold(
           backgroundColor: const Color(0xFF0A0A14),
           extendBody: true,
-          bottomNavigationBar: isDesktop
+          bottomNavigationBar: useSidebar
               ? null
               : BottomNav(
                   currentIndex: selectedIndex,
@@ -57,16 +60,28 @@ class DashboardScaffold extends StatelessWidget {
                 ),
           body: SafeArea(
             bottom: false,
-            child: isDesktop
+            child: useSidebar
                 ? Row(
                     children: [
-                      _buildNavigationRail(context),
+                      _buildNavigationRail(
+                        context,
+                        isCompactHeight: isShortHeight,
+                        maxAvailableWidth: constraints.maxWidth,
+                      ),
                       Expanded(
-                        child: _buildContent(context, isDesktop),
+                        child: _buildContent(
+                          context,
+                          useSidebar,
+                          isCompactHeight: isShortHeight,
+                        ),
                       ),
                     ],
                   )
-                : _buildContent(context, isDesktop),
+                : _buildContent(
+                    context,
+                    useSidebar,
+                    isCompactHeight: false,
+                  ),
           ),
         );
       },
@@ -76,23 +91,33 @@ class DashboardScaffold extends StatelessWidget {
   // ---------------------------------------------------------------------------
   // Navigation Rail (collapsible: Gemini-style Expand and Shrink modes)
   // ---------------------------------------------------------------------------
-  Widget _buildNavigationRail(BuildContext context) {
+  Widget _buildNavigationRail(
+    BuildContext context, {
+    bool isCompactHeight = false,
+    double maxAvailableWidth = 1000,
+  }) {
     return ValueListenableBuilder<bool>(
       valueListenable: isExpandedNotifier,
       builder: (context, isExpanded, _) {
+        final double expandedWidth = (maxAvailableWidth * 0.35).clamp(180.0, 260.0);
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 0, 16),
+          padding: EdgeInsets.fromLTRB(
+            isCompactHeight ? 10 : 16,
+            isCompactHeight ? 8 : 16,
+            0,
+            isCompactHeight ? 8 : 16,
+          ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(isCompactHeight ? 22 : 28),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeInOutCubic,
-                width: isExpanded ? 260 : 72,
+                width: isExpanded ? expandedWidth : (isCompactHeight ? 64 : 72),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(isCompactHeight ? 22 : 28),
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.12),
                     width: 1.2,
@@ -107,7 +132,7 @@ class DashboardScaffold extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    const SizedBox(height: 16),
+                    SizedBox(height: isCompactHeight ? 8 : 16),
 
                     // Top Bar (Logo & Expand / Shrink Interactions)
                     if (isExpanded)
@@ -191,7 +216,7 @@ class DashboardScaffold extends StatelessWidget {
                         onTap: () => isExpandedNotifier.value = true,
                       ),
 
-                    const SizedBox(height: 14),
+                    SizedBox(height: isCompactHeight ? 8 : 14),
 
                     // Store Profile Section
                     if (isExpanded)
@@ -332,7 +357,7 @@ class DashboardScaffold extends StatelessWidget {
                         },
                       ),
 
-                    const SizedBox(height: 12),
+                    SizedBox(height: isCompactHeight ? 6 : 12),
 
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -342,7 +367,7 @@ class DashboardScaffold extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 8),
+                    SizedBox(height: isCompactHeight ? 4 : 8),
 
                     // Nav items (Smoothly adapts to Expanded or Shrunk)
                     Expanded(
@@ -372,12 +397,12 @@ class DashboardScaffold extends StatelessWidget {
                         height: 1,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: isCompactHeight ? 4 : 6),
 
                     // Sign Out
                     _SidebarNavItem(
                       icon: HugeIcons.strokeRoundedLogout02,
-                      label: 'Sign Out',
+                      label: 'settings.sign_out'.tr(),
                       selected: false,
                       isExpanded: isExpanded,
                       onTap: () async {
@@ -449,7 +474,7 @@ class DashboardScaffold extends StatelessWidget {
                         }
                       },
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: isCompactHeight ? 6 : 12),
                   ],
                 ),
               ),
@@ -463,14 +488,18 @@ class DashboardScaffold extends StatelessWidget {
   // ---------------------------------------------------------------------------
   // Content Area
   // ---------------------------------------------------------------------------
-  Widget _buildContent(BuildContext context, bool isDesktop) {
+  Widget _buildContent(
+    BuildContext context,
+    bool useSidebar, {
+    bool isCompactHeight = false,
+  }) {
     final bool hasSubtitle = pageSubtitle.trim().isNotEmpty;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        isDesktop ? 20 : 16,
-        isDesktop ? 20 : 16,
-        isDesktop ? 20 : 16,
-        isDesktop ? 20 : 0,
+        useSidebar ? (isCompactHeight ? 14 : 20) : 16,
+        useSidebar ? (isCompactHeight ? 8 : 20) : 16,
+        useSidebar ? (isCompactHeight ? 14 : 20) : 16,
+        useSidebar ? (isCompactHeight ? 8 : 20) : 0,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,16 +514,16 @@ class DashboardScaffold extends StatelessWidget {
                   children: [
                     Text(
                       pageTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 26,
+                        fontSize: isCompactHeight ? 20 : 26,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.5,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (hasSubtitle) ...[
+                    if (hasSubtitle && !isCompactHeight) ...[
                       const SizedBox(height: 4),
                       Text(
                         pageSubtitle,
@@ -514,7 +543,7 @@ class DashboardScaffold extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 12),
+          SizedBox(height: isCompactHeight ? 6 : 12),
 
           Expanded(child: child),
         ],
@@ -822,7 +851,7 @@ class _TopBarActions extends StatelessWidget {
                     profile?['logo_url']) as String?;
 
             return Tooltip(
-              message: 'Profil Kedai',
+              message: 'settings.business_profile'.tr(),
               child: _StoreAvatar(
                 size: 34,
                 logoUrl: logoUrl,
