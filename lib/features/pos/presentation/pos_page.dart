@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'dart:async';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -955,7 +956,7 @@ class _PosPageState extends State<PosPage> {
               controller: tableCtrl,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
-                labelText: 'Nombor / Nama Meja Kustom',
+                labelText: 'pos.custom_table_label'.tr(),
                 labelStyle: const TextStyle(color: Colors.white60, fontSize: 12),
                 hintText: 'Cth: Meja 12 / Token 99',
                 hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
@@ -969,7 +970,7 @@ class _PosPageState extends State<PosPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal', style: TextStyle(color: Colors.white60)),
+            child: Text('common.cancel'.tr(), style: const TextStyle(color: Colors.white60)),
           ),
           ElevatedButton(
             onPressed: () {

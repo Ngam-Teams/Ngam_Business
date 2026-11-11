@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -159,9 +160,9 @@ class _LoyaltyStampsPageState extends State<LoyaltyStampsPage> {
                       'Tetapan Program Kad Cop Digital',
                       style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
-                    const Text(
-                      'Kustomisasi tajuk, bilangan cop & ganjaran pelanggan',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    Text(
+                      'loyalty.modal_subtitle'.tr(),
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
                     ),
                     const SizedBox(height: 16),
 

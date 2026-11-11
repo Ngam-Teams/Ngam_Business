@@ -172,11 +172,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           _customLogoBytes = bytes;
           _includeLogo = true;
         });
-        showGlassToast(context, 'Logo resit berjaya dikemaskini!');
+        showGlassToast(context, 'receipt.logo_updated'.tr());
       }
     } catch (e) {
       if (mounted) {
-        showGlassToast(context, 'Gagal memilih logo: $e', isError: true);
+        showGlassToast(context, 'receipt.logo_picker_error'.tr(args: [e.toString()]), isError: true);
       }
     }
   }
@@ -196,7 +196,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   }
 
   void _printTestReceipt() {
-    showGlassToast(context, 'Menghantar cetakan ujian ke $_selectedPrinter (${_paperWidth}mm)...');
+    showGlassToast(context, 'receipt.test_print_sending'.tr(args: [_selectedPrinter, _paperWidth.toString()]));
   }
 
   Future<void> _captureAndSaveReceipt() async {
@@ -219,7 +219,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       if (kIsWeb) {
         await downloadStandeeImage(bytes: pngBytes, fileName: fileName);
         if (mounted) {
-          showGlassToast(context, 'Resit digital berjaya dimuat turun ($fileName)!');
+          showGlassToast(context, 'receipt.download_success'.tr(args: [fileName]));
         }
       } else {
         final dir = await getApplicationDocumentsDirectory();
@@ -231,7 +231,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       }
     } catch (e) {
       if (mounted) {
-        showGlassToast(context, 'Ralat memuat turun resit: $e', isError: true);
+        showGlassToast(context, 'receipt.download_error'.tr(args: [e.toString()]), isError: true);
       }
     } finally {
       if (mounted) {
@@ -304,7 +304,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Saiz Fail:', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                    Text('receipt.file_size'.tr(), style: const TextStyle(color: Colors.white54, fontSize: 12)),
                     Text(sizeStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                   ],
                 ),
@@ -322,11 +322,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   onPressed: () async {
                     final result = await OpenFilex.open(file.path);
                     if (result.type != ResultType.done && mounted) {
-                      showGlassToast(context, 'Membuka fail: ${result.message}');
+                      showGlassToast(context, 'receipt.open_file_toast'.tr(args: [result.message]));
                     }
                   },
                   icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                  label: const Text('Buka Fail Imej Sekarang', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  label: Text('receipt.open_image_btn'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 ),
               ),
             ],
@@ -340,18 +340,18 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   Widget build(BuildContext context) {
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      title: 'Studio Resit & Pencetak',
-      subtitle: 'Kustomisasi logo & pencetak haba',
+      title: 'receipt.title'.tr(),
+      subtitle: 'receipt.subtitle'.tr(),
       actionItems: [
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedDownload04,
-          tooltip: 'Muat Turun Resit Digital HD',
+          tooltip: 'receipt.download_receipt'.tr(),
           isLoading: _isDownloadingReceipt,
           onTap: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
         ),
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedPrinter,
-          tooltip: 'Uji Cetak Resit',
+          tooltip: 'receipt.test_print'.tr(),
           onTap: _printTestReceipt,
         ),
       ],
@@ -509,19 +509,19 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         // 6. Store Info & Legal Details
         _buildSectionHeader('6. Maklumat Rasmi Kedai & Cukai', HugeIcons.strokeRoundedBuilding02),
         const SizedBox(height: 12),
-        _buildTextField(controller: _storeNameCtrl, label: 'Nama Kedai Syarikat Kepala Resit'),
+        _buildTextField(controller: _storeNameCtrl, label: 'receipt.field_store_name'.tr()),
         const SizedBox(height: 10),
-        _buildTextFieldWithToggle(controller: _taglineCtrl, label: 'Slogan / Tagline Kedai', value: _showTagline, onChanged: (v) => setState(() => _showTagline = v)),
+        _buildTextFieldWithToggle(controller: _taglineCtrl, label: 'receipt.field_tagline'.tr(), value: _showTagline, onChanged: (v) => setState(() => _showTagline = v)),
         const SizedBox(height: 10),
-        _buildTextFieldWithToggle(controller: _ssmCtrl, label: 'No. Pendaftaran Syarikat SSM', value: _showSsm, onChanged: (v) => setState(() => _showSsm = v)),
+        _buildTextFieldWithToggle(controller: _ssmCtrl, label: 'receipt.field_ssm'.tr(), value: _showSsm, onChanged: (v) => setState(() => _showSsm = v)),
         const SizedBox(height: 10),
-        _buildTextFieldWithToggle(controller: _sstCtrl, label: 'No. Cukai SST', value: _showSst, onChanged: (v) => setState(() => _showSst = v)),
+        _buildTextFieldWithToggle(controller: _sstCtrl, label: 'receipt.field_sst'.tr(), value: _showSst, onChanged: (v) => setState(() => _showSst = v)),
         const SizedBox(height: 10),
-        _buildTextFieldWithToggle(controller: _addressCtrl, label: 'Alamat Cawangan Kedai', value: _showAddress, onChanged: (v) => setState(() => _showAddress = v)),
+        _buildTextFieldWithToggle(controller: _addressCtrl, label: 'receipt.field_address'.tr(), value: _showAddress, onChanged: (v) => setState(() => _showAddress = v)),
         const SizedBox(height: 10),
-        _buildTextFieldWithToggle(controller: _phoneCtrl, label: 'No. Telefon Hubungi / WhatsApp', value: _showPhone, onChanged: (v) => setState(() => _showPhone = v)),
+        _buildTextFieldWithToggle(controller: _phoneCtrl, label: 'receipt.field_phone'.tr(), value: _showPhone, onChanged: (v) => setState(() => _showPhone = v)),
         const SizedBox(height: 10),
-        _buildTextFieldWithToggle(controller: _socialCtrl, label: 'Akaun Media Sosial Instagram TikTok', value: _showSocial, onChanged: (v) => setState(() => _showSocial = v)),
+        _buildTextFieldWithToggle(controller: _socialCtrl, label: 'receipt.field_social'.tr(), value: _showSocial, onChanged: (v) => setState(() => _showSocial = v)),
         const SizedBox(height: 24),
 
         // 7. Transaction & Pricing Toggles
@@ -539,9 +539,9 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         // 9. Footer Notes & Return Policy
         _buildSectionHeader('9. Mesej Bawah & Dasar Pulangan', HugeIcons.strokeRoundedNote01),
         const SizedBox(height: 12),
-        _buildTextField(controller: _footerMsgCtrl, label: 'Ucapan Terima Kasih Kaki Resit'),
+        _buildTextField(controller: _footerMsgCtrl, label: 'receipt.field_footer_msg'.tr()),
         const SizedBox(height: 10),
-        _buildTextField(controller: _policyCtrl, label: 'Syarat & Dasar Pertukaran / Bayaran Balik'),
+        _buildTextField(controller: _policyCtrl, label: 'receipt.field_policy'.tr()),
         const SizedBox(height: 24),
 
         // 10. Hardware Connection Status
@@ -562,12 +562,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               elevation: 4,
             ),
             onPressed: () {
-              showGlassToast(context, 'Tetapan templat resit berjaya disimpan!');
+              showGlassToast(context, 'receipt.template_saved'.tr());
             },
             icon: const Icon(Icons.check_circle_rounded, size: 20),
-            label: const Text(
-              'Simpan Tetapan Templat Resit',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            label: Text(
+              'receipt.save_settings'.tr(),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
         ),
@@ -1227,10 +1227,10 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             const Divider(height: 20, color: Colors.white10),
             Row(
               children: [
-                const Text('Saiz Logo:', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                Text('receipt.logo_size'.tr(), style: const TextStyle(color: Colors.white54, fontSize: 12)),
                 const SizedBox(width: 10),
                 ChoiceChip(
-                  label: const Text('Kecil 36px'),
+                  label: Text('receipt.logo_size_small'.tr()),
                   selected: _logoSize == LogoSize.small,
                   onSelected: (_) => setState(() => _logoSize = LogoSize.small),
                   selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
@@ -1240,7 +1240,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: const Text('Sedang 48px'),
+                  label: Text('receipt.logo_size_medium'.tr()),
                   selected: _logoSize == LogoSize.medium,
                   onSelected: (_) => setState(() => _logoSize = LogoSize.medium),
                   selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
@@ -1250,7 +1250,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: const Text('Besar 60px'),
+                  label: Text('receipt.logo_size_large'.tr()),
                   selected: _logoSize == LogoSize.large,
                   onSelected: (_) => setState(() => _logoSize = LogoSize.large),
                   selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
@@ -1273,17 +1273,17 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     ),
                     onPressed: _pickCustomLogo,
                     icon: const Icon(Icons.upload_rounded, size: 16, color: Color(0xFF42A5F5)),
-                    label: const Text('Muat Naik Logo Resit Baharu', style: TextStyle(fontSize: 12)),
+                    label: Text('receipt.upload_new_logo'.tr(), style: const TextStyle(fontSize: 12)),
                   ),
                 ),
                 if (_customLogoBytes != null) ...[
                   const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(Icons.refresh_rounded, color: Colors.redAccent, size: 18),
-                    tooltip: 'Gunakan logo asal profil kedai',
+                    tooltip: 'receipt.logo_reset'.tr(),
                     onPressed: () {
                       setState(() => _customLogoBytes = null);
-                      showGlassToast(context, 'Kembali ke logo asal profil kedai.');
+                      showGlassToast(context, 'receipt.logo_reset'.tr());
                     },
                   ),
                 ],
@@ -1308,19 +1308,19 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       ),
       child: Column(
         children: [
-          _buildCompactSwitchTile('Papar No. Meja / Dine-in Status', _showTableNo, (v) => setState(() => _showTableNo = v)),
+          _buildCompactSwitchTile('receipt.show_table_no'.tr(), _showTableNo, (v) => setState(() => _showTableNo = v)),
           const Divider(color: Colors.white10, height: 1),
-          _buildCompactSwitchTile('Papar Nama Kasir / Staf', _showCashier, (v) => setState(() => _showCashier = v)),
+          _buildCompactSwitchTile('receipt.show_cashier'.tr(), _showCashier, (v) => setState(() => _showCashier = v)),
           const Divider(color: Colors.white10, height: 1),
-          _buildCompactSwitchTile('Papar Tarikh & Waktu Cetakan', _showDateTime, (v) => setState(() => _showDateTime = v)),
+          _buildCompactSwitchTile('receipt.show_datetime'.tr(), _showDateTime, (v) => setState(() => _showDateTime = v)),
           const Divider(color: Colors.white10, height: 1),
-          _buildCompactSwitchTile('Pecahan Cukai SST (6%)', _showSstTax, (v) => setState(() => _showSstTax = v)),
+          _buildCompactSwitchTile('receipt.show_sst_tax'.tr(), _showSstTax, (v) => setState(() => _showSstTax = v)),
           const Divider(color: Colors.white10, height: 1),
-          _buildCompactSwitchTile('Caj Servis (Service Charge 10%)', _showServiceCharge, (v) => setState(() => _showServiceCharge = v)),
+          _buildCompactSwitchTile('receipt.show_service_charge'.tr(), _showServiceCharge, (v) => setState(() => _showServiceCharge = v)),
           const Divider(color: Colors.white10, height: 1),
-          _buildCompactSwitchTile('Penyelarasan 5 Sen Penggenapan', _showRounding, (v) => setState(() => _showRounding = v)),
+          _buildCompactSwitchTile('receipt.show_rounding'.tr(), _showRounding, (v) => setState(() => _showRounding = v)),
           const Divider(color: Colors.white10, height: 1),
-          _buildCompactSwitchTile('Papar Kaedah Bayaran (DuitNow/Tunai/Kad)', _showPaymentMethod, (v) => setState(() => _showPaymentMethod = v)),
+          _buildCompactSwitchTile('receipt.show_payment_method'.tr(), _showPaymentMethod, (v) => setState(() => _showPaymentMethod = v)),
         ],
       ),
     );
@@ -1357,17 +1357,17 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Pilih Jenis Kod di Bahagian Bawah Resit:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          Text('receipt.bottom_code_title'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildCodeOptionChip(BottomCodeType.qrReceipt, '📱 QR e-Resit (Pelanggan)'),
-              _buildCodeOptionChip(BottomCodeType.qrPromo, '🎟️ QR Baucar / Promosi'),
-              _buildCodeOptionChip(BottomCodeType.qrWifi, '📶 QR WiFi Tetamu Kedai'),
-              _buildCodeOptionChip(BottomCodeType.barcode, '📊 Kod Bar (Barcode)'),
-              _buildCodeOptionChip(BottomCodeType.none, '❌ Tiada Kod (Kompak)'),
+              _buildCodeOptionChip(BottomCodeType.qrReceipt, 'receipt.code_qr_receipt'.tr()),
+              _buildCodeOptionChip(BottomCodeType.qrPromo, 'receipt.code_qr_promo'.tr()),
+              _buildCodeOptionChip(BottomCodeType.qrWifi, 'receipt.code_qr_wifi'.tr()),
+              _buildCodeOptionChip(BottomCodeType.barcode, 'receipt.code_barcode'.tr()),
+              _buildCodeOptionChip(BottomCodeType.none, 'receipt.code_none'.tr()),
             ],
           ),
           const SizedBox(height: 12),
@@ -1376,12 +1376,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Pilihan Hantar e-Resit WhatsApp', style: TextStyle(color: Colors.white, fontSize: 13)),
-                    Text('Boleh kongsi pautan PDF digital terus ke telefon', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                    Text('receipt.whatsapp_receipt_title'.tr(), style: const TextStyle(color: Colors.white, fontSize: 13)),
+                    Text('receipt.whatsapp_receipt_desc'.tr(), style: const TextStyle(color: Colors.white38, fontSize: 11)),
                   ],
                 ),
               ),
@@ -1473,7 +1473,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            _isConnected ? 'TERHUBUNG' : 'LUAR TALIAN',
+                            _isConnected ? 'receipt.printer_status_connected'.tr() : 'receipt.printer_status_offline'.tr(),
                             style: TextStyle(
                               color: _isConnected ? const Color(0xFF10B981) : Colors.redAccent,
                               fontSize: 10,
@@ -1498,7 +1498,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 activeColor: const Color(0xFF10B981),
                 onChanged: (val) {
                   setState(() => _isConnected = val);
-                  showGlassToast(context, val ? 'Pencetak terhubung' : 'Pencetak diputuskan');
+                  showGlassToast(context, val ? 'receipt.printer_toast_connected'.tr() : 'receipt.printer_toast_disconnected'.tr());
                 },
               ),
             ],
@@ -1507,8 +1507,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
-                child: Text('Cetak automatik bila pesanan baharu masuk', style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+              Expanded(
+                child: Text('receipt.auto_print_on_order'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
               ),
               Switch(
                 value: _autoPrintOnOrder,
@@ -1520,8 +1520,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
-                child: Text('Potong kertas secara automatik (Auto-Cutter)', style: TextStyle(color: Colors.white70, fontSize: 12.5)),
+              Expanded(
+                child: Text('receipt.auto_cut_paper'.tr(), style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
               ),
               Switch(
                 value: _autoCutPaper,
@@ -1692,11 +1692,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         if (_showTableNo)
-                          Text('Meja: 04 (Makan Sini)', style: _getReceiptFont(color: Colors.black87, fontSize: 9.0))
+                          Text('receipt.table_dine_in'.tr(), style: _getReceiptFont(color: Colors.black87, fontSize: 9.0))
                         else
                           const SizedBox.shrink(),
                         if (_showCashier)
-                          Text('Kasir: Ahmad', style: _getReceiptFont(color: Colors.black54, fontSize: 9.0))
+                          Text('${'receipt.cashier_label'.tr()}: Ahmad', style: _getReceiptFont(color: Colors.black54, fontSize: 9.0))
                         else
                           const SizedBox.shrink(),
                       ],
@@ -1950,7 +1950,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               ),
               const SizedBox(height: 3),
               Text(
-                'Imbas Simpan e-Resit & Poin Ngam',
+                'receipt.qr_scan_receipt_hint'.tr(),
                 style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
@@ -2020,7 +2020,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               ),
               const SizedBox(height: 3),
               Text(
-                '📶 Imbas Untuk Sambung WiFi Tetamu Kedai',
+                'receipt.qr_scan_wifi_hint'.tr(),
                 style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
