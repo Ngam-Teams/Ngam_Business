@@ -874,14 +874,22 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 width: 1.0,
               ),
             ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<ReceiptFont>(
-                value: _selectedFont,
-                isExpanded: true,
-                dropdownColor: const Color(0xFF141424),
-                borderRadius: BorderRadius.circular(16),
-                menuMaxHeight: 400,
-                itemHeight: 56.0,
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                focusColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<ReceiptFont>(
+                  value: _selectedFont,
+                  focusColor: Colors.transparent,
+                  isExpanded: true,
+                  dropdownColor: const Color(0xFF141424),
+                  borderRadius: BorderRadius.circular(16),
+                  menuMaxHeight: 400,
+                  itemHeight: 56.0,
                 icon: const Icon(
                   Icons.keyboard_arrow_down_rounded,
                   color: Color(0xFF42A5F5),
@@ -1035,9 +1043,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     setState(() {
                       _selectedFont = newFont;
                     });
+                    FocusManager.instance.primaryFocus?.unfocus();
                   }
                 },
               ),
+            ),
             ),
           ),
         ],
@@ -1931,6 +1941,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 child: QrImageView(
                   data: 'https://ngam.dev/receipt/NG4029',
                   version: QrVersions.auto,
+                  errorCorrectionLevel: QrErrorCorrectLevel.L,
+                  padding: const EdgeInsets.all(2),
                   size: _paperWidth == 58 ? 68 : 80,
                   eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
                   dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
@@ -1962,8 +1974,10 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   border: Border.all(color: Colors.black12),
                 ),
                 child: QrImageView(
-                  data: 'https://ngam.dev/@warungngam?promo=NGAM10',
+                  data: 'https://ngam.dev/promo/NGAM10',
                   version: QrVersions.auto,
+                  errorCorrectionLevel: QrErrorCorrectLevel.L,
+                  padding: const EdgeInsets.all(2),
                   size: _paperWidth == 58 ? 68 : 80,
                   eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
                   dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
@@ -1975,7 +1989,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
-                'Tunjuk atau imbas resit ini untuk tebus',
+                'ngam.dev/promo/NGAM10',
                 style: _getReceiptFont(color: Colors.black38, fontSize: 7.0),
               ),
             ],
@@ -1997,6 +2011,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 child: QrImageView(
                   data: 'WIFI:T:WPA;S:${(BusinessService.cachedProfile?["settings"] as Map?)?["wifi_ssid"]?.toString() ?? "WiFi_Kedai"};P:${(BusinessService.cachedProfile?["settings"] as Map?)?["wifi_password"]?.toString() ?? ""};;',
                   version: QrVersions.auto,
+                  errorCorrectionLevel: QrErrorCorrectLevel.L,
+                  padding: const EdgeInsets.all(2),
                   size: _paperWidth == 58 ? 68 : 80,
                   eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
                   dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
