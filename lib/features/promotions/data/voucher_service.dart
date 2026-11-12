@@ -280,7 +280,12 @@ class VoucherService {
       );
     }
 
-    final cleanCode = code.trim().toUpperCase();
+    var cleanCode = code.trim().toUpperCase();
+    if (cleanCode.startsWith('NGAM_VOUCHER:') || cleanCode.startsWith('NGAM-VOUCHER:')) {
+      cleanCode = cleanCode.substring(13).trim();
+    } else if (cleanCode.startsWith('VOUCHER:')) {
+      cleanCode = cleanCode.substring(8).trim();
+    }
     if (cleanCode.isEmpty) {
       return VoucherValidationResult(
         isValid: false,

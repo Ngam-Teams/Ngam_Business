@@ -341,7 +341,9 @@ class _OrdersPageState extends State<OrdersPage> {
         final status = o.status;
         final payStatus = o.paymentStatus;
         final tot = o.total;
-        totalRev += tot;
+        if (o.status.toLowerCase() != 'cancelled') {
+          totalRev += tot;
+        }
         final source = o.source;
         final notes = (o.notes ?? '').replaceAll('\n', ' ').replaceAll(',', ' ');
 
@@ -870,7 +872,21 @@ class _OrdersPageState extends State<OrdersPage> {
                                         );
                                       }
                                       final items = itemSnap.data ?? [];
-                                      _orderItemsCache[order.id] = items;
+                                      if (items.isNotEmpty || DateTime.now().difference(order.createdAt).inSeconds >= 20) {
+                                        _orderItemsCache[order.id] = items;
+                                      } else {
+                                        Future.delayed(const Duration(milliseconds: 1500), () async {
+                                          final retryItems = await _ordersService.fetchOrderItems(order.id);
+                                          if (mounted) {
+                                            setState(() {
+                                              _orderItemsCache[order.id] = retryItems;
+                                            });
+                                            try {
+                                              setModalState(() {});
+                                            } catch (_) {}
+                                          }
+                                        });
+                                      }
                                       if (items.isEmpty) {
                                         return _buildFallbackOrderItemRow(order, fmt);
                                       }
@@ -1316,7 +1332,18 @@ class _OrdersPageState extends State<OrdersPage> {
           );
         }
         final items = snapshot.data ?? [];
-        _orderItemsCache[order.id] = items;
+        if (items.isNotEmpty || DateTime.now().difference(order.createdAt).inSeconds >= 20) {
+          _orderItemsCache[order.id] = items;
+        } else {
+          Future.delayed(const Duration(milliseconds: 1500), () async {
+            final retryItems = await _ordersService.fetchOrderItems(order.id);
+            if (mounted) {
+              setState(() {
+                _orderItemsCache[order.id] = retryItems;
+              });
+            }
+          });
+        }
         if (items.isEmpty) {
           return _buildFallbackOrderItemRow(order, fmt);
         }

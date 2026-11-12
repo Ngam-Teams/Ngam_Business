@@ -101,13 +101,15 @@ class OrdersService {
     try {
       final profile = await _businessService.getBusinessProfile();
       final businessId = profile?['id'];
-
-      var query = _client.from('orders').select();
-      if (businessId != null) {
-        query = query.eq('business_id', businessId);
+      if (businessId == null || businessId.toString().isEmpty) {
+        return [];
       }
 
-      final response = await query.order('created_at', ascending: false);
+      final response = await _client
+          .from('orders')
+          .select()
+          .eq('business_id', businessId)
+          .order('created_at', ascending: false);
 
       return (response as List)
           .where((json) => isOrderReadyForMerchant(json as Map<String, dynamic>))
@@ -160,7 +162,9 @@ class OrdersService {
       // 2. HTTP Fetch fallback (SWR - pastikan data segar dari REST API)
       try {
         final httpOrders = await fetchOrders();
-        if (httpOrders.isNotEmpty) {
+        if (businessId != null && businessId.isNotEmpty) {
+          await emitData(httpOrders, cacheKey);
+        } else if (httpOrders.isNotEmpty) {
           await emitData(httpOrders, cacheKey);
         }
       } catch (e) {
@@ -171,16 +175,15 @@ class OrdersService {
       try {
         await realtimeSubscription?.cancel();
 
-        final baseStream = (businessId != null && businessId.isNotEmpty)
-            ? _client
-                .from('orders')
-                .stream(primaryKey: ['id'])
-                .eq('business_id', businessId)
-                .order('created_at', ascending: false)
-            : _client
-                .from('orders')
-                .stream(primaryKey: ['id'])
-                .order('created_at', ascending: false);
+        if (businessId == null || businessId.isEmpty) {
+          return;
+        }
+
+        final baseStream = _client
+            .from('orders')
+            .stream(primaryKey: ['id'])
+            .eq('business_id', businessId)
+            .order('created_at', ascending: false);
 
         realtimeSubscription = baseStream.listen(
           (list) {
@@ -196,7 +199,9 @@ class OrdersService {
             // Cuba ambil data melalui REST jika socket gagal
             try {
               final httpOrders = await fetchOrders();
-              if (httpOrders.isNotEmpty) {
+              if (businessId != null && businessId.isNotEmpty) {
+                await emitData(httpOrders, cacheKey);
+              } else if (httpOrders.isNotEmpty) {
                 await emitData(httpOrders, cacheKey);
               }
             } catch (_) {}
@@ -257,30 +262,54 @@ class OrdersService {
 
   /// Update the status of an order
   Future<bool> updateOrderStatus(String orderId, String newStatus, {String? paymentStatus}) async {
+    String? effectivePaymentStatus = paymentStatus;
     // Jika pesanan dibatalkan, pulihkan semula stok inventori bagi produk fizikal
     if (newStatus.toLowerCase() == 'cancelled') {
       try {
-        final items = await _client
-            .from('order_items')
-            .select('product_id, quantity')
-            .eq('order_id', orderId);
-        for (final row in (items as List)) {
-          final prodId = row['product_id']?.toString();
-          final qty = (row['quantity'] as num?)?.toInt() ?? 0;
-          if (prodId != null && prodId.isNotEmpty && qty > 0) {
-            final prod = await _client
-                .from('business_products')
-                .select('stock, track_inventory, item_type')
-                .eq('id', prodId)
-                .maybeSingle();
-            if (prod != null &&
-                prod['item_type'] != 'service' &&
-                (prod['track_inventory'] as bool? ?? true)) {
-              final curStock = (prod['stock'] as num?)?.toInt() ?? 0;
-              await _client
-                  .from('business_products')
-                  .update({'stock': curStock + qty})
-                  .eq('id', prodId);
+        final existingOrder = await _client
+            .from('orders')
+            .select('status, source, payment_method, payment_status')
+            .eq('id', orderId)
+            .maybeSingle();
+
+        if (existingOrder != null) {
+          final existingStatus = (existingOrder['status'] ?? '').toString().toLowerCase();
+          if (existingStatus == 'cancelled') {
+            return true;
+          }
+
+          final source = (existingOrder['source'] ?? 'pos').toString().toLowerCase();
+          final payMethod = (existingOrder['payment_method'] ?? 'cash').toString().toLowerCase();
+          final existingPayStatus = (existingOrder['payment_status'] ?? '').toString().toLowerCase();
+
+          if (existingPayStatus == 'paid' && effectivePaymentStatus == null) {
+            effectivePaymentStatus = 'refund_pending';
+          }
+
+          if (!(source != 'pos' && payMethod != 'cash' && existingPayStatus == 'pending')) {
+            final items = await _client
+                .from('order_items')
+                .select('product_id, quantity')
+                .eq('order_id', orderId);
+            for (final row in (items as List)) {
+              final prodId = row['product_id']?.toString();
+              final qty = (row['quantity'] as num?)?.toInt() ?? 0;
+              if (prodId != null && prodId.isNotEmpty && qty > 0) {
+                final prod = await _client
+                    .from('business_products')
+                    .select('stock, track_inventory, item_type')
+                    .eq('id', prodId)
+                    .maybeSingle();
+                if (prod != null &&
+                    prod['item_type'] != 'service' &&
+                    (prod['track_inventory'] as bool? ?? true)) {
+                  final curStock = (prod['stock'] as num?)?.toInt() ?? 0;
+                  await _client
+                      .from('business_products')
+                      .update({'stock': curStock + qty})
+                      .eq('id', prodId);
+                }
+              }
             }
           }
         }
@@ -290,7 +319,7 @@ class OrdersService {
     try {
       final payload = <String, dynamic>{
         'status': newStatus,
-        if (paymentStatus != null) 'payment_status': paymentStatus,
+        if (effectivePaymentStatus != null) 'payment_status': effectivePaymentStatus,
       };
       try {
         await _client

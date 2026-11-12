@@ -85,7 +85,8 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
       OrderModel? matched;
       for (final o in widget.allOrders) {
         final idLower = o.id.toLowerCase();
-        if (idLower == cleaned || idLower.startsWith(cleaned) || idLower.endsWith(cleaned)) {
+        if (idLower == cleaned ||
+            (cleaned.length >= 6 && (idLower.startsWith(cleaned) || idLower.endsWith(cleaned)))) {
           matched = o;
           break;
         }
@@ -96,14 +97,32 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
         final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
         final shopId = profile?['id']?.toString();
 
-        var query = Supabase.instance.client.from('orders').select();
         if (shopId != null && shopId.isNotEmpty) {
-          query = query.eq('business_id', shopId);
-        }
-
-        final res = await query.or('id.eq.$cleaned,id.ilike.$cleaned%').limit(1);
-        if (res.isNotEmpty) {
-          matched = OrderModel.fromJson(res.first);
+          if (cleaned.length == 36) {
+            final res = await Supabase.instance.client
+                .from('orders')
+                .select()
+                .eq('business_id', shopId)
+                .eq('id', cleaned)
+                .limit(1);
+            if ((res as List).isNotEmpty) {
+              matched = OrderModel.fromJson(res.first as Map<String, dynamic>);
+            }
+          } else if (cleaned.length >= 6) {
+            final res = await Supabase.instance.client
+                .from('orders')
+                .select()
+                .eq('business_id', shopId)
+                .order('created_at', ascending: false)
+                .limit(100);
+            for (final row in (res as List)) {
+              final idLower = (row['id']?.toString() ?? '').toLowerCase();
+              if (idLower == cleaned || idLower.startsWith(cleaned) || idLower.endsWith(cleaned)) {
+                matched = OrderModel.fromJson(row as Map<String, dynamic>);
+                break;
+              }
+            }
+          }
         }
       }
 

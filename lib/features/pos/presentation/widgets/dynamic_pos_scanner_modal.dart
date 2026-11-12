@@ -279,39 +279,45 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
         }
       }
 
-      // 0B. Semak jika ia adalah QR Tiket Tempahan (ID:RZRV-... atau RZRV-...)
-      if (upperQuery.contains('RZRV-')) {
-        String bookingCode = upperQuery;
-        final m = RegExp(r'(RZRV-[A-Z0-9-]+)').firstMatch(upperQuery);
-        if (m != null) bookingCode = m.group(1)!;
-        final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
-        final shopId = profile?['id']?.toString();
-        var selectQuery = Supabase.instance.client
-            .from('bookings')
-            .select('id, business_id, booking_metadata');
-        if (shopId != null && shopId.isNotEmpty) {
-          selectQuery = selectQuery.eq('business_id', shopId);
+      // 0B. Semak jika ia adalah QR Tiket Tempahan (ID:...|SHOP:... atau RZRV-...)
+      if (upperQuery.startsWith('ID:') || upperQuery.contains('|SHOP:') || upperQuery.contains('RZRV-')) {
+        String bookingId = query;
+        final idMatch = RegExp(r'ID:([^|]+)', caseSensitive: false).firstMatch(query);
+        if (idMatch != null) {
+          bookingId = idMatch.group(1)!.trim();
+        } else {
+          final m = RegExp(r'(RZRV-[A-Z0-9-]+)', caseSensitive: false).firstMatch(query);
+          if (m != null) bookingId = m.group(1)!;
         }
-        final rows = await selectQuery
-            .order('created_at', ascending: false)
-            .limit(100);
-        for (final r in (rows as List)) {
-          final meta = r['booking_metadata'] as Map<String, dynamic>? ?? {};
-          final ref = (meta['booking_id'] ?? meta['short_ref'] ?? '').toString().toUpperCase();
-          if (ref == bookingCode) {
-            await Supabase.instance.client
-                .from('bookings')
-                .update({'status': 'in_progress'})
-                .eq('id', r['id']);
-            SoundService.instance.playOrderChime();
-            if (mounted) {
-              setState(() {
-                _isResolving = false;
-                _statusError = '✅ Tiket Tempahan $bookingCode berjaya Check-In!';
-              });
-            }
-            return;
+        final handled = await _verifyAndCompleteBooking(bookingId);
+        if (handled) return;
+      }
+
+      // 0C. Semak jika ia adalah QR Tiket Giliran (NGAM_QUEUE:<ticketId>:<ticketNum>)
+      if (upperQuery.startsWith('NGAM_QUEUE:') || upperQuery.startsWith('NGAM-QUEUE:')) {
+        final rawQueue = query.substring(11).trim();
+        final parts = rawQueue.split(':');
+        final ticketId = parts.first.trim();
+        final ticketLabel = parts.length > 1 ? parts[1].trim() : ticketId;
+        if (ticketId.isNotEmpty) {
+          final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+          final shopId = profile?['id']?.toString();
+          var q = Supabase.instance.client.from('queue_tickets').update({
+            'status': 'serving',
+            'serving_at': DateTime.now().toIso8601String(),
+          }).eq('id', ticketId);
+          if (shopId != null && shopId.isNotEmpty) {
+            q = q.eq('business_id', shopId);
           }
+          await q;
+          SoundService.instance.playOrderChime();
+          if (mounted) {
+            setState(() {
+              _isResolving = false;
+              _statusError = '✅ Tiket Giliran $ticketLabel disahkan hadir & sedang dilayan!';
+            });
+          }
+          return;
         }
       }
 
@@ -331,9 +337,16 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
         }
       }
 
-      // 2. Semak jika ia adalah BAUCAR PROMOSI atau PENEBUSAN GANJARAN
+      // 2. Semak jika ia adalah BAUCAR PROMOSI atau PENEBUSAN GANJARAN (termasuk NGAM_VOUCHER: / NGAM-VOUCHER:)
+      String voucherQuery = query;
+      if (upperQuery.startsWith('NGAM_VOUCHER:') || upperQuery.startsWith('NGAM-VOUCHER:')) {
+        voucherQuery = query.substring(13).trim();
+      } else if (upperQuery.startsWith('VOUCHER:')) {
+        voucherQuery = query.substring(8).trim();
+      }
+
       final voucherVal = await _voucherService.validateVoucherCode(
-        code: query,
+        code: voucherQuery,
         subtotal: widget.currentSubtotal,
       );
 
@@ -403,6 +416,44 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
         _isResolving = false;
       });
     }
+  }
+
+  Future<bool> _verifyAndCompleteBooking(String bookingId) async {
+    final cleanBookingId = bookingId.trim();
+    if (cleanBookingId.isEmpty) return false;
+    final upperCode = cleanBookingId.toUpperCase();
+
+    final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+    final shopId = profile?['id']?.toString();
+    var selectQuery = Supabase.instance.client
+        .from('bookings')
+        .select('id, business_id, booking_metadata');
+    if (shopId != null && shopId.isNotEmpty) {
+      selectQuery = selectQuery.eq('business_id', shopId);
+    }
+    final rows = await selectQuery
+        .order('created_at', ascending: false)
+        .limit(100);
+    for (final r in (rows as List)) {
+      final rowId = (r['id']?.toString() ?? '').toUpperCase();
+      final meta = r['booking_metadata'] as Map<String, dynamic>? ?? {};
+      final ref = (meta['booking_id'] ?? meta['short_ref'] ?? '').toString().toUpperCase();
+      if (rowId == upperCode || ref == upperCode || (upperCode.length >= 6 && rowId.startsWith(upperCode))) {
+        await Supabase.instance.client
+            .from('bookings')
+            .update({'status': 'in_progress'})
+            .eq('id', r['id']);
+        SoundService.instance.playOrderChime();
+        if (mounted) {
+          setState(() {
+            _isResolving = false;
+            _statusError = '✅ Tiket Tempahan ${ref.isNotEmpty ? ref : cleanBookingId} berjaya Check-In!';
+          });
+        }
+        return true;
+      }
+    }
+    return false;
   }
 
   // ---------------------------------------------------------------------------

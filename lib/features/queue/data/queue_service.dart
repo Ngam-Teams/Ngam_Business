@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../orders/data/orders_service.dart';
 import '../../settings/data/business_service.dart';
 import '../models/queue_ticket_model.dart';
 
@@ -34,6 +35,9 @@ class QueueService {
   ) {
     final List<QueueTicketModel> list = [];
     for (final r in orderRows) {
+      if (!OrdersService.isOrderReadyForMerchant(r)) {
+        continue;
+      }
       final status = (r['status'] ?? '').toString().toLowerCase();
       // Only active orders appear in queue and smart TV display
       if (status != 'pending' &&
@@ -63,7 +67,15 @@ class QueueService {
           : (r['source'] == 'takeaway' ? 'Pesanan Bungkus' : 'Pesanan Kaunter');
 
       final isReady = status == 'ready';
-      final queueStatus = isReady ? 'calling' : 'waiting';
+      final isServing = status == 'preparing' || status == 'in_progress' || status == 'cooking';
+      final String queueStatus;
+      if (isReady) {
+        queueStatus = 'calling';
+      } else if (isServing) {
+        queueStatus = 'serving';
+      } else {
+        queueStatus = 'waiting';
+      }
       final stationOrChair = isReady ? 'Sedia Diambil' : 'Sedang Disediakan';
 
       final createdAt = DateTime.tryParse(r['created_at']?.toString() ?? '') ?? DateTime.now();
@@ -131,11 +143,7 @@ class QueueService {
                   final startOfToday = DateTime(now.year, now.month, now.day);
                   latestQueueTickets = rows
                       .map((j) => QueueTicketModel.fromJson(j))
-                      .where((t) =>
-                          t.createdAt.isAfter(startOfToday) ||
-                          t.status == 'waiting' ||
-                          t.status == 'calling' ||
-                          t.status == 'serving')
+                      .where((t) => t.createdAt.isAfter(startOfToday))
                       .toList();
                   emitMerged();
                 },
@@ -198,11 +206,7 @@ class QueueService {
         result.addAll(
           (response as List)
               .map((json) => QueueTicketModel.fromJson(json as Map<String, dynamic>))
-              .where((t) =>
-                  t.createdAt.isAfter(startOfToday) ||
-                  t.status == 'waiting' ||
-                  t.status == 'calling' ||
-                  t.status == 'serving'),
+              .where((t) => t.createdAt.isAfter(startOfToday)),
         );
       } catch (_) {
         result.addAll(_localDemoTickets);
@@ -273,7 +277,7 @@ class QueueService {
           }
           final tNum = (r['ticket_number']?.toString() ?? '').replaceAll(RegExp(r'[^0-9]'), '');
           final parsed = int.tryParse(tNum);
-          if (parsed != null && parsed < 100 && parsed > maxNum) {
+          if (parsed != null && parsed > maxNum) {
             maxNum = parsed;
           }
         }
@@ -405,7 +409,11 @@ class QueueService {
           'status': 'preparing',
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('id', ticketId);
-      } catch (_) {}
+      } catch (_) {
+        try {
+          await _client.from('orders').update({'status': 'preparing'}).eq('id', ticketId);
+        } catch (_) {}
+      }
     }
 
     final idx = _localDemoTickets.indexWhere((t) => t.id == ticketId);
@@ -466,16 +474,10 @@ class QueueService {
     } catch (_) {}
 
     if (!updatedInQueue) {
-      try {
-        await _client.from('orders').update({
-          'status': 'cancelled',
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', ticketId);
-      } catch (_) {
-        try {
-          await _client.from('orders').update({'status': 'cancelled'}).eq('id', ticketId);
-        } catch (_) {}
-      }
+      await OrdersService(
+        client: _client,
+        businessService: _businessService,
+      ).updateOrderStatus(ticketId, 'cancelled');
     }
 
     final idx = _localDemoTickets.indexWhere((t) => t.id == ticketId);

@@ -286,22 +286,29 @@ class PosService {
       order = await _client.from('orders').insert(baseOrderData).select().single();
     }
 
-    final orderItems = items
-        .map((item) => {
-              'order_id': order['id'],
-              'product_id': item.product.id,
-              'product_name': item.formattedOrderItemName,
-              'quantity': item.quantity,
-              'unit_price': item.unitPriceWithAddons,
-              'subtotal': item.subtotal,
-            })
-        .toList();
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+
+    final orderItems = items.map((item) {
+      final isValidUuid = uuidRegex.hasMatch(item.product.id);
+      return <String, dynamic>{
+        'order_id': order['id'],
+        if (isValidUuid) 'product_id': item.product.id,
+        'product_name': item.formattedOrderItemName,
+        'quantity': item.quantity,
+        'unit_price': item.unitPriceWithAddons,
+        'subtotal': item.subtotal,
+      };
+    }).toList();
 
     await _client.from('order_items').insert(orderItems);
 
     // Auto-deduct inventory stock for physical products that track stock
     for (final item in items) {
-      if (item.product.isProduct && item.product.trackInventory) {
+      if (item.product.isProduct &&
+          item.product.trackInventory &&
+          uuidRegex.hasMatch(item.product.id)) {
         try {
           final current = await _client
               .from('business_products')

@@ -29,6 +29,7 @@ class _KdsPageState extends State<KdsPage> {
   bool _isLoading = true;
 
   StreamSubscription? _orderSub;
+  Timer? _elapsedTimer;
   List<Map<String, dynamic>> _liveTickets = [];
   final Map<String, List<Map<String, dynamic>>> _orderItemsCache = {};
   final Set<String> _knownOrderIds = {};
@@ -99,10 +100,27 @@ class _KdsPageState extends State<KdsPage> {
   void initState() {
     super.initState();
     _initLiveKds();
+    _elapsedTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        for (final t in _liveTickets) {
+          final createdAt = t['createdAt'] as DateTime?;
+          if (createdAt != null) {
+            t['minutesAgo'] = DateTime.now().difference(createdAt).inMinutes;
+          } else {
+            t['minutesAgo'] = ((t['minutesAgo'] as int?) ?? 0) + 1;
+          }
+        }
+        for (final t in _demoTickets) {
+          t['minutesAgo'] = ((t['minutesAgo'] as int?) ?? 0) + 1;
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
+    _elapsedTimer?.cancel();
     _orderSub?.cancel();
     super.dispose();
   }
@@ -197,7 +215,7 @@ class _KdsPageState extends State<KdsPage> {
       try {
         final itemsRes = await Supabase.instance.client
             .from('order_items')
-            .select()
+            .select('order_id, product_name, quantity')
             .filter('order_id', 'in', missingIds);
 
         for (final item in itemsRes) {
@@ -228,7 +246,11 @@ class _KdsPageState extends State<KdsPage> {
 
       // Check if local operator stage override exists
       if (_ticketStagesOverride.containsKey(id)) {
-        stage = _ticketStagesOverride[id]!;
+        if (_ticketStagesOverride[id] == stage) {
+          _ticketStagesOverride.remove(id);
+        } else {
+          stage = _ticketStagesOverride[id]!;
+        }
       }
 
       final rawItems = _orderItemsCache[id] ?? [];
@@ -306,6 +328,7 @@ class _KdsPageState extends State<KdsPage> {
         'id': shortId,
         'table': tableLabel,
         'type': typeLabel,
+        'createdAt': createdAt,
         'minutesAgo': minutesAgo,
         'stage': stage,
         'server': serverLabel,

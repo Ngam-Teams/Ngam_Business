@@ -10,9 +10,6 @@ import '../../../widgets/glass_toast.dart';
 import '../../../widgets/glass_nav_button.dart';
 import '../../settings/data/business_service.dart';
 import '../../pos/presentation/widgets/payment_terminal_modal.dart';
-import '../../pos/data/pos_service.dart';
-import '../../pos/models/product_model.dart';
-import '../../pos/models/order_model.dart';
 
 // ============================================================
 // AppointmentsPage — Merchant Booking & Schedule Management
@@ -48,11 +45,14 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   void _subscribeToLiveBookings() async {
     try {
       final profile = await BusinessService().getBusinessProfile();
-      _businessId = profile?['id'];
+      _businessId = profile?['id']?.toString();
+      if (_businessId == null || _businessId!.isEmpty) return;
 
+      _bookingsSub?.cancel();
       _bookingsSub = Supabase.instance.client
           .from('bookings')
           .stream(primaryKey: ['id'])
+          .eq('business_id', _businessId!)
           .order('created_at', ascending: false)
           .listen((data) {
         if (!mounted) return;
@@ -63,10 +63,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
           final meta = b['booking_metadata'] is Map ? b['booking_metadata'] as Map : const {};
           final payStatus = (meta['payment_status'] ?? '').toString().toLowerCase();
           if (payStatus == 'pending') return false;
-          if (_businessId != null && _businessId!.isNotEmpty) {
-            return b['business_id'] == _businessId;
-          }
-          return true;
+          return b['business_id'] == _businessId;
         }).toList();
 
         if (relevantBookings.isNotEmpty || (_businessId != null && _businessId!.isNotEmpty)) {
@@ -98,8 +95,8 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
               }
 
               double price = 0.0;
-              final rawPrice = meta['total_price']?.toString() ?? '0';
-              price = double.tryParse(rawPrice.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 35.0;
+              final rawPrice = (b['total_price'] ?? meta['total_price'] ?? '0').toString();
+              price = double.tryParse(rawPrice.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
 
               String serviceLabel = b['service_name']?.toString() ?? meta['category']?.toString() ?? 'Perkhidmatan';
               final rawAddons = meta['addons_list'];
@@ -134,7 +131,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                 'customerName': b['customer_name'] ?? meta['customer_name'] ?? 'Pelanggan Ngam',
                 'phone': (meta['phone'] != null && meta['phone'].toString().trim().isNotEmpty)
                     ? meta['phone'].toString().trim()
-                    : '+60 12-345 6789',
+                    : '-',
                 'service': serviceLabel,
                 'dateTime': '${b['booking_date'] ?? 'Hari Ini'}, ${b['booking_time'] ?? ''}',
                 'staff': meta['provider_name'] ?? 'Staff',
@@ -206,11 +203,16 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
 
   List<Map<String, dynamic>> get _filteredAppointments {
     if (_selectedFilterIndex == 0) return _appointments;
+    if (_selectedFilterIndex == 2) {
+      return _appointments
+          .where((a) =>
+              a['status'] == AppointmentStatus.confirmed ||
+              a['status'] == AppointmentStatus.inProgress)
+          .toList();
+    }
     final targetStatus = _selectedFilterIndex == 1
         ? AppointmentStatus.pending
-        : _selectedFilterIndex == 2
-            ? AppointmentStatus.confirmed
-            : AppointmentStatus.completed;
+        : AppointmentStatus.completed;
     return _appointments.where((a) => a['status'] == targetStatus).toList();
   }
 
@@ -294,45 +296,32 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     if (result == null || !result.isSuccess || !mounted) return;
 
     try {
-      final dummyProduct = ProductModel(
-        id: 'svc-${appt['id']}',
-        name: appt['service'] as String,
-        price: amount,
-        isAvailable: true,
-      );
-
-      await PosService().submitOrder(
-        items: [CartItem(product: dummyProduct, quantity: 1)],
-        total: amount,
-        customerName: appt['customerName'],
-        notes: '[Bayaran Tempahan #${appt['id']}] Kaedah: ${result.paymentMethod.toUpperCase()}',
-        paymentSplits: [
-          PaymentSplit(method: result.paymentMethod, amount: amount),
-        ],
-        initialStatus: 'completed',
-      );
+      final rawMeta = (appt['raw_meta'] is Map)
+          ? Map<String, dynamic>.from(appt['raw_meta'] as Map)
+          : <String, dynamic>{};
+      final updatedMeta = <String, dynamic>{
+        ...rawMeta,
+        'payment_status': 'paid',
+        'payment_method': 'POS (${result.paymentMethod.toUpperCase()})',
+      };
 
       setState(() {
         appt['payment_status'] = 'paid';
+        appt['payment_method'] = 'POS (${result.paymentMethod.toUpperCase()})';
         appt['deposit'] = price;
+        appt['raw_meta'] = updatedMeta;
+        appt['status'] = AppointmentStatus.completed;
       });
       final dbId = appt['db_id'];
       if (dbId != null) {
-        final rawMeta = (appt['raw_meta'] is Map)
-            ? Map<String, dynamic>.from(appt['raw_meta'] as Map)
-            : <String, dynamic>{};
         try {
           await Supabase.instance.client.from('bookings').update({
             'status': 'completed',
-            'booking_metadata': {
-              ...rawMeta,
-              'payment_status': 'paid',
-              'payment_method': 'POS (${result.paymentMethod.toUpperCase()})',
-            },
+            'total_price': price,
+            'booking_metadata': updatedMeta,
           }).eq('id', dbId);
         } catch (_) {}
       }
-      _updateStatus(appt, AppointmentStatus.completed);
 
       if (!mounted) return;
       showGlassToast(
@@ -565,6 +554,10 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
               if (raw.contains('ID:')) {
                 final m = RegExp(r'ID:([^|]+)').firstMatch(raw);
                 if (m != null) raw = m.group(1)!.trim();
+              }
+              if (raw.isEmpty) {
+                showGlassToast(context, 'Tiket tempahan tidak ditemui.', isError: true);
+                return;
               }
               for (final a in _appointments) {
                 final aid = (a['id']?.toString() ?? '').toUpperCase();
@@ -814,7 +807,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           value: appt['payment_status'] == 'paid'
                               ? 'SUDAH DIBAYAR PENUH ONLINE'
                               : (appt['payment_status'] == 'refund_pending'
-                                  ? 'PEMULANGAN WANG SELESAI'
+                                  ? 'PEMULANGAN WANG DIPROSES'
                                   : 'BELUM DIBAYAR BAYAR DI KEDAI'),
                           valueColor: appt['payment_status'] == 'paid'
                               ? const Color(0xFF44CF6C)
@@ -1286,7 +1279,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                         final phone = phoneCtrl.text.trim();
                         final service = serviceCtrl.text.trim();
                         final staff = staffCtrl.text.trim().isEmpty ? 'Kakitangan Bertugas' : staffCtrl.text.trim();
-                        final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
+                        final priceVal = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
                         final deposit = double.tryParse(depositCtrl.text.trim()) ?? 0.0;
                         final notes = notesCtrl.text.trim();
 
@@ -1301,16 +1294,31 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
 
                         final bookingId = 'BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
                         final dateTimeStr = '$selectedDateText, $selectedTimeText';
+                        final int addDays = selectedDateText == 'Hari Ini' ? 0 : (selectedDateText == 'Esok' ? 1 : 2);
+                        final String bookingDateIso = DateFormat('yyyy-MM-dd').format(DateTime.now().add(Duration(days: addDays)));
 
-                        final newBookingMap = {
+                        final rawMeta = <String, dynamic>{
+                          'booking_id': bookingId,
+                          'phone': phone,
+                          'provider_name': staff,
+                          'total_price': priceVal,
+                          'deposit': deposit,
+                          'payment_status': 'unpaid',
+                          'notes': notes,
+                        };
+
+                        final newBookingMap = <String, dynamic>{
+                          'db_id': null,
                           'id': bookingId,
                           'customerName': name,
                           'phone': phone.isEmpty ? 'Walk-in' : phone,
                           'service': service,
                           'dateTime': dateTimeStr,
                           'staff': staff,
-                          'price': price,
+                          'price': priceVal,
                           'deposit': deposit,
+                          'payment_status': 'unpaid',
+                          'raw_meta': rawMeta,
                           'status': AppointmentStatus.confirmed,
                           'notes': notes,
                         };
@@ -1319,22 +1327,17 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                         try {
                           final profile = await BusinessService().getBusinessProfile();
                           final bId = profile?['id'];
-                          await Supabase.instance.client.from('bookings').insert({
+                          final inserted = await Supabase.instance.client.from('bookings').insert({
                             if (bId != null) 'business_id': bId,
                             'customer_name': name,
                             'service_name': service,
-                            'booking_date': selectedDateText == 'Hari Ini' ? DateFormat('yyyy-MM-dd').format(DateTime.now()) : DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 1))),
+                            'booking_date': bookingDateIso,
                             'booking_time': selectedTimeText,
+                            'total_price': priceVal,
                             'status': 'confirmed',
-                            'booking_metadata': {
-                              'booking_id': bookingId,
-                              'phone': phone,
-                              'provider_name': staff,
-                              'total_price': price,
-                              'deposit': deposit,
-                              'notes': notes,
-                            },
-                          });
+                            'booking_metadata': rawMeta,
+                          }).select().single();
+                          newBookingMap['db_id'] = inserted['id'];
                         } catch (e) {
                           debugPrint('[Appointments] Offline/local fallback: $e');
                         }

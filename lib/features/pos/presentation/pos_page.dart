@@ -216,8 +216,10 @@ class _PosPageState extends State<PosPage> {
         return;
       }
 
-      final existing = _cart.where((i) => i.product.id == product.id).firstOrNull;
-      if (existing != null && existing.quantity >= product.stock) {
+      final totalInCart = _cart
+          .where((i) => i.product.id == product.id)
+          .fold<int>(0, (sum, i) => sum + i.quantity);
+      if (totalInCart >= product.stock) {
         SoundService.instance.playErrorBeep();
         showGlassToast(
           context,
@@ -252,6 +254,22 @@ class _PosPageState extends State<PosPage> {
       existingItem: existingItem,
     );
     if (res == null || !mounted) return;
+
+    if (product.isProduct && product.trackInventory) {
+      final otherQty = _cart
+          .where((i) => i.product.id == product.id && !identical(i, existingItem))
+          .fold<int>(0, (sum, i) => sum + i.quantity);
+      final requestedTotal = otherQty + (existingItem != null ? existingItem.quantity : res.quantity);
+      if (requestedTotal > product.stock) {
+        SoundService.instance.playErrorBeep();
+        showGlassToast(
+          context,
+          'Had stok maksimum dicapai (Baki: ${product.stock} ${product.unit}).',
+          isError: true,
+        );
+        return;
+      }
+    }
 
     setState(() {
       if (existingItem != null) {
@@ -477,16 +495,15 @@ class _PosPageState extends State<PosPage> {
 
     try {
       String? combinedNotes = result.notes;
-      final modeTag = '[Mod: ${_orderType.toUpperCase()} | Meja: $_tableNumber]';
+      final modInfo = _orderType == 'dine_in'
+          ? '[Mod: DINE_IN | Meja: $_tableNumber]'
+          : '[Mod: ${_orderType.toUpperCase()}]';
       combinedNotes = (combinedNotes == null || combinedNotes.trim().isEmpty)
-          ? modeTag
-          : '$modeTag | $combinedNotes';
+          ? modInfo
+          : '$modInfo | $combinedNotes';
 
       if (result.voucherCode != null && result.discountAmount > 0) {
         final voucherTag = '[Baucar: ${result.voucherCode} (-RM ${result.discountAmount.toStringAsFixed(2)})]';
-        combinedNotes = '$voucherTag | $combinedNotes';
-      } else if (_appliedVoucherCode != null && _voucherDiscount > 0) {
-        final voucherTag = '[Baucar: $_appliedVoucherCode (-RM ${_voucherDiscount.toStringAsFixed(2)})]';
         combinedNotes = '$voucherTag | $combinedNotes';
       }
 
@@ -508,15 +525,6 @@ class _PosPageState extends State<PosPage> {
           await VoucherService().recordVoucherUsage(
             voucherId: result.voucherId!,
             discountAmount: result.discountAmount,
-            orderSubtotal: _cartTotal,
-            customerPhone: _selectedMember?.phone ?? (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : null),
-          );
-        } catch (_) {}
-      } else if (_voucherId != null && _voucherDiscount > 0) {
-        try {
-          await VoucherService().recordVoucherUsage(
-            voucherId: _voucherId!,
-            discountAmount: _voucherDiscount,
             orderSubtotal: _cartTotal,
             customerPhone: _selectedMember?.phone ?? (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : null),
           );
@@ -576,7 +584,10 @@ class _PosPageState extends State<PosPage> {
     if (result == null || !result.isSuccess || !mounted) return;
 
     try {
-      String notes = '[Mod: ${_orderType.toUpperCase()} | Meja: $_tableNumber] [Terminal: ${result.paymentMethod.toUpperCase()}]';
+      final modInfo = _orderType == 'dine_in'
+          ? '[Mod: DINE_IN | Meja: $_tableNumber]'
+          : '[Mod: ${_orderType.toUpperCase()}]';
+      String notes = '$modInfo [Terminal: ${result.paymentMethod.toUpperCase()}]';
       if (_appliedVoucherCode != null && _voucherDiscount > 0) {
         notes += ' [Baucar: $_appliedVoucherCode (-RM ${_voucherDiscount.toStringAsFixed(2)})]';
       }
@@ -747,7 +758,10 @@ class _PosPageState extends State<PosPage> {
     if (confirmed != true || !mounted) return;
 
     try {
-      String notes = '[Mod: ${_orderType.toUpperCase()} | Meja: $_tableNumber] [Terminal: TUNAI PANTAS] (Diterima: RM ${cashTendered.toStringAsFixed(2)}, Baki: RM ${change.toStringAsFixed(2)})';
+      final modInfo = _orderType == 'dine_in'
+          ? '[Mod: DINE_IN | Meja: $_tableNumber]'
+          : '[Mod: ${_orderType.toUpperCase()}]';
+      String notes = '$modInfo [Terminal: TUNAI PANTAS] (Diterima: RM ${cashTendered.toStringAsFixed(2)}, Baki: RM ${change.toStringAsFixed(2)})';
       if (_appliedVoucherCode != null && _voucherDiscount > 0) {
         notes += ' [Baucar: $_appliedVoucherCode (-RM ${_voucherDiscount.toStringAsFixed(2)})]';
       }
