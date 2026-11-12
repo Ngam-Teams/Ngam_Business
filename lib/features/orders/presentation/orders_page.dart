@@ -1923,7 +1923,8 @@ class _OrdersPageState extends State<OrdersPage> {
   Widget _buildQuickActionsRow(List<OrderModel> allOrders) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool isWide = constraints.maxWidth >= 640;
+        final bool isLandscape = constraints.maxWidth > constraints.maxHeight;
+        final bool isWide = constraints.maxWidth >= 600 || isLandscape;
 
         return Row(
           children: [

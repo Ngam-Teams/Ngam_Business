@@ -16,6 +16,7 @@ import 'core/services/network_status_service.dart';
 import 'features/auth/data/auth_service.dart';
 import 'features/settings/data/business_service.dart';
 import 'widgets/offline_banner.dart';
+import 'widgets/responsive_landscape_scale.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -122,9 +123,12 @@ class NgamBusinessApp extends StatelessWidget {
       supportedLocales: context.supportedLocales,
       locale: context.locale,
       builder: (context, child) {
+        final content = child != null
+            ? ResponsiveLandscapeScale(child: child)
+            : const SizedBox.shrink();
         return Stack(
           children: [
-            if (child != null) child,
+            content,
             const Positioned(
               top: 0,
               left: 0,

@@ -1059,15 +1059,21 @@ class _PosPageState extends State<PosPage> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 700;
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+        final isWide = constraints.maxWidth >= 650 || isLandscape;
 
         if (isWide) {
+          final double cartWidth = constraints.maxWidth >= 1100
+              ? 380.0
+              : (constraints.maxWidth >= 900
+                  ? 350.0
+                  : (constraints.maxWidth * 0.38).clamp(260.0, 330.0));
           return Row(
             children: [
               Expanded(flex: 3, child: _buildProductGrid()),
-              const SizedBox(width: 20),
+              const SizedBox(width: 16),
               SizedBox(
-                width: constraints.maxWidth >= 1100 ? 380 : (constraints.maxWidth >= 900 ? 350 : 330),
+                width: cartWidth,
                 child: _buildCart(),
               ),
             ],

@@ -357,7 +357,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       ],
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 880;
+          final isLandscape = constraints.maxWidth > constraints.maxHeight;
+          final isWide = constraints.maxWidth >= 780 || isLandscape;
 
           if (isWide) {
             // ─── LANDSCAPE / DUAL COLUMN LAYOUT ───

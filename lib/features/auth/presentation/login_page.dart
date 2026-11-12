@@ -338,7 +338,8 @@ class _LoginPageState extends State<LoginPage>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final isDesktop = size.width >= 960;
+    final isLandscape = size.width > size.height;
+    final isDesktop = size.width >= 960 || (isLandscape && size.width >= 650);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,

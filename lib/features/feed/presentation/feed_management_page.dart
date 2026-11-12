@@ -305,8 +305,9 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
           const SizedBox(height: 14),
           LayoutBuilder(
             builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= 600;
-              final isPhone = constraints.maxWidth < 600;
+              final isLandscape = constraints.maxWidth > constraints.maxHeight;
+              final isWide = constraints.maxWidth >= 600 || isLandscape;
+              final isPhone = constraints.maxWidth < 600 && !isLandscape;
 
               final items = [
                 _buildStatItem('Jumlah Post', '${_stats['totalPosts'] ?? _posts.length}', Icons.grid_view_rounded, const Color(0xFF8B5CF6), isPhone),
@@ -434,7 +435,8 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
   Widget _buildPostsLayout() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isGrid = constraints.maxWidth >= 720;
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+        final isGrid = constraints.maxWidth >= 680 || isLandscape;
 
         if (isGrid) {
           return GridView.builder(

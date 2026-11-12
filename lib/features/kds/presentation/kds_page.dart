@@ -431,7 +431,8 @@ class _KdsPageState extends State<KdsPage> {
               padding: const EdgeInsets.only(top: 68),
               child: LayoutBuilder(
               builder: (context, constraints) {
-                final isMultiColumn = constraints.maxWidth >= 900;
+                final isLandscape = constraints.maxWidth > constraints.maxHeight;
+                final isMultiColumn = constraints.maxWidth >= 800 || isLandscape;
 
                 if (activeSource.isEmpty) {
                   return _buildEmptyState();

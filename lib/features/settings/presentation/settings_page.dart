@@ -196,10 +196,11 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 900;
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+        final isWide = constraints.maxWidth >= 850 || isLandscape;
 
         if (isWide) {
-          final leftWidth = (constraints.maxWidth * 0.32).clamp(340.0, 440.0);
+          final leftWidth = (constraints.maxWidth * 0.32).clamp(280.0, 440.0);
 
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,

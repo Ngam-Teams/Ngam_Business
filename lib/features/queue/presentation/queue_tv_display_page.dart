@@ -870,8 +870,8 @@ class _QueueTvDisplayPageState extends State<QueueTvDisplayPage> {
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Pengesanan mod skrin: Lebar < 768px (Telefon mudah alih / Portrait) vs Skrin TV/Desktop
-              final isMobile = constraints.maxWidth < 768;
+              final isLandscape = constraints.maxWidth > constraints.maxHeight;
+              final isMobile = constraints.maxWidth < 768 && !isLandscape;
 
               return Padding(
                 padding: EdgeInsets.all(isMobile ? 10 : 16),

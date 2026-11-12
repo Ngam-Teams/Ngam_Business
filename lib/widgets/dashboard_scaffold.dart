@@ -42,8 +42,8 @@ class DashboardScaffold extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isLandscape = constraints.maxWidth > constraints.maxHeight;
-        final isShortHeight = constraints.maxHeight < 500;
-        final useSidebar = constraints.maxWidth >= 768 || (isLandscape && constraints.maxWidth >= 500);
+        final isShortHeight = constraints.maxHeight < 520;
+        final useSidebar = constraints.maxWidth >= 768 || isLandscape;
 
         return Scaffold(
           backgroundColor: const Color(0xFF0A0A14),

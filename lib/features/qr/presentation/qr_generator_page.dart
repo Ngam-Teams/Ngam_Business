@@ -707,7 +707,8 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       ],
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 860;
+          final isLandscape = constraints.maxWidth > constraints.maxHeight;
+          final isWide = constraints.maxWidth >= 780 || isLandscape;
 
           if (isWide) {
             // ─── LANDSCAPE / WIDE DISPLAY (2-Column Layout) ───

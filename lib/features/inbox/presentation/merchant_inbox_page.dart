@@ -168,8 +168,8 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
-    final isLandscape = media.orientation == Orientation.landscape;
-    final isDesktop = media.size.width >= 768 || (isLandscape && media.size.width >= 500);
+    final isLandscape = media.orientation == Orientation.landscape || media.size.width > media.size.height;
+    final isDesktop = media.size.width >= 768 || isLandscape;
 
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),

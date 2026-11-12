@@ -405,7 +405,7 @@ Laporan dijana secara automatik oleh Ngam Business
                   ];
 
                   final orientation = MediaQuery.orientationOf(context);
-                  final isLandscape = (orientation == Orientation.landscape && width >= 720) || width >= 960;
+                  final isLandscape = orientation == Orientation.landscape || (constraints.maxWidth > constraints.maxHeight) || width >= 800;
 
                   if (isLandscape) {
                     return Row(

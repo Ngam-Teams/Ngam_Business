@@ -110,8 +110,10 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 900;
+    final media = MediaQuery.of(context);
+    final screenWidth = media.size.width;
+    final isLandscape = screenWidth > media.size.height;
+    final isDesktop = screenWidth >= 900 || isLandscape;
     final activeItem = BusinessTypeCatalog.findById(_selectedId);
 
     final bgDark = const Color(0xFF0F172A);
