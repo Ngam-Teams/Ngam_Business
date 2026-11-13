@@ -1,7 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:ui';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/glass_toast.dart';
@@ -86,24 +88,20 @@ class AppUpdateService {
     try {
       final activeVersion = current ?? await getAppVersion();
 
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 10);
-
       final uri = Uri.parse('https://api.github.com/repos/$orgName/$repo/releases/latest');
-      final request = await client.getUrl(uri);
-      request.headers.set('User-Agent', 'NgamBusinessApp');
-      request.headers.set('Accept', 'application/vnd.github.v3+json');
+      final response = await http.get(
+        uri,
+        headers: {
+          'User-Agent': 'NgamBusinessApp',
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      ).timeout(const Duration(seconds: 10));
 
-      final response = await request.close();
       if (response.statusCode != 200) {
-        client.close();
         return null;
       }
 
-      final body = await response.transform(utf8.decoder).join();
-      client.close();
-
-      final data = json.decode(body) as Map<String, dynamic>;
+      final data = json.decode(response.body) as Map<String, dynamic>;
       final tagName = data['tag_name'] as String? ?? '';
       final releaseName = data['name'] as String? ?? tagName;
       final changelog = data['body'] as String? ?? 'Pembaikan pepijat dan peningkatan kestabilan.';
@@ -426,6 +424,7 @@ class AppUpdateService {
     String? current,
     String repo = repoName,
   }) async {
+    if (kIsWeb) return;
     await Future.delayed(const Duration(seconds: 2));
     if (!context.mounted) return;
 
@@ -444,7 +443,7 @@ class AppUpdateService {
   }) async {
     showGlassToast(
       context,
-      'Menyemak kemas kini terkini...',
+      'app_update.downloading'.tr(),
       type: GlassToastType.info,
       color: Colors.blueAccent,
       duration: const Duration(seconds: 2),
@@ -459,7 +458,7 @@ class AppUpdateService {
     } else {
       showGlassToast(
         context,
-        'Aplikasi $appName adalah versi terkini (v$activeCurrent).',
+        'app_update.latest_version'.tr(args: ['v$activeCurrent']),
         type: GlassToastType.success,
         duration: const Duration(seconds: 3),
       );

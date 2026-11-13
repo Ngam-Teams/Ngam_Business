@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:intl/intl.dart';
@@ -86,12 +87,12 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
   Widget build(BuildContext context) {
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      title: 'Audit Trails & Security',
-      subtitle: 'Rekod log aktiviti keselamatan',
+      title: 'audit_logs.title'.tr(),
+      subtitle: 'audit_logs.subtitle'.tr(),
       actionItems: [
         GlassNavPillItem(
           icon: Icons.refresh_rounded,
-          tooltip: 'Muat Semula Log',
+          tooltip: 'common.retry'.tr(),
           onTap: _fetchLogs,
         ),
       ],
@@ -115,7 +116,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                       onChanged: (_) => _fetchLogs(),
                       style: const TextStyle(color: Colors.white, fontSize: 13.5),
                       decoration: InputDecoration(
-                        hintText: 'Cari staf, tindakan (cth: VOID, MFA, PRICE)...',
+                        hintText: 'audit_logs.search_hint'.tr(),
                         hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
                         prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 20),
                         suffixIcon: _searchController.text.isNotEmpty
@@ -151,13 +152,13 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildFilterChip('Semua', 'all', Colors.white70),
+                          _buildFilterChip('audit_logs.filter_all'.tr(), 'all', Colors.white70),
                           const SizedBox(width: 8),
-                          _buildFilterChip('Kritikal', 'critical', const Color(0xFFEF4444)),
+                          _buildFilterChip('audit_logs.filter_critical'.tr(), 'critical', const Color(0xFFEF4444)),
                           const SizedBox(width: 8),
-                          _buildFilterChip('Amaran', 'warning', const Color(0xFFF59E0B)),
+                          _buildFilterChip('audit_logs.filter_warning'.tr(), 'warning', const Color(0xFFF59E0B)),
                           const SizedBox(width: 8),
-                          _buildFilterChip('Informasi', 'info', const Color(0xFF42A5F5)),
+                          _buildFilterChip('audit_logs.filter_info'.tr(), 'info', const Color(0xFF42A5F5)),
                         ],
                       ),
                     ),
@@ -371,13 +372,13 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Tiada Log Keselamatan Dijumpai',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            Text(
+              'audit_logs.no_logs'.tr(),
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
-              'Sebarang pengaktifan 2FA, pembatalan pesanan, perubahan harga atau pindaan staf akan direkodkan secara kekal di sini.',
+              'audit_logs.no_logs_desc'.tr(),
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12.5),
             ),

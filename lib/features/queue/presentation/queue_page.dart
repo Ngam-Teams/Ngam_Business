@@ -69,7 +69,7 @@ class _QueuePageState extends State<QueuePage> {
   Future<void> _callNextTicket() async {
     final next = _nextWaitingTicket;
     if (next == null) {
-      showGlassToast(context, 'Tiada pelanggan menunggu dalam senarai.');
+      showGlassToast(context, 'queue.no_waiting_title'.tr());
       return;
     }
 
@@ -78,7 +78,7 @@ class _QueuePageState extends State<QueuePage> {
       if (!mounted) return;
       showGlassToast(
         context,
-        'Memanggil ${next.ticketNumber} - ${next.customerName}',
+        'queue.calling_toast'.tr(args: [next.ticketNumber, next.customerName]),
         customColor: const Color(0xFF42A5F5),
       );
       if (next.phoneNumber != null && next.phoneNumber!.isNotEmpty) {
@@ -96,7 +96,7 @@ class _QueuePageState extends State<QueuePage> {
       if (!mounted) return;
       showGlassToast(
         context,
-        'Mula servis untuk ${ticket.ticketNumber}',
+        'queue.start_service_toast'.tr(args: [ticket.ticketNumber]),
         customColor: const Color(0xFF10B981),
       );
     } catch (e) {
@@ -111,7 +111,7 @@ class _QueuePageState extends State<QueuePage> {
       if (!mounted) return;
       showGlassToast(
         context,
-        'Tiket ${ticket.ticketNumber} selesai!',
+        'queue.ticket_completed_toast'.tr(args: [ticket.ticketNumber]),
         customColor: const Color(0xFF44CF6C),
       );
     } catch (e) {
@@ -126,7 +126,7 @@ class _QueuePageState extends State<QueuePage> {
       if (!mounted) return;
       showGlassToast(
         context,
-        isNoShow ? 'Ditandakan sebagai No-Show' : 'Tiket dibatalkan',
+        isNoShow ? 'queue.no_show_toast'.tr() : 'queue.ticket_cancelled_toast'.tr(),
         isError: true,
       );
     } catch (e) {
@@ -137,7 +137,7 @@ class _QueuePageState extends State<QueuePage> {
 
   void _sendWhatsAppReminder(QueueTicketModel ticket) async {
     if (ticket.phoneNumber == null || ticket.phoneNumber!.isEmpty) {
-      showGlassToast(context, 'Tiada nombor telefon direkodkan', isError: true);
+      showGlassToast(context, 'queue.no_phone_error'.tr(), isError: true);
       return;
     }
 
@@ -154,7 +154,7 @@ class _QueuePageState extends State<QueuePage> {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } catch (_) {
       if (!mounted) return;
-      showGlassToast(context, 'Tidak dapat membuka WhatsApp', isError: true);
+      showGlassToast(context, 'queue.wa_open_failed'.tr(), isError: true);
     }
   }
 
@@ -336,9 +336,9 @@ class _QueuePageState extends State<QueuePage> {
                         color: const Color(0xFF42A5F5).withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text(
-                        'GILIRAN SETERUSNYA',
-                        style: TextStyle(color: Color(0xFF42A5F5), fontSize: 10, fontWeight: FontWeight.w900),
+                      child: Text(
+                        'queue.next_turn_badge'.tr(),
+                        style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 10, fontWeight: FontWeight.w900),
                       ),
                     ),
                   ],
@@ -352,17 +352,17 @@ class _QueuePageState extends State<QueuePage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    'Servis: ${next.serviceName ?? "Servis Am"} • Menunggu ${DateTime.now().difference(next.createdAt).inMinutes} min',
+                    '${next.serviceName ?? "queue.service_general".tr()} • ${'queue.waiting_min'.tr(args: [DateTime.now().difference(next.createdAt).inMinutes.toString()])}',
                     style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ] else ...[
-                  const Text(
-                    'Tiada giliran menunggu',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  Text(
+                    'queue.no_waiting_title'.tr(),
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                  const Text(
-                    'Keluarkan tiket baru untuk mula melayan pelanggan',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  Text(
+                    'queue.no_waiting_subtitle'.tr(),
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
                   ),
                 ],
               ],
@@ -372,7 +372,7 @@ class _QueuePageState extends State<QueuePage> {
           ElevatedButton.icon(
             onPressed: next == null ? null : _callNextTicket,
             icon: const Icon(Icons.campaign_rounded, size: 18),
-            label: const Text('Panggil', style: TextStyle(fontWeight: FontWeight.bold)),
+            label: Text('queue.call_action'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF42A5F5),
               foregroundColor: Colors.white,
@@ -490,7 +490,7 @@ class _QueuePageState extends State<QueuePage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${ticket.serviceName ?? "Servis Am"} • ${ticket.stationOrChair ?? "Kaunter"}',
+                      '${ticket.serviceName ?? "queue.service_general".tr()} • ${ticket.stationOrChair ?? "queue.station_counter".tr()}',
                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ],
@@ -500,7 +500,7 @@ class _QueuePageState extends State<QueuePage> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'Menunggu $waitMinutes m',
+                    'queue.waiting_min'.tr(args: [waitMinutes.toString()]),
                     style: TextStyle(
                       color: waitMinutes > 20 ? Colors.redAccent : Colors.white54,
                       fontSize: 12,
@@ -555,7 +555,7 @@ class _QueuePageState extends State<QueuePage> {
                     side: const BorderSide(color: Colors.redAccent),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
-                  child: const Text('No-Show', style: TextStyle(fontSize: 12)),
+                  child: Text('queue.mark_no_show_action'.tr(), style: const TextStyle(fontSize: 12)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
@@ -566,7 +566,7 @@ class _QueuePageState extends State<QueuePage> {
                     }
                   },
                   icon: const Icon(Icons.campaign_rounded, size: 16),
-                  label: const Text('Panggil', style: TextStyle(fontSize: 12)),
+                  label: Text('queue.call_action'.tr(), style: const TextStyle(fontSize: 12)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF42A5F5),
                     foregroundColor: Colors.white,
@@ -581,13 +581,13 @@ class _QueuePageState extends State<QueuePage> {
                     side: const BorderSide(color: Color(0xFF42A5F5)),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
-                  child: const Text('Ulang Panggil', style: TextStyle(fontSize: 12)),
+                  child: Text('queue.recall_action'.tr(), style: const TextStyle(fontSize: 12)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   onPressed: () => _startServing(ticket),
                   icon: const Icon(Icons.content_cut_rounded, size: 16),
-                  label: const Text('Mula Servis', style: TextStyle(fontSize: 12)),
+                  label: Text('queue.start_serve_action'.tr(), style: const TextStyle(fontSize: 12)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF10B981),
                     foregroundColor: Colors.white,
@@ -598,7 +598,7 @@ class _QueuePageState extends State<QueuePage> {
                 ElevatedButton.icon(
                   onPressed: () => _completeTicket(ticket),
                   icon: const Icon(Icons.check_circle_rounded, size: 16),
-                  label: const Text('Tandakan Selesai', style: TextStyle(fontSize: 12)),
+                  label: Text('queue.mark_complete_action'.tr(), style: const TextStyle(fontSize: 12)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF44CF6C),
                     foregroundColor: Colors.white,
@@ -607,7 +607,7 @@ class _QueuePageState extends State<QueuePage> {
                 ),
               ] else ...[
                 Text(
-                  'Selesai pada ${ticket.completedAt != null ? DateFormat("hh:mm a").format(ticket.completedAt!) : "-"}',
+                  'queue.completed_at'.tr(args: [ticket.completedAt != null ? DateFormat("hh:mm a").format(ticket.completedAt!) : "-"]),
                   style: const TextStyle(color: Colors.white38, fontSize: 11),
                 ),
               ],
@@ -633,7 +633,7 @@ class _QueuePageState extends State<QueuePage> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Tekan "+ ${'queue.issue_ticket'.tr()}" atau pamerkan QR Giliran untuk pelanggan imbas sendiri',
+            'queue.empty_hint'.tr(),
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
           ),
@@ -680,17 +680,17 @@ class _QueuePageState extends State<QueuePage> {
   String _getStatusText(String status) {
     switch (status) {
       case 'waiting':
-        return 'MENUNGGU';
+        return 'queue.status_waiting'.tr();
       case 'calling':
-        return 'SEDANG DIPANGGIL';
+        return 'queue.status_calling'.tr();
       case 'serving':
-        return 'SEDANG DILAYAN';
+        return 'queue.status_serving'.tr();
       case 'completed':
-        return 'SELESAI';
+        return 'queue.status_completed'.tr();
       case 'no_show':
-        return 'NO-SHOW';
+        return 'queue.status_no_show'.tr();
       case 'cancelled':
-        return 'DIBATALKAN';
+        return 'queue.status_cancelled'.tr();
       default:
         return status.toUpperCase();
     }

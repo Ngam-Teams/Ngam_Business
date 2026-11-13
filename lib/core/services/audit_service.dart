@@ -28,12 +28,17 @@ class AuditService {
           user.email?.split('@').first ??
           'Staff';
 
+      final isOwner = business?['owner_user_id'] == user.id;
+      final actorRole = isOwner
+          ? 'tenant_admin'
+          : (business?['_user_role'] ?? user.userMetadata?['role'] ?? 'staff');
+
       await _client.from('audit_logs').insert({
         'business_id': businessId,
         'actor_user_id': user.id,
         'actor_name': actorName,
         'actor_email': user.email,
-        'actor_role': user.userMetadata?['role'] ?? 'tenant_admin',
+        'actor_role': actorRole,
         'action': action,
         'severity': severity,
         'target_type': targetType,

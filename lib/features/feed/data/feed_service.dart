@@ -146,7 +146,7 @@ class FeedService {
       severity: 'info',
       targetType: 'feed_post',
       targetId: postId,
-      description: 'Post Feed ID $postId telah dikemaskini: "$title"',
+      description: 'Post Feed ID $postId telah dikemas kini: "$title"',
     );
 
     return updated;

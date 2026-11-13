@@ -133,7 +133,7 @@ class _PromotionsPageState extends State<PromotionsPage> {
           _vouchers[idx] = voucher.copyWith(isActive: oldState);
         }
       });
-      showGlassToast(context, 'Gagal mengemaskini status: $e', isError: true);
+      showGlassToast(context, 'Gagal mengemas kini status: $e', isError: true);
     }
   }
 
@@ -1062,7 +1062,7 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
           'is_active': _isActive,
         });
         if (!mounted) return;
-        showGlassToast(context, 'Baucar "$code" berjaya dikemaskini!');
+        showGlassToast(context, 'Baucar "$code" berjaya dikemas kini!');
       }
 
       widget.onSaved();

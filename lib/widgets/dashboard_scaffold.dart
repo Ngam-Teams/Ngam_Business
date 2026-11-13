@@ -277,7 +277,7 @@ class DashboardScaffold extends StatelessWidget {
                                           children: [
                                             Text(
                                               businessName.isEmpty
-                                                  ? 'Memuatkan...'
+                                                  ? 'dashboard_scaffold.loading'.tr()
                                                   : businessName,
                                               style: const TextStyle(
                                                 color: Colors.white,
@@ -291,7 +291,7 @@ class DashboardScaffold extends StatelessWidget {
                                             Text(
                                               handle != null && handle.isNotEmpty
                                                   ? '@$handle'
-                                                  : 'Live on Explore',
+                                                  : 'dashboard_scaffold.live_on_explore'.tr(),
                                               style: TextStyle(
                                                 color: Colors.white.withValues(alpha: 0.45),
                                                 fontSize: 10.5,
@@ -384,6 +384,7 @@ class DashboardScaffold extends StatelessWidget {
                             label: item.label,
                             selected: selected,
                             isExpanded: isExpanded,
+                            isCompactHeight: isCompactHeight,
                             onTap: () => onNavTap(index),
                           );
                         },
@@ -405,6 +406,7 @@ class DashboardScaffold extends StatelessWidget {
                       label: 'settings.sign_out'.tr(),
                       selected: false,
                       isExpanded: isExpanded,
+                      isCompactHeight: isCompactHeight,
                       onTap: () async {
                         final confirm = await showDialog<bool>(
                           context: context,
@@ -570,7 +572,7 @@ class _LogoExpandButtonState extends State<_LogoExpandButton> {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: _isHovered ? 'Kembangkan Sidebar' : 'Ngam Business',
+      message: _isHovered ? 'dashboard_scaffold.expand_sidebar'.tr() : 'Ngam Business',
       waitDuration: const Duration(milliseconds: 300),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -669,7 +671,7 @@ class _CollapseSidebarButtonState extends State<_CollapseSidebarButton> {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: 'Kecilkan Sidebar',
+      message: 'dashboard_scaffold.collapse_sidebar'.tr(),
       waitDuration: const Duration(milliseconds: 300),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -717,6 +719,7 @@ class _SidebarNavItem extends StatelessWidget {
   final String label;
   final bool selected;
   final bool isExpanded;
+  final bool isCompactHeight;
   final VoidCallback onTap;
 
   const _SidebarNavItem({
@@ -724,6 +727,7 @@ class _SidebarNavItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.isExpanded,
+    this.isCompactHeight = false,
     required this.onTap,
   });
 
@@ -731,6 +735,8 @@ class _SidebarNavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!isExpanded) {
       // Shrunk mode: Icon only with Tooltip
+      final size = isCompactHeight ? 38.0 : 48.0;
+      final iconSize = isCompactHeight ? 18.0 : 22.0;
       return Tooltip(
         message: label,
         waitDuration: const Duration(milliseconds: 300),
@@ -740,8 +746,8 @@ class _SidebarNavItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: 48,
-              height: 48,
+              width: size,
+              height: size,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 color: selected
@@ -758,7 +764,7 @@ class _SidebarNavItem extends StatelessWidget {
                 child: HugeIcon(
                   icon: icon,
                   color: selected ? const Color(0xFF42A5F5) : Colors.white38,
-                  size: 22,
+                  size: iconSize,
                   strokeWidth: selected ? 2.3 : 1.9,
                 ),
               ),
@@ -773,8 +779,14 @@ class _SidebarNavItem extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        margin: EdgeInsets.symmetric(
+          horizontal: isCompactHeight ? 8 : 12,
+          vertical: isCompactHeight ? 1.5 : 3,
+        ),
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompactHeight ? 10 : 14,
+          vertical: isCompactHeight ? 7 : 11,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           color: selected
@@ -792,10 +804,10 @@ class _SidebarNavItem extends StatelessWidget {
             HugeIcon(
               icon: icon,
               color: selected ? const Color(0xFF42A5F5) : Colors.white38,
-              size: 20,
+              size: isCompactHeight ? 17 : 20,
               strokeWidth: selected ? 2.3 : 1.9,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: isCompactHeight ? 8 : 12),
             Expanded(
               child: Text(
                 label,

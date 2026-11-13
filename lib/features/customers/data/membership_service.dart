@@ -94,78 +94,9 @@ class MembershipService {
   final SupabaseClient _client;
   final BusinessService _businessService;
 
-  // Local preset members list for instant cashier lookup & offline stability
-  final List<CustomerMember> _presetMembers = [
-    const CustomerMember(
-      id: 'CUST-01',
-      name: 'Danish Irfan',
-      phone: '01123456789',
-      tier: 'Gold VIP',
-      stamps: 4,
-      totalStampsRequired: 5,
-      points: 250,
-      visits: 18,
-      totalSpent: 740.00,
-      lastVisit: '3 hari lepas',
-      qrCode: 'NGAM-MEM-01123456789',
-    ),
-    const CustomerMember(
-      id: 'CUST-02',
-      name: 'Haziq Aiman',
-      phone: '01798765432',
-      tier: 'Silver VIP',
-      stamps: 3,
-      totalStampsRequired: 5,
-      points: 150,
-      visits: 12,
-      totalSpent: 480.00,
-      lastVisit: '1 minggu lepas',
-      qrCode: 'NGAM-MEM-01798765432',
-    ),
-    const CustomerMember(
-      id: 'CUST-03',
-      name: 'Melissa Tan',
-      phone: '01233445566',
-      tier: 'Silver VIP',
-      stamps: 5, // Reward ready to redeem!
-      totalStampsRequired: 5,
-      points: 90,
-      visits: 9,
-      totalSpent: 395.00,
-      lastVisit: '2 minggu lepas',
-      qrCode: 'NGAM-MEM-01233445566',
-    ),
-    const CustomerMember(
-      id: 'CUST-04',
-      name: 'Luqman Hakim',
-      phone: '01344556677',
-      tier: 'Regular',
-      stamps: 2,
-      totalStampsRequired: 5,
-      points: 50,
-      visits: 5,
-      totalSpent: 175.00,
-      lastVisit: 'Semalam',
-      qrCode: 'NGAM-MEM-01344556677',
-    ),
-    const CustomerMember(
-      id: 'CUST-05',
-      name: 'Suresh Kumar',
-      phone: '01488990011',
-      tier: 'Regular',
-      stamps: 1,
-      totalStampsRequired: 5,
-      points: 30,
-      visits: 3,
-      totalSpent: 105.00,
-      lastVisit: '1 bulan lepas',
-      qrCode: 'NGAM-MEM-01488990011',
-    ),
-  ];
-
   Future<String?> _getBusinessId() async {
     final profile = await _businessService.getBusinessProfile();
-    return profile?['id'];
+    return profile?['id']?.toString();
   }
 
   /// Normalizes phone numbers (e.g. '+60 11-2345 6789' -> '01123456789')
@@ -177,8 +108,29 @@ class MembershipService {
     return digits;
   }
 
-  /// List of all members (presets + registered)
-  List<CustomerMember> getAllPresetMembers() => List.unmodifiable(_presetMembers);
+  /// Fetch loyalty members from database for current business
+  Future<List<CustomerMember>> getLoyaltyMembers([String? explicitBusinessId]) async {
+    try {
+      final businessId = explicitBusinessId ?? await _getBusinessId();
+      if (businessId == null || businessId.isEmpty) return [];
+
+      final rows = await _client
+          .from('customer_loyalty_cards')
+          .select()
+          .eq('business_id', businessId)
+          .order('created_at', ascending: false)
+          .limit(50);
+      return (rows as List).map((r) => CustomerMember.fromJson(r as Map<String, dynamic>)).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('[MembershipService] getLoyaltyMembers error: $e');
+      }
+      return [];
+    }
+  }
+
+  /// For backwards compatibility: returns empty list
+  List<CustomerMember> getAllPresetMembers() => const [];
 
   /// Find member by phone, QR code, or member ID
   Future<CustomerMember?> findMember(String input) async {
@@ -187,20 +139,10 @@ class MembershipService {
 
     final normPhone = normalizePhone(cleanInput);
 
-    // 1. Check local preset/cached members first for blazing speed
-    for (final m in _presetMembers) {
-      if (m.phone == normPhone ||
-          m.id.toLowerCase() == cleanInput.toLowerCase() ||
-          (m.qrCode != null && m.qrCode!.toLowerCase() == cleanInput.toLowerCase()) ||
-          m.name.toLowerCase().contains(cleanInput.toLowerCase())) {
-        return m;
-      }
-    }
-
-    // 2. Query Supabase customer_loyalty_cards table
+    // Query Supabase customer_loyalty_cards table
     try {
       final businessId = await _getBusinessId();
-      if (businessId == null) return null;
+      if (businessId == null || businessId.isEmpty) return null;
 
       final res = await _client
           .from('customer_loyalty_cards')
@@ -214,23 +156,8 @@ class MembershipService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('[MembershipService] findMember error, falling back: $e');
+        print('[MembershipService] findMember error: $e');
       }
-    }
-
-    // 3. Fallback: If it's a valid Malaysian phone number, auto-recognize as a walk-in member
-    if (normPhone.length >= 10 && normPhone.startsWith('01')) {
-      return CustomerMember(
-        id: 'MEM-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-        name: 'Pelanggan ($normPhone)',
-        phone: normPhone,
-        tier: 'Member',
-        stamps: 1,
-        totalStampsRequired: 5,
-        points: 10,
-        visits: 1,
-        qrCode: 'NGAM-MEM-$normPhone',
-      );
     }
 
     return null;
@@ -244,63 +171,41 @@ class MembershipService {
     final normPhone = normalizePhone(phone);
     final cleanName = name.trim();
 
-    final newMember = CustomerMember(
-      id: 'MEM-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-      name: cleanName.isNotEmpty ? cleanName : 'Pelanggan Baru',
-      phone: normPhone.isNotEmpty ? normPhone : phone,
-      tier: 'Member',
-      stamps: 1,
-      totalStampsRequired: 5,
-      points: 10,
-      visits: 1,
-      totalSpent: 0.0,
-      lastVisit: 'Baru didaftarkan',
-      qrCode: 'NGAM-MEM-$normPhone',
-    );
-
-    // Save to local cache
-    _presetMembers.insert(0, newMember);
-
-    // Try persisting to Supabase customer_loyalty_cards if loyalty program exists
-    try {
-      final businessId = await _getBusinessId();
-      if (businessId != null) {
-        // Find or create default program_id
-        final progRes = await _client
-            .from('loyalty_programs')
-            .select('id')
-            .eq('business_id', businessId)
-            .limit(1)
-            .maybeSingle();
-
-        String? programId = progRes?['id'];
-        if (programId == null) {
-          final newProg = await _client.from('loyalty_programs').insert({
-            'business_id': businessId,
-            'title': 'Kad Cop Kesetiaan Ngam',
-            'total_stamps': 5,
-            'reward_title': 'Ganjaran Percuma',
-            'min_spend_per_stamp': 10.0,
-          }).select('id').single();
-          programId = newProg['id'];
-        }
-
-        await _client.from('customer_loyalty_cards').insert({
-          'program_id': programId,
-          'business_id': businessId,
-          'customer_name': newMember.name,
-          'customer_phone': newMember.phone,
-          'current_stamps': 1,
-          'total_stamps_required': 5,
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('[MembershipService] registerWalkInMember DB insert fallback: $e');
-      }
+    final businessId = await _getBusinessId();
+    if (businessId == null || businessId.isEmpty) {
+      throw Exception('Profil perniagaan tidak dijumpai.');
     }
 
-    return newMember;
+    // Find or create default program_id
+    final progRes = await _client
+        .from('loyalty_programs')
+        .select('id')
+        .eq('business_id', businessId)
+        .limit(1)
+        .maybeSingle();
+
+    String? programId = progRes?['id']?.toString();
+    if (programId == null || programId.isEmpty) {
+      final newProg = await _client.from('loyalty_programs').insert({
+        'business_id': businessId,
+        'title': 'Kad Cop Kesetiaan Ngam',
+        'total_stamps': 5,
+        'reward_title': 'Ganjaran Percuma',
+        'min_spend_per_stamp': 10.0,
+      }).select('id').single();
+      programId = newProg['id']?.toString();
+    }
+
+    final inserted = await _client.from('customer_loyalty_cards').insert({
+      'program_id': programId,
+      'business_id': businessId,
+      'customer_name': cleanName.isNotEmpty ? cleanName : 'Pelanggan Baru',
+      'customer_phone': normPhone.isNotEmpty ? normPhone : phone,
+      'current_stamps': 1,
+      'total_stamps_required': 5,
+    }).select().single();
+
+    return CustomerMember.fromJson(inserted);
   }
 
   /// Records visit / stamp after payment
@@ -309,54 +214,28 @@ class MembershipService {
     required double amountSpent,
   }) async {
     final norm = normalizePhone(phone);
-    final idx = _presetMembers.indexWhere((m) => m.phone == norm);
-    if (idx != -1) {
-      final current = _presetMembers[idx];
-      final newStamps = current.stamps + 1;
-      final newPoints = current.points + (amountSpent / 1.0).floor(); // 1 point per RM 1
-      final newVisits = current.visits + 1;
-      final newSpent = current.totalSpent + amountSpent;
-      final newTier = newSpent >= 700
-          ? 'Gold VIP'
-          : (newSpent >= 350 ? 'Silver VIP' : 'Member');
+    final businessId = await _getBusinessId();
+    if (businessId == null || businessId.isEmpty || norm.isEmpty) return;
 
-      _presetMembers[idx] = CustomerMember(
-        id: current.id,
-        name: current.name,
-        phone: current.phone,
-        tier: newTier,
-        stamps: newStamps > current.totalStampsRequired ? 1 : newStamps,
-        totalStampsRequired: current.totalStampsRequired,
-        points: newPoints,
-        visits: newVisits,
-        totalSpent: newSpent,
-        lastVisit: 'Hari ini',
-        qrCode: current.qrCode,
-      );
-    }
-
-    // Persist visit & stamps to Supabase customer_loyalty_cards for this business
     try {
-      final businessId = await _getBusinessId();
-      if (businessId != null && norm.isNotEmpty) {
-        final existing = await _client
+      final existing = await _client
+          .from('customer_loyalty_cards')
+          .select()
+          .eq('business_id', businessId)
+          .eq('customer_phone', norm)
+          .maybeSingle();
+      if (existing != null) {
+        final curStamps = (existing['current_stamps'] as num?)?.toInt() ?? 0;
+        final reqStamps = (existing['total_stamps_required'] as num?)?.toInt() ?? 5;
+        final nextStamps = (curStamps + 1) > reqStamps ? 1 : (curStamps + 1);
+        await _client
             .from('customer_loyalty_cards')
-            .select()
-            .eq('business_id', businessId)
-            .eq('customer_phone', norm)
-            .maybeSingle();
-        if (existing != null) {
-          final curStamps = (existing['current_stamps'] as num?)?.toInt() ?? 0;
-          final reqStamps = (existing['total_stamps_required'] as num?)?.toInt() ?? 5;
-          final nextStamps = (curStamps + 1) > reqStamps ? 1 : (curStamps + 1);
-          await _client
-              .from('customer_loyalty_cards')
-              .update({
-                'current_stamps': nextStamps,
-                'last_stamped_at': DateTime.now().toUtc().toIso8601String(),
-              })
-              .eq('id', existing['id']);
-        }
+            .update({
+              'current_stamps': nextStamps,
+              'last_stamped_at': DateTime.now().toUtc().toIso8601String(),
+            })
+            .eq('id', existing['id'])
+            .eq('business_id', businessId);
       }
     } catch (_) {}
   }

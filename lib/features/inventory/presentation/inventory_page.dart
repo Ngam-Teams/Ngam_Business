@@ -37,16 +37,16 @@ class _InventoryPageState extends State<InventoryPage> {
     final success = await _productService.updateStock(product.id, newStock);
     if (mounted) {
       if (success) {
-        showGlassToast(context, 'Stok ${product.name} dikemaskini: $newStock ${product.unit}');
+        showGlassToast(context, 'Stok ${product.name} dikemas kini: $newStock ${product.unit}');
       } else {
-        showGlassToast(context, 'Gagal mengemaskini stok', isError: true);
+        showGlassToast(context, 'Gagal mengemas kini stok', isError: true);
       }
     }
   }
 
-  void _showSetStockDialog(ProductModel product) {
+  Future<void> _showSetStockDialog(ProductModel product) async {
     final textCtrl = TextEditingController(text: '${product.stock}');
-    showDialog(
+    await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF141824),
@@ -106,6 +106,7 @@ class _InventoryPageState extends State<InventoryPage> {
         ],
       ),
     );
+    textCtrl.dispose();
   }
 
   Future<void> _exportInventoryCsv(List<ProductModel> items) async {

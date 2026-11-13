@@ -56,3 +56,5 @@ Future<String?> downloadStandeeImage({
       fileName: fileName,
       mimeType: 'image/png',
     );
+
+Future<void> openSavedFile(String path) => impl.openSavedFile(path);

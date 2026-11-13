@@ -21,6 +21,11 @@ class BusinessService {
 
   static const String _storageKey = 'cached_business_profile_v1';
 
+  static bool _isCacheForUser(Map<String, dynamic>? prof, String uid) {
+    if (prof == null) return false;
+    return prof['_cached_for_user_id'] == uid || prof['owner_user_id'] == uid;
+  }
+
   /// Synchronously or eagerly load cached profile from SharedPreferences on app start.
   /// Validates that the cached record strictly matches the currently logged-in user.
   static Future<Map<String, dynamic>?> loadCachedProfile() async {
@@ -31,7 +36,7 @@ class BusinessService {
     }
 
     if (_cachedProfile != null) {
-      if (_cachedProfile!['owner_user_id'] == currentUserId) {
+      if (_isCacheForUser(_cachedProfile, currentUserId)) {
         return _cachedProfile;
       } else {
         clearCache();
@@ -44,7 +49,7 @@ class BusinessService {
       if (raw != null && raw.isNotEmpty) {
         final decoded = jsonDecode(raw);
         if (decoded is Map<String, dynamic>) {
-          if (decoded['owner_user_id'] == currentUserId) {
+          if (_isCacheForUser(decoded, currentUserId)) {
             _cachedProfile = decoded;
             profileNotifier.value = decoded;
             return decoded;
@@ -62,9 +67,8 @@ class BusinessService {
 
   static Future<void> _saveProfileToCache(Map<String, dynamic> profile) async {
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-    // Safety guard: only cache if it strictly belongs to the current user
-    if (currentUserId != null && profile['owner_user_id'] != currentUserId) {
-      return;
+    if (currentUserId != null) {
+      profile['_cached_for_user_id'] = currentUserId;
     }
 
     _cachedProfile = Map<String, dynamic>.from(profile);
@@ -152,12 +156,12 @@ class BusinessService {
     }
 
     // Safety check: if existing cache does not match the current user, purge it immediately
-    if (_cachedProfile != null && _cachedProfile!['owner_user_id'] != user.id) {
+    if (_cachedProfile != null && !_isCacheForUser(_cachedProfile, user.id)) {
       clearCache();
     }
 
     // If cache exists and belongs to current user, and not forcing refresh, return immediately and trigger silent refresh
-    if (!forceRefresh && _cachedProfile != null && _cachedProfile!['owner_user_id'] == user.id) {
+    if (!forceRefresh && _cachedProfile != null && _isCacheForUser(_cachedProfile, user.id)) {
       if (_inflightFetch == null) {
         _inflightFetch = _doGetBusinessProfile(autoCreate: autoCreate);
         _inflightFetch!.whenComplete(() => _inflightFetch = null);
@@ -239,6 +243,68 @@ class BusinessService {
 
         await _saveProfileToCache(profile);
         return profile;
+      }
+
+      // Check if user is linked as an active team member of a business
+      try {
+        final memberRes = await _client
+            .from('team_members')
+            .select('business_id, role, status')
+            .or('user_id.eq.${user.id},user_email.ilike.${user.email ?? ""}')
+            .eq('status', 'active')
+            .limit(1);
+        final memberList = memberRes as List;
+        if (memberList.isNotEmpty) {
+          final linkedBusinessId = memberList.first['business_id'] as String;
+          // Auto link user_id if not linked yet
+          if (user.email != null && user.email!.isNotEmpty) {
+            try {
+              await _client
+                  .from('team_members')
+                  .update({'user_id': user.id})
+                  .eq('business_id', linkedBusinessId)
+                  .ilike('user_email', user.email!);
+            } catch (_) {}
+          }
+
+          final bizRes = await _client
+              .from('businesses')
+              .select()
+              .eq('id', linkedBusinessId)
+              .maybeSingle();
+          if (bizRes != null) {
+            final profile = Map<String, dynamic>.from(bizRes);
+            profile['_cached_for_user_id'] = user.id;
+            profile['_user_role'] = memberList.first['role'] ?? 'staff';
+
+            try {
+              final settings = await _client
+                  .from('business_settings')
+                  .select()
+                  .eq('business_id', profile['id'])
+                  .maybeSingle();
+              if (settings != null) {
+                profile['settings'] = Map<String, dynamic>.from(settings);
+              }
+            } catch (_) {}
+
+            try {
+              final compliance = await _client
+                  .from('business_compliance')
+                  .select()
+                  .eq('business_id', profile['id'])
+                  .maybeSingle();
+              if (compliance != null) {
+                profile['compliance'] = Map<String, dynamic>.from(compliance);
+              }
+            } catch (_) {}
+
+            await _saveProfileToCache(profile);
+            return profile;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error checking team_members for user: $e');
       }
 
       if (!autoCreate) return null;

@@ -132,7 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       await AuthService().signOut();
       if (mounted) {
-        showGlassToast(context, 'Berjaya log keluar.');
+        showGlassToast(context, 'settings.sign_out_success'.tr());
         context.go('/login');
       }
     } catch (e) {
@@ -145,31 +145,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
   String _formatIndustry(String? industry) {
     switch (industry?.toLowerCase()) {
-      case 'fnb':
-        return 'Food & Beverage';
       case 'barber':
-        return 'Barber & Salon';
-      case 'beauty':
-        return 'Beauty, Spa & Wellness';
+        return 'settings.ind_barbershop'.tr();
+      case 'fnb':
+      case 'restaurant':
+        return 'settings.ind_restaurant'.tr();
+      case 'carwash':
       case 'auto':
-        return 'Automotive & Workshop';
+        return 'settings.ind_carwash'.tr();
       case 'retail':
-        return 'Retail & Shopping';
+        return 'settings.ind_retail'.tr();
+      case 'beauty':
+      case 'spa':
+        return 'settings.ind_spa'.tr();
       case 'clinic':
-        return 'Clinic & Healthcare';
-      case 'fitness':
-        return 'Sports & Fitness';
-      case 'cleaning':
-        return 'Home & Cleaning';
-      case 'electronics':
-        return 'Gadget & Tech Repair';
-      case 'events':
-        return 'Events & Photography';
-      case 'education':
-        return 'Education & Classes';
+        return 'settings.ind_clinic'.tr();
+      case 'motorcycle':
+        return 'settings.ind_motorcycle'.tr();
       case 'services':
       default:
-        return 'Services & Professional';
+        return 'settings.ind_other'.tr();
     }
   }
 
@@ -277,26 +272,31 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildAccountPanel() {
+    final isOwner = _businessProfile?['owner_user_id'] == Supabase.instance.client.auth.currentUser?.id;
+    final roleDisplay = isOwner
+        ? 'settings.role_tenant_admin'.tr()
+        : (_businessProfile?['_user_role']?.toString().toUpperCase() ?? 'STAFF');
+
     return _buildPanel(
-      title: 'Account',
+      title: 'settings.section_account'.tr(),
       icon: HugeIcons.strokeRoundedUser,
       child: Column(
         children: [
           _buildInfoRow(
-            label: 'Email',
+            label: 'settings.email'.tr(),
             value: _userEmail,
             icon: HugeIcons.strokeRoundedMail01,
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildInfoRow(
-            label: 'User ID',
+            label: 'settings.user_id'.tr(),
             value: '$_userId...',
             icon: HugeIcons.strokeRoundedIdentification,
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildInfoRow(
-            label: 'Role',
-            value: 'Tenant Admin',
+            label: 'settings.role_label'.tr(),
+            value: roleDisplay,
             icon: HugeIcons.strokeRoundedShield01,
             valueColor: const Color(0xFF42A5F5),
           ),
@@ -507,14 +507,14 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildInfoRow(
-            label: 'Build',
-            value: 'Oct 1 Clean Rebuild',
+            label: 'settings.build_label'.tr(),
+            value: 'v${AppUpdateService.currentVersion}',
             icon: HugeIcons.strokeRoundedCalendar03,
             valueColor: const Color(0xFF42A5F5),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildInfoRow(
-            label: 'Platform',
+            label: 'settings.platform_label'.tr(),
             value: 'Ngam Business',
             icon: HugeIcons.strokeRoundedBuilding03,
           ),
@@ -778,7 +778,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     children: [
                       // Store Name
                       Text(
-                        _loadingBusiness ? 'Loading...' : businessName,
+                        _loadingBusiness ? 'common.loading'.tr() : businessName,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.white,
@@ -830,7 +830,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             child: Text(
                               locationText.isNotEmpty
                                   ? locationText
-                                  : (hasLocation ? 'Location Pinned' : 'Location Not Set — Tap to setup'),
+                                  : (hasLocation ? 'settings.location_pinned'.tr() : 'settings.location_not_set'.tr()),
                               style: TextStyle(
                                 color: hasLocation || locationText.isNotEmpty
                                     ? Colors.white70

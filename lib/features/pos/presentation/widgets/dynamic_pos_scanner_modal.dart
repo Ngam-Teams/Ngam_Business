@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -260,14 +261,19 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
         if (orderId.isNotEmpty) {
           final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
           final shopId = profile?['id']?.toString();
-          var updateQuery = Supabase.instance.client.from('orders').update({
+          if (shopId == null || shopId.isEmpty) {
+            if (mounted) {
+              setState(() {
+                _isResolving = false;
+                _statusError = 'pos.shop_id_missing'.tr();
+              });
+            }
+            return;
+          }
+          await Supabase.instance.client.from('orders').update({
             'status': 'completed',
             'payment_status': 'paid',
-          }).eq('id', orderId);
-          if (shopId != null && shopId.isNotEmpty) {
-            updateQuery = updateQuery.eq('business_id', shopId);
-          }
-          await updateQuery;
+          }).eq('id', orderId).eq('business_id', shopId);
           SoundService.instance.playOrderChime();
           if (mounted) {
             setState(() {
@@ -302,14 +308,19 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
         if (ticketId.isNotEmpty) {
           final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
           final shopId = profile?['id']?.toString();
-          var q = Supabase.instance.client.from('queue_tickets').update({
+          if (shopId == null || shopId.isEmpty) {
+            if (mounted) {
+              setState(() {
+                _isResolving = false;
+                _statusError = 'pos.shop_id_missing'.tr();
+              });
+            }
+            return;
+          }
+          await Supabase.instance.client.from('queue_tickets').update({
             'status': 'serving',
             'serving_at': DateTime.now().toIso8601String(),
-          }).eq('id', ticketId);
-          if (shopId != null && shopId.isNotEmpty) {
-            q = q.eq('business_id', shopId);
-          }
-          await q;
+          }).eq('id', ticketId).eq('business_id', shopId);
           SoundService.instance.playOrderChime();
           if (mounted) {
             setState(() {
@@ -425,13 +436,12 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
 
     final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
     final shopId = profile?['id']?.toString();
-    var selectQuery = Supabase.instance.client
+    if (shopId == null || shopId.isEmpty) return false;
+
+    final rows = await Supabase.instance.client
         .from('bookings')
-        .select('id, business_id, booking_metadata');
-    if (shopId != null && shopId.isNotEmpty) {
-      selectQuery = selectQuery.eq('business_id', shopId);
-    }
-    final rows = await selectQuery
+        .select('id, business_id, booking_metadata')
+        .eq('business_id', shopId)
         .order('created_at', ascending: false)
         .limit(100);
     for (final r in (rows as List)) {
@@ -442,7 +452,8 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
         await Supabase.instance.client
             .from('bookings')
             .update({'status': 'in_progress'})
-            .eq('id', r['id']);
+            .eq('id', r['id'])
+            .eq('business_id', shopId);
         SoundService.instance.playOrderChime();
         if (mounted) {
           setState(() {
@@ -1113,106 +1124,125 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
   // ---------------------------------------------------------------------------
 
   Widget _buildSelectMemberTab() {
-    final members = _memberService.getAllPresetMembers();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Pilih ahli berdaftar untuk pautkan ke pesanan ini:',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
-        ),
-        const SizedBox(height: 12),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: members.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (context, idx) {
-            final m = members[idx];
-            final isCurrent = widget.currentMember?.phone == m.phone;
-            return Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isCurrent
-                    ? const Color(0xFF00C853).withValues(alpha: 0.12)
-                    : Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isCurrent
-                      ? const Color(0xFF00C853).withValues(alpha: 0.4)
-                      : Colors.white.withValues(alpha: 0.08),
-                ),
+    return FutureBuilder<List<CustomerMember>>(
+      future: _memberService.getLoyaltyMembers(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
+        }
+        final members = snapshot.data ?? [];
+        if (members.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(
+                'Tiada ahli berdaftar lagi untuk perniagaan ini.',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
               ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: const Color(0xFF42A5F5).withValues(alpha: 0.2),
-                    child: Text(
-                      m.name.isNotEmpty ? m.name[0] : 'U',
-                      style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
+            ),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pilih ahli berdaftar untuk pautkan ke pesanan ini:',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: members.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, idx) {
+                final m = members[idx];
+                final isCurrent = widget.currentMember?.phone == m.phone;
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isCurrent
+                        ? const Color(0xFF00C853).withValues(alpha: 0.12)
+                        : Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isCurrent
+                          ? const Color(0xFF00C853).withValues(alpha: 0.4)
+                          : Colors.white.withValues(alpha: 0.08),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: const Color(0xFF42A5F5).withValues(alpha: 0.2),
+                        child: Text(
+                          m.name.isNotEmpty ? m.name[0] : 'U',
+                          style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              m.name,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: m.tier.contains('Gold')
-                                    ? Colors.amber.withValues(alpha: 0.2)
-                                    : const Color(0xFF42A5F5).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                m.tierBadge,
-                                style: TextStyle(
-                                  color: m.tier.contains('Gold') ? Colors.amber : const Color(0xFF42A5F5),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                            Row(
+                              children: [
+                                Text(
+                                  m.name,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: m.tier.contains('Gold')
+                                        ? Colors.amber.withValues(alpha: 0.2)
+                                        : const Color(0xFF42A5F5).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    m.tierBadge,
+                                    style: TextStyle(
+                                      color: m.tier.contains('Gold') ? Colors.amber : const Color(0xFF42A5F5),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${m.phone} • ${m.stamps}/${m.totalStampsRequired} Cop • ${m.points} Mata',
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          '${m.phone} • ${m.stamps}/${m.totalStampsRequired} Cop • ${m.points} Mata',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          SoundService.instance.playOrderChime();
+                          Navigator.of(context).pop(DynamicScanResult.member(m));
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isCurrent ? const Color(0xFF00C853) : Colors.white.withValues(alpha: 0.1),
+                          foregroundColor: isCurrent ? Colors.black : Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                      ],
-                    ),
+                        child: Text(
+                          isCurrent ? 'Dipautkan' : 'Pilih',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ],
                   ),
-                  ElevatedButton(
-                    onPressed: () {
-                      SoundService.instance.playOrderChime();
-                      Navigator.of(context).pop(DynamicScanResult.member(m));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isCurrent ? const Color(0xFF00C853) : Colors.white.withValues(alpha: 0.1),
-                      foregroundColor: isCurrent ? Colors.black : Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: Text(
-                      isCurrent ? 'Dipautkan' : 'Pilih',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ],
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 

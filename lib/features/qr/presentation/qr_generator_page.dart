@@ -3,9 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_toast.dart';
@@ -165,7 +165,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       }
     } catch (_) {
       if (mounted) {
-        showGlassToast(context, 'WiFi dikemaskini pada paparan!');
+        showGlassToast(context, 'WiFi dikemas kini pada paparan!');
       }
     }
   }
@@ -403,13 +403,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           onPressed: () async {
-                            final result = await OpenFilex.open(savedPath);
-                            if (result.type != ResultType.done && mounted) {
-                              showGlassToast(context, 'Membuka fail: ${result.message}');
-                            }
+                            await openSavedFile(savedPath);
                           },
                           icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                          label: Text('Buka Fail Sekarang', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                          label: Text('receipt.open_image_btn'.tr(), style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -670,7 +667,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             _colorOptions.insert(0, color);
           }
         });
-        showGlassToast(context, 'Warna tema standee dikemaskini!');
+        showGlassToast(context, 'Warna tema standee dikemas kini!');
       },
     );
   }
@@ -687,7 +684,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             _qrColorOptions.insert(0, color);
           }
         });
-        showGlassToast(context, 'Warna kod QR dikemaskini!');
+        showGlassToast(context, 'Warna kod QR dikemas kini!');
       },
     );
   }

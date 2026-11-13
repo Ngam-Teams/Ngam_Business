@@ -23,6 +23,8 @@ Future<String?> saveAndDownloadFile({
   return 'Folder Downloads Pelayar Web';
 }
 
+Future<void> openSavedFile(String path) async {}
+
 String _resolveMimeType(String fileName) {
   final lower = fileName.toLowerCase();
   if (lower.endsWith('.csv')) {

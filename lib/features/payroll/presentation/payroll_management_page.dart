@@ -346,6 +346,14 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
     );
   }
 
+  String _sanitizeCsvField(String val) {
+    String clean = val.replaceAll('"', '""').trim();
+    if (clean.startsWith('=') || clean.startsWith('+') || clean.startsWith('-') || clean.startsWith('@')) {
+      clean = "'$clean";
+    }
+    return '"$clean"';
+  }
+
   Future<void> _exportPayrollCsv() async {
     showGlassToast(context, 'export.preparing'.tr());
     try {
@@ -357,7 +365,7 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
       final nowStr = fmt.format(DateTime.now());
 
       final buffer = StringBuffer();
-      buffer.writeln('RINGKASAN PENYATA GAJI & KOMISEN STAF - $bizName');
+      buffer.writeln('RINGKASAN PENYATA GAJI & KOMISEN STAF - ${_sanitizeCsvField(bizName)}');
       buffer.writeln('Tarikh Dijana: ${DateTime.now().toLocal()}');
       buffer.writeln('Jumlah Bersih Penggajian: RM ${_totalNetPayout.toStringAsFixed(2)}');
       buffer.writeln('Jumlah Komisen Jualan: RM ${_totalCommissions.toStringAsFixed(2)}');
@@ -366,9 +374,9 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
       buffer.writeln('ID_Staf,Nama_Pekerja,Jawatan,Gaji_Pokok_RM,Komisen_Servis_RM,Komisen_Produk_RM,Elaun_RM,KWSP_Pekerja_RM,PERKESO_Pekerja_RM,SIP_Pekerja_RM,Gaji_Bersih_RM,Status_Bayaran');
 
       for (final item in _payrollItems) {
-        final id = item.staffCode.replaceAll(',', ' ');
-        final name = item.staffName.replaceAll(',', ' ');
-        final desig = item.designation.replaceAll(',', ' ');
+        final id = _sanitizeCsvField(item.staffCode);
+        final name = _sanitizeCsvField(item.staffName);
+        final desig = _sanitizeCsvField(item.designation);
         final base = item.baseSalary.toStringAsFixed(2);
         final commSvc = item.serviceCommission.toStringAsFixed(2);
         final commProd = item.productCommission.toStringAsFixed(2);
@@ -377,7 +385,7 @@ class _PayrollManagementPageState extends State<PayrollManagementPage>
         final socso = item.socsoEmployee.toStringAsFixed(2);
         final eis = item.eisEmployee.toStringAsFixed(2);
         final net = item.netPay.toStringAsFixed(2);
-        final status = item.status == 'paid' ? 'Sudah Dibayar' : 'Menunggu Bayaran';
+        final status = _sanitizeCsvField(item.status == 'paid' ? 'Sudah Dibayar' : 'Menunggu Bayaran');
 
         buffer.writeln('$id,$name,$desig,$base,$commSvc,$commProd,$allowance,$epf,$socso,$eis,$net,$status');
       }

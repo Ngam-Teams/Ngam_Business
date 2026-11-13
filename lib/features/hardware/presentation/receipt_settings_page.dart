@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
@@ -7,8 +6,6 @@ import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_toast.dart';
@@ -216,17 +213,17 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'Ngam_Resit_${_paperWidth}mm_$timestamp.png';
 
-      if (kIsWeb) {
-        await downloadStandeeImage(bytes: pngBytes, fileName: fileName);
-        if (mounted) {
+      final savedPath = await saveAndDownloadFile(
+        bytes: pngBytes,
+        fileName: fileName,
+        mimeType: 'image/png',
+      );
+
+      if (mounted) {
+        if (kIsWeb || savedPath == null) {
           showGlassToast(context, 'receipt.download_success'.tr(args: [fileName]));
-        }
-      } else {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/$fileName');
-        await file.writeAsBytes(pngBytes);
-        if (mounted) {
-          _showReceiptDownloadModal(file, pngBytes);
+        } else {
+          _showReceiptDownloadModal(savedPath, pngBytes);
         }
       }
     } catch (e) {
@@ -240,8 +237,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
     }
   }
 
-  void _showReceiptDownloadModal(File file, Uint8List pngBytes) {
-    final double fileSizeKb = file.lengthSync() / 1024.0;
+  void _showReceiptDownloadModal(String filePath, Uint8List pngBytes) {
+    final double fileSizeKb = pngBytes.lengthInBytes / 1024.0;
     final String sizeStr = '${fileSizeKb.toStringAsFixed(1)} KB';
 
     showModalBottomSheet(
@@ -268,15 +265,15 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Resit Digital Berjaya Dijana! 🧾',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                'receipt.digital_receipt_success'.tr(),
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Fail grafik resit resolusi tinggi sedia untuk dicetak atau dikongsi.',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
+              Text(
+                'receipt.digital_receipt_desc'.tr(),
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 18),
@@ -320,10 +317,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   onPressed: () async {
-                    final result = await OpenFilex.open(file.path);
-                    if (result.type != ResultType.done && mounted) {
-                      showGlassToast(context, 'receipt.open_file_toast'.tr(args: [result.message]));
-                    }
+                    await openSavedFile(filePath);
                   },
                   icon: const Icon(Icons.open_in_new_rounded, size: 18),
                   label: Text('receipt.open_image_btn'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),

@@ -411,15 +411,19 @@ class _LoginPageState extends State<LoginPage>
                         children: [
                           // Language button
                           IconButton(
-                            tooltip: 'Language',
+                            tooltip: 'auth.tooltip_language'.tr(),
                             icon: const HugeIcon(
                               icon: HugeIcons.strokeRoundedTranslate,
                               color: textPrimary,
                               size: 18,
                             ),
                             onPressed: () {
+                              final newLocale = context.locale.languageCode == 'en'
+                                  ? const Locale('ms')
+                                  : const Locale('en');
+                              context.setLocale(newLocale);
                               setState(() {
-                                _locale = _locale == 'en' ? 'ms' : 'en';
+                                _locale = newLocale.languageCode;
                               });
                             },
                           ),
@@ -470,7 +474,10 @@ class _LoginPageState extends State<LoginPage>
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 48),
+                padding: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width < 900 ? 28 : 56,
+                  vertical: MediaQuery.of(context).size.height < 500 ? 20 : 48,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.25),
                   border: Border(
@@ -480,10 +487,12 @@ class _LoginPageState extends State<LoginPage>
                     ),
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
                     // Top Logo Group
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -556,6 +565,7 @@ class _LoginPageState extends State<LoginPage>
                       ],
                     ),
                   ],
+                ),
                 ),
               ),
             ),
@@ -725,8 +735,8 @@ class _LoginPageState extends State<LoginPage>
                   prefixIcon: Icons.email_outlined,
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) return 'Sila masukkan emel';
-                  if (!value.contains('@')) return 'Emel tidak sah';
+                  if (value == null || value.trim().isEmpty) return 'Sila masukkan e-mel';
+                  if (!value.contains('@')) return 'E-mel tidak sah';
                   return null;
                 },
               ),
@@ -932,8 +942,8 @@ class _LoginPageState extends State<LoginPage>
                         prefixIcon: Icons.email_outlined,
                       ),
                       validator: (val) {
-                        if (val == null || val.trim().isEmpty) return 'Sila masukkan emel';
-                        if (!val.contains('@')) return 'Emel tidak sah';
+                        if (val == null || val.trim().isEmpty) return 'Sila masukkan e-mel';
+                        if (!val.contains('@')) return 'E-mel tidak sah';
                         return null;
                       },
                     ),
@@ -1165,7 +1175,7 @@ class _LoginPageState extends State<LoginPage>
           ),
           const SizedBox(height: 4),
           Text(
-            'Lupa emel atau kata laluan? Masukkan emel atau no. telefon berdaftar untuk pulihkan akaun.',
+            'Lupa e-mel atau kata laluan? Masukkan e-mel atau no. telefon berdaftar untuk pulihkan akaun.',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 12.5,
@@ -1200,7 +1210,7 @@ class _LoginPageState extends State<LoginPage>
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '✉️ Guna Emel',
+                        '✉️ Guna E-mel',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 11.5,
@@ -1226,7 +1236,7 @@ class _LoginPageState extends State<LoginPage>
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '📱 No. Telefon (Lupa Emel)',
+                        '📱 No. Telefon (Lupa E-mel)',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 11.5,
@@ -1263,10 +1273,10 @@ class _LoginPageState extends State<LoginPage>
             ),
             validator: (val) {
               if (val == null || val.trim().isEmpty) {
-                return _forgotMode == 'phone' ? 'Sila masukkan nombor telefon' : 'Sila masukkan emel';
+                return _forgotMode == 'phone' ? 'Sila masukkan nombor telefon' : 'Sila masukkan e-mel';
               }
               if (_forgotMode == 'email' && !val.contains('@')) {
-                return 'Format emel tidak sah';
+                return 'Format e-mel tidak sah';
               }
               if (_forgotMode == 'phone' && val.replaceAll(RegExp(r'[^0-9]'), '').length < 8) {
                 return 'Nombor telefon tidak sah';
@@ -1278,7 +1288,7 @@ class _LoginPageState extends State<LoginPage>
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                '💡 Kami akan mencari emel akaun anda dan menghantar pautan reset kata laluan secara percuma ke emel tersebut.',
+                '💡 Kami akan mencari e-mel akaun anda dan menghantar pautan reset kata laluan secara percuma ke e-mel tersebut.',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   color: const Color(0xFF10B981),
@@ -1396,7 +1406,7 @@ class _LoginPageState extends State<LoginPage>
           child: Column(
             children: [
               Text(
-                'EMEL BERDAFTAR ANDA',
+                'E-MEL BERDAFTAR ANDA',
                 style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
@@ -1418,7 +1428,7 @@ class _LoginPageState extends State<LoginPage>
         ),
         const SizedBox(height: 12),
         Text(
-          'Pautan penetapan semula kata laluan telah dihantar secara automatik ke alamat emel di atas. Sila semak peti masuk anda sekarang.',
+          'Pautan penetapan semula kata laluan telah dihantar secara automatik ke alamat e-mel di atas. Sila semak peti masuk anda sekarang.',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 12.5,

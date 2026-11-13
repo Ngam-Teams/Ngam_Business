@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
@@ -590,6 +590,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   List<Map<String, dynamic>> _modifiers = [];
 
   XFile? _imageFile;
+  Uint8List? _imageBytes;
   bool _isSaving = false;
 
   static const _unitOptions = ['pcs', 'pack', 'kg', 'g', 'cup', 'box', 'portion', 'set'];
@@ -657,100 +658,44 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800);
     if (picked != null) {
-      setState(() => _imageFile = picked);
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _imageFile = picked;
+        _imageBytes = bytes;
+      });
     }
   }
 
   void _addVariantDialog() {
-    final nameCtrl = TextEditingController();
-    final priceCtrl = TextEditingController(text: _priceController.text);
-
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2C),
-        title: const Text('Add Variant / Option', style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Variant Name (e.g. Large, 500g)', labelStyle: TextStyle(color: Colors.white54)),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: priceCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Price (RM)', labelStyle: TextStyle(color: Colors.white54)),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF42A5F5)),
-            onPressed: () {
-              final name = nameCtrl.text.trim();
-              final pr = double.tryParse(priceCtrl.text) ?? 0.0;
-              if (name.isNotEmpty) {
-                setState(() {
-                  _variants.add({'name': name, 'price': pr});
-                });
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Add', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      builder: (ctx) => _OptionInputDialog(
+        title: 'products.add_variant'.tr(),
+        nameLabel: 'products.variant_name'.tr(),
+        priceLabel: 'products.variant_price'.tr(),
+        initialPrice: _priceController.text,
+        onAdd: (name, pr) {
+          setState(() {
+            _variants.add({'name': name, 'price': pr});
+          });
+        },
       ),
     );
   }
 
   void _addModifierDialog() {
-    final nameCtrl = TextEditingController();
-    final priceCtrl = TextEditingController(text: '0.00');
-
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2C),
-        title: const Text('Add Topping / Add-on', style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Add-on Name (e.g. Extra Cheese)', labelStyle: TextStyle(color: Colors.white54)),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: priceCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Extra Price (+RM)', labelStyle: TextStyle(color: Colors.white54)),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF42A5F5)),
-            onPressed: () {
-              final name = nameCtrl.text.trim();
-              final pr = double.tryParse(priceCtrl.text) ?? 0.0;
-              if (name.isNotEmpty) {
-                setState(() {
-                  _modifiers.add({'name': name, 'price': pr});
-                });
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Add', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      builder: (ctx) => _OptionInputDialog(
+        title: 'products.add_modifier'.tr(),
+        nameLabel: 'products.modifier_name'.tr(),
+        priceLabel: 'products.modifier_price'.tr(),
+        initialPrice: '0.00',
+        onAdd: (name, pr) {
+          setState(() {
+            _modifiers.add({'name': name, 'price': pr});
+          });
+        },
       ),
     );
   }
@@ -772,7 +717,10 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     Uint8List? imageBytes;
     String? imageExt;
 
-    if (_imageFile != null) {
+    if (_imageBytes != null && _imageFile != null) {
+      imageBytes = _imageBytes;
+      imageExt = _imageFile!.name.split('.').last;
+    } else if (_imageFile != null) {
       imageBytes = await _imageFile!.readAsBytes();
       imageExt = _imageFile!.name.split('.').last;
     }
@@ -997,9 +945,9 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                           color: Colors.white.withValues(alpha: 0.04),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                          image: _imageFile != null
+                          image: _imageBytes != null
                               ? DecorationImage(
-                                  image: FileImage(File(_imageFile!.path)),
+                                  image: MemoryImage(_imageBytes!),
                                   fit: BoxFit.cover,
                                 )
                               : (widget.existingProduct?.imageUrl != null
@@ -1009,7 +957,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                                     )
                                   : null),
                         ),
-                        child: _imageFile == null && widget.existingProduct?.imageUrl == null
+                        child: _imageBytes == null && widget.existingProduct?.imageUrl == null
                             ? Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -1020,7 +968,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Upload Cover Image',
+                                    'products.upload_cover_image'.tr(),
                                     style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
                                   ),
                                 ],
@@ -1550,3 +1498,95 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     );
   }
 }
+
+class _OptionInputDialog extends StatefulWidget {
+  final String title;
+  final String nameLabel;
+  final String priceLabel;
+  final String initialPrice;
+  final void Function(String name, double price) onAdd;
+
+  const _OptionInputDialog({
+    required this.title,
+    required this.nameLabel,
+    required this.priceLabel,
+    required this.initialPrice,
+    required this.onAdd,
+  });
+
+  @override
+  State<_OptionInputDialog> createState() => _OptionInputDialogState();
+}
+
+class _OptionInputDialogState extends State<_OptionInputDialog> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _priceCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController();
+    _priceCtrl = TextEditingController(text: widget.initialPrice);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _priceCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1E1E2C),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(widget.title, style: const TextStyle(color: Colors.white, fontSize: 16)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _nameCtrl,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: widget.nameLabel,
+              labelStyle: const TextStyle(color: Colors.white54),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _priceCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: widget.priceLabel,
+              labelStyle: const TextStyle(color: Colors.white54),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('common.cancel'.tr(), style: const TextStyle(color: Colors.white54)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF42A5F5),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          onPressed: () {
+            final name = _nameCtrl.text.trim();
+            final pr = double.tryParse(_priceCtrl.text) ?? 0.0;
+            if (name.isNotEmpty) {
+              widget.onAdd(name, pr);
+              Navigator.pop(context);
+            }
+          },
+          child: Text('common.add'.tr(), style: const TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+}
+

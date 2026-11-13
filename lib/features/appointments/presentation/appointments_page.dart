@@ -254,21 +254,24 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
           statusStr = 'pending';
           break;
       }
-      Supabase.instance.client
+      var query = Supabase.instance.client
           .from('bookings')
           .update({'status': statusStr})
-          .eq('id', dbId)
-          .catchError((e) {
-            debugPrint('Error updating booking status: $e');
-          });
+          .eq('id', dbId);
+      if (_businessId != null && _businessId!.isNotEmpty) {
+        query = query.eq('business_id', _businessId!);
+      }
+      query.catchError((e) {
+        debugPrint('Error updating booking status: $e');
+      });
     }
 
     final statusLabel = newStatus == AppointmentStatus.confirmed
-        ? 'Confirmed'
+        ? 'Disahkan'
         : newStatus == AppointmentStatus.completed
-            ? 'Completed'
-            : 'Cancelled';
-    showGlassToast(context, 'Booking ${appt['id']} marked as $statusLabel');
+            ? 'Selesai'
+            : 'Dibatalkan';
+    showGlassToast(context, 'Tempahan ${appt['id']} ditandakan sebagai $statusLabel');
   }
 
   Future<void> _payAppointmentAtPos(Map<String, dynamic> appt) async {
@@ -315,11 +318,15 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
       final dbId = appt['db_id'];
       if (dbId != null) {
         try {
-          await Supabase.instance.client.from('bookings').update({
+          var query = Supabase.instance.client.from('bookings').update({
             'status': 'completed',
             'total_price': price,
             'booking_metadata': updatedMeta,
           }).eq('id', dbId);
+          if (_businessId != null && _businessId!.isNotEmpty) {
+            query = query.eq('business_id', _businessId!);
+          }
+          await query;
         } catch (_) {}
       }
 
@@ -375,9 +382,10 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
     required String value,
     Color? valueColor,
     bool isBold = false,
+    Widget? trailing,
   }) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Icon(icon, size: 16, color: Colors.white54),
         const SizedBox(width: 10),
@@ -397,8 +405,105 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
             ),
           ),
         ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing,
+        ],
       ],
     );
+  }
+
+  Future<void> _reassignStaff(Map<String, dynamic> appt) async {
+    if (_businessId == null || _businessId!.isEmpty) return;
+    try {
+      final staffRows = await Supabase.instance.client
+          .from('team_members')
+          .select('id, user_id, name, role')
+          .eq('business_id', _businessId!)
+          .eq('is_active', true);
+      final staffList = (staffRows as List).cast<Map<String, dynamic>>();
+      if (staffList.isEmpty) {
+        if (mounted) showGlassToast(context, 'Tiada krew aktif ditemui untuk ditugaskan.');
+        return;
+      }
+
+      if (!mounted) return;
+      final selected = await showModalBottomSheet<Map<String, dynamic>>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: Color(0xFF141724),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Tugaskan Krew untuk Tempahan',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ...staffList.map((s) => ListTile(
+                leading: const Icon(Icons.person_pin_rounded, color: Color(0xFF42A5F5)),
+                title: Text(s['name'] ?? 'Krew', style: const TextStyle(color: Colors.white)),
+                subtitle: Text((s['role'] ?? 'krew').toString().toUpperCase(), style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                onTap: () => Navigator.pop(ctx, s),
+              )),
+            ],
+          ),
+        ),
+      );
+
+      if (selected == null || !mounted) return;
+      final newStaffName = selected['name'] ?? 'Krew';
+      final assignedUserId = selected['user_id']?.toString();
+
+      final rawMeta = (appt['raw_meta'] is Map)
+          ? Map<String, dynamic>.from(appt['raw_meta'] as Map)
+          : <String, dynamic>{};
+      final updatedMeta = <String, dynamic>{
+        ...rawMeta,
+        'provider_name': newStaffName,
+        'assigned_staff_id': selected['id'],
+      };
+
+      final dbId = appt['db_id'];
+      if (dbId != null) {
+        var query = Supabase.instance.client.from('bookings').update({
+          'booking_metadata': updatedMeta,
+        }).eq('id', dbId);
+        if (_businessId != null && _businessId!.isNotEmpty) {
+          query = query.eq('business_id', _businessId!);
+        }
+        await query;
+
+        if (assignedUserId != null && assignedUserId.isNotEmpty) {
+          try {
+            await Supabase.instance.client.from('notifications').insert({
+              'user_id': assignedUserId,
+              'business_id': _businessId,
+              'title': 'Tugasan Tempahan Baharu',
+              'body': 'Anda telah ditugaskan untuk tempahan #${appt['id']} (${appt['service']}) pada ${appt['dateTime']}.',
+              'type': 'tempahan',
+            });
+          } catch (_) {}
+        }
+      }
+
+      setState(() {
+        appt['staff'] = newStaffName;
+        appt['raw_meta'] = updatedMeta;
+      });
+
+      if (mounted) {
+        showGlassToast(context, 'Krew $newStaffName berjaya ditugaskan!', customColor: const Color(0xFF10B981));
+      }
+    } catch (e) {
+      if (mounted) showGlassToast(context, 'Ralat menugaskan krew: $e', isError: true);
+    }
   }
 
   Future<void> _rejectWithReason(Map<String, dynamic> appt) async {
@@ -475,7 +580,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
           : <String, dynamic>{};
       final isPaid = appt['payment_status'] == 'paid';
       try {
-        await Supabase.instance.client.from('bookings').update({
+        var query = Supabase.instance.client.from('bookings').update({
           'status': 'cancelled',
           'booking_metadata': {
             ...rawMeta,
@@ -484,6 +589,10 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
             if (isPaid) 'payment_status': 'refund_pending',
           },
         }).eq('id', dbId);
+        if (_businessId != null && _businessId!.isNotEmpty) {
+          query = query.eq('business_id', _businessId!);
+        }
+        await query;
       } catch (e) {
         debugPrint('Error rejecting booking: $e');
       }
@@ -573,6 +682,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
         ],
       ),
     );
+    codeCtrl.dispose();
 
     if (matched != null && mounted) {
       _showBookingDetailsModal(matched);
@@ -779,6 +889,22 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           icon: Icons.badge_outlined,
                           label: 'Kakitangan / Staf',
                           value: staff,
+                          trailing: InkWell(
+                            onTap: () async {
+                              Navigator.pop(modalCtx);
+                              await _reassignStaff(appt);
+                            },
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.3)),
+                              ),
+                              child: const Text('Tukar', style: TextStyle(color: Color(0xFF42A5F5), fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
                         ),
                         const Divider(color: Colors.white10, height: 20),
                         _buildDetailRow(
@@ -1003,7 +1129,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
     );
   }
 
-  void _openNewAppointmentModal() {
+  Future<void> _openNewAppointmentModal() async {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final serviceCtrl = TextEditingController();
@@ -1022,7 +1148,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
       'Penyelenggaraan / Baik Pulih',
     ];
 
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -1323,12 +1449,16 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           'notes': notes,
                         };
 
-                        // 1. Try to persist to Supabase bookings table
+                        // 1. Persist directly to Supabase bookings table
                         try {
                           final profile = await BusinessService().getBusinessProfile();
-                          final bId = profile?['id'];
-                          final inserted = await Supabase.instance.client.from('bookings').insert({
-                            if (bId != null) 'business_id': bId,
+                          final bId = profile?['id']?.toString() ?? _businessId;
+                          if (bId == null || bId.isEmpty) {
+                            showGlassToast(context, 'Profil perniagaan tidak dijumpai.', isError: true);
+                            return;
+                          }
+                          await Supabase.instance.client.from('bookings').insert({
+                            'business_id': bId,
                             'customer_name': name,
                             'service_name': service,
                             'booking_date': bookingDateIso,
@@ -1337,21 +1467,17 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                             'status': 'confirmed',
                             'booking_metadata': rawMeta,
                           }).select().single();
-                          newBookingMap['db_id'] = inserted['id'];
+
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                          }
+                          if (mounted) {
+                            showGlassToast(context, 'Tempahan #$bookingId berjaya didaftarkan!', customColor: const Color(0xFF10B981));
+                          }
                         } catch (e) {
-                          debugPrint('[Appointments] Offline/local fallback: $e');
-                        }
-
-                        // 2. Update local state
-                        setState(() {
-                          _appointments.insert(0, newBookingMap);
-                        });
-
-                        if (ctx.mounted) {
-                          Navigator.pop(ctx);
-                        }
-                        if (mounted) {
-                          showGlassToast(context, 'Tempahan #$bookingId berjaya didaftarkan!', customColor: const Color(0xFF10B981));
+                          if (mounted) {
+                            showGlassToast(context, 'Ralat mendaftar tempahan: $e', isError: true);
+                          }
                         }
                       },
                       child: const Row(
@@ -1371,6 +1497,14 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
         },
       ),
     );
+
+    nameCtrl.dispose();
+    phoneCtrl.dispose();
+    serviceCtrl.dispose();
+    staffCtrl.dispose();
+    priceCtrl.dispose();
+    depositCtrl.dispose();
+    notesCtrl.dispose();
   }
 
   Color _statusColor(AppointmentStatus status) {

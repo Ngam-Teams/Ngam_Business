@@ -1365,7 +1365,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
         showGlassToast(
           context,
           widget.existing != null
-              ? 'Post berjaya dikemaskini!'
+              ? 'Post berjaya dikemas kini!'
               : 'Post berjaya dimuat naik & diterbitkan di Ngam Feed!',
           customColor: const Color(0xFF10B981),
         );
@@ -1378,7 +1378,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
       if (errStr.contains('XMLHttpRequest') || errStr.contains('CORS')) {
         friendlyMsg = 'Ralat CORS Cloudflare R2: Sila pastikan CORS Policy telah disimpan di dashboard Cloudflare R2.';
       } else if (errStr.contains('42501') || errStr.contains('permission denied')) {
-        friendlyMsg = 'Ralat Kebenaran Supabase: Sila kemaskini SQL RLS feed_posts dalam Supabase SQL Editor.';
+        friendlyMsg = 'Ralat Kebenaran Supabase: Sila kemas kini SQL RLS feed_posts dalam Supabase SQL Editor.';
       }
       if (mounted) {
         showGlassToast(context, friendlyMsg, isError: true);

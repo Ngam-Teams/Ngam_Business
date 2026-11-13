@@ -9,13 +9,10 @@ class QueueService {
   final SupabaseClient _client;
   final BusinessService _businessService;
 
-  // Local in-memory queue tickets cache (e.g. for offline or locally created tickets)
-  static final List<QueueTicketModel> _localDemoTickets = [];
   static int _ticketSequence = 1;
 
-  /// Reset in-memory queue demo tickets and sequence (e.g. on sign out)
+  /// Reset in-memory queue sequence (e.g. on sign out)
   static void reset() {
-    _localDemoTickets.clear();
     _ticketSequence = 1;
   }
 
@@ -125,8 +122,8 @@ class QueueService {
     controller = StreamController<List<QueueTicketModel>>.broadcast(
       onListen: () async {
         final businessId = explicitBusinessId ?? await _getShopId();
-        if (businessId == null) {
-          controller.add(List.from(_localDemoTickets));
+        if (businessId == null || businessId.isEmpty) {
+          controller.add([]);
           return;
         }
 
@@ -147,13 +144,15 @@ class QueueService {
                       .toList();
                   emitMerged();
                 },
-                onError: (_) {
-                  latestQueueTickets = List.from(_localDemoTickets);
+                onError: (err) {
+                  debugPrint('[QueueService] Queue stream error: $err');
+                  latestQueueTickets = [];
                   emitMerged();
                 },
               );
-        } catch (_) {
-          latestQueueTickets = List.from(_localDemoTickets);
+        } catch (e) {
+          debugPrint('[QueueService] Queue stream setup error: $e');
+          latestQueueTickets = [];
           emitMerged();
         }
 
@@ -190,7 +189,7 @@ class QueueService {
   Future<List<QueueTicketModel>> fetchQueueTickets([String? explicitBusinessId]) async {
     try {
       final businessId = explicitBusinessId ?? await _getShopId();
-      if (businessId == null) return List.from(_localDemoTickets);
+      if (businessId == null || businessId.isEmpty) return [];
 
       final List<QueueTicketModel> result = [];
 
@@ -198,18 +197,20 @@ class QueueService {
       try {
         final now = DateTime.now();
         final startOfToday = DateTime(now.year, now.month, now.day);
+        final startOfTodayIso = startOfToday.toUtc().toIso8601String();
         final response = await _client
             .from('queue_tickets')
             .select()
             .eq('business_id', businessId)
+            .gte('created_at', startOfTodayIso)
             .order('created_at', ascending: true);
         result.addAll(
           (response as List)
               .map((json) => QueueTicketModel.fromJson(json as Map<String, dynamic>))
               .where((t) => t.createdAt.isAfter(startOfToday)),
         );
-      } catch (_) {
-        result.addAll(_localDemoTickets);
+      } catch (e) {
+        debugPrint('[QueueService] Fetch queue tickets error: $e');
       }
 
       // Fetch active orders
@@ -221,12 +222,14 @@ class QueueService {
             .inFilter('status', ['pending', 'preparing', 'in_progress', 'cooking', 'ready'])
             .order('created_at', ascending: true);
         result.addAll(_convertOrdersToQueueTickets((ordersRes as List).cast<Map<String, dynamic>>(), businessId));
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[QueueService] Fetch orders error: $e');
+      }
 
       result.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       return result;
     } catch (_) {
-      return List.from(_localDemoTickets);
+      return [];
     }
   }
 
@@ -237,11 +240,15 @@ class QueueService {
     String? serviceName,
     String? serviceId,
     String? stationOrChair,
+    String? assignedStaffId,
     String? assignedStaffName,
     String? notes,
   }) async {
     final profile = await _businessService.getBusinessProfile();
-    final businessId = profile?['id']?.toString() ?? 'local_shop';
+    final businessId = profile?['id']?.toString();
+    if (businessId == null || businessId.isEmpty) {
+      throw Exception('Profil perniagaan tidak dijumpai.');
+    }
 
     int baseWaitMins = 15;
     int totalChairs = 1;
@@ -258,39 +265,31 @@ class QueueService {
     int nextSeq = _ticketSequence;
     int activeWaitingCount = 0;
 
-    if (businessId != 'local_shop') {
-      try {
-        final now = DateTime.now();
-        final startOfToday = DateTime(now.year, now.month, now.day).toIso8601String();
-        final todayRows = await _client
-            .from('queue_tickets')
-            .select('ticket_number, status')
-            .eq('business_id', businessId)
-            .gte('created_at', startOfToday);
+    try {
+      final now = DateTime.now();
+      final startOfTodayIso = DateTime(now.year, now.month, now.day).toUtc().toIso8601String();
+      final todayRows = await _client
+          .from('queue_tickets')
+          .select('ticket_number, status')
+          .eq('business_id', businessId)
+          .gte('created_at', startOfTodayIso);
 
-        final list = todayRows as List;
-        int maxNum = list.length;
-        for (final r in list) {
-          final st = r['status']?.toString() ?? '';
-          if (st == 'waiting' || st == 'calling') {
-            activeWaitingCount++;
-          }
-          final tNum = (r['ticket_number']?.toString() ?? '').replaceAll(RegExp(r'[^0-9]'), '');
-          final parsed = int.tryParse(tNum);
-          if (parsed != null && parsed > maxNum) {
-            maxNum = parsed;
-          }
+      final list = todayRows as List;
+      int maxNum = list.length;
+      for (final r in list) {
+        final st = r['status']?.toString() ?? '';
+        if (st == 'waiting' || st == 'calling') {
+          activeWaitingCount++;
         }
-        nextSeq = maxNum + 1;
-        if (nextSeq <= _ticketSequence) {
-          _ticketSequence = nextSeq + 1;
-        } else {
-          _ticketSequence = nextSeq + 1;
+        final tNum = (r['ticket_number']?.toString() ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+        final parsed = int.tryParse(tNum);
+        if (parsed != null && parsed > maxNum) {
+          maxNum = parsed;
         }
-      } catch (_) {
-        nextSeq = _ticketSequence++;
       }
-    } else {
+      nextSeq = maxNum + 1;
+      _ticketSequence = nextSeq + 1;
+    } catch (_) {
       nextSeq = _ticketSequence++;
     }
 
@@ -307,6 +306,7 @@ class QueueService {
       if (serviceName != null && serviceName.isNotEmpty) 'service_name': serviceName,
       if (serviceId != null) 'service_id': serviceId,
       if (stationOrChair != null) 'station_or_chair': stationOrChair,
+      if (assignedStaffId != null) 'assigned_staff_id': assignedStaffId,
       if (assignedStaffName != null) 'assigned_staff_name': assignedStaffName,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
       'status': 'waiting',
@@ -314,44 +314,26 @@ class QueueService {
       'created_at': DateTime.now().toIso8601String(),
     };
 
-    try {
-      final response = await _client
-          .from('queue_tickets')
-          .insert(newTicketData)
-          .select()
-          .single();
-      return QueueTicketModel.fromJson(response);
-    } catch (_) {
-      // Fallback local creation
-      final ticket = QueueTicketModel(
-        id: 'local_${DateTime.now().millisecondsSinceEpoch}',
-        businessId: businessId,
-        ticketNumber: ticketNumber,
-        customerName: customerName,
-        phoneNumber: phoneNumber,
-        serviceName: serviceName,
-        serviceId: serviceId,
-        stationOrChair: stationOrChair,
-        assignedStaffName: assignedStaffName,
-        status: 'waiting',
-        notes: notes,
-        createdAt: DateTime.now(),
-      );
-      _localDemoTickets.add(ticket);
-      return ticket;
-    }
+    final response = await _client
+        .from('queue_tickets')
+        .insert(newTicketData)
+        .select()
+        .single();
+    return QueueTicketModel.fromJson(response);
   }
 
   /// Calls a ticket or live order to station / pickup counter
   Future<void> callTicket(
     String ticketId, {
     String? stationOrChair,
+    String? assignedStaffId,
     String? assignedStaffName,
   }) async {
     final updates = {
       'status': 'calling',
       'called_at': DateTime.now().toIso8601String(),
       if (stationOrChair != null) 'station_or_chair': stationOrChair,
+      if (assignedStaffId != null) 'assigned_staff_id': assignedStaffId,
       if (assignedStaffName != null) 'assigned_staff_name': assignedStaffName,
     };
 
@@ -375,16 +357,6 @@ class QueueService {
           await _client.from('orders').update({'status': 'ready'}).eq('id', ticketId);
         } catch (_) {}
       }
-    }
-
-    final idx = _localDemoTickets.indexWhere((t) => t.id == ticketId);
-    if (idx != -1) {
-      _localDemoTickets[idx] = _localDemoTickets[idx].copyWith(
-        status: 'calling',
-        stationOrChair: stationOrChair ?? 'Sedia Diambil',
-        assignedStaffName: assignedStaffName,
-        calledAt: DateTime.now(),
-      );
     }
   }
 
@@ -415,14 +387,6 @@ class QueueService {
         } catch (_) {}
       }
     }
-
-    final idx = _localDemoTickets.indexWhere((t) => t.id == ticketId);
-    if (idx != -1) {
-      _localDemoTickets[idx] = _localDemoTickets[idx].copyWith(
-        status: 'serving',
-        servingAt: DateTime.now(),
-      );
-    }
   }
 
   /// Completes a ticket or order service
@@ -452,14 +416,6 @@ class QueueService {
         } catch (_) {}
       }
     }
-
-    final idx = _localDemoTickets.indexWhere((t) => t.id == ticketId);
-    if (idx != -1) {
-      _localDemoTickets[idx] = _localDemoTickets[idx].copyWith(
-        status: 'completed',
-        completedAt: DateTime.now(),
-      );
-    }
   }
 
   /// Cancels or marks ticket or order as cancelled / no-show
@@ -478,11 +434,6 @@ class QueueService {
         client: _client,
         businessService: _businessService,
       ).updateOrderStatus(ticketId, 'cancelled');
-    }
-
-    final idx = _localDemoTickets.indexWhere((t) => t.id == ticketId);
-    if (idx != -1) {
-      _localDemoTickets[idx] = _localDemoTickets[idx].copyWith(status: status);
     }
   }
 }

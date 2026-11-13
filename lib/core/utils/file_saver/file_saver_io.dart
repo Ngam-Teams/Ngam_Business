@@ -35,3 +35,9 @@ Future<String?> saveAndDownloadFile({
 
   return file.path;
 }
+
+Future<void> openSavedFile(String path) async {
+  try {
+    await OpenFilex.open(path);
+  } catch (_) {}
+}

@@ -40,25 +40,42 @@ class PayrollService {
 
       final members = (membersRes as List).cast<Map<String, dynamic>>();
 
+      // 2. Fetch saved compensation settings from DB
+      final dbSettingsRes = await _client
+          .from('staff_payroll_settings')
+          .select()
+          .eq('business_id', businessId);
+      final Map<String, Map<String, dynamic>> dbMap = {};
+      for (final row in (dbSettingsRes as List)) {
+        final map = Map<String, dynamic>.from(row as Map);
+        if (map['staff_id'] != null) {
+          dbMap[map['staff_id'] as String] = map;
+        }
+      }
+
       final List<StaffPayrollSetting> results = [];
       for (final m in members) {
         final id = m['id'] as String;
         if (_localSettings.containsKey(id)) {
           results.add(_localSettings[id]!);
+        } else if (dbMap.containsKey(id)) {
+          final setting = StaffPayrollSetting.fromJson(dbMap[id]!);
+          _localSettings[id] = setting;
+          results.add(setting);
         } else {
           final setting = StaffPayrollSetting(
             staffId: id,
             staffName: m['name'] as String? ?? 'Staff',
             staffCode: m['staff_code'] as String? ?? 'STF-001',
-            designation: m['designation'] as String? ?? 'Barber / Crew',
-            baseSalary: 1800.0,
-            serviceCommissionRate: 35.0,
-            productCommissionRate: 10.0,
-            epfEnabled: true,
-            socsoEnabled: true,
-            eisEnabled: true,
-            bankName: 'Maybank Islamic',
-            bankAccountNumber: '5140-xxxx-1289',
+            designation: m['designation'] as String? ?? 'Krew',
+            baseSalary: 0.0,
+            serviceCommissionRate: 0.0,
+            productCommissionRate: 0.0,
+            epfEnabled: false,
+            socsoEnabled: false,
+            eisEnabled: false,
+            bankName: null,
+            bankAccountNumber: null,
           );
           _localSettings[id] = setting;
           results.add(setting);
@@ -87,22 +104,62 @@ class PayrollService {
     }
   }
 
-  /// Generates the live monthly payroll run with calculated commissions
+  /// Generates the live monthly payroll run with calculated commissions from real sales
   Future<List<MonthlyPayrollItem>> generateMonthlyPayroll() async {
     if (_localCurrentPayroll.isNotEmpty) {
       return List.from(_localCurrentPayroll);
     }
 
+    final businessId = await _getShopId();
     final settings = await fetchStaffPayrollSettings();
     final List<MonthlyPayrollItem> list = [];
 
-    // Realistic demo base data seeded from staff compensation
-    double commMultiplier = 1.0;
+    // Query real completed bookings and orders this month to compute exact commissions
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1).toIso8601String();
+
+    final Map<String, double> staffServiceSales = {};
+    final Map<String, double> staffProductSales = {};
+
+    if (businessId != null) {
+      try {
+        final bookingsRes = await _client
+            .from('bookings')
+            .select('staff_id, total_price, status, created_at')
+            .eq('business_id', businessId)
+            .eq('status', 'completed')
+            .gte('created_at', startOfMonth);
+        for (final b in (bookingsRes as List)) {
+          final sid = b['staff_id'] as String?;
+          final amt = (b['total_price'] as num?)?.toDouble() ?? 0.0;
+          if (sid != null) {
+            staffServiceSales[sid] = (staffServiceSales[sid] ?? 0.0) + amt;
+          }
+        }
+      } catch (_) {}
+
+      try {
+        final ordersRes = await _client
+            .from('orders')
+            .select('staff_id, total_amount, status, created_at')
+            .eq('business_id', businessId)
+            .eq('status', 'completed')
+            .gte('created_at', startOfMonth);
+        for (final o in (ordersRes as List)) {
+          final sid = o['staff_id'] as String?;
+          final amt = (o['total_amount'] as num?)?.toDouble() ?? 0.0;
+          if (sid != null) {
+            staffProductSales[sid] = (staffProductSales[sid] ?? 0.0) + amt;
+          }
+        }
+      } catch (_) {}
+    }
+
     for (final s in settings) {
-      final serviceComm = (450.0 * commMultiplier);
-      final productComm = (85.0 * commMultiplier);
-      final ot = (180.0 * (commMultiplier > 1.1 ? 1.5 : 1.0));
-      final tip = 140.0;
+      final totalServiceSales = staffServiceSales[s.staffId] ?? 0.0;
+      final totalProductSales = staffProductSales[s.staffId] ?? 0.0;
+      final serviceComm = totalServiceSales * (s.serviceCommissionRate / 100.0);
+      final productComm = totalProductSales * (s.productCommissionRate / 100.0);
 
       list.add(
         MonthlyPayrollItem(
@@ -113,8 +170,10 @@ class PayrollService {
           baseSalary: s.baseSalary,
           serviceCommission: serviceComm,
           productCommission: productComm,
-          overtimePay: ot,
-          tipsShare: tip,
+          overtimePay: 0.0,
+          tipsShare: 0.0,
+          bonusOrAllowance: 0.0,
+          penaltyOrDeduction: 0.0,
           epfEnabled: s.epfEnabled,
           socsoEnabled: s.socsoEnabled,
           eisEnabled: s.eisEnabled,
@@ -123,7 +182,6 @@ class PayrollService {
           status: 'draft',
         ),
       );
-      commMultiplier += 0.2;
     }
 
     _localCurrentPayroll.clear();
@@ -148,14 +206,32 @@ class PayrollService {
     try {
       final businessId = await _getShopId();
       if (businessId != null) {
-        await _client.from('monthly_payrolls').insert({
-          'business_id': businessId,
-          'month': DateTime.now().month,
-          'year': DateTime.now().year,
-          'total_amount': _localCurrentPayroll.fold(0.0, (s, i) => s + i.netPay),
-          'status': 'approved',
-          'created_at': DateTime.now().toIso8601String(),
-        });
+        final now = DateTime.now();
+        final existing = await _client
+            .from('monthly_payrolls')
+            .select('id')
+            .eq('business_id', businessId)
+            .eq('month', now.month)
+            .eq('year', now.year)
+            .order('created_at', ascending: false)
+            .limit(1)
+            .maybeSingle();
+
+        if (existing != null) {
+          await _client.from('monthly_payrolls').update({
+            'total_amount': _localCurrentPayroll.fold(0.0, (s, i) => s + i.netPay),
+            'status': 'approved',
+          }).eq('id', existing['id']);
+        } else {
+          await _client.from('monthly_payrolls').insert({
+            'business_id': businessId,
+            'month': now.month,
+            'year': now.year,
+            'total_amount': _localCurrentPayroll.fold(0.0, (s, i) => s + i.netPay),
+            'status': 'approved',
+            'created_at': now.toIso8601String(),
+          });
+        }
       }
     } catch (_) {}
   }

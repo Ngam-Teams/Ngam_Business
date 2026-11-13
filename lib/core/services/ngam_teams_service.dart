@@ -1,3 +1,5 @@
+import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +23,7 @@ class NgamTeamsService {
       final apkUri = Uri.parse(apkDownloadUrl);
 
       bool launched = false;
-      if (await canLaunchUrl(schemeUri)) {
+      if (!kIsWeb && await canLaunchUrl(schemeUri)) {
         launched = await launchUrl(schemeUri, mode: LaunchMode.externalApplication);
       }
 
@@ -67,7 +69,7 @@ class NgamTeamsService {
         ? '\n👉 Kod Staf anda: $staffCode'
         : '';
     final emailLine = email != null && email.trim().isNotEmpty
-        ? '\n👉 Emel berdaftar: $email'
+        ? '\n👉 E-mel berdaftar: $email'
         : '';
 
     final message = '''
@@ -79,7 +81,7 @@ $codeLine$emailLine
 
 Langkah-langkah Mudah:
 1. Pasang aplikasi Ngam Teams menggunakan pautan di atas.
-2. Log masuk menggunakan emel berdaftar anda, ATAU buka menu Profil dan masukkan Kod Staf di atas.
+2. Log masuk menggunakan e-mel berdaftar anda, ATAU buka menu Profil dan masukkan Kod Staf di atas.
 3. Anda akan terus dipautkan ke akaun kedai untuk mula bertugas!
 '''.trim();
 
@@ -195,9 +197,9 @@ Langkah-langkah Mudah:
               ),
 
               const SizedBox(height: 18),
-              const Text(
-                'TINDAKAN PANTAS QUICK ACTIONS',
-                style: TextStyle(
+              Text(
+                'ngam_teams.quick_actions'.tr(),
+                style: const TextStyle(
                   color: Colors.white38,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -210,7 +212,7 @@ Langkah-langkah Mudah:
               _buildHubActionTile(
                 icon: HugeIcons.strokeRoundedSmartPhone01,
                 iconColor: const Color(0xFF38BDF8),
-                title: 'Buka Aplikasi Ngam Teams',
+                title: 'ngam_teams.open_teams_app'.tr(),
                 subtitle: 'Lancar app terus pada peranti ini atau semak APK terkini',
                 onTap: () {
                   Navigator.pop(ctx);
@@ -223,7 +225,7 @@ Langkah-langkah Mudah:
                 icon: HugeIcons.strokeRoundedUserAdd01,
                 iconColor: const Color(0xFFA78BFA),
                 title: 'Urus Akaun Staf & QR Kod Jemputan',
-                subtitle: 'Daftar staf, pautkan emel, atau jana QR imbasan pantas',
+                subtitle: 'Daftar staf, pautkan e-mel, atau jana QR imbasan pantas',
                 onTap: () {
                   Navigator.pop(ctx);
                   context.push('/staff-management');

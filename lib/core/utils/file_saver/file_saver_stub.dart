@@ -7,3 +7,5 @@ Future<String?> saveAndDownloadFile({
 }) async {
   throw UnsupportedError('Platform ini tidak disokong untuk muat turun.');
 }
+
+Future<void> openSavedFile(String path) async {}

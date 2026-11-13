@@ -94,66 +94,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }
   }
 
-  List<({Color color, String event, dynamic icon, String time, VoidCallback? onTap})> _getDefaultActivities(BuildContext context) {
-    return [
-      (
-        time: 'dashboard.just_now'.tr(),
-        event: 'dashboard.act_order_completed'.tr(args: ['2041', '32.00']),
-        icon: HugeIcons.strokeRoundedShoppingBag01,
-        color: const Color(0xFF42A5F5),
-        onTap: () => switchAppShellTab(1),
-      ),
-      (
-        time: 'dashboard.time_min_ago'.tr(args: ['12']),
-        event: 'dashboard.act_product_added'.tr(args: ['Laksa']),
-        icon: HugeIcons.strokeRoundedAdd01,
-        color: const Color(0xFF44CF6C),
-        onTap: () => context.push('/product-catalogue'),
-      ),
-      (
-        time: 'dashboard.time_hour_ago'.tr(args: ['1']),
-        event: 'dashboard.act_order_completed'.tr(args: ['2040', '18.50']),
-        icon: HugeIcons.strokeRoundedShoppingBag01,
-        color: const Color(0xFF42A5F5),
-        onTap: () => switchAppShellTab(1),
-      ),
-      (
-        time: 'dashboard.time_hour_ago'.tr(args: ['2']),
-        event: 'dashboard.act_stock_updated'.tr(args: ['Nasi Lemak 50']),
-        icon: HugeIcons.strokeRoundedPackageDelivered,
-        color: const Color(0xFF42A5F5),
-        onTap: () => context.push('/inventory'),
-      ),
-      (
-        time: 'dashboard.time_hour_ago'.tr(args: ['3']),
-        event: 'dashboard.act_order_completed'.tr(args: ['2039', '24.00']),
-        icon: HugeIcons.strokeRoundedShoppingBag01,
-        color: const Color(0xFF42A5F5),
-        onTap: () => switchAppShellTab(1),
-      ),
-      (
-        time: 'dashboard.time_hour_ago'.tr(args: ['4']),
-        event: 'dashboard.act_review_received'.tr(args: ['5.0']),
-        icon: HugeIcons.strokeRoundedStar,
-        color: const Color(0xFFFFA726),
-        onTap: () => context.push('/customer-reviews'),
-      ),
-      (
-        time: 'dashboard.time_hour_ago'.tr(args: ['5']),
-        event: 'dashboard.act_order_completed'.tr(args: ['2038', '45.00']),
-        icon: HugeIcons.strokeRoundedShoppingBag01,
-        color: const Color(0xFF42A5F5),
-        onTap: () => switchAppShellTab(1),
-      ),
-      (
-        time: 'dashboard.time_hour_ago'.tr(args: ['6']),
-        event: 'dashboard.act_payout_processed'.tr(args: ['380.00']),
-        icon: HugeIcons.strokeRoundedCoins01,
-        color: const Color(0xFF10B981),
-        onTap: () => context.push('/payouts'),
-      ),
-    ];
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +191,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             // In landscape or wide screens: ALWAYS keep Recent Activity & Quick Actions SIDE-BY-SIDE!
             if (isLandscape) {
               // Full-viewport non-scrolling layout when height is sufficient (fills full screen like before)
-              if (height >= 360) {
+              if (height >= 480) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -709,7 +650,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final List<({Color color, String event, dynamic icon, String time, VoidCallback? onTap})> displayActivities;
     if (liveRaw != null && liveRaw.isNotEmpty) {
       displayActivities = liveRaw.map((item) {
-        final map = item as Map<String, dynamic>;
+        final map = Map<String, dynamic>.from(item as Map);
         final isBooking = map['type'] == 'booking';
         final st = (map['status'] ?? '').toString();
         final Color c = st == 'completed'
@@ -733,7 +674,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
         );
       }).toList();
     } else {
-      displayActivities = _getDefaultActivities(context);
+      displayActivities = const [];
     }
 
     return _buildPanel(
@@ -772,27 +713,45 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ],
         ),
       ),
-      child: isDesktop
-          ? Scrollbar(
-              thumbVisibility: true,
-              child: ListView.separated(
-                padding: EdgeInsets.zero,
-                physics: const BouncingScrollPhysics(),
-                itemCount: displayActivities.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, i) => _buildActivityItem(displayActivities[i]),
+      child: displayActivities.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.history_rounded, size: 36, color: Colors.white24),
+                    const SizedBox(height: 8),
+                    Text(
+                      'dashboard.no_activity'.tr(),
+                      style: const TextStyle(color: Colors.white38, fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             )
-          : Column(
-              children: displayActivities
-                  .map(
-                    (act) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildActivityItem(act),
-                    ),
-                  )
-                  .toList(),
-            ),
+          : isDesktop
+              ? Scrollbar(
+                  thumbVisibility: true,
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: displayActivities.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, i) => _buildActivityItem(displayActivities[i]),
+                  ),
+                )
+              : Column(
+                  children: displayActivities
+                      .map(
+                        (act) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildActivityItem(act),
+                        ),
+                      )
+                      .toList(),
+                ),
     );
   }
 
@@ -1033,8 +992,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
         ),
         child: Text(
-          '${actions.length} Tools',
-          style: TextStyle(
+          'dashboard.tools_count'.tr(args: [actions.length.toString()]),
+          style: const TextStyle(
             color: Colors.white60,
             fontSize: 10.5,
             fontWeight: FontWeight.w600,
@@ -1211,15 +1170,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final handle = (profile?['business_handle'] as String?)?.trim() ?? '';
     final storeLink = handle.isNotEmpty ? 'https://ngam.dev/@$handle' : 'https://ngam.dev';
 
-    final templates = [
-      '🎉 Promosi Istimewa Hujung Minggu!\nJom nikmati hidangan lazat di $storeName hari ini! Kumpul cop ganjaran digital untuk setiap pembelian.\n\nLihat menu & pesan terus di sini:\n$storeLink',
-      '🔥 Menu Panas & Menarik!\nAda menu istimewa menanti anda di $storeName hari ini. Disediakan segar setiap masa!\n\nPesan awal untuk elak beratur:\n$storeLink',
-      '🏷️ Baucar Ganjaran Khas!\nTerima kasih kerana setia bersama $storeName. Dapatkan tawaran diskaun menarik untuk pesanan anda!\n\nSemak promosi terkini di sini:\n$storeLink',
-    ];
-
-    int selectedIdx = 0;
-    final textCtrl = TextEditingController(text: templates[0]);
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1227,137 +1177,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF25D366).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const HugeIcon(
-                          icon: HugeIcons.strokeRoundedWhatsapp,
-                          color: Color(0xFF25D366),
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'WhatsApp Marketing Broadcast',
-                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              'Hantar promosi & pautan kedai ke pelanggan dengan 1 klik',
-                              style: TextStyle(color: Colors.white54, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Pilih Templat Promosi:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildTemplateChip('Promosi', 0, selectedIdx, () {
-                        setModalState(() {
-                          selectedIdx = 0;
-                          textCtrl.text = templates[0];
-                        });
-                      }),
-                      const SizedBox(width: 8),
-                      _buildTemplateChip('Menu Baru', 1, selectedIdx, () {
-                        setModalState(() {
-                          selectedIdx = 1;
-                          textCtrl.text = templates[1];
-                        });
-                      }),
-                      const SizedBox(width: 8),
-                      _buildTemplateChip('Ganjaran Cop', 2, selectedIdx, () {
-                        setModalState(() {
-                          selectedIdx = 2;
-                          textCtrl.text = templates[2];
-                        });
-                      }),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: textCtrl,
-                    maxLines: 4,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.05),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF25D366))),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white70,
-                            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          icon: const Icon(Icons.copy_rounded, size: 18),
-                          label: Text('dashboard.copy_text'.tr()),
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: textCtrl.text));
-                            Navigator.pop(ctx);
-                            showGlassToast(context, 'dashboard.text_copied'.tr(), color: const Color(0xFF25D366));
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF25D366),
-                            foregroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          icon: const HugeIcon(icon: HugeIcons.strokeRoundedWhatsapp, color: Colors.black, size: 18),
-                          label: Text('dashboard.open_whatsapp'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                          onPressed: () async {
-                            final text = Uri.encodeComponent(textCtrl.text);
-                            final url = Uri.parse('https://wa.me/?text=$text');
-                            if (await canLaunchUrl(url)) {
-                              await launchUrl(url, mode: LaunchMode.externalApplication);
-                            }
-                            if (ctx.mounted) Navigator.pop(ctx);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (ctx) => _WhatsAppBroadcastSheet(storeName: storeName, storeLink: storeLink),
     );
   }
 
@@ -1507,14 +1327,28 @@ class _HomeDashboardState extends State<HomeDashboard> {
                           icon: const Icon(Icons.download_rounded, size: 18),
                           label: Text('dashboard.export_csv'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                           onPressed: () async {
+                            String sanitizeCsv(dynamic value) {
+                              if (value == null) return '';
+                              var s = value.toString();
+                              if (s.startsWith('=') || s.startsWith('+') || s.startsWith('-') || s.startsWith('@') || s.startsWith('\t') || s.startsWith('\r')) {
+                                s = "'$s";
+                              }
+                              if (s.contains(',') || s.contains('"') || s.contains('\n') || s.contains('\r')) {
+                                s = '"${s.replaceAll('"', '""')}"';
+                              }
+                              return s;
+                            }
+
                             final buffer = StringBuffer();
                             buffer.writeln('ID_Pesanan,Tarikh,Pelanggan,Jumlah_RM,Status,Sumber');
                             for (final o in todayOrders) {
-                              buffer.writeln('${o.id},${o.createdAt.toIso8601String()},${o.customerName ?? "Pelanggan"},${o.total.toStringAsFixed(2)},${o.status},${o.source}');
+                              buffer.writeln('${sanitizeCsv(o.id)},${sanitizeCsv(o.createdAt.toIso8601String())},${sanitizeCsv(o.customerName ?? "Pelanggan")},${o.total.toStringAsFixed(2)},${sanitizeCsv(o.status)},${sanitizeCsv(o.source)}');
                             }
-                            final bytes = Uint8List.fromList(utf8.encode(buffer.toString()));
                             final safeDate = DateFormat('yyyy-MM-dd').format(today);
-                            await downloadStandeeImage(bytes: bytes, fileName: 'Z_Report_$safeDate.csv');
+                            await saveAndDownloadCsv(
+                              csvContent: buffer.toString(),
+                              fileName: 'Z_Report_$safeDate.csv',
+                            );
                             if (ctx.mounted) Navigator.pop(ctx);
                             if (context.mounted) {
                               showGlassToast(context, 'dashboard.csv_downloaded'.tr());
@@ -1640,6 +1474,186 @@ class _QuickActionButtonState extends State<_QuickActionButton> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _WhatsAppBroadcastSheet extends StatefulWidget {
+  final String storeName;
+  final String storeLink;
+
+  const _WhatsAppBroadcastSheet({
+    required this.storeName,
+    required this.storeLink,
+  });
+
+  @override
+  State<_WhatsAppBroadcastSheet> createState() => _WhatsAppBroadcastSheetState();
+}
+
+class _WhatsAppBroadcastSheetState extends State<_WhatsAppBroadcastSheet> {
+  late final List<String> _templates;
+  int _selectedIdx = 0;
+  late final TextEditingController _textCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _templates = [
+      '🎉 Promosi Istimewa Hujung Minggu!\nJom nikmati hidangan lazat di ${widget.storeName} hari ini! Kumpul cop ganjaran digital untuk setiap pembelian.\n\nLihat menu & pesan terus di sini:\n${widget.storeLink}',
+      '🔥 Menu Panas & Menarik!\nAda menu istimewa menanti anda di ${widget.storeName} hari ini. Disediakan segar setiap masa!\n\nPesan awal untuk elak beratur:\n${widget.storeLink}',
+      '🏷️ Baucar Ganjaran Khas!\nTerima kasih kerana setia bersama ${widget.storeName}. Dapatkan tawaran diskaun menarik untuk pesanan anda!\n\nSemak promosi terkini di sini:\n${widget.storeLink}',
+    ];
+    _textCtrl = TextEditingController(text: _templates[0]);
+  }
+
+  @override
+  void dispose() {
+    _textCtrl.dispose();
+    super.dispose();
+  }
+
+  Widget _buildChip(String label, int idx) {
+    final isSel = _selectedIdx == idx;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedIdx = idx;
+          _textCtrl.text = _templates[idx];
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSel ? const Color(0xFF25D366).withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSel ? const Color(0xFF25D366) : Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSel ? const Color(0xFF25D366) : Colors.white70,
+            fontSize: 12,
+            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF25D366).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedWhatsapp,
+                  color: Color(0xFF25D366),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'dashboard.quick_broadcast'.tr(),
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'dashboard.quick_broadcast_desc'.tr(),
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text('Pilih Templat Promosi:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildChip('Promosi', 0),
+              const SizedBox(width: 8),
+              _buildChip('Menu Baru', 1),
+              const SizedBox(width: 8),
+              _buildChip('Ganjaran Cop', 2),
+            ],
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _textCtrl,
+            maxLines: 4,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.05),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFF25D366))),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: Text('dashboard.copy_text'.tr()),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: _textCtrl.text));
+                    Navigator.pop(context);
+                    showGlassToast(context, 'dashboard.text_copied'.tr(), color: const Color(0xFF25D366));
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const HugeIcon(icon: HugeIcons.strokeRoundedWhatsapp, color: Colors.black, size: 18),
+                  label: Text('dashboard.open_whatsapp'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed: () async {
+                    final text = Uri.encodeComponent(_textCtrl.text);
+                    final url = Uri.parse('https://wa.me/?text=$text');
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
