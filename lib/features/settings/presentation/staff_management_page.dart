@@ -339,9 +339,15 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
 
   Future<void> _updateLeaveStatus(String leaveId, String status) async {
     try {
+      final normalizedStatus = status.toLowerCase() == 'approved'
+          ? 'Approved'
+          : (status.toLowerCase() == 'rejected' ? 'Rejected' : 'Pending');
       await _client
           .from('staff_leaves')
-          .update({'status': status})
+          .update({
+            'status': normalizedStatus,
+            'approved_by': _client.auth.currentUser?.id,
+          })
           .eq('id', leaveId);
       if (mounted) {
         showGlassToast(context, 'staff.leave_status_updated'.tr());
@@ -357,11 +363,24 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
   Future<void> _addAnnouncement(String title, String content, String priority, bool isPinned) async {
     if (_businessId == null) return;
     try {
+      String dbPriority = priority;
+      if (!const ['Important', 'Info', 'Reminder', 'Notice'].contains(dbPriority)) {
+        if (priority == 'high') {
+          dbPriority = 'Important';
+        } else if (priority == 'low') {
+          dbPriority = 'Notice';
+        } else {
+          dbPriority = 'Info';
+        }
+      }
+
       await _client.from('business_announcements').insert({
         'business_id': _businessId!,
+        'author_id': _client.auth.currentUser?.id,
+        'author_name': 'Pengurusan',
         'title': title,
-        'content': content,
-        'priority': priority,
+        'body': content,
+        'priority': dbPriority,
         'is_pinned': isPinned,
         'created_at': DateTime.now().toIso8601String(),
       });
@@ -374,6 +393,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
           try {
             await _client.from('notifications').insert({
               'user_id': uid,
+              'business_id': _businessId,
               'title': title,
               'message': content,
               'type': 'sistem',
@@ -907,7 +927,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
               itemBuilder: (context, index) {
                 final ann = _announcementList[index];
                 final isPinned = ann['is_pinned'] == true;
-                final priority = ann['priority'] as String? ?? 'normal';
+                final priority = ann['priority'] as String? ?? 'Info';
                 final createdRaw = ann['created_at'] as String?;
                 String dateStr = '';
                 if (createdRaw != null) {
@@ -919,8 +939,9 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
                 }
 
                 Color pColor = const Color(0xFF42A5F5);
-                if (priority == 'high') pColor = const Color(0xFFFF5252);
-                if (priority == 'low') pColor = Colors.white54;
+                if (priority == 'Important' || priority == 'high') pColor = const Color(0xFFFF5252);
+                if (priority == 'Reminder') pColor = const Color(0xFFF9C80E);
+                if (priority == 'Notice' || priority == 'low') pColor = Colors.white54;
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -971,7 +992,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        ann['content'] ?? '',
+                        ann['body'] ?? ann['content'] ?? '',
                         style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
                       ),
                       if (dateStr.isNotEmpty) ...[
@@ -1664,11 +1685,11 @@ Halo $name! Anda telah ditambah sebagai krew/staf untuk "$biz" di aplikasi Ngam 
 ${NgamTeamsService.apkDownloadUrl}
 
 🔑 Kod Staf Anda: $code
-📧 Emel Berdaftar: $email
+📧 E-mel Berdaftar: $email
 
 Cara Menyambung Mudah & Pantas:
 1. Pasang aplikasi Ngam Teams menggunakan pautan di atas.
-2. Log masuk menggunakan emel ($email), ATAU buka menu Profil dan tekan "Enter Staff Code to Connect" lalu masukkan kod: $code.
+2. Log masuk menggunakan e-mel ($email), ATAU buka menu Profil dan tekan "Enter Staff Code to Connect" lalu masukkan kod: $code.
 Selamat bertugas!
 '''.trim();
 
@@ -2274,7 +2295,7 @@ class _AddAnnouncementSheetState extends State<_AddAnnouncementSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _contentController;
-  String _priority = 'normal';
+  String _priority = 'Info';
   bool _isPinned = false;
 
   @override
@@ -2381,9 +2402,10 @@ class _AddAnnouncementSheetState extends State<_AddAnnouncementSheet> {
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'low', child: Text('Rendah')),
-                              DropdownMenuItem(value: 'normal', child: Text('Biasa')),
-                              DropdownMenuItem(value: 'high', child: Text('Tinggi / Mustahak')),
+                              DropdownMenuItem(value: 'Info', child: Text('Maklumat (Info)')),
+                              DropdownMenuItem(value: 'Important', child: Text('Penting / Mustahak')),
+                              DropdownMenuItem(value: 'Reminder', child: Text('Peringatan')),
+                              DropdownMenuItem(value: 'Notice', child: Text('Notis')),
                             ],
                             onChanged: (val) {
                               if (val != null) setState(() => _priority = val);

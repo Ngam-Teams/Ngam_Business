@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'core/router/app_router.dart';
 import 'core/router/url_strategy.dart';
+import 'core/services/app_update_service.dart';
 import 'core/services/network_status_service.dart';
 import 'features/auth/data/auth_service.dart';
 import 'features/settings/data/business_service.dart';
@@ -22,6 +23,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
   setCleanUrlStrategy();
+  AppUpdateService.getAppVersion();
 
   // Initialize network connectivity monitoring
   NetworkStatusService.instance.initialize();

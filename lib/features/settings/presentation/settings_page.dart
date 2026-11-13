@@ -471,46 +471,76 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => _showLanguageModal(context),
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
-          InkWell(
-            onTap: () => AppUpdateService.checkManually(context),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildInfoRow(
-                      label: 'settings.app_version'.tr(),
-                      value: 'v${AppUpdateService.currentVersion}',
-                      icon: HugeIcons.strokeRoundedCode,
-                      valueColor: const Color(0xFF44CF6C),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF44CF6C).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'settings.check_updates'.tr(),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF44CF6C),
+          ValueListenableBuilder<String>(
+            valueListenable: AppUpdateService.versionNotifier,
+            builder: (context, ver, _) {
+              return ValueListenableBuilder<AppReleaseInfo?>(
+                valueListenable: AppUpdateService.availableUpdateNotifier,
+                builder: (context, update, _) {
+                  final hasUpdate = update != null;
+                  final Color badgeColor =
+                      hasUpdate ? Colors.amberAccent : const Color(0xFF44CF6C);
+
+                  return InkWell(
+                    onTap: () {
+                      if (update != null) {
+                        AppUpdateService.showUpdateDialog(context, update);
+                      } else {
+                        AppUpdateService.checkManually(context);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildInfoRow(
+                              label: 'settings.app_version'.tr(),
+                              value: 'v$ver',
+                              icon: HugeIcons.strokeRoundedCode,
+                              valueColor: badgeColor,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: badgeColor.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(6),
+                              border: hasUpdate
+                                  ? Border.all(color: Colors.amberAccent.withValues(alpha: 0.45))
+                                  : null,
+                            ),
+                            child: Text(
+                              hasUpdate
+                                  ? 'app_update.update_pill'.tr(args: [update.version])
+                                  : 'settings.check_updates'.tr(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: badgeColor,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                  );
+                },
+              );
+            },
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
-          _buildInfoRow(
-            label: 'settings.build_label'.tr(),
-            value: 'v${AppUpdateService.currentVersion}',
-            icon: HugeIcons.strokeRoundedCalendar03,
-            valueColor: const Color(0xFF42A5F5),
+          ValueListenableBuilder<String>(
+            valueListenable: AppUpdateService.versionNotifier,
+            builder: (context, ver, _) {
+              return _buildInfoRow(
+                label: 'settings.build_label'.tr(),
+                value: 'v$ver',
+                icon: HugeIcons.strokeRoundedCalendar03,
+                valueColor: const Color(0xFF42A5F5),
+              );
+            },
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildInfoRow(

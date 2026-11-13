@@ -23,6 +23,7 @@
   <meta name="description" content="Sistem operasi kedai moden untuk rakan niaga Ngam. Urus pesanan QR, giliran pintar dan pantau jualan harian dalam satu platform.">
   <meta name="keywords" content="ngam business, business ngam dev, ngam peniaga, portal peniaga ngam, urus pesanan kedai, qr standee, giliran pintar, smart queue malaysia, sistem kedai makan">
   <meta name="author" content="Ngam Digital Platform">
+  <meta name="app-version" content="1.0.21">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://business.ngam.dev/">
 
@@ -145,6 +146,47 @@
         console.warn('[WebNotification] Display error:', err);
       }
     };
+
+    window.ngamReloadPwa = function(versionTag) {
+      try {
+        var ver = versionTag || Date.now().toString();
+        var doReload = function() {
+          try {
+            var url = new URL(window.location.href);
+            url.searchParams.set('_v', ver);
+            window.location.replace(url.toString());
+          } catch (e) {
+            window.location.reload();
+          }
+        };
+        var tasks = [];
+        if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
+          tasks.push(
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              return Promise.all(regs.map(function(reg) {
+                return reg.unregister();
+              }));
+            }).catch(function() {})
+          );
+        }
+        if ('caches' in window && window.caches && window.caches.keys) {
+          tasks.push(
+            window.caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) {
+                return window.caches.delete(k);
+              }));
+            }).catch(function() {})
+          );
+        }
+        if (tasks.length > 0) {
+          Promise.all(tasks).finally(doReload);
+        } else {
+          doReload();
+        }
+      } catch (e) {
+        window.location.reload();
+      }
+    };
   </script>
 
   <!-- PWA Theme Color (Adaptive Light & Dark Mode) -->
@@ -187,122 +229,12 @@
         }
       } catch (e) {}
     };
-
-    // Universal Web / PWA Push Notification Bridge
-    window.isNotificationSupported = function() {
-      return ('Notification' in window);
-    };
-
-    window.getNotificationPermission = function() {
-      if (!('Notification' in window)) return 'unsupported';
-      return Notification.permission;
-    };
-
-    window.requestNotificationPermissionAsync = function(callback) {
-      if (!('Notification' in window)) {
-        if (callback) callback('unsupported');
-        return;
-      }
-      Notification.requestPermission().then(function(perm) {
-        if (callback) callback(perm);
-      }).catch(function() {
-        if (callback) callback('denied');
-      });
-    };
-
-    window.showWebPushNotification = function(title, body, tag, icon, url) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      try {
-        var options = {
-          body: body || '',
-          icon: icon || 'favicon.png',
-          badge: 'favicon.png',
-          tag: tag || ('ngam_biz_' + Date.now()),
-          renotify: true,
-          requireInteraction: false
-        };
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then(function(reg) {
-            reg.showNotification(title, options);
-          }).catch(function() {
-            var n = new Notification(title, options);
-            n.onclick = function() {
-              window.focus();
-              n.close();
-            };
-          });
-        } else {
-          var n = new Notification(title, options);
-          n.onclick = function() {
-            window.focus();
-            n.close();
-          };
-        }
-      } catch (err) {
-        console.warn('[WebNotification] Display error:', err);
-      }
-    };
   </script>
   <!-- Auto-redirect from .pages.dev to official business.ngam.dev -->
   <script>
     if (window.location.hostname.endsWith('pages.dev')) {
       window.location.replace('https://business.ngam.dev' + window.location.pathname + window.location.search);
     }
-
-    // Universal Web / PWA Push Notification Bridge
-    window.isNotificationSupported = function() {
-      return ('Notification' in window);
-    };
-
-    window.getNotificationPermission = function() {
-      if (!('Notification' in window)) return 'unsupported';
-      return Notification.permission;
-    };
-
-    window.requestNotificationPermissionAsync = function(callback) {
-      if (!('Notification' in window)) {
-        if (callback) callback('unsupported');
-        return;
-      }
-      Notification.requestPermission().then(function(perm) {
-        if (callback) callback(perm);
-      }).catch(function() {
-        if (callback) callback('denied');
-      });
-    };
-
-    window.showWebPushNotification = function(title, body, tag, icon, url) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      try {
-        var options = {
-          body: body || '',
-          icon: icon || 'favicon.png',
-          badge: 'favicon.png',
-          tag: tag || ('ngam_biz_' + Date.now()),
-          renotify: true,
-          requireInteraction: false
-        };
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then(function(reg) {
-            reg.showNotification(title, options);
-          }).catch(function() {
-            var n = new Notification(title, options);
-            n.onclick = function() {
-              window.focus();
-              n.close();
-            };
-          });
-        } else {
-          var n = new Notification(title, options);
-          n.onclick = function() {
-            window.focus();
-            n.close();
-          };
-        }
-      } catch (err) {
-        console.warn('[WebNotification] Display error:', err);
-      }
-    };
   </script>
 
   <!-- iOS / iPadOS PWA meta tags & icons -->
@@ -375,61 +307,6 @@
         document.head.appendChild(style);
       }
     })();
-
-    // Universal Web / PWA Push Notification Bridge
-    window.isNotificationSupported = function() {
-      return ('Notification' in window);
-    };
-
-    window.getNotificationPermission = function() {
-      if (!('Notification' in window)) return 'unsupported';
-      return Notification.permission;
-    };
-
-    window.requestNotificationPermissionAsync = function(callback) {
-      if (!('Notification' in window)) {
-        if (callback) callback('unsupported');
-        return;
-      }
-      Notification.requestPermission().then(function(perm) {
-        if (callback) callback(perm);
-      }).catch(function() {
-        if (callback) callback('denied');
-      });
-    };
-
-    window.showWebPushNotification = function(title, body, tag, icon, url) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      try {
-        var options = {
-          body: body || '',
-          icon: icon || 'favicon.png',
-          badge: 'favicon.png',
-          tag: tag || ('ngam_biz_' + Date.now()),
-          renotify: true,
-          requireInteraction: false
-        };
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then(function(reg) {
-            reg.showNotification(title, options);
-          }).catch(function() {
-            var n = new Notification(title, options);
-            n.onclick = function() {
-              window.focus();
-              n.close();
-            };
-          });
-        } else {
-          var n = new Notification(title, options);
-          n.onclick = function() {
-            window.focus();
-            n.close();
-          };
-        }
-      } catch (err) {
-        console.warn('[WebNotification] Display error:', err);
-      }
-    };
   </script>
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
@@ -453,61 +330,6 @@
         }, 350);
       }
     });
-
-    // Universal Web / PWA Push Notification Bridge
-    window.isNotificationSupported = function() {
-      return ('Notification' in window);
-    };
-
-    window.getNotificationPermission = function() {
-      if (!('Notification' in window)) return 'unsupported';
-      return Notification.permission;
-    };
-
-    window.requestNotificationPermissionAsync = function(callback) {
-      if (!('Notification' in window)) {
-        if (callback) callback('unsupported');
-        return;
-      }
-      Notification.requestPermission().then(function(perm) {
-        if (callback) callback(perm);
-      }).catch(function() {
-        if (callback) callback('denied');
-      });
-    };
-
-    window.showWebPushNotification = function(title, body, tag, icon, url) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      try {
-        var options = {
-          body: body || '',
-          icon: icon || 'favicon.png',
-          badge: 'favicon.png',
-          tag: tag || ('ngam_biz_' + Date.now()),
-          renotify: true,
-          requireInteraction: false
-        };
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then(function(reg) {
-            reg.showNotification(title, options);
-          }).catch(function() {
-            var n = new Notification(title, options);
-            n.onclick = function() {
-              window.focus();
-              n.close();
-            };
-          });
-        } else {
-          var n = new Notification(title, options);
-          n.onclick = function() {
-            window.focus();
-            n.close();
-          };
-        }
-      } catch (err) {
-        console.warn('[WebNotification] Display error:', err);
-      }
-    };
   </script>
   <!-- Client-side Web Video Compressor (720p H.264 / WebM MediaRecorder) -->
   <script>
@@ -608,61 +430,6 @@
         };
       } catch (err) {
         onError(err);
-      }
-    };
-
-    // Universal Web / PWA Push Notification Bridge
-    window.isNotificationSupported = function() {
-      return ('Notification' in window);
-    };
-
-    window.getNotificationPermission = function() {
-      if (!('Notification' in window)) return 'unsupported';
-      return Notification.permission;
-    };
-
-    window.requestNotificationPermissionAsync = function(callback) {
-      if (!('Notification' in window)) {
-        if (callback) callback('unsupported');
-        return;
-      }
-      Notification.requestPermission().then(function(perm) {
-        if (callback) callback(perm);
-      }).catch(function() {
-        if (callback) callback('denied');
-      });
-    };
-
-    window.showWebPushNotification = function(title, body, tag, icon, url) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      try {
-        var options = {
-          body: body || '',
-          icon: icon || 'favicon.png',
-          badge: 'favicon.png',
-          tag: tag || ('ngam_biz_' + Date.now()),
-          renotify: true,
-          requireInteraction: false
-        };
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then(function(reg) {
-            reg.showNotification(title, options);
-          }).catch(function() {
-            var n = new Notification(title, options);
-            n.onclick = function() {
-              window.focus();
-              n.close();
-            };
-          });
-        } else {
-          var n = new Notification(title, options);
-          n.onclick = function() {
-            window.focus();
-            n.close();
-          };
-        }
-      } catch (err) {
-        console.warn('[WebNotification] Display error:', err);
       }
     };
   </script>

@@ -8,6 +8,7 @@ import 'bottom_nav.dart';
 import 'glass_toast.dart';
 import '../features/auth/data/auth_service.dart';
 import '../features/settings/data/business_service.dart';
+import '../core/services/app_update_service.dart';
 
 /// DashboardScaffold — master responsive layout for Ngam Business.
 ///
@@ -476,6 +477,148 @@ class DashboardScaffold extends StatelessWidget {
                         }
                       },
                     ),
+                    SizedBox(height: isCompactHeight ? 4 : 6),
+
+                    // Live Version & Update Indicator
+                    ValueListenableBuilder<String>(
+                      valueListenable: AppUpdateService.versionNotifier,
+                      builder: (context, ver, _) {
+                        return ValueListenableBuilder<AppReleaseInfo?>(
+                          valueListenable: AppUpdateService.availableUpdateNotifier,
+                          builder: (context, update, _) {
+                            final hasUpdate = update != null;
+                            final Color badgeColor =
+                                hasUpdate ? Colors.amberAccent : const Color(0xFF44CF6C);
+
+                            void handleTap() {
+                              if (update != null) {
+                                AppUpdateService.showUpdateDialog(context, update);
+                              } else {
+                                AppUpdateService.checkManually(context);
+                              }
+                            }
+
+                            if (!isExpanded) {
+                              return Tooltip(
+                                message: hasUpdate
+                                    ? 'app_update.update_available_tap'.tr(args: [update.version])
+                                    : 'dashboard_scaffold.version_tooltip'.tr(args: [ver]),
+                                waitDuration: const Duration(milliseconds: 200),
+                                child: InkWell(
+                                  onTap: handleTap,
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 10),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: badgeColor.withValues(alpha: hasUpdate ? 0.16 : 0.08),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: badgeColor.withValues(alpha: hasUpdate ? 0.45 : 0.22),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            color: badgeColor,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Flexible(
+                                          child: Text(
+                                            hasUpdate ? '!' : 'v$ver',
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return Tooltip(
+                              message: 'dashboard_scaffold.version_tooltip'.tr(args: [ver]),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: InkWell(
+                                  onTap: handleTap,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: isCompactHeight ? 5 : 7,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: badgeColor.withValues(alpha: hasUpdate ? 0.14 : 0.07),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: badgeColor.withValues(alpha: hasUpdate ? 0.45 : 0.2),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 7,
+                                          height: 7,
+                                          decoration: BoxDecoration(
+                                            color: badgeColor,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'app_update.version_footer'.tr(args: [ver]),
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: badgeColor.withValues(alpha: 0.2),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            hasUpdate
+                                                ? 'dashboard_scaffold.update_pill'.tr(args: [update.version])
+                                                : 'app_update.latest_badge'.tr(),
+                                            style: TextStyle(
+                                              color: badgeColor,
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+
                     SizedBox(height: isCompactHeight ? 6 : 12),
                   ],
                 ),
@@ -837,7 +980,77 @@ class _TopBarActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        ValueListenableBuilder<String>(
+          valueListenable: AppUpdateService.versionNotifier,
+          builder: (context, ver, _) {
+            return ValueListenableBuilder<AppReleaseInfo?>(
+              valueListenable: AppUpdateService.availableUpdateNotifier,
+              builder: (context, update, _) {
+                final hasUpdate = update != null;
+                final Color pillColor =
+                    hasUpdate ? Colors.amberAccent : const Color(0xFF44CF6C);
+                return Tooltip(
+                  message: 'dashboard_scaffold.version_tooltip'.tr(args: [ver]),
+                  child: InkWell(
+                    onTap: () {
+                      if (update != null) {
+                        AppUpdateService.showUpdateDialog(context, update);
+                      } else {
+                        AppUpdateService.checkManually(context);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: pillColor.withValues(
+                          alpha: hasUpdate ? 0.16 : 0.08,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: pillColor.withValues(
+                            alpha: hasUpdate ? 0.45 : 0.25,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: pillColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            hasUpdate
+                                ? 'dashboard_scaffold.update_pill'.tr(args: [update.version])
+                                : 'dashboard_scaffold.latest_pill'.tr(args: [ver]),
+                            style: TextStyle(
+                              color: pillColor,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        const SizedBox(width: 4),
         IconButton(
           icon: const HugeIcon(
             icon: HugeIcons.strokeRoundedNotification02,

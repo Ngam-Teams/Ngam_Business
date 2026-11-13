@@ -402,7 +402,6 @@ class OrderAlertService {
                                               .from('orders')
                                               .update({
                                                 'status': 'preparing',
-                                                'updated_at': DateTime.now().toIso8601String(),
                                               })
                                               .eq('id', orderId);
                                         } catch (e) {

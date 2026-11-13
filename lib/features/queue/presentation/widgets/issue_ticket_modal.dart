@@ -109,9 +109,9 @@ class _IssueTicketModalState extends State<IssueTicketModal> {
         // 3. Dynamic staff members from team_members
         final staffRows = await Supabase.instance.client
             .from('team_members')
-            .select('id, user_id, role, name, user_email, is_active')
+            .select('id, user_id, role, name, email, status')
             .eq('business_id', shopId)
-            .eq('is_active', true);
+            .eq('status', 'active');
         if (mounted) {
           setState(() {
             _staffMembers = (staffRows as List).cast<Map<String, dynamic>>();

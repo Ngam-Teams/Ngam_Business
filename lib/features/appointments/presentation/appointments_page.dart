@@ -420,7 +420,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
           .from('team_members')
           .select('id, user_id, name, role')
           .eq('business_id', _businessId!)
-          .eq('is_active', true);
+          .eq('status', 'active');
       final staffList = (staffRows as List).cast<Map<String, dynamic>>();
       if (staffList.isEmpty) {
         if (mounted) showGlassToast(context, 'Tiada krew aktif ditemui untuk ditugaskan.');
@@ -473,6 +473,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
       final dbId = appt['db_id'];
       if (dbId != null) {
         var query = Supabase.instance.client.from('bookings').update({
+          'staff_id': selected['id'],
           'booking_metadata': updatedMeta,
         }).eq('id', dbId);
         if (_businessId != null && _businessId!.isNotEmpty) {
@@ -486,7 +487,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
               'user_id': assignedUserId,
               'business_id': _businessId,
               'title': 'Tugasan Tempahan Baharu',
-              'body': 'Anda telah ditugaskan untuk tempahan #${appt['id']} (${appt['service']}) pada ${appt['dateTime']}.',
+              'message': 'Anda telah ditugaskan untuk tempahan #${appt['id']} (${appt['service']}) pada ${appt['dateTime']}.',
               'type': 'tempahan',
             });
           } catch (_) {}

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -111,9 +112,12 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
         final uri = Uri.parse(
           'https://nominatim.openstreetmap.org/reverse?lat=${target.latitude}&lon=${target.longitude}&format=json&addressdetails=1',
         );
-        final res = await http.get(uri, headers: {
-          'User-Agent': 'NgamBusiness/1.0 (contact@ngam.dev)',
-        }).timeout(const Duration(seconds: 4));
+        final res = await http
+            .get(
+              uri,
+              headers: kIsWeb ? null : const {'User-Agent': 'NgamBusiness/1.0 (contact@ngam.dev)'},
+            )
+            .timeout(const Duration(seconds: 4));
 
         if (res.statusCode == 200 && mounted) {
           final data = json.decode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
@@ -182,9 +186,12 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
           final nomUri = Uri.parse(
             'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(trimmed)}&format=json&addressdetails=1&limit=5&countrycodes=my',
           );
-          final nomRes = await http.get(nomUri, headers: {
-            'User-Agent': 'NgamBusiness/1.0 (contact@ngam.dev)',
-          }).timeout(const Duration(seconds: 3));
+          final nomRes = await http
+              .get(
+                nomUri,
+                headers: kIsWeb ? null : const {'User-Agent': 'NgamBusiness/1.0 (contact@ngam.dev)'},
+              )
+              .timeout(const Duration(seconds: 3));
 
           if (nomRes.statusCode == 200) {
             final list = json.decode(utf8.decode(nomRes.bodyBytes)) as List? ?? [];

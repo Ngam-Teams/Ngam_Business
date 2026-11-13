@@ -321,19 +321,8 @@ class OrdersService {
         'status': newStatus,
         if (effectivePaymentStatus != null) 'payment_status': effectivePaymentStatus,
       };
-      try {
-        await _client
-            .from('orders')
-            .update({
-              ...payload,
-              'updated_at': DateTime.now().toIso8601String(),
-            })
-            .eq('id', orderId);
-        return true;
-      } catch (_) {
-        await _client.from('orders').update(payload).eq('id', orderId);
-        return true;
-      }
+      await _client.from('orders').update(payload).eq('id', orderId);
+      return true;
     } catch (e) {
       debugPrint('[OrdersService] updateOrderStatus error ($orderId -> $newStatus): $e');
       return false;

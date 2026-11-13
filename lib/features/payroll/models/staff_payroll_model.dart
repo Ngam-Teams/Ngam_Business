@@ -63,6 +63,19 @@ class StaffPayrollSetting {
     'bank_account_number': bankAccountNumber,
   };
 
+  /// Column-only payload for `staff_payroll_settings` table (excludes display fields from `team_members`).
+  Map<String, dynamic> toDbJson() => {
+    'staff_id': staffId,
+    'base_salary': baseSalary,
+    'service_commission_rate': serviceCommissionRate,
+    'product_commission_rate': productCommissionRate,
+    'epf_enabled': epfEnabled,
+    'socso_enabled': socsoEnabled,
+    'eis_enabled': eisEnabled,
+    'bank_name': bankName,
+    'bank_account_number': bankAccountNumber,
+  };
+
   StaffPayrollSetting copyWith({
     double? baseSalary,
     double? serviceCommissionRate,

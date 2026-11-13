@@ -250,8 +250,8 @@ class BusinessService {
         final memberRes = await _client
             .from('team_members')
             .select('business_id, role, status')
-            .or('user_id.eq.${user.id},user_email.ilike.${user.email ?? ""}')
-            .eq('status', 'active')
+            .or('user_id.eq.${user.id},email.ilike.${user.email ?? ""}')
+            .neq('status', 'inactive')
             .limit(1);
         final memberList = memberRes as List;
         if (memberList.isNotEmpty) {
@@ -261,9 +261,9 @@ class BusinessService {
             try {
               await _client
                   .from('team_members')
-                  .update({'user_id': user.id})
+                  .update({'user_id': user.id, 'status': 'active'})
                   .eq('business_id', linkedBusinessId)
-                  .ilike('user_email', user.email!);
+                  .ilike('email', user.email!);
             } catch (_) {}
           }
 

@@ -59,7 +59,13 @@ class PayrollService {
         if (_localSettings.containsKey(id)) {
           results.add(_localSettings[id]!);
         } else if (dbMap.containsKey(id)) {
-          final setting = StaffPayrollSetting.fromJson(dbMap[id]!);
+          final merged = {
+            ...dbMap[id]!,
+            'staff_name': m['name'] ?? dbMap[id]!['staff_name'] ?? 'Staff',
+            'staff_code': m['staff_code'] ?? dbMap[id]!['staff_code'] ?? 'STF-001',
+            'designation': m['designation'] ?? dbMap[id]!['designation'] ?? 'Staff',
+          };
+          final setting = StaffPayrollSetting.fromJson(merged);
           _localSettings[id] = setting;
           results.add(setting);
         } else {
@@ -95,10 +101,13 @@ class PayrollService {
       final businessId = await _getShopId();
       if (businessId == null) return;
 
-      await _client.from('staff_payroll_settings').upsert({
-        'business_id': businessId,
-        ...setting.toJson(),
-      });
+      await _client.from('staff_payroll_settings').upsert(
+        {
+          'business_id': businessId,
+          ...setting.toDbJson(),
+        },
+        onConflict: 'business_id,staff_id',
+      );
     } catch (_) {
       // Silently fall back to in-memory
     }
@@ -139,15 +148,30 @@ class PayrollService {
       } catch (_) {}
 
       try {
+        final membersRes = await _client
+            .from('team_members')
+            .select('id, user_id')
+            .eq('business_id', businessId)
+            .eq('status', 'active');
+        final Map<String, String> userIdToStaffId = {};
+        for (final m in (membersRes as List)) {
+          final uid = m['user_id'] as String?;
+          final sid = m['id'] as String?;
+          if (uid != null && sid != null) {
+            userIdToStaffId[uid] = sid;
+          }
+        }
+
         final ordersRes = await _client
             .from('orders')
-            .select('staff_id, total_amount, status, created_at')
+            .select('owner_user_id, total, status, created_at')
             .eq('business_id', businessId)
             .eq('status', 'completed')
             .gte('created_at', startOfMonth);
         for (final o in (ordersRes as List)) {
-          final sid = o['staff_id'] as String?;
-          final amt = (o['total_amount'] as num?)?.toDouble() ?? 0.0;
+          final uid = o['owner_user_id'] as String?;
+          final sid = uid != null ? userIdToStaffId[uid] : null;
+          final amt = (o['total'] as num?)?.toDouble() ?? 0.0;
           if (sid != null) {
             staffProductSales[sid] = (staffProductSales[sid] ?? 0.0) + amt;
           }
