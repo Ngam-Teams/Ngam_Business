@@ -55,6 +55,26 @@ class _PosPageState extends State<PosPage> {
   String? _manualDiscountLabel;
   bool _autoPrintReceipt = false;
   Map<String, dynamic>? _lastCompletedReceipt;
+  final ValueNotifier<int> _cartUiRevision = ValueNotifier<int>(0);
+  BuildContext? _cartSheetContext;
+
+  void _updatePosState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+    _cartUiRevision.value++;
+  }
+
+  String _orderTypeLabel(String type) {
+    switch (type) {
+      case 'takeaway':
+        return 'pos.type_takeaway'.tr();
+      case 'delivery':
+        return 'pos.type_delivery'.tr();
+      case 'dine_in':
+      default:
+        return 'pos.type_dine_in'.tr();
+    }
+  }
 
   List<String> get _categories {
     final cats = _allProducts
@@ -163,6 +183,7 @@ class _PosPageState extends State<PosPage> {
     _productSubscription?.cancel();
     _searchController.dispose();
     _customerController.dispose();
+    _cartUiRevision.dispose();
     super.dispose();
   }
 
@@ -172,7 +193,7 @@ class _PosPageState extends State<PosPage> {
     }
     _productSubscription = _service.streamProducts().listen((products) {
       if (!mounted) return;
-      setState(() {
+      _updatePosState(() {
         _allProducts = products;
         
         // Remove items from the cart if they are deleted or made unavailable
@@ -235,7 +256,7 @@ class _PosPageState extends State<PosPage> {
       return;
     }
 
-    setState(() {
+    _updatePosState(() {
       final existing = _cart
           .where((i) => i.product.id == product.id && !i.hasCustomizations && !i.isReward)
           .firstOrNull;
@@ -271,7 +292,7 @@ class _PosPageState extends State<PosPage> {
       }
     }
 
-    setState(() {
+    _updatePosState(() {
       if (existingItem != null) {
         existingItem.selectedVariant = res.selectedVariant;
         existingItem.variantPriceDelta = res.variantPriceDelta;
@@ -311,8 +332,11 @@ class _PosPageState extends State<PosPage> {
       manualDiscount: _manualDiscount,
       manualDiscountLabel: _manualDiscountLabel,
     );
+    final modeSummary = _orderType == 'dine_in'
+        ? 'pos.table_chip'.tr(args: [_tableNumber])
+        : _orderTypeLabel(_orderType);
 
-    setState(() {
+    _updatePosState(() {
       _heldOrders.insert(0, held);
       _cart = [];
       _customerController.clear();
@@ -327,9 +351,12 @@ class _PosPageState extends State<PosPage> {
 
     await _service.saveHeldOrders(_heldOrders);
     if (!mounted) return;
+    if (_cartSheetContext != null && _cartSheetContext!.mounted) {
+      Navigator.of(_cartSheetContext!).pop();
+    }
     showGlassToast(
       context,
-      'Bil ${held.ticketNumber} (${_orderType == 'dine_in' ? 'Meja $_tableNumber' : _orderType.toUpperCase()}) disimpan ke Senarai Tahan!',
+      'pos.held_toast'.tr(args: [held.ticketNumber, modeSummary]),
       customColor: Colors.amber,
     );
   }
@@ -340,7 +367,7 @@ class _PosPageState extends State<PosPage> {
       builder: (ctx) => PosHeldOrdersModal(
         heldOrders: _heldOrders,
         onResume: (order) async {
-          setState(() {
+          _updatePosState(() {
             _cart = List<CartItem>.from(order.items);
             _orderType = order.orderType;
             _tableNumber = order.tableNumber;
@@ -358,7 +385,7 @@ class _PosPageState extends State<PosPage> {
           );
         },
         onDelete: (order) async {
-          setState(() {
+          _updatePosState(() {
             _heldOrders.removeWhere((h) => h.id == order.id);
           });
           await _service.saveHeldOrders(_heldOrders);
@@ -379,7 +406,7 @@ class _PosPageState extends State<PosPage> {
       subtotal: _cartTotal,
     );
     if (res == null || !mounted) return;
-    setState(() {
+    _updatePosState(() {
       _manualDiscount = res.discountAmount;
       _manualDiscountLabel = res.label;
     });
@@ -422,9 +449,13 @@ class _PosPageState extends State<PosPage> {
     required String paymentMethodLabel,
     String? customerName,
   }) async {
+    final modeDisplay = _orderType == 'dine_in'
+        ? '${_orderTypeLabel(_orderType)} (${'pos.table_chip'.tr(args: [_tableNumber])})'
+        : _orderTypeLabel(_orderType);
+
     final receiptPayload = {
       'ref': '#NG-$_orderSequence',
-      'mode': _orderType == 'dine_in' ? 'MAKAN SINI (Meja $_tableNumber)' : _orderType.toUpperCase(),
+      'mode': modeDisplay,
       'customer': (customerName != null && customerName.isNotEmpty) ? customerName : 'Pelanggan Kaunter',
       'items': itemsSnapshot
           .map((i) => '${i.quantity}x ${i.formattedOrderItemName} | RM ${i.subtotal.toStringAsFixed(2)}')
@@ -436,7 +467,7 @@ class _PosPageState extends State<PosPage> {
     final queue = await _service.getOfflineQueuedOrders();
     if (!mounted) return;
 
-    setState(() {
+    _updatePosState(() {
       _lastCompletedReceipt = receiptPayload;
       _offlineQueueCount = queue.length;
       _cart = [];
@@ -449,6 +480,10 @@ class _PosPageState extends State<PosPage> {
       _manualDiscountLabel = null;
       _orderSequence++;
     });
+
+    if (_cartSheetContext != null && _cartSheetContext!.mounted) {
+      Navigator.of(_cartSheetContext!).pop();
+    }
 
     if (!syncedOnline && mounted) {
       showGlassToast(
@@ -464,7 +499,7 @@ class _PosPageState extends State<PosPage> {
   }
 
   void _removeFromCart(CartItem item) {
-    setState(() {
+    _updatePosState(() {
       if (item.quantity > 1) {
         item.quantity--;
       } else {
@@ -474,7 +509,7 @@ class _PosPageState extends State<PosPage> {
   }
 
   void _deleteFromCart(CartItem item) {
-    setState(() => _cart.remove(item));
+    _updatePosState(() => _cart.remove(item));
   }
 
   Future<void> _checkout() async {
@@ -877,7 +912,7 @@ class _PosPageState extends State<PosPage> {
           if (_customerController.text.isNotEmpty)
             TextButton(
               onPressed: () {
-                setState(() => _customerController.clear());
+                _updatePosState(() => _customerController.clear());
                 Navigator.pop(ctx);
               },
               child: const Text('Padam', style: TextStyle(color: Colors.redAccent)),
@@ -888,7 +923,7 @@ class _PosPageState extends State<PosPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              setState(() {
+              _updatePosState(() {
                 _customerController.text = nameCtrl.text.trim();
               });
               Navigator.pop(ctx);
@@ -958,7 +993,7 @@ class _PosPageState extends State<PosPage> {
                   ),
                   onSelected: (selected) {
                     if (selected) {
-                      setState(() => _tableNumber = t);
+                      _updatePosState(() => _tableNumber = t);
                       Navigator.pop(ctx);
                     }
                   },
@@ -989,7 +1024,7 @@ class _PosPageState extends State<PosPage> {
           ElevatedButton(
             onPressed: () {
               if (tableCtrl.text.trim().isNotEmpty) {
-                setState(() => _tableNumber = tableCtrl.text.trim());
+                _updatePosState(() => _tableNumber = tableCtrl.text.trim());
               }
               Navigator.pop(ctx);
             },
@@ -1017,7 +1052,7 @@ class _PosPageState extends State<PosPage> {
 
     switch (result.type) {
       case DynamicScanType.member:
-        setState(() {
+        _updatePosState(() {
           _selectedMember = result.member;
           _customerController.text = '${result.member!.name} (${result.member!.phone})';
         });
@@ -1037,7 +1072,7 @@ class _PosPageState extends State<PosPage> {
               price: 0.0,
             );
 
-        setState(() {
+        _updatePosState(() {
           _cart.add(CartItem(
             product: rewardProd,
             quantity: 1,
@@ -1053,7 +1088,7 @@ class _PosPageState extends State<PosPage> {
         break;
 
       case DynamicScanType.voucherDiscount:
-        setState(() {
+        _updatePosState(() {
           _appliedVoucherCode = result.voucherCode;
           _voucherDiscount = result.discountAmount;
           _voucherId = result.voucherId;
@@ -1068,6 +1103,37 @@ class _PosPageState extends State<PosPage> {
   }
 
   void _showVoucherDialog() => _showDynamicScanner();
+
+  void _openCartSheet() {
+    ModalSheet.show(
+      context: context,
+      initialChildSize: 0.85,
+      minChildSize: 0.45,
+      maxChildSize: 0.96,
+      builder: (ctx, scrollController) {
+        _cartSheetContext = ctx;
+        return ValueListenableBuilder<int>(
+          valueListenable: _cartUiRevision,
+          builder: (sheetCtx, _, __) => Column(
+            children: [
+              _buildOrderModeHeader(
+                isModalSheet: true,
+                onCloseSheet: () => Navigator.of(sheetCtx).pop(),
+              ),
+              _buildCustomerBar(),
+              const Divider(height: 1, color: Color(0x1AFFFFFF)),
+              Expanded(
+                child: _buildCartContent(scrollController: scrollController),
+              ),
+              _buildCartFooter(),
+            ],
+          ),
+        );
+      },
+    ).whenComplete(() {
+      _cartSheetContext = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1094,27 +1160,18 @@ class _PosPageState extends State<PosPage> {
           );
         }
 
+        final bottomClearance = MediaQuery.paddingOf(context).bottom * 0.5 + 88;
         return Stack(
           children: [
             _buildProductGrid(),
             if (_cart.isNotEmpty)
               Positioned(
-                bottom: 90,
+                bottom: bottomClearance,
                 left: 16,
                 right: 16,
                 child: GestureDetector(
-                  onTap: () => ModalSheet.show(
-                    context: context,
-                    initialChildSize: 0.85,
-                    builder: (ctx, _) => Column(
-                      children: [
-                        _buildOrderModeHeader(),
-                        _buildCustomerBar(),
-                        Expanded(child: _buildCartContent()),
-                        _buildCartFooter(),
-                      ],
-                    ),
-                  ),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _openCartSheet,
                   child: _buildCartBadge(),
                 ),
               ),
@@ -2062,30 +2119,72 @@ class _PosPageState extends State<PosPage> {
     );
   }
 
-  Widget _buildOrderModeHeader() {
+  Widget _buildOrderModeHeader({
+    bool isModalSheet = false,
+    VoidCallback? onCloseSheet,
+  }) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+      padding: EdgeInsets.fromLTRB(
+        isModalSheet ? 4 : 14,
+        isModalSheet ? 4 : 14,
+        isModalSheet ? 4 : 14,
+        10,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: isModalSheet
+            ? Colors.transparent
+            : Colors.white.withValues(alpha: 0.03),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
           // Segmented order type switcher
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-            ),
-            child: Row(
-              children: [
-                _orderTypeChip('dine_in', 'Makan Sini', Icons.restaurant_rounded),
-                _orderTypeChip('takeaway', 'Bungkus', Icons.takeout_dining_rounded),
-                _orderTypeChip('delivery', 'Hantar', Icons.delivery_dining_rounded),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  child: Row(
+                    children: [
+                      _orderTypeChip('dine_in', 'pos.type_dine_in'.tr(), Icons.restaurant_rounded),
+                      _orderTypeChip('takeaway', 'pos.type_takeaway'.tr(), Icons.takeout_dining_rounded),
+                      _orderTypeChip('delivery', 'pos.type_delivery'.tr(), Icons.delivery_dining_rounded),
+                    ],
+                  ),
+                ),
+              ),
+              if (isModalSheet && onCloseSheet != null) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onCloseSheet,
+                  child: Tooltip(
+                    message: 'pos.close_sheet'.tr(),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.14),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white70,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
           const SizedBox(height: 10),
 
@@ -2114,9 +2213,10 @@ class _PosPageState extends State<PosPage> {
               // Table or Delivery Pill
               if (_orderType == 'dine_in')
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: _showTableNumberDialog,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
@@ -2128,7 +2228,7 @@ class _PosPageState extends State<PosPage> {
                         const Icon(Icons.table_restaurant_rounded, color: Color(0xFF42A5F5), size: 13),
                         const SizedBox(width: 4),
                         Text(
-                          'Meja $_tableNumber',
+                          'pos.table_chip'.tr(args: [_tableNumber]),
                           style: const TextStyle(
                             color: Color(0xFF42A5F5),
                             fontSize: 11,
@@ -2143,14 +2243,16 @@ class _PosPageState extends State<PosPage> {
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                   ),
                   child: Text(
-                    _orderType == 'takeaway' ? 'Bawa Pulang 🛍️' : 'Penghantaran 🛵',
+                    _orderType == 'takeaway'
+                        ? 'pos.type_takeaway_badge'.tr()
+                        : 'pos.type_delivery_badge'.tr(),
                     style: const TextStyle(
                       color: Colors.amber,
                       fontSize: 11,
@@ -2164,22 +2266,23 @@ class _PosPageState extends State<PosPage> {
               // Hold Order (Tahan Bil) button
               if (_cart.isNotEmpty) ...[
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: _holdCurrentOrder,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
                       color: Colors.amber.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.pause_rounded, size: 12, color: Colors.amber),
-                        SizedBox(width: 3),
+                        const Icon(Icons.pause_rounded, size: 12, color: Colors.amber),
+                        const SizedBox(width: 3),
                         Text(
-                          'Tahan Bil',
-                          style: TextStyle(
+                          'pos.hold_bill'.tr(),
+                          style: const TextStyle(
                             color: Colors.amber,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -2192,16 +2295,17 @@ class _PosPageState extends State<PosPage> {
                 const SizedBox(width: 6),
               ] else if (_heldOrders.isNotEmpty) ...[
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: _showHeldOrdersDialog,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
                       color: Colors.amber.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.amber.withValues(alpha: 0.35)),
                     ),
                     child: Text(
-                      'Tab (${_heldOrders.length})',
+                      'pos.held_tab_short'.tr(args: [_heldOrders.length.toString()]),
                       style: const TextStyle(
                         color: Colors.amber,
                         fontSize: 11,
@@ -2215,8 +2319,9 @@ class _PosPageState extends State<PosPage> {
               // Clear button
               if (_cart.isNotEmpty)
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () {
-                    setState(() {
+                    _updatePosState(() {
                       _cart = [];
                       _appliedVoucherCode = null;
                       _voucherDiscount = 0.0;
@@ -2226,14 +2331,15 @@ class _PosPageState extends State<PosPage> {
                     });
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
+                      color: Colors.redAccent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.redAccent.withValues(alpha: 0.25)),
                     ),
-                    child: const Text(
-                      'Padam Troli',
-                      style: TextStyle(
+                    child: Text(
+                      'pos.clear_cart_btn'.tr(),
+                      style: const TextStyle(
                         color: Colors.redAccent,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -2252,10 +2358,11 @@ class _PosPageState extends State<PosPage> {
     final isSel = _orderType == type;
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _orderType = type),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _updatePosState(() => _orderType = type),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 7),
           decoration: BoxDecoration(
             color: isSel ? const Color(0xFF42A5F5) : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
@@ -2269,12 +2376,16 @@ class _PosPageState extends State<PosPage> {
                 color: isSel ? Colors.white : Colors.white60,
               ),
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSel ? Colors.white : Colors.white60,
-                  fontSize: 11.5,
-                  fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isSel ? Colors.white : Colors.white60,
+                    fontSize: 11.5,
+                    fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                  ),
                 ),
               ),
             ],
@@ -2333,6 +2444,7 @@ class _PosPageState extends State<PosPage> {
           const SizedBox(width: 10),
           Expanded(
             child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: _showCustomerDialog,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2366,6 +2478,7 @@ class _PosPageState extends State<PosPage> {
 
           // Dynamic Scanner Quick Action
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: _showDynamicScanner,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -2398,13 +2511,17 @@ class _PosPageState extends State<PosPage> {
           ),
 
           if (hasCustomer) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             GestureDetector(
-              onTap: () => setState(() {
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _updatePosState(() {
                 _customerController.clear();
                 _selectedMember = null;
               }),
-              child: const Icon(Icons.close_rounded, size: 16, color: Colors.white38),
+              child: const Padding(
+                padding: EdgeInsets.all(6),
+                child: Icon(Icons.close_rounded, size: 16, color: Colors.white54),
+              ),
             ),
           ],
         ],
@@ -2412,51 +2529,54 @@ class _PosPageState extends State<PosPage> {
     );
   }
 
-  Widget _buildCartContent() {
+  Widget _buildCartContent({ScrollController? scrollController}) {
     if (_cart.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
-                  shape: BoxShape.circle,
-                ),
-                child: const HugeIcon(
-                  icon: HugeIcons.strokeRoundedShoppingCart01,
-                  color: Colors.white30,
-                  size: 36,
-                ),
+      return ListView(
+        controller: scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        children: [
+          const SizedBox(height: 28),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Troli Kosong',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: const HugeIcon(
+                icon: HugeIcons.strokeRoundedShoppingCart01,
+                color: Colors.white30,
+                size: 36,
               ),
-              const SizedBox(height: 4),
-              const Text(
-                'Tekan produk di sebelah kiri untuk mula menambah pesanan.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white38,
-                  fontSize: 11.5,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+          Text(
+            'pos.cart_empty'.tr(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'pos.cart_empty_sub'.tr(),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 11.5,
+            ),
+          ),
+        ],
       );
     }
 
     return ListView.separated(
+      controller: scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       itemCount: _cart.length,
       separatorBuilder: (_, __) =>
@@ -2541,9 +2661,10 @@ class _PosPageState extends State<PosPage> {
                     if (!item.isReward) ...[
                       const SizedBox(width: 8),
                       GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: () => _customizeCartItem(item.product, existingItem: item),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.07),
                             borderRadius: BorderRadius.circular(5),
@@ -2606,7 +2727,7 @@ class _PosPageState extends State<PosPage> {
                     );
                     return;
                   }
-                  setState(() => item.quantity++);
+                  _updatePosState(() => item.quantity++);
                 },
               ),
             ],
@@ -2624,14 +2745,18 @@ class _PosPageState extends State<PosPage> {
             ),
           ),
 
-          const SizedBox(width: 6),
+          const SizedBox(width: 2),
           // Delete icon
           GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () => _deleteFromCart(item),
-            child: Icon(
-              Icons.close_rounded,
-              color: Colors.white.withValues(alpha: 0.3),
-              size: 16,
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Icon(
+                Icons.close_rounded,
+                color: Colors.white.withValues(alpha: 0.45),
+                size: 16,
+              ),
             ),
           ),
         ],
@@ -2641,15 +2766,16 @@ class _PosPageState extends State<PosPage> {
 
   Widget _cartBtn(IconData icon, VoidCallback onTap) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 26,
-        height: 26,
+        width: 30,
+        height: 30,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(7),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.12),
+            color: Colors.white.withValues(alpha: 0.14),
           ),
         ),
         child: Icon(icon, color: Colors.white, size: 15),
@@ -2659,6 +2785,9 @@ class _PosPageState extends State<PosPage> {
 
   Widget _buildCartFooter() {
     final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
+    final itemCountLabel = _cartCount == 1
+        ? 'pos.cart_badge_item_singular'.tr(args: [_cartCount.toString()])
+        : 'pos.cart_badge_item_plural'.tr(args: [_cartCount.toString()]);
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
@@ -2688,7 +2817,7 @@ class _PosPageState extends State<PosPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Subtotal ($_cartCount ${_cartCount == 1 ? 'item' : 'items'})',
+                      '${'pos.subtotal'.tr()} ($itemCountLabel)',
                       style: const TextStyle(color: Colors.white60, fontSize: 11.5),
                     ),
                     Text(
@@ -2722,26 +2851,34 @@ class _PosPageState extends State<PosPage> {
                           ),
                           const SizedBox(width: 4),
                           GestureDetector(
+                            behavior: HitTestBehavior.opaque,
                             onTap: () {
-                              setState(() {
+                              _updatePosState(() {
                                 _appliedVoucherCode = null;
                                 _voucherDiscount = 0.0;
                                 _voucherId = null;
                               });
                             },
-                            child: const Icon(Icons.cancel_rounded, size: 14, color: Colors.redAccent),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(Icons.cancel_rounded, size: 14, color: Colors.redAccent),
+                            ),
                           ),
                         ],
                       )
                     else
                       GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: _showVoucherDialog,
-                        child: const Text(
-                          '+ Tebus Kod',
-                          style: TextStyle(
-                            color: Color(0xFF42A5F5),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                          child: Text(
+                            '+ Tebus Kod',
+                            style: TextStyle(
+                              color: Color(0xFF42A5F5),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
                       ),
@@ -2779,25 +2916,33 @@ class _PosPageState extends State<PosPage> {
                           ),
                           const SizedBox(width: 4),
                           GestureDetector(
+                            behavior: HitTestBehavior.opaque,
                             onTap: () {
-                              setState(() {
+                              _updatePosState(() {
                                 _manualDiscount = 0.0;
                                 _manualDiscountLabel = null;
                               });
                             },
-                            child: const Icon(Icons.cancel_rounded, size: 14, color: Colors.redAccent),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(Icons.cancel_rounded, size: 14, color: Colors.redAccent),
+                            ),
                           ),
                         ],
                       )
                     else
                       GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: _showManualDiscountDialog,
-                        child: const Text(
-                          '+ Diskaun (% / RM)',
-                          style: TextStyle(
-                            color: Color(0xFF42A5F5),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                          child: Text(
+                            '+ Diskaun (% / RM)',
+                            style: TextStyle(
+                              color: Color(0xFF42A5F5),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
                       ),
@@ -3078,46 +3223,96 @@ class _PosPageState extends State<PosPage> {
 
   Widget _buildCartBadge() {
     final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
+    final itemCountText = _cartCount == 1
+        ? 'pos.cart_badge_item_singular'.tr(args: [_cartCount.toString()])
+        : 'pos.cart_badge_item_plural'.tr(args: [_cartCount.toString()]);
+    final modeLabel = _orderTypeLabel(_orderType);
+
     return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(22),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF00C853).withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF42A5F5).withValues(alpha: 0.42),
+                const Color(0xFF1E88E5).withValues(alpha: 0.34),
+                const Color(0xFF1565C0).withValues(alpha: 0.48),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: const Color(0xFF90CAF9).withValues(alpha: 0.55),
+              width: 1.25,
+            ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF00C853).withValues(alpha: 0.4),
-                blurRadius: 20,
+                color: const Color(0xFF1E88E5).withValues(alpha: 0.32),
+                blurRadius: 24,
                 offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Row(
             children: [
-              const Icon(Icons.shopping_cart_rounded, color: Colors.white, size: 20),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF64B5F6).withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.shopping_cart_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  '$_cartCount ${_cartCount == 1 ? 'item' : 'items'} • ${_orderType.toUpperCase()}',
+                  '$itemCountText • $modeLabel',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w700,
+                    letterSpacing: 0.1,
                   ),
                 ),
               ),
-              Text(
-                fmt.format(_grandTotal),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
-                  fontFamily: 'monospace',
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Text(
+                  fmt.format(_grandTotal),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14.5,
+                    fontFamily: 'monospace',
+                  ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               const Icon(
                 Icons.keyboard_arrow_up_rounded,
                 color: Colors.white,

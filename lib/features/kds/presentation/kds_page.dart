@@ -23,7 +23,7 @@ class KdsPage extends StatefulWidget {
 }
 
 class _KdsPageState extends State<KdsPage> {
-  String _filterType = 'All'; // All, Dine-In, Takeaway
+  String _filterType = 'All'; // All, Dine In, Takeaway
   bool _soundEnabled = true;
   bool _useDemoData = false;
   bool _isLoading = true;
@@ -44,7 +44,7 @@ class _KdsPageState extends State<KdsPage> {
       'rawId': 'demo-1',
       'id': '#4031',
       'table': 'Table 04',
-      'type': 'Dine-In',
+      'type': 'Dine In',
       'minutesAgo': 4,
       'stage': KdsStage.incoming,
       'server': 'Ahmad',
@@ -58,7 +58,7 @@ class _KdsPageState extends State<KdsPage> {
       'rawId': 'demo-2',
       'id': '#4030',
       'table': 'Table 09',
-      'type': 'Dine-In',
+      'type': 'Dine In',
       'minutesAgo': 12,
       'stage': KdsStage.cooking,
       'server': 'Farid',
@@ -85,7 +85,7 @@ class _KdsPageState extends State<KdsPage> {
       'rawId': 'demo-4',
       'id': '#4028',
       'table': 'Table 02',
-      'type': 'Dine-In',
+      'type': 'Dine In',
       'minutesAgo': 18,
       'stage': KdsStage.ready,
       'server': 'Farid',
@@ -280,7 +280,7 @@ class _KdsPageState extends State<KdsPage> {
 
       final String notesStr = (r['notes'] ?? '').toString();
       String tableLabel = 'Kaunter';
-      String typeLabel = 'Dine-In';
+      String typeLabel = 'Dine In';
 
       final bool isTakeaway = source == 'takeaway' ||
           notesStr.toUpperCase().contains('TAKEAWAY') ||
@@ -298,7 +298,7 @@ class _KdsPageState extends State<KdsPage> {
         typeLabel = 'Takeaway';
         tableLabel = 'Bungkus';
       } else if (notesStr.toUpperCase().contains('DINE_IN') || notesStr.toUpperCase().contains('MAKAN SINI')) {
-        typeLabel = 'Dine-In';
+        typeLabel = 'Dine In';
         final tableMatch = RegExp(r'Meja:\s*([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(notesStr) ??
             RegExp(r'Meja\s*#?([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(notesStr);
         if (tableMatch != null && tableMatch.group(1) != '0') {
@@ -420,7 +420,7 @@ class _KdsPageState extends State<KdsPage> {
           icon: Icons.filter_list_rounded,
           tooltip: 'Tapis: $_filterType',
           onTap: () {
-            const filters = ['All', 'Dine-In', 'Takeaway', 'Delivery'];
+            const filters = ['All', 'Dine In', 'Takeaway', 'Delivery'];
             final next = filters[(filters.indexOf(_filterType) + 1) % filters.length];
             setState(() => _filterType = next);
             showGlassToast(context, 'Tapis pesanan: $next');

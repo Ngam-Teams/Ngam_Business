@@ -251,7 +251,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         return 'Standee Menu & Katalog Kedai';
       case QrMode.table:
         final t = _tableCtrl.text.trim().isEmpty ? '1' : _tableCtrl.text.trim();
-        return 'Standee Meja #$t (Dine-in)';
+        return 'Standee Meja #$t (Dine In)';
       case QrMode.promo:
         return 'Standee Baucar & Diskaun Khas';
       case QrMode.wifi:
@@ -1238,7 +1238,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             children: [
               _buildModeChip(QrMode.storefront, 'Storefront', HugeIcons.strokeRoundedStore01),
               const SizedBox(width: 8),
-              _buildModeChip(QrMode.table, 'Meja Dine-in', HugeIcons.strokeRoundedRestaurant01),
+              _buildModeChip(QrMode.table, 'Meja Dine In', HugeIcons.strokeRoundedRestaurant01),
               const SizedBox(width: 8),
               _buildModeChip(QrMode.promo, 'Kod Promo', HugeIcons.strokeRoundedCoupon02),
               const SizedBox(width: 8),
@@ -1535,7 +1535,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         case QrMode.storefront:
           return 'Scan To Browse & Order';
         case QrMode.table:
-          return 'Dine-In Table Order';
+          return 'Dine In Table Order';
         case QrMode.promo:
           return 'Special Promo Voucher';
         case QrMode.wifi:
@@ -1548,7 +1548,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         case QrMode.storefront:
           return 'Imbas Untuk Pesan & Katalog';
         case QrMode.table:
-          return 'Pesanan Meja Dine-In';
+          return 'Pesanan Meja Dine In';
         case QrMode.promo:
           return 'Baucar Promosi Khas';
         case QrMode.wifi:

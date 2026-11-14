@@ -9,6 +9,7 @@ class ModalSheet {
     double initialChildSize = 0.6,
     double minChildSize = 0.4,
     double maxChildSize = 1.0,
+    EdgeInsetsGeometry contentPadding = const EdgeInsets.symmetric(horizontal: 12),
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -17,12 +18,16 @@ class ModalSheet {
       isScrollControlled: true,
       useSafeArea: false,
       backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: initialChildSize,
         minChildSize: minChildSize,
         maxChildSize: maxChildSize,
+        expand: false,
         builder: (context, scrollController) {
-          final topPadding = MediaQuery.of(context).padding.top;
+          final topPadding = initialChildSize >= 0.96
+              ? MediaQuery.of(context).padding.top
+              : 0.0;
 
           return GlassContainer(
             useOwnLayer: true,
@@ -30,7 +35,7 @@ class ModalSheet {
             shape: const LiquidRoundedSuperellipse(borderRadius: 28.0),
             settings: LiquidGlassSettings(
               thickness: 0.1,
-              blur: 2.0,
+              blur: 18.0,
               refractiveIndex: 1.0,
               glassColor: Colors.transparent,
               lightAngle: 45.0,
@@ -41,40 +46,47 @@ class ModalSheet {
             ),
             child: Container(
               decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF0E1222).withValues(alpha: 0.94)
+                    : const Color(0xFF14192C).withValues(alpha: 0.92),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.4),
+                  color: Colors.white.withValues(alpha: isDark ? 0.16 : 0.28),
                   width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-                    blurRadius: 12,
-                    offset: const Offset(0, -4),
+                    color: Colors.black.withValues(alpha: 0.45),
+                    blurRadius: 24,
+                    offset: const Offset(0, -6),
                   ),
                 ],
               ),
-              child: Column(
-                children: [
-                  SizedBox(height: topPadding + 12),
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: isDark ? 0.25 : 0.5),
-                        borderRadius: BorderRadius.circular(2),
+              child: SafeArea(
+                top: false,
+                bottom: true,
+                child: Column(
+                  children: [
+                    SizedBox(height: topPadding + 10),
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.32),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: builder(context, scrollController),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: Padding(
+                        padding: contentPadding,
+                        child: builder(context, scrollController),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );

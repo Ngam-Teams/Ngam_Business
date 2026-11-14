@@ -1,4 +1,5 @@
 import '../../../../core/utils/file_saver/file_saver.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -650,8 +651,12 @@ class PosHeldOrdersModal extends StatelessWidget {
                                 ),
                                 child: Text(
                                   h.orderType == 'dine_in'
-                                      ? 'Meja ${h.tableNumber}'
-                                      : h.orderType.toUpperCase(),
+                                      ? 'pos.table_chip'.tr(args: [h.tableNumber])
+                                      : (h.orderType == 'takeaway'
+                                          ? 'pos.type_takeaway'.tr()
+                                          : (h.orderType == 'delivery'
+                                              ? 'pos.type_delivery'.tr()
+                                              : h.orderType)),
                                   style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 11.5),
                                 ),
                               ),
@@ -1344,7 +1349,7 @@ class PosQuickThermalReceiptModal extends StatelessWidget {
     final method = receipt['method']?.toString() ?? 'TUNAI';
     final ref = receipt['ref']?.toString() ?? '#POS';
     final customer = receipt['customer']?.toString() ?? 'Pelanggan Kaunter';
-    final mode = receipt['mode']?.toString() ?? 'DINE-IN';
+    final mode = receipt['mode']?.toString() ?? 'pos.type_dine_in'.tr();
 
     return '''
 ================================
@@ -1374,7 +1379,7 @@ Terima kasih! Sila datang lagi.
     final method = receipt['method']?.toString() ?? 'TUNAI';
     final ref = receipt['ref']?.toString() ?? '#POS';
     final customer = receipt['customer']?.toString() ?? 'Pelanggan Kaunter';
-    final mode = receipt['mode']?.toString() ?? 'DINE-IN';
+    final mode = receipt['mode']?.toString() ?? 'pos.type_dine_in'.tr();
 
     return Dialog(
       backgroundColor: Colors.transparent,

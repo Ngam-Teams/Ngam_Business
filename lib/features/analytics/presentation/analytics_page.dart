@@ -661,7 +661,7 @@ Laporan dijana secara automatik oleh Ngam Business
         // Order Channels
         const Text('Sales by Order Channel:', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 10),
-        _buildProgressBarRow('Dine-In Orders', '62%', const Color(0xFF42A5F5), 0.62),
+        _buildProgressBarRow('Dine In Orders', '62%', const Color(0xFF42A5F5), 0.62),
         const SizedBox(height: 8),
         _buildProgressBarRow('Takeaway / Bungkus', '26%', const Color(0xFF44CF6C), 0.26),
         const SizedBox(height: 8),
