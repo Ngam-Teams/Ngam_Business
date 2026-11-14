@@ -130,7 +130,7 @@ class NgamBusinessApp extends StatelessWidget {
             : const SizedBox.shrink();
         return Stack(
           children: [
-            content,
+            Positioned.fill(child: content),
             const Positioned(
               top: 0,
               left: 0,
@@ -143,13 +143,13 @@ class NgamBusinessApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+        scaffoldBackgroundColor: const Color(0xFF0A0A14),
         splashColor: Colors.transparent,
         highlightColor: Colors.white.withValues(alpha: 0.04),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF2196F3),
           brightness: Brightness.dark,
-          surface: const Color(0xFF0A0A0A),
+          surface: const Color(0xFF0A0A14),
         ),
         textTheme: GoogleFonts.interTextTheme(
           ThemeData.dark().textTheme,

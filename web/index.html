@@ -189,25 +189,19 @@
     };
   </script>
 
-  <!-- PWA Theme Color (Adaptive Light & Dark Mode) -->
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F8F9FA">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
-  <meta name="theme-color" content="#000000">
+  <!-- PWA Theme Color (Dark Merchant Portal) -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0A0A14">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0A0A14">
+  <meta name="theme-color" content="#0A0A14">
 
   <!-- PWA Theme Color Auto-sync & Bridge -->
   <script>
     (function() {
       try {
-        var isDarkPref = localStorage.getItem('flutter.theme_mode');
-        var isDark = isDarkPref !== null
-          ? isDarkPref === 'true'
-          : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        var color = isDark ? '#000000' : '#F8F9FA';
+        var color = '#0A0A14';
         var metas = document.querySelectorAll('meta[name="theme-color"]');
         metas.forEach(function(m) {
-          if (!m.getAttribute('media')) {
-            m.setAttribute('content', color);
-          }
+          m.setAttribute('content', color);
         });
         if (document.body) {
           document.body.style.backgroundColor = color;
@@ -217,12 +211,10 @@
 
     window.updatePwaThemeColor = function(isDark) {
       try {
-        var color = isDark ? '#000000' : '#F8F9FA';
+        var color = '#0A0A14';
         var metas = document.querySelectorAll('meta[name="theme-color"]');
         metas.forEach(function(m) {
-          if (!m.getAttribute('media')) {
-            m.setAttribute('content', color);
-          }
+          m.setAttribute('content', color);
         });
         if (document.body) {
           document.body.style.backgroundColor = color;
@@ -256,10 +248,11 @@
   <link rel="manifest" href="manifest.json">
   <style>
     html, body {
-      background-color: #000000;
+      background-color: #0A0A14;
       margin: 0;
       padding: 0;
       overflow: hidden;
+      width: 100%;
       height: 100%;
     }
     #ngam-splash {
@@ -272,7 +265,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background-color: #000000;
+      background-color: #0A0A14;
       z-index: 99999;
       transition: opacity 0.35s ease-out;
       user-select: none;
@@ -310,7 +303,7 @@
   </script>
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
-<body style="background-color: #000000;">
+<body style="background-color: #0A0A14;">
   <!-- Semantic Header for Search Engine Indexing (Googlebot & Web Crawlers) -->
   <header style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;" aria-hidden="false">
     <h1>Ngam Business | Portal Peniaga &amp; Operasi Kedai</h1>
