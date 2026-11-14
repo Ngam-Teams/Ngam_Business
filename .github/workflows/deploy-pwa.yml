@@ -54,6 +54,7 @@ jobs:
           cp -r web/privacy_policy build/web/ || true
           cp web/privacypolicy.html build/web/ || true
           cp web/privacy_policy.html build/web/ || true
+          cp web/version.json build/web/version.json || true
         shell: bash
 
       - name: Deploy to Cloudflare Pages via Wrangler

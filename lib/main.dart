@@ -129,8 +129,9 @@ class NgamBusinessApp extends StatelessWidget {
             ? ResponsiveLandscapeScale(child: child)
             : const SizedBox.shrink();
         return Stack(
+          fit: StackFit.expand,
           children: [
-            Positioned.fill(child: content),
+            content,
             const Positioned(
               top: 0,
               left: 0,
