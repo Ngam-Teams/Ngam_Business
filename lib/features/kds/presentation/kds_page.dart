@@ -297,7 +297,11 @@ class _KdsPageState extends State<KdsPage> {
       } else if (isTakeaway) {
         typeLabel = 'Takeaway';
         tableLabel = 'Bungkus';
-      } else if (notesStr.toUpperCase().contains('DINE_IN') || notesStr.toUpperCase().contains('MAKAN SINI')) {
+      } else if (source == 'table' ||
+          notesStr.toUpperCase().contains('DINE_IN') ||
+          notesStr.toUpperCase().contains('DINE IN') ||
+          notesStr.toUpperCase().contains('DINE-IN') ||
+          notesStr.toUpperCase().contains('MAKAN SINI')) {
         typeLabel = 'Dine In';
         final tableMatch = RegExp(r'Meja:\s*([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(notesStr) ??
             RegExp(r'Meja\s*#?([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(notesStr);

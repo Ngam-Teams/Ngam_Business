@@ -1,6 +1,6 @@
 {
-  "version": "1.0.23",
-  "build_number": 3,
-  "released_at": "2026-11-14T05:10:00Z",
-  "changelog": "Label tab POS ringkas, helaian troli POS responsif serta-merta, paparan Makan Sini / Dine In, dan butang kaca biru glassmorphism."
+  "version": "1.0.24",
+  "build_number": 4,
+  "released_at": "2026-11-15T10:00:00Z",
+  "changelog": "Sokongan terjemahan penuh POS (BM & EN) serta keserasian pengesanan pesanan meja Dine In di KDS."
 }

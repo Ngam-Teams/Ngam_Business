@@ -1190,7 +1190,7 @@ class _PosPageState extends State<PosPage> {
           controller: _searchController,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
-            hintText: 'Search products...',
+            hintText: 'pos.search_product'.tr(),
             hintStyle: TextStyle(
               color: Colors.white.withValues(alpha: 0.35),
             ),
@@ -2399,11 +2399,20 @@ class _PosPageState extends State<PosPage> {
     final hasCustomer = _customerController.text.trim().isNotEmpty || _selectedMember != null;
     final displayName = _selectedMember != null
         ? _selectedMember!.name
-        : (_customerController.text.trim().isNotEmpty ? _customerController.text.trim() : 'Pelanggan Tetamu (Walk-in)');
+        : (_customerController.text.trim().isNotEmpty
+            ? _customerController.text.trim()
+            : 'pos.walkin_guest'.tr());
 
     final subtitle = _selectedMember != null
-        ? '${_selectedMember!.tierBadge} • ${_selectedMember!.stamps}/${_selectedMember!.totalStampsRequired} Cop • ${_selectedMember!.points} Mata'
-        : (hasCustomer ? 'Rekod Pesanan Pelanggan' : '+ Tekan atau imbas untuk kenalpasti ahli');
+        ? 'pos.member_status_line'.tr(args: [
+            _selectedMember!.tierBadge,
+            _selectedMember!.stamps.toString(),
+            _selectedMember!.totalStampsRequired.toString(),
+            _selectedMember!.points.toString(),
+          ])
+        : (hasCustomer
+            ? 'pos.customer_order_record'.tr()
+            : 'pos.tap_or_scan_member'.tr());
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -2492,14 +2501,14 @@ class _PosPageState extends State<PosPage> {
                   ),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.qr_code_scanner_rounded, size: 13, color: Colors.black),
-                  SizedBox(width: 4),
+                  const Icon(Icons.qr_code_scanner_rounded, size: 13, color: Colors.black),
+                  const SizedBox(width: 4),
                   Text(
-                    'Imbas Pintar',
-                    style: TextStyle(
+                    'pos.smart_scan'.tr(),
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 10.5,
                       fontWeight: FontWeight.w900,
@@ -2607,9 +2616,9 @@ class _PosPageState extends State<PosPage> {
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: const Color(0xFFFF9800).withValues(alpha: 0.4)),
                         ),
-                        child: const Text(
-                          '🎁 GANJARAN',
-                          style: TextStyle(
+                        child: Text(
+                          'pos.reward_badge'.tr(),
+                          style: const TextStyle(
                             color: Color(0xFFFF9800),
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
@@ -2648,7 +2657,7 @@ class _PosPageState extends State<PosPage> {
                     Flexible(
                       child: Text(
                         item.isReward
-                            ? 'Penebusan Ganjaran • Percuma'
+                            ? 'pos.reward_redemption_free'.tr()
                             : 'RM ${item.unitPriceWithAddons.toStringAsFixed(2)} / unit',
                         style: TextStyle(
                           color: item.isReward ? const Color(0xFFFF9800) : Colors.white.withValues(alpha: 0.45),
@@ -2676,7 +2685,9 @@ class _PosPageState extends State<PosPage> {
                               const Icon(Icons.tune_rounded, size: 10, color: Color(0xFF42A5F5)),
                               const SizedBox(width: 3),
                               Text(
-                                item.hasCustomizations ? 'Ubah Pilihan' : '+ Varian/Nota',
+                                item.hasCustomizations
+                                    ? 'pos.edit_options'.tr()
+                                    : 'pos.add_variant_note'.tr(),
                                 style: const TextStyle(
                                   color: Color(0xFF42A5F5),
                                   fontSize: 9.5,
@@ -2722,7 +2733,10 @@ class _PosPageState extends State<PosPage> {
                       item.quantity >= item.product.stock) {
                     showGlassToast(
                       context,
-                      'Had stok maksimum dicapai (${item.product.stock} ${item.product.unit}).',
+                      'pos.max_stock_reached'.tr(args: [
+                        item.product.stock.toString(),
+                        item.product.unit,
+                      ]),
                       isError: true,
                     );
                     return;
@@ -2832,9 +2846,9 @@ class _PosPageState extends State<PosPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Baucar / Promosi',
-                      style: TextStyle(color: Colors.white60, fontSize: 11.5),
+                    Text(
+                      'pos.voucher_promo_label'.tr(),
+                      style: const TextStyle(color: Colors.white60, fontSize: 11.5),
                     ),
                     if (_appliedVoucherCode != null && _voucherDiscount > 0)
                       Row(
@@ -2870,11 +2884,11 @@ class _PosPageState extends State<PosPage> {
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: _showVoucherDialog,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
                           child: Text(
-                            '+ Tebus Kod',
-                            style: TextStyle(
+                            'pos.redeem_code_btn'.tr(),
+                            style: const TextStyle(
                               color: Color(0xFF42A5F5),
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
@@ -2894,8 +2908,8 @@ class _PosPageState extends State<PosPage> {
                     Expanded(
                       child: Text(
                         _manualDiscountLabel != null
-                            ? 'Diskaun ($_manualDiscountLabel)'
-                            : 'Diskaun Manual / Staf',
+                            ? 'pos.manual_discount_applied'.tr(args: [_manualDiscountLabel!])
+                            : 'pos.manual_discount_label'.tr(),
                         style: const TextStyle(color: Colors.white60, fontSize: 11.5),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -2934,11 +2948,11 @@ class _PosPageState extends State<PosPage> {
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: _showManualDiscountDialog,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
                           child: Text(
-                            '+ Diskaun (% / RM)',
-                            style: TextStyle(
+                            'pos.add_discount_btn'.tr(),
+                            style: const TextStyle(
                               color: Color(0xFF42A5F5),
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
@@ -2955,9 +2969,9 @@ class _PosPageState extends State<PosPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Penyelarasan (5-Sen)',
-                        style: TextStyle(color: Colors.white54, fontSize: 11),
+                      Text(
+                        'pos.rounding_5sen'.tr(),
+                        style: const TextStyle(color: Colors.white54, fontSize: 11),
                       ),
                       Text(
                         '${_roundingAmount >= 0 ? '+' : ''}RM ${_roundingAmount.toStringAsFixed(2)}',
@@ -2974,12 +2988,12 @@ class _PosPageState extends State<PosPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'JUMLAH BESAR',
-                          style: TextStyle(
+                          'pos.grand_total_upper'.tr(),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11.5,
                             fontWeight: FontWeight.w800,
@@ -2987,8 +3001,8 @@ class _PosPageState extends State<PosPage> {
                           ),
                         ),
                         Text(
-                          'Termasuk Cukai SST',
-                          style: TextStyle(
+                          'pos.including_sst'.tr(),
+                          style: const TextStyle(
                             color: Colors.white38,
                             fontSize: 9.5,
                           ),
@@ -3018,9 +3032,9 @@ class _PosPageState extends State<PosPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    '💵 TUNAI PANTAS:',
-                    style: TextStyle(
+                  Text(
+                    'pos.fast_cash_header'.tr(),
+                    style: const TextStyle(
                       color: Colors.white54,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
@@ -3028,7 +3042,7 @@ class _PosPageState extends State<PosPage> {
                     ),
                   ),
                   Text(
-                    '1-Klik Selesai',
+                    'pos.one_click_settle'.tr(),
                     style: TextStyle(
                       color: const Color(0xFF00C853).withValues(alpha: 0.8),
                       fontSize: 9.5,
@@ -3066,7 +3080,9 @@ class _PosPageState extends State<PosPage> {
                         ),
                       ),
                       child: Text(
-                        isExact ? 'Tepat (${opt.toStringAsFixed(2)})' : 'RM ${opt.toStringAsFixed(0)}',
+                        isExact
+                            ? 'pos.exact_cash_chip'.tr(args: [opt.toStringAsFixed(2)])
+                            : 'RM ${opt.toStringAsFixed(0)}',
                         style: TextStyle(
                           color: isExact ? const Color(0xFF00C853) : Colors.white,
                           fontSize: 11,
@@ -3117,16 +3133,18 @@ class _PosPageState extends State<PosPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'BAYAR SEKARANG',
-                          style: TextStyle(
+                        Text(
+                          'pos.pay_now_btn'.tr(),
+                          style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.5,
                           ),
                         ),
                         Text(
-                          _cart.isEmpty ? 'Pilih Produk Dahulu' : 'Pilih Kaedah Bayaran',
+                          _cart.isEmpty
+                              ? 'pos.select_product_first'.tr()
+                              : 'pos.choose_payment_method'.tr(),
                           style: TextStyle(
                             fontSize: 9.5,
                             color: Colors.white.withValues(alpha: 0.8),
@@ -3166,19 +3184,19 @@ class _PosPageState extends State<PosPage> {
               ),
               const SizedBox(width: 6),
               _quickMethodBtn(
-                'Tunai',
+                'pos.quick_cash'.tr(),
                 Icons.payments_rounded,
                 _cart.isEmpty ? null : () => _openPaymentTerminal(initialStep: TerminalStep.cashTender),
               ),
               const SizedBox(width: 6),
               _quickMethodBtn(
-                'Kad/EDC',
+                'pos.quick_card'.tr(),
                 Icons.credit_card_rounded,
                 _cart.isEmpty ? null : () => _openPaymentTerminal(initialStep: TerminalStep.cardPayment),
               ),
               const SizedBox(width: 6),
               _quickMethodBtn(
-                'Pecah Bil',
+                'pos.quick_split'.tr(),
                 Icons.alt_route_rounded,
                 _cart.isEmpty ? null : _checkout,
               ),
