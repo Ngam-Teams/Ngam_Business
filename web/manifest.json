@@ -55,21 +55,52 @@
             "short_name": "Pesanan",
             "description": "Pantau dan proses pesanan masuk",
             "url": "/",
-            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+            "icons": [
+                {
+                    "src": "icons/shortcuts/orders.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                }
+            ]
         },
         {
             "name": "Sistem Kaunter POS",
             "short_name": "POS",
             "description": "Kaunter jualan dan resit pantas",
             "url": "/",
-            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+            "icons": [
+                {
+                    "src": "icons/shortcuts/pos.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                }
+            ]
         },
         {
             "name": "Standee QR & Meja",
             "short_name": "QR Standee",
             "description": "Jana kod QR untuk meja dan kaunter",
             "url": "/",
-            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
+            "icons": [
+                {
+                    "src": "icons/shortcuts/qr.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                }
+            ]
+        },
+        {
+            "name": "Analitik Jualan",
+            "short_name": "Analitik",
+            "description": "Pantau prestasi jualan dan laporan kedai",
+            "url": "/",
+            "icons": [
+                {
+                    "src": "icons/shortcuts/analytics.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                }
+            ]
         }
     ]
 }
