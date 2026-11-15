@@ -1,4 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -24,7 +25,7 @@ class HomeDashboard extends StatefulWidget {
   State<HomeDashboard> createState() => _HomeDashboardState();
 }
 
-class _HomeDashboardState extends State<HomeDashboard> {
+class _HomeDashboardState extends State<HomeDashboard> with WidgetsBindingObserver {
   final AnalyticsService _analytics = AnalyticsService();
   final BusinessService _businessService = BusinessService();
 
@@ -32,17 +33,26 @@ class _HomeDashboardState extends State<HomeDashboard> {
   bool _loadingBusiness = true;
   late Future<Map<String, dynamic>> _overviewFuture;
   String? _lastLoadedBusinessId;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _businessProfile = BusinessService.cachedProfile;
     _loadingBusiness = _businessProfile == null;
     _lastLoadedBusinessId = _businessProfile?['id']?.toString();
-    _overviewFuture = _analytics.fetchOverviewStats();
+    _overviewFuture = _analytics.fetchOverviewStats(forceRefresh: true);
 
     BusinessService.profileNotifier.addListener(_onProfileUpdated);
     _loadBusinessProfile();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        setState(() {
+          _overviewFuture = _analytics.fetchOverviewStats(forceRefresh: true);
+        });
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (mounted) {
@@ -50,6 +60,16 @@ class _HomeDashboardState extends State<HomeDashboard> {
         }
       });
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _loadBusinessProfile();
+      setState(() {
+        _overviewFuture = _analytics.fetchOverviewStats(forceRefresh: true);
+      });
+    }
   }
 
   void _onProfileUpdated() {
@@ -73,6 +93,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefreshTimer?.cancel();
     BusinessService.profileNotifier.removeListener(_onProfileUpdated);
     super.dispose();
   }

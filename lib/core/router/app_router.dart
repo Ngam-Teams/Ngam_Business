@@ -12,6 +12,7 @@ import '../../features/auth/presentation/reset_password_page.dart';
 import '../../features/home/presentation/home_dashboard.dart';
 import '../../features/orders/presentation/orders_page.dart';
 import '../../features/pos/presentation/pos_page.dart';
+import '../../features/analytics/data/analytics_service.dart';
 import '../../features/analytics/presentation/analytics_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/settings/presentation/business_profile_page.dart';
@@ -191,9 +192,11 @@ class _AppShellState extends State<_AppShell> {
 
   Future<void> _initOrderAlerts() async {
     try {
-      final profile = await BusinessService().getBusinessProfile();
+      final profile = await BusinessService().getBusinessProfile(forceRefresh: true);
       final businessId = profile?['id']?.toString();
       if (businessId != null && mounted) {
+        // Pre-warm analytics cache immediately on app open
+        unawaited(AnalyticsService().fetchOverviewStats(forceRefresh: true));
         MerchantNotificationService.instance.initialize(
           businessId: businessId,
           onTabSwitch: (index) {

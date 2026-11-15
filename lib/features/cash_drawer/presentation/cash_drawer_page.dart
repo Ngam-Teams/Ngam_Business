@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -30,6 +31,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
   double _qrSales = 0.00;
   double _cardSales = 0.00;
   bool _isLoadingSales = true;
+  Timer? _autoRefreshTimer;
 
   late List<Map<String, dynamic>> _pettyCashEntries;
   final TextEditingController _countedCashCtrl = TextEditingController(text: '200.00');
@@ -56,10 +58,15 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
       },
     ];
     _loadLiveShiftSales();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (mounted) _loadLiveShiftSales(silent: true);
+    });
   }
 
-  Future<void> _loadLiveShiftSales() async {
-    setState(() => _isLoadingSales = true);
+  Future<void> _loadLiveShiftSales({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _isLoadingSales = true);
+    }
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user?.userMetadata?['full_name'] != null) {
@@ -147,6 +154,7 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     _countedCashCtrl.dispose();
     super.dispose();
   }
@@ -762,15 +770,6 @@ Status: Syif Ditutup & Disahkan ke Cloud
       title: 'Cash Drawer & Closing',
       subtitle: 'Petty cash logs & Z-Reports',
       actionItems: [
-        GlassNavPillItem(
-          icon: Icons.refresh_rounded,
-          tooltip: 'Kemas Kini Jualan',
-          isLoading: _isLoadingSales,
-          onTap: () {
-            _loadLiveShiftSales();
-            showGlassToast(context, 'Mengemas kini data jualan syif terkini...');
-          },
-        ),
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedMoneyAdd02,
           tooltip: 'Add Petty Cash',

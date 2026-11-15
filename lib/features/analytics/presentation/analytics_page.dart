@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -30,11 +31,25 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   final AnalyticsService _service = AnalyticsService();
   AnalyticsPeriod _selectedPeriod = AnalyticsPeriod.sevenDays;
   late Future<Map<String, dynamic>> _overviewFuture;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _overviewFuture = _service.fetchOverviewStats();
+    _overviewFuture = _service.fetchOverviewStats(forceRefresh: true);
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        setState(() {
+          _overviewFuture = _service.fetchOverviewStats(forceRefresh: true);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
   }
 
   void _exportReport() {

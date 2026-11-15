@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -37,15 +38,27 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
     'totalComments': 0,
   };
   Map<String, dynamic>? _businessProfile;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadInitialData();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _loadInitialData(silent: true);
+    });
   }
 
-  Future<void> _loadInitialData() async {
-    setState(() => _loading = true);
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadInitialData({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _loading = true);
+    }
     await Future.wait([
       _fetchPosts(),
       _fetchStats(),
@@ -227,11 +240,6 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
       title: isPhone ? 'Feed & Post' : 'Ngam Feed Studio',
       subtitle: 'Video & hantaran promosi',
       actionItems: [
-        GlassNavPillItem(
-          icon: Icons.refresh_rounded,
-          tooltip: 'Muat Semula',
-          onTap: _loadInitialData,
-        ),
         GlassNavPillItem(
           icon: HugeIcons.strokeRoundedAdd01,
           tooltip: 'Cipta Post',

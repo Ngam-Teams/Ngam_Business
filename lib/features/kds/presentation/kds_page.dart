@@ -441,14 +441,6 @@ class _KdsPageState extends State<KdsPage> {
             showGlassToast(context, _soundEnabled ? 'Bunyi amaran pesanan diaktifkan' : 'Bunyi amaran dinyahaktifkan');
           },
         ),
-        GlassNavPillItem(
-          icon: Icons.refresh_rounded,
-          tooltip: 'Muat Semula Papan',
-          onTap: () {
-            _initLiveKds();
-            showGlassToast(context, 'Memuat semula pesanan...');
-          },
-        ),
       ],
       body: _isLoading
           ? const Center(

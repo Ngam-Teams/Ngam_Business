@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -20,21 +21,28 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
 
   bool _loading = true;
   List<Map<String, dynamic>> _logs = [];
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchLogs();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _fetchLogs(silent: true);
+    });
   }
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchLogs() async {
-    setState(() => _loading = true);
+  Future<void> _fetchLogs({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _loading = true);
+    }
     final results = await AuditService.getAuditLogs(
       severity: _selectedSeverity,
       searchQuery: _searchController.text.trim(),
@@ -89,13 +97,6 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
       backgroundColor: const Color(0xFF0A0A14),
       title: 'audit_logs.title'.tr(),
       subtitle: 'audit_logs.subtitle'.tr(),
-      actionItems: [
-        GlassNavPillItem(
-          icon: Icons.refresh_rounded,
-          tooltip: 'common.retry'.tr(),
-          onTap: _fetchLogs,
-        ),
-      ],
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),

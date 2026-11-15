@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../../../../core/utils/file_saver/file_saver.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
@@ -976,15 +977,27 @@ class PosRecentOrdersVoidModal extends StatefulWidget {
 class _PosRecentOrdersVoidModalState extends State<PosRecentOrdersVoidModal> {
   List<Map<String, dynamic>> _orders = [];
   bool _loading = true;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadOrders();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) _loadOrders(silent: true);
+    });
   }
 
-  Future<void> _loadOrders() async {
-    setState(() => _loading = true);
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadOrders({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _loading = true);
+    }
     final list = await widget.service.fetchRecentOrders(limit: 25);
     if (!mounted) return;
     setState(() {
@@ -1161,10 +1174,6 @@ class _PosRecentOrdersVoidModalState extends State<PosRecentOrdersVoidModal> {
                       ),
                     ],
                   ),
-                ),
-                IconButton(
-                  onPressed: _loadOrders,
-                  icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),

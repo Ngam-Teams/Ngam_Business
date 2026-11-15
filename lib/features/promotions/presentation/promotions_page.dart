@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../widgets/glass_nav_button.dart';
@@ -38,11 +39,15 @@ class _PromotionsPageState extends State<PromotionsPage> {
   VoucherStats _stats = const VoucherStats();
   bool _isLoading = true;
   String? _errorMessage;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _loadData(silent: true);
+    });
     _searchCtrl.addListener(() {
       setState(() => _searchQuery = _searchCtrl.text.trim().toLowerCase());
     });
@@ -50,15 +55,18 @@ class _PromotionsPageState extends State<PromotionsPage> {
 
   @override
   void dispose() {
+    _autoRefreshTimer?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final vouchers = await _voucherService.fetchVouchers();
@@ -205,13 +213,6 @@ class _PromotionsPageState extends State<PromotionsPage> {
     return GlassScaffold(
       title: 'Baucar & Promosi',
       subtitle: 'Pengurusan kod diskaun',
-      actionItems: [
-        GlassNavPillItem(
-          icon: Icons.refresh_rounded,
-          tooltip: 'Muat Semula',
-          onTap: _loadData,
-        ),
-      ],
       backgroundColor: const Color(0xFF0A0A14),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: const Color(0xFF42A5F5),
