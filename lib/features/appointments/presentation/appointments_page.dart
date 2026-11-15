@@ -1554,35 +1554,85 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
               padding: EdgeInsets.only(top: widget.isEmbedded ? 0 : 68),
               child: Column(
                 children: [
-                  // QR Check-In Bar
+                  // QR Check-In Bar & Manual New Appointment Button
                   Padding(
                     padding: EdgeInsets.fromLTRB(widget.isEmbedded ? 0 : 20, 4, widget.isEmbedded ? 0 : 20, 10),
-                    child: InkWell(
-                      onTap: _openBookingQrCheckIn,
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.35)),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF42A5F5), size: 18),
-                            SizedBox(width: 8),
-                            Text(
-                              'Imbas Sahkan QR Tiket Tempahan RZRV',
-                              style: TextStyle(
-                                color: Color(0xFF42A5F5),
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.bold,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: _openBookingQrCheckIn,
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.35)),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF42A5F5), size: 17),
+                                  SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      'Imbas Sahkan QR Tiket Tempahan RZRV',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: Color(0xFF42A5F5),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: _openNewAppointmentModal,
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF42A5F5).withValues(alpha: 0.9),
+                                  const Color(0xFF1976D2).withValues(alpha: 0.95),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF42A5F5).withValues(alpha: 0.25),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.add_rounded, color: Colors.white, size: 17),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'appointments.new_booking'.tr(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   // Filter Chips
