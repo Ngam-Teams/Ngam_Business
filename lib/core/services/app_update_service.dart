@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
@@ -30,9 +31,11 @@ class AppReleaseInfo {
 }
 
 class AppUpdateService {
-  static const String fallbackVersion = '1.0.25';
+  static const String fallbackVersion = '1.0.26';
   static String? _cachedVersion;
   static bool _startupDialogShown = false;
+  static String? _lastNotifiedVersion;
+  static Timer? _periodicTimer;
 
   static final ValueNotifier<String> versionNotifier = ValueNotifier<String>(fallbackVersion);
   static final ValueNotifier<AppReleaseInfo?> availableUpdateNotifier = ValueNotifier<AppReleaseInfo?>(null);
@@ -43,10 +46,18 @@ class AppUpdateService {
   static const String repoName = 'Ngam_Business';
   static const String orgName = 'Ngam-Teams';
 
-  /// Get active installed app version dynamically from platform
+  /// Get active installed app version dynamically from platform.
+  /// On Web/PWA, PackageInfo.fromPlatform() fetches /version.json from the server,
+  /// which would return the NEW server version instead of the running JS bundle!
+  /// Always use the compiled-in fallbackVersion on Web.
   static Future<String> getAppVersion() async {
     if (_cachedVersion != null && _cachedVersion!.isNotEmpty) {
       return _cachedVersion!;
+    }
+    if (kIsWeb) {
+      _cachedVersion = fallbackVersion;
+      versionNotifier.value = fallbackVersion;
+      return fallbackVersion;
     }
     try {
       final info = await PackageInfo.fromPlatform();
@@ -94,7 +105,15 @@ class AppUpdateService {
     if (!kIsWeb) return null;
     try {
       final uri = Uri.base.resolve('/version.json?t=${DateTime.now().millisecondsSinceEpoch}');
-      final response = await http.get(uri).timeout(const Duration(seconds: 6));
+      final response = await http
+          .get(
+            uri,
+            headers: const {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+            },
+          )
+          .timeout(const Duration(seconds: 6));
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
         if (decoded is Map && decoded['version'] != null) {
@@ -557,21 +576,40 @@ class AppUpdateService {
     );
   }
 
-  /// Automatically check on app startup and prompt if newer release is found
+  /// Automatically check on app startup (and periodically) and notify via toast + dialog
   static Future<void> checkOnStartup(
     BuildContext context, {
     String? current,
     String repo = repoName,
   }) async {
-    await Future.delayed(const Duration(seconds: 2));
-    if (!context.mounted) return;
-
-    final activeCurrent = current ?? await getAppVersion();
-    final update = await checkForUpdate(current: activeCurrent, repo: repo);
-    if (update != null && context.mounted && !_startupDialogShown) {
-      _startupDialogShown = true;
-      await showUpdateDialog(context, update, current: activeCurrent);
+    Future<void> runCheck() async {
+      if (!context.mounted) return;
+      final activeCurrent = current ?? await getAppVersion();
+      final update = await checkForUpdate(current: activeCurrent, repo: repo);
+      if (update != null && context.mounted) {
+        if (_lastNotifiedVersion != update.version) {
+          _lastNotifiedVersion = update.version;
+          showGlassToast(
+            context,
+            'app_update.update_available_tap'.tr(args: [update.version]),
+            type: GlassToastType.info,
+            color: const Color(0xFF10B981),
+            duration: const Duration(seconds: 5),
+          );
+        }
+        if (!_startupDialogShown) {
+          _startupDialogShown = true;
+          await showUpdateDialog(context, update, current: activeCurrent);
+        }
+      }
     }
+
+    _periodicTimer ??= Timer.periodic(const Duration(minutes: 5), (_) {
+      runCheck();
+    });
+
+    await Future.delayed(const Duration(seconds: 2));
+    await runCheck();
   }
 
   /// Explicit check triggered from Settings / Sidebar / Login page with user feedback

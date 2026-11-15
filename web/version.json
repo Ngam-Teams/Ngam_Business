@@ -1,6 +1,6 @@
 {
-  "version": "1.0.25",
-  "build_number": 5,
-  "released_at": "2026-11-16T01:15:00Z",
-  "changelog": "Betulkan kedudukan pil troli POS supaya kekal kemas di atas bar navigasi bawah serta kemas kini ikon pintasan PWA."
+  "version": "1.0.26",
+  "build_number": 6,
+  "released_at": "2026-11-16T01:25:00Z",
+  "changelog": "Betulkan pengesanan versi Web/PWA, tambah notifikasi toast kemas kini, dan paparkan label versi hanya dalam Tetapan."
 }
