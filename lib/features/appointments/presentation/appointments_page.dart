@@ -1546,13 +1546,6 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
   Widget build(BuildContext context) {
     final scaffold = Scaffold(
       backgroundColor: widget.isEmbedded ? Colors.transparent : const Color(0xFF0A0A14),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF42A5F5),
-        foregroundColor: Colors.white,
-        onPressed: _openNewAppointmentModal,
-        icon: const Icon(Icons.add_rounded, size: 20),
-        label: const Text('Tempahan Baharu', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
       body: SafeArea(
         top: !widget.isEmbedded,
         child: Stack(
