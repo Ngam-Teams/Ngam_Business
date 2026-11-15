@@ -1160,22 +1160,32 @@ class _PosPageState extends State<PosPage> {
           );
         }
 
-        final bottomClearance = MediaQuery.paddingOf(context).bottom * 0.5 + 88;
-        return Stack(
-          children: [
-            _buildProductGrid(),
-            if (_cart.isNotEmpty)
-              Positioned(
-                bottom: bottomClearance,
-                left: 16,
-                right: 16,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _openCartSheet,
-                  child: _buildCartBadge(),
+        final safeBottom = MediaQuery.paddingOf(context).bottom.clamp(0.0, 60.0);
+        final bottomClearance =
+            (safeBottom > 0 ? safeBottom * 0.5 : 10.0) + 86.0;
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _buildProductGrid(),
+              if (_cart.isNotEmpty)
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(8, 0, 8, bottomClearance),
+                    child: RepaintBoundary(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _openCartSheet,
+                        child: _buildCartBadge(),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         );
       },
     );

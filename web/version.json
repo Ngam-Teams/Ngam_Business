@@ -1,6 +1,6 @@
 {
-  "version": "1.0.24",
-  "build_number": 4,
-  "released_at": "2026-11-15T10:00:00Z",
-  "changelog": "Sokongan terjemahan penuh POS (BM & EN) serta keserasian pengesanan pesanan meja Dine In di KDS."
+  "version": "1.0.25",
+  "build_number": 5,
+  "released_at": "2026-11-16T01:15:00Z",
+  "changelog": "Betulkan kedudukan pil troli POS supaya kekal kemas di atas bar navigasi bawah serta kemas kini ikon pintasan PWA."
 }
