@@ -183,38 +183,64 @@ class FeedService {
     );
   }
 
-  /// Statistik keseluruhan post kedai
+  /// Statistik keseluruhan post kedai (disegerakkan terus dengan jadual feed_posts Ngam)
   Future<Map<String, int>> getSummaryStats() async {
     try {
       final businessId = await _getBusinessId();
       if (businessId == null) {
-        return {'totalPosts': 0, 'totalViews': 0, 'totalLikes': 0, 'totalComments': 0};
+        return {
+          'totalPosts': 0,
+          'publishedCount': 0,
+          'draftCount': 0,
+          'totalViews': 0,
+          'totalLikes': 0,
+          'totalComments': 0,
+          'totalShares': 0,
+        };
       }
 
       final res = await _client
           .from('feed_posts')
-          .select('id, views_count, likes_count, comments_count')
+          .select('id, status, views_count, likes_count, comments_count, shares_count')
           .eq('business_id', businessId);
 
       final List<dynamic> list = res as List<dynamic>;
       int views = 0;
       int likes = 0;
       int comments = 0;
+      int shares = 0;
+      int published = 0;
+      int draft = 0;
 
       for (var item in list) {
+        final st = item['status']?.toString() ?? 'published';
+        if (st == 'published') published++;
+        if (st == 'draft') draft++;
         views += (item['views_count'] as num?)?.toInt() ?? 0;
         likes += (item['likes_count'] as num?)?.toInt() ?? 0;
         comments += (item['comments_count'] as num?)?.toInt() ?? 0;
+        shares += (item['shares_count'] as num?)?.toInt() ?? 0;
       }
 
       return {
         'totalPosts': list.length,
+        'publishedCount': published,
+        'draftCount': draft,
         'totalViews': views,
         'totalLikes': likes,
         'totalComments': comments,
+        'totalShares': shares,
       };
     } catch (_) {
-      return {'totalPosts': 0, 'totalViews': 0, 'totalLikes': 0, 'totalComments': 0};
+      return {
+        'totalPosts': 0,
+        'publishedCount': 0,
+        'draftCount': 0,
+        'totalViews': 0,
+        'totalLikes': 0,
+        'totalComments': 0,
+        'totalShares': 0,
+      };
     }
   }
 }

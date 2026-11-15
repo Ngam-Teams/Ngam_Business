@@ -13,10 +13,11 @@ import '../data/feed_service.dart';
 import '../models/feed_post_model.dart';
 import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_nav_button.dart';
+import 'feed_create_page.dart';
 
-/// FeedManagementPage — Ngam Feed & Post Studio.
-/// Dioptimumkan sepenuhnya untuk responsif telefon pintar (Mobile-Friendly)
-/// dan desktop browser.
+/// FeedManagementPage — Ngam Feed & Post Studio (Gaya TikTok & IG Creator).
+/// Top header dikekalkan dengan GlassScaffold; susunan video 9:16, tab Siaran/Draf/Statistik,
+/// dan metrik disegerakkan terus dengan aplikasi pelanggan Ngam.
 class FeedManagementPage extends StatefulWidget {
   const FeedManagementPage({super.key});
 
@@ -29,13 +30,16 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
   final BusinessService _businessService = BusinessService();
 
   bool _loading = true;
-  String _selectedFilter = 'all'; // 'all', 'published', 'draft', 'pinned'
+  String _selectedFilter = 'published'; // 'published', 'pinned', 'draft', 'analytics'
   List<FeedPostModel> _posts = [];
   Map<String, int> _stats = {
     'totalPosts': 0,
+    'publishedCount': 0,
+    'draftCount': 0,
     'totalViews': 0,
     'totalLikes': 0,
     'totalComments': 0,
+    'totalShares': 0,
   };
   Map<String, dynamic>? _businessProfile;
   Timer? _autoRefreshTimer;
@@ -70,7 +74,11 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
   }
 
   Future<void> _fetchPosts() async {
-    final posts = await _feedService.getPosts(filter: _selectedFilter);
+    final effectiveFilter = _selectedFilter == 'analytics' ? 'published' : _selectedFilter;
+    final posts = await _feedService.getPosts(filter: effectiveFilter);
+    if (_selectedFilter == 'analytics') {
+      posts.sort((a, b) => b.viewsCount.compareTo(a.viewsCount));
+    }
     if (mounted) {
       setState(() => _posts = posts);
     }
@@ -87,6 +95,30 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
     final profile = await _businessService.getBusinessProfile();
     if (mounted) {
       setState(() => _businessProfile = profile);
+    }
+  }
+
+  Future<void> _publishFromDraft(FeedPostModel post) async {
+    try {
+      await _feedService.updatePost(
+        postId: post.id,
+        title: post.title,
+        caption: post.caption,
+        mediaUrl: post.mediaUrl,
+        mediaType: post.mediaType,
+        category: post.category,
+        serviceTag: post.serviceTag,
+        ctaType: post.ctaType,
+        ctaText: post.ctaText,
+        status: 'published',
+        isPinned: post.isPinned,
+      );
+      if (mounted) {
+        showGlassToast(context, 'Draf berjaya diterbitkan ke Ngam Feed!', type: GlassToastType.success, color: const Color(0xFF10B981));
+        _loadInitialData();
+      }
+    } catch (e) {
+      if (mounted) showGlassToast(context, 'Gagal menerbitkan draf: $e', isError: true);
     }
   }
 
@@ -147,18 +179,19 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
     }
   }
 
-  void _openCreateOrEditPostDialog({FeedPostModel? existing}) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _CreateEditPostDialog(
-        existing: existing,
-        businessCategory: _businessProfile?['category']?.toString() ?? 'services',
-        onSaved: () {
-          _loadInitialData();
-        },
+  Future<void> _openCreateOrEditPostDialog({FeedPostModel? existing}) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => FeedCreatePage(
+          existing: existing,
+          businessCategory: _businessProfile?['category']?.toString() ?? 'services',
+        ),
       ),
     );
+    if (result == true && mounted) {
+      _loadInitialData();
+    }
   }
 
   void _showPhonePreview(FeedPostModel post) {
@@ -282,454 +315,543 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
     );
   }
 
+  String _formatCompact(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return '$count';
+  }
+
   Widget _buildMetricHeader() {
+    final shopName = _businessProfile?['name']?.toString() ?? 'Kedai Ngam Anda';
+    final avatarUrl = _businessProfile?['avatar_url']?.toString() ?? '';
+    final handle = '@${shopName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')}';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFEC4899).withValues(alpha: 0.12),
+            const Color(0xFF8B5CF6).withValues(alpha: 0.08),
+            Colors.white.withValues(alpha: 0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              HugeIcon(
-                icon: HugeIcons.strokeRoundedAnalytics01,
-                color: Color(0xFF42A5F5),
-                size: 18,
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Prestasi Jangkauan Feed Pelanggan',
-                  style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isLandscape = constraints.maxWidth > constraints.maxHeight;
-              final isWide = constraints.maxWidth >= 600 || isLandscape;
-              final isPhone = constraints.maxWidth < 600 && !isLandscape;
-
-              final items = [
-                _buildStatItem('Jumlah Post', '${_stats['totalPosts'] ?? _posts.length}', Icons.grid_view_rounded, const Color(0xFF8B5CF6), isPhone),
-                _buildStatItem('Tontonan', '${_stats['totalViews'] ?? 0}', Icons.remove_red_eye_rounded, const Color(0xFF42A5F5), isPhone),
-                _buildStatItem('Sukaan', '${_stats['totalLikes'] ?? 0}', Icons.favorite_rounded, const Color(0xFFEF4444), isPhone),
-                _buildStatItem('Komen', '${_stats['totalComments'] ?? 0}', Icons.chat_bubble_rounded, const Color(0xFFF59E0B), isPhone),
-              ];
-
-              if (isWide) {
-                return Row(
-                  children: items.map((w) => Expanded(child: w)).toList(),
-                );
-              } else {
-                return Column(
-                  children: [
-                    Row(children: [Expanded(child: items[0]), const SizedBox(width: 8), Expanded(child: items[1])]),
-                    const SizedBox(height: 8),
-                    Row(children: [Expanded(child: items[2]), const SizedBox(width: 8), Expanded(child: items[3])]),
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF00E5FF)]),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFFEC4899).withValues(alpha: 0.3), blurRadius: 12),
                   ],
-                );
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, IconData icon, Color color, bool isPhone) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: isPhone ? 10 : 14, vertical: isPhone ? 9 : 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(isPhone ? 6 : 8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.18),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: isPhone ? 16 : 18),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isPhone ? 15 : 17,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(color: color.withValues(alpha: 0.5), blurRadius: 8),
-                    ],
-                  ),
                 ),
-                const SizedBox(height: 1),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.55),
-                    fontSize: isPhone ? 10.5 : 11,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                padding: const EdgeInsets.all(2),
+                child: ClipOval(
+                  child: avatarUrl.isNotEmpty
+                      ? Image.network(avatarUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _buildAvatarFallback(shopName))
+                      : _buildAvatarFallback(shopName),
                 ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterBar() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: [
-          _buildFilterChip('Semua (${_stats['totalPosts'] ?? _posts.length})', 'all', const Color(0xFFEC4899)),
-          const SizedBox(width: 8),
-          _buildFilterChip('Diterbitkan', 'published', const Color(0xFF10B981)),
-          const SizedBox(width: 8),
-          _buildFilterChip('Draf', 'draft', const Color(0xFFF59E0B)),
-          const SizedBox(width: 8),
-          _buildFilterChip('Disematkan 📌', 'pinned', const Color(0xFF8B5CF6)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, String value, Color color) {
-    final isSelected = _selectedFilter == value;
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : Colors.white70,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          fontSize: 12,
-        ),
-      ),
-      selected: isSelected,
-      selectedColor: color.withValues(alpha: 0.85),
-      backgroundColor: Colors.white.withValues(alpha: 0.05),
-      side: BorderSide(color: isSelected ? color : Colors.white.withValues(alpha: 0.12)),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onSelected: (selected) {
-        if (selected) {
-          setState(() => _selectedFilter = value);
-          _fetchPosts();
-        }
-      },
-    );
-  }
-
-  Widget _buildPostsLayout() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isLandscape = constraints.maxWidth > constraints.maxHeight;
-        final isGrid = constraints.maxWidth >= 680 || isLandscape;
-
-        if (isGrid) {
-          return GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _posts.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              mainAxisExtent: 420,
-            ),
-            itemBuilder: (context, index) => _buildPostCard(_posts[index]),
-          );
-        }
-
-        return ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _posts.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 16),
-          itemBuilder: (context, index) => _buildPostCard(_posts[index]),
-        );
-      },
-    );
-  }
-
-  Widget _buildPostCard(FeedPostModel post) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isPhone = constraints.maxWidth < 450;
-
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: post.isPinned
-                  ? const Color(0xFF8B5CF6).withValues(alpha: 0.4)
-                  : Colors.white.withValues(alpha: 0.12),
-              width: post.isPinned ? 1.6 : 1.1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Media Thumbnail Banner
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    child: _FeedPostCardThumbnail(
-                      post: post,
-                      height: isPhone ? 160 : 185,
-                    ),
-                  ),
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.6),
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.8),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Top Badges
-                  Positioned(
-                    top: 10,
-                    left: 12,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: post.isPublished
-                                ? const Color(0xFF10B981).withValues(alpha: 0.9)
-                                : const Color(0xFFF59E0B).withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            post.isPublished ? 'DITERBITKAN' : 'DRAF',
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        if (post.isPinned) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF8B5CF6).withValues(alpha: 0.95),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.push_pin_rounded, color: Colors.white, size: 12),
-                                SizedBox(width: 4),
-                                Text('PIN', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
-                  // Date in Top Right
-                  Positioned(
-                    top: 10,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        post.formattedDate,
-                        style: const TextStyle(color: Colors.white70, fontSize: 11),
-                      ),
-                    ),
-                  ),
-
-                  // Bottom of Image: CTA Tag Badge
-                  Positioned(
-                    bottom: 10,
-                    left: 12,
-                    right: 12,
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF00F2FE).withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            post.ctaText,
-                            style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900),
-                          ),
-                        ),
-                        if (post.serviceTag != null && post.serviceTag!.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.7),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                post.serviceTag!,
-                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
               ),
-
-              // Content Section
-              Padding(
-                padding: EdgeInsets.all(isPhone ? 12 : 14),
+              const SizedBox(width: 12),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      post.title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: isPhone ? 14.5 : 15.5,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      shopName,
+                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      handle,
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 5),
-                    if (post.caption != null && post.caption!.isNotEmpty)
-                      Text(
-                        post.caption!,
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontSize: 12,
-                          height: 1.35,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    const SizedBox(height: 10),
-
-                    // Engagement Metrics Row
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.04),
-                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(100),
+                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildMetricMini(Icons.remove_red_eye_rounded, '${post.viewsCount}', const Color(0xFF42A5F5)),
-                          _buildMetricMini(Icons.favorite_rounded, '${post.likesCount}', const Color(0xFFEF4444)),
-                          _buildMetricMini(Icons.chat_bubble_rounded, '${post.commentsCount}', const Color(0xFFF59E0B)),
-                          _buildMetricMini(Icons.share_rounded, '${post.sharesCount}', const Color(0xFF10B981)),
+                          Icon(Icons.sync_rounded, color: Color(0xFF10B981), size: 11),
+                          SizedBox(width: 4),
+                          Text(
+                            'Live Sync Ngam App',
+                            style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Action Buttons Bar (Responsive for Phone Screens)
-                    Row(
-                      children: [
-                        // Preview Button (Mockup Reels)
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () => _showPhonePreview(post),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF00F2FE),
-                              side: BorderSide(color: const Color(0xFF00F2FE).withValues(alpha: 0.5)),
-                              padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            icon: const Icon(Icons.phone_iphone_rounded, size: 15),
-                            label: Text(
-                              isPhone ? 'Pratonton' : 'Pratonton Feed',
-                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-
-                        // Pin Button
-                        IconButton(
-                          padding: const EdgeInsets.all(7),
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          icon: Icon(
-                            post.isPinned ? Icons.push_pin_rounded : Icons.push_pin_outlined,
-                            color: post.isPinned ? const Color(0xFF8B5CF6) : Colors.white60,
-                            size: 19,
-                          ),
-                          tooltip: post.isPinned ? 'Tanggalkan Pin' : 'Sematkan ke Atas',
-                          onPressed: () => _togglePin(post),
-                        ),
-
-                        // Edit Button
-                        IconButton(
-                          padding: const EdgeInsets.all(7),
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          icon: const Icon(Icons.edit_note_rounded, color: Color(0xFF42A5F5), size: 21),
-                          tooltip: 'Sunting Post',
-                          onPressed: () => _openCreateOrEditPostDialog(existing: post),
-                        ),
-
-                        // Delete Button
-                        IconButton(
-                          padding: const EdgeInsets.all(7),
-                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 19),
-                          tooltip: 'Padam Post',
-                          onPressed: () => _deletePost(post),
-                        ),
-                      ],
                     ),
                   ],
                 ),
               ),
+              ElevatedButton.icon(
+                onPressed: () => _openCreateOrEditPostDialog(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEC4899),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Muat Naik', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
             ],
           ),
+          const SizedBox(height: 16),
+          Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: _buildTikTokStatCell('Tontonan', _formatCompact(_stats['totalViews'] ?? 0), Icons.play_arrow_rounded, const Color(0xFF00E5FF))),
+              _buildStatDivider(),
+              Expanded(child: _buildTikTokStatCell('Sukaan', _formatCompact(_stats['totalLikes'] ?? 0), Icons.favorite_rounded, const Color(0xFFEF4444))),
+              _buildStatDivider(),
+              Expanded(child: _buildTikTokStatCell('Komen', _formatCompact(_stats['totalComments'] ?? 0), Icons.chat_bubble_rounded, const Color(0xFFF59E0B))),
+              _buildStatDivider(),
+              Expanded(child: _buildTikTokStatCell('Kongsi', _formatCompact(_stats['totalShares'] ?? 0), Icons.share_rounded, const Color(0xFF8B5CF6))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarFallback(String shopName) {
+    return Container(
+      color: const Color(0xFF161626),
+      alignment: Alignment.center,
+      child: Text(
+        shopName.isNotEmpty ? shopName[0].toUpperCase() : 'N',
+        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+      ),
+    );
+  }
+
+  Widget _buildStatDivider() {
+    return Container(width: 1, height: 28, color: Colors.white.withValues(alpha: 0.08));
+  }
+
+  Widget _buildTikTokStatCell(String label, String value, IconData icon, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 3),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color, size: 12),
+            const SizedBox(width: 3),
+            Text(
+              label,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterBar() {
+    final pubCount = _stats['publishedCount'] ?? 0;
+    final draftCount = _stats['draftCount'] ?? 0;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+      ),
+      child: Row(
+        children: [
+          _buildTikTokTab(
+            label: 'Siaran ($pubCount)',
+            value: 'published',
+            icon: Icons.grid_on_rounded,
+          ),
+          _buildTikTokTab(
+            label: 'Disemat',
+            value: 'pinned',
+            icon: Icons.push_pin_rounded,
+          ),
+          _buildTikTokTab(
+            label: draftCount > 0 ? 'Draf ($draftCount)' : 'Draf',
+            value: 'draft',
+            icon: Icons.lock_outline_rounded,
+          ),
+          _buildTikTokTab(
+            label: 'Statistik',
+            value: 'analytics',
+            icon: Icons.bar_chart_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTikTokTab({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedFilter == value;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          if (_selectedFilter != value) {
+            setState(() => _selectedFilter = value);
+            _fetchPosts();
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: isSelected ? const Color(0xFFEC4899) : Colors.transparent,
+                width: 2.5,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 15, color: isSelected ? Colors.white : Colors.white38),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.white38,
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostsLayout() {
+    if (_selectedFilter == 'analytics') {
+      return _buildAnalyticsList();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final crossAxisCount = w >= 1000 ? 5 : (w >= 650 ? 4 : 3);
+        final spacing = w >= 650 ? 8.0 : 3.0;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _posts.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: spacing,
+            mainAxisSpacing: spacing,
+            childAspectRatio: 9 / 14,
+          ),
+          itemBuilder: (context, index) => _buildTikTokGridTile(_posts[index]),
         );
       },
+    );
+  }
+
+  Widget _buildTikTokGridTile(FeedPostModel post) {
+    return GestureDetector(
+      onTap: () => _showPhonePreview(post),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF141422),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: post.isPinned
+                ? const Color(0xFF8B5CF6).withValues(alpha: 0.6)
+                : Colors.white.withValues(alpha: 0.06),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _FeedPostCardThumbnail(post: post, height: 240),
+
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.35),
+                      Colors.transparent,
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.85),
+                    ],
+                    stops: const [0.0, 0.25, 0.6, 1.0],
+                  ),
+                ),
+              ),
+            ),
+
+            Positioned(
+              top: 6,
+              left: 6,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (post.isPinned)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEC4899),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'Pinned',
+                        style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                      ),
+                    )
+                  else if (post.isDraft)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'DRAF',
+                        style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            Positioned(
+              top: 2,
+              right: 2,
+              child: PopupMenuButton<String>(
+                icon: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 15),
+                ),
+                color: const Color(0xFF1A1A2E),
+                onSelected: (val) {
+                  if (val == 'edit') {
+                    _openCreateOrEditPostDialog(existing: post);
+                  } else if (val == 'pin') {
+                    _togglePin(post);
+                  } else if (val == 'publish') {
+                    _publishFromDraft(post);
+                  } else if (val == 'delete') {
+                    _deletePost(post);
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(value: 'edit', child: Text('Sunting', style: TextStyle(color: Colors.white, fontSize: 13))),
+                  if (post.isDraft)
+                    const PopupMenuItem(value: 'publish', child: Text('Siarkan Sekarang', style: TextStyle(color: Color(0xFF10B981), fontSize: 13, fontWeight: FontWeight.bold))),
+                  PopupMenuItem(
+                    value: 'pin',
+                    child: Text(post.isPinned ? 'Buka Sematan' : 'Sematkan (Pin)', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                  ),
+                  const PopupMenuItem(value: 'delete', child: Text('Padam', style: TextStyle(color: Colors.redAccent, fontSize: 13))),
+                ],
+              ),
+            ),
+
+            Positioned(
+              left: 6,
+              right: 6,
+              bottom: 6,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    post.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.play_arrow_outlined, color: Colors.white, size: 14),
+                          const SizedBox(width: 2),
+                          Text(
+                            _formatCompact(post.viewsCount),
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                          ),
+                        ],
+                      ),
+                      if (post.likesCount > 0)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.favorite_border_rounded, color: Colors.white70, size: 11),
+                            const SizedBox(width: 2),
+                            Text(
+                              _formatCompact(post.likesCount),
+                              style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsList() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF00E5FF).withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: 0.25)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.verified_rounded, color: Color(0xFF00E5FF), size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Prestasi sebenar disegerakkan secara langsung daripada tontonan, sukaan & komen pelanggan dalam aplikasi Ngam.',
+                  style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.35),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _posts.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            final post = _posts[index];
+            final engagement = post.viewsCount > 0
+                ? (((post.likesCount + post.commentsCount + post.sharesCount) / post.viewsCount) * 100).toStringAsFixed(1)
+                : '0.0';
+
+            return InkWell(
+              onTap: () => _showPhonePreview(post),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 54,
+                      height: 76,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: _FeedPostCardThumbnail(post: post, height: 76),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            post.title,
+                            style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${post.ctaText} • ${post.formattedDate}',
+                            style: const TextStyle(color: Colors.white54, fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              _buildMetricMini(Icons.play_arrow_rounded, _formatCompact(post.viewsCount), const Color(0xFF00E5FF)),
+                              const SizedBox(width: 12),
+                              _buildMetricMini(Icons.favorite_rounded, _formatCompact(post.likesCount), const Color(0xFFEF4444)),
+                              const SizedBox(width: 12),
+                              _buildMetricMini(Icons.chat_bubble_rounded, _formatCompact(post.commentsCount), const Color(0xFFF59E0B)),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                                child: Text(
+                                  '$engagement% ER',
+                                  style: const TextStyle(color: Color(0xFF10B981), fontSize: 10.5, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -738,7 +860,7 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, color: color, size: 13),
-        const SizedBox(width: 4),
+        const SizedBox(width: 3),
         Text(
           value,
           style: const TextStyle(color: Colors.white70, fontSize: 11.5, fontWeight: FontWeight.w600),
@@ -746,6 +868,7 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
       ],
     );
   }
+
 
   Widget _buildEmptyState() {
     return Container(
@@ -1271,6 +1394,7 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
   }
 
   Future<void> _submit() async {
+    if (_saving) return;
     if (!_formKey.currentState!.validate()) return;
 
     final hasNewFile = _selectedFileBytes != null && _selectedFileName != null;
