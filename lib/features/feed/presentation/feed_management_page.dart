@@ -200,6 +200,20 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
       builder: (ctx) => _PhoneMockupPreviewDialog(
         post: post,
         businessProfile: _businessProfile,
+        onCommentsUpdated: () => _loadInitialData(silent: true),
+      ),
+    );
+  }
+
+  void _openCommentsSheet(FeedPostModel post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _OwnerPostCommentsSheet(
+        post: post,
+        businessProfile: _businessProfile,
+        onCommentsUpdated: () => _loadInitialData(silent: true),
       ),
     );
   }
@@ -671,7 +685,9 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
                 ),
                 color: const Color(0xFF1A1A2E),
                 onSelected: (val) {
-                  if (val == 'edit') {
+                  if (val == 'comments') {
+                    _openCommentsSheet(post);
+                  } else if (val == 'edit') {
                     _openCreateOrEditPostDialog(existing: post);
                   } else if (val == 'pin') {
                     _togglePin(post);
@@ -682,6 +698,16 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
                   }
                 },
                 itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: 'comments',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF00E5FF), size: 16),
+                        const SizedBox(width: 8),
+                        Text('Komen (${post.commentsCount})', style: const TextStyle(color: Color(0xFF00E5FF), fontSize: 13, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(value: 'edit', child: Text('Sunting', style: TextStyle(color: Colors.white, fontSize: 13))),
                   if (post.isDraft)
                     const PopupMenuItem(value: 'publish', child: Text('Siarkan Sekarang', style: TextStyle(color: Color(0xFF10B981), fontSize: 13, fontWeight: FontWeight.bold))),
@@ -723,18 +749,42 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
                           ),
                         ],
                       ),
-                      if (post.likesCount > 0)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.favorite_border_rounded, color: Colors.white70, size: 11),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (post.likesCount > 0) ...[
+                            const Icon(Icons.favorite_rounded, color: Color(0xFFFE2C55), size: 11),
                             const SizedBox(width: 2),
                             Text(
                               _formatCompact(post.likesCount),
-                              style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w600),
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
                             ),
+                            const SizedBox(width: 6),
                           ],
-                        ),
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _openCommentsSheet(post),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.45),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF00E5FF), size: 10.5),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    _formatCompact(post.commentsCount),
+                                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -827,7 +877,22 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
                               const SizedBox(width: 12),
                               _buildMetricMini(Icons.favorite_rounded, _formatCompact(post.likesCount), const Color(0xFFEF4444)),
                               const SizedBox(width: 12),
-                              _buildMetricMini(Icons.chat_bubble_rounded, _formatCompact(post.commentsCount), const Color(0xFFF59E0B)),
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => _openCommentsSheet(post),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF59E0B).withValues(alpha: 0.14),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: _buildMetricMini(
+                                    Icons.chat_bubble_rounded,
+                                    '${_formatCompact(post.commentsCount)} Balas',
+                                    const Color(0xFFF59E0B),
+                                  ),
+                                ),
+                              ),
                               const Spacer(),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -2274,10 +2339,12 @@ class _CreateEditPostDialogState extends State<_CreateEditPostDialog> {
 class _PhoneMockupPreviewDialog extends StatefulWidget {
   final FeedPostModel post;
   final Map<String, dynamic>? businessProfile;
+  final VoidCallback? onCommentsUpdated;
 
   const _PhoneMockupPreviewDialog({
     required this.post,
     this.businessProfile,
+    this.onCommentsUpdated,
   });
 
   @override
@@ -2289,6 +2356,7 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
   bool _isVideoInitialized = false;
   bool _isMuted = false;
   bool _hasVideoError = false;
+  late int _liveCommentsCount;
 
   bool get _isVideo =>
       widget.post.mediaType == 'video' ||
@@ -2299,9 +2367,29 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
   @override
   void initState() {
     super.initState();
+    _liveCommentsCount = widget.post.commentsCount;
     if (_isVideo) {
       _initVideo();
     }
+  }
+
+  void _openOwnerCommentsDrawer() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _OwnerPostCommentsSheet(
+        post: widget.post,
+        businessProfile: widget.businessProfile,
+        onCountChanged: (newCount) {
+          if (mounted) {
+            setState(() => _liveCommentsCount = newCount);
+          }
+          widget.onCommentsUpdated?.call();
+        },
+        onCommentsUpdated: widget.onCommentsUpdated,
+      ),
+    );
   }
 
   void _initVideo() {
@@ -2513,12 +2601,12 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.visibility_rounded, color: Colors.white70, size: 13),
-                            SizedBox(width: 4),
-                            Text('Paparan Pelanggan', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            const Icon(Icons.play_arrow_rounded, color: Color(0xFF00E5FF), size: 14),
+                            const SizedBox(width: 3),
+                            Text('${widget.post.viewsCount} Tontonan', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
@@ -2595,9 +2683,27 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                       Text('${widget.post.likesCount}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
 
-                      // Comments Icon
-                      const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 24),
-                      Text('${widget.post.commentsCount}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      // Comments Icon (Interactive — Opens Owner Comments & Reply Drawer)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _openOwnerCommentsDrawer,
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00E5FF).withValues(alpha: 0.18),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0xFF00E5FF).withValues(alpha: 0.5)),
+                              ),
+                              child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
+                            ),
+                            const SizedBox(height: 2),
+                            Text('$_liveCommentsCount', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                            const Text('Balas', style: TextStyle(color: Color(0xFF00E5FF), fontSize: 8.5, fontWeight: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 12),
 
                       // Share Icon
@@ -2702,3 +2808,697 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
     );
   }
 }
+
+// =============================================================================
+// Sheet: Pengurusan Komen & Balasan Pemilik Kedai (Gaya TikTok / IG Reels)
+// Membolehkan pemilik kedai melihat semua komen pelanggan (dengan profil Ngam sebenar)
+// dan membalas terus dengan lencana "Pemilik Kedai" (Owner Tag).
+// =============================================================================
+class _OwnerPostCommentsSheet extends StatefulWidget {
+  final FeedPostModel post;
+  final Map<String, dynamic>? businessProfile;
+  final VoidCallback? onCommentsUpdated;
+  final ValueChanged<int>? onCountChanged;
+
+  const _OwnerPostCommentsSheet({
+    required this.post,
+    this.businessProfile,
+    this.onCommentsUpdated,
+    this.onCountChanged,
+  });
+
+  @override
+  State<_OwnerPostCommentsSheet> createState() => _OwnerPostCommentsSheetState();
+}
+
+class _OwnerPostCommentsSheetState extends State<_OwnerPostCommentsSheet> {
+  final FeedService _feedService = FeedService();
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+
+  List<Map<String, dynamic>> _comments = [];
+  bool _loading = true;
+  bool _sending = false;
+  String? _replyingToCommentId;
+  String? _replyingToUser;
+
+  static const List<String> _quickReplies = [
+    'Terima kasih! Jemput singgah lagi 🙏🔥',
+    'Slot walk-in & tempahan masih dibuka hari ini! ⚡',
+    'Boleh tekan butang di bawah video untuk tempah terus ya 😊',
+  ];
+
+  int get _totalCommentsCount {
+    int count = 0;
+    for (final c in _comments) {
+      count += 1;
+      final replies = c['replies'];
+      if (replies is List) count += replies.length;
+    }
+    return count;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadComments();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadComments() async {
+    setState(() => _loading = true);
+    final list = await _feedService.getPostComments(widget.post.id);
+    if (mounted) {
+      setState(() {
+        _comments = list;
+        _loading = false;
+      });
+      widget.onCountChanged?.call(_totalCommentsCount);
+    }
+  }
+
+  String _formatTimeAgo(String raw) {
+    if (raw.isEmpty) return 'Baru saja';
+    DateTime? dt = DateTime.tryParse(raw)?.toLocal();
+    if (dt == null && !raw.endsWith('Z') && raw.contains('T')) {
+      dt = DateTime.tryParse('${raw}Z')?.toLocal();
+    }
+    if (dt == null) return 'Baru saja';
+    final diff = DateTime.now().difference(dt);
+    if (diff.isNegative || diff.inSeconds < 60) return 'Baru saja';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}j';
+    if (diff.inDays < 7) return '${diff.inDays}h';
+    return '${dt.day}/${dt.month}';
+  }
+
+  Future<void> _sendOwnerComment({String? presetText}) async {
+    final text = (presetText ?? _controller.text).trim();
+    if (text.isEmpty || _sending) return;
+
+    setState(() => _sending = true);
+    final parentId = _replyingToCommentId;
+    final replyUser = _replyingToUser;
+
+    try {
+      await _feedService.postOwnerComment(
+        postId: widget.post.id,
+        text: text,
+        parentCommentId: parentId,
+        replyToUser: replyUser,
+      );
+      _controller.clear();
+      setState(() {
+        _replyingToCommentId = null;
+        _replyingToUser = null;
+      });
+      await _loadComments();
+      widget.onCommentsUpdated?.call();
+      if (mounted) {
+        showGlassToast(
+          context,
+          parentId != null
+              ? 'Balasan Pemilik Kedai dihantar!'
+              : 'Komen Pemilik Kedai disiarkan!',
+          type: GlassToastType.success,
+          color: const Color(0xFF10B981),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'Gagal menghantar balasan: $e', isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _deleteItem(String commentId) async {
+    if (commentId.isEmpty) return;
+    try {
+      await _feedService.deleteComment(commentId);
+      await _loadComments();
+      widget.onCommentsUpdated?.call();
+      if (mounted) {
+        showGlassToast(context, 'Komen telah dipadam.');
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'Gagal memadam komen: $e', isError: true);
+      }
+    }
+  }
+
+  Future<void> _toggleLike(Map<String, dynamic> item) async {
+    final String cid = item['id']?.toString() ?? '';
+    final bool wasLiked = item['isLiked'] == true;
+    final int currentLikes = (item['likes'] as num?)?.toInt() ?? 0;
+    final bool nowLiked = !wasLiked;
+    final int newLikes = nowLiked ? currentLikes + 1 : math.max(0, currentLikes - 1);
+
+    setState(() {
+      item['isLiked'] = nowLiked;
+      item['likes'] = newLikes;
+    });
+
+    if (cid.isNotEmpty) {
+      await _feedService.toggleLikeComment(cid, newLikes);
+    }
+  }
+
+  Widget _buildAvatar(String name, String? url, {double size = 34, bool isOwner = false}) {
+    final cleanUrl = (url ?? '').trim();
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'N';
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isOwner ? const Color(0xFFFE2C55) : Colors.white24,
+          width: isOwner ? 1.5 : 1.0,
+        ),
+      ),
+      child: ClipOval(
+        child: cleanUrl.isNotEmpty
+            ? Image.network(
+                cleanUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: const Color(0xFF1E293B),
+                  child: Center(
+                    child: Text(initial, style: TextStyle(color: Colors.white, fontSize: size * 0.42, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              )
+            : Container(
+                color: isOwner ? const Color(0xFFFE2C55) : const Color(0xFF1E293B),
+                child: Center(
+                  child: Text(initial, style: TextStyle(color: Colors.white, fontSize: size * 0.42, fontWeight: FontWeight.bold)),
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildOwnerBadge() {
+    return Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFE2C55).withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: const Color(0xFFFE2C55).withValues(alpha: 0.45), width: 0.8),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.storefront_rounded, size: 10, color: Color(0xFFFE2C55)),
+          SizedBox(width: 3),
+          Text(
+            'Pemilik Kedai',
+            style: TextStyle(color: Color(0xFFFE2C55), fontSize: 9.5, fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String shopName = widget.businessProfile?['name']?.toString() ??
+        widget.businessProfile?['business_name']?.toString() ??
+        'Kedai Anda';
+    final String? shopLogo = widget.businessProfile?['logo_url']?.toString() ??
+        widget.businessProfile?['business_logo_url']?.toString();
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFF11131F),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag Handle
+            Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 14, 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.forum_rounded, color: Color(0xFF00E5FF), size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              'Komen & Balasan Pelanggan',
+                              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$_totalCommentsCount',
+                                style: const TextStyle(color: Color(0xFF00E5FF), fontSize: 11.5, fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          widget.post.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white54, fontSize: 11.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _loadComments,
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.white70, size: 20),
+                    tooltip: 'Muat Semula',
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(color: Colors.white10, height: 1),
+
+            // Comments List
+            Expanded(
+              child: _loading
+                  ? const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E5FF)),
+                    )
+                  : _comments.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(28),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.chat_bubble_outline_rounded, color: Colors.white.withValues(alpha: 0.25), size: 42),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Belum ada komen pada video ini',
+                                  style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Mulakan perbualan sebagai Pemilik Kedai atau tunggu komen pelanggan daripada aplikasi Ngam!',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+                          itemCount: _comments.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 16),
+                          itemBuilder: (ctx, idx) {
+                            final c = _comments[idx];
+                            final String cid = c['id']?.toString() ?? '';
+                            final String user = c['user']?.toString() ?? 'Pelanggan Ngam';
+                            final String? avatar = c['avatar']?.toString();
+                            final String text = c['text']?.toString() ?? '';
+                            final String time = _formatTimeAgo(c['createdAt']?.toString() ?? '');
+                            final int likes = (c['likes'] as num?)?.toInt() ?? 0;
+                            final bool isLiked = c['isLiked'] == true;
+                            final bool isOwner = c['isOwner'] == true;
+                            final List<Map<String, dynamic>> replies =
+                                (c['replies'] as List?)
+                                        ?.map((e) => Map<String, dynamic>.from(e as Map))
+                                        .toList() ??
+                                    [];
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildAvatar(user, avatar, size: 36, isOwner: isOwner),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  user,
+                                                  style: TextStyle(
+                                                    color: isOwner ? const Color(0xFFFE2C55) : Colors.white,
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              if (isOwner) _buildOwnerBadge(),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            text,
+                                            style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.35),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Row(
+                                            children: [
+                                              Text(time, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                                              const SizedBox(width: 16),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  setState(() {
+                                                    _replyingToCommentId = cid;
+                                                    _replyingToUser = user;
+                                                  });
+                                                  _focusNode.requestFocus();
+                                                },
+                                                child: const Text(
+                                                  'Balas sebagai Pemilik',
+                                                  style: TextStyle(color: Color(0xFF00E5FF), fontSize: 11.5, fontWeight: FontWeight.w700),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              GestureDetector(
+                                                onTap: () => _deleteItem(cid),
+                                                child: Text(
+                                                  'Padam',
+                                                  style: TextStyle(color: Colors.redAccent.withValues(alpha: 0.85), fontSize: 11.5, fontWeight: FontWeight.w600),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () => _toggleLike(c),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(4),
+                                        child: Column(
+                                          children: [
+                                            Icon(
+                                              isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                              size: 17,
+                                              color: isLiked ? const Color(0xFFFE2C55) : Colors.white38,
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '$likes',
+                                              style: TextStyle(
+                                                color: isLiked ? const Color(0xFFFE2C55) : Colors.white38,
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                // Nested Replies
+                                if (replies.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 46, top: 10),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: replies.map((r) {
+                                        final String rid = r['id']?.toString() ?? '';
+                                        final String rUser = r['user']?.toString() ?? 'Pelanggan';
+                                        final String rTarget = r['replyToUser']?.toString() ?? '';
+                                        final bool rIsOwner = r['isOwner'] == true;
+                                        final int rLikes = (r['likes'] as num?)?.toInt() ?? 0;
+                                        final bool rLiked = r['isLiked'] == true;
+
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 10),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _buildAvatar(rUser, r['avatar']?.toString(), size: 26, isOwner: rIsOwner),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Wrap(
+                                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                                      children: [
+                                                        Text(
+                                                          rUser,
+                                                          style: TextStyle(
+                                                            color: rIsOwner ? const Color(0xFFFE2C55) : Colors.white70,
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.w800,
+                                                          ),
+                                                        ),
+                                                        if (rIsOwner) _buildOwnerBadge(),
+                                                        if (rTarget.isNotEmpty) ...[
+                                                          const Padding(
+                                                            padding: EdgeInsets.symmetric(horizontal: 3),
+                                                            child: Icon(Icons.play_arrow_rounded, size: 12, color: Colors.white38),
+                                                          ),
+                                                          Text(
+                                                            rTarget,
+                                                            style: const TextStyle(color: Colors.white60, fontSize: 11.5, fontWeight: FontWeight.w700),
+                                                          ),
+                                                        ],
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      r['text']?.toString() ?? '',
+                                                      style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Row(
+                                                      children: [
+                                                        Text(
+                                                          _formatTimeAgo(r['createdAt']?.toString() ?? ''),
+                                                          style: const TextStyle(color: Colors.white38, fontSize: 10.5),
+                                                        ),
+                                                        const SizedBox(width: 14),
+                                                        GestureDetector(
+                                                          onTap: () {
+                                                            setState(() {
+                                                              _replyingToCommentId = cid;
+                                                              _replyingToUser = rUser;
+                                                            });
+                                                            _focusNode.requestFocus();
+                                                          },
+                                                          child: const Text(
+                                                            'Balas',
+                                                            style: TextStyle(color: Color(0xFF00E5FF), fontSize: 11, fontWeight: FontWeight.w700),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 14),
+                                                        GestureDetector(
+                                                          onTap: () => _deleteItem(rid),
+                                                          child: Text(
+                                                            'Padam',
+                                                            style: TextStyle(color: Colors.redAccent.withValues(alpha: 0.85), fontSize: 11, fontWeight: FontWeight.w600),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              GestureDetector(
+                                                onTap: () => _toggleLike(r),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                                  child: Column(
+                                                    children: [
+                                                      Icon(
+                                                        rLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                                        size: 14,
+                                                        color: rLiked ? const Color(0xFFFE2C55) : Colors.white38,
+                                                      ),
+                                                      Text('$rLikes', style: const TextStyle(color: Colors.white38, fontSize: 9.5)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+            ),
+
+            // Quick Owner Reply Templates + Input Bar
+            Container(
+              padding: EdgeInsets.fromLTRB(14, 10, 14, 12 + MediaQuery.of(context).padding.bottom),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0B0D16),
+                border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Quick Reply Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: _quickReplies
+                          .map(
+                            (preset) => Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: ActionChip(
+                                backgroundColor: Colors.white.withValues(alpha: 0.06),
+                                side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                                label: Text(preset, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                                onPressed: () => _sendOwnerComment(presetText: preset),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+
+                  if (_replyingToUser != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00E5FF).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.subdirectory_arrow_right_rounded, size: 14, color: Color(0xFF00E5FF)),
+                          const SizedBox(width: 6),
+                          const Text('Membalas sebagai Pemilik kepada ', style: TextStyle(color: Colors.white70, fontSize: 11.5)),
+                          Expanded(
+                            child: Text(
+                              '@$_replyingToUser',
+                              style: const TextStyle(color: Color(0xFF00E5FF), fontSize: 11.5, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => setState(() {
+                              _replyingToCommentId = null;
+                              _replyingToUser = null;
+                            }),
+                            child: const Icon(Icons.close_rounded, size: 16, color: Colors.white54),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  Row(
+                    children: [
+                      _buildAvatar(shopName, shopLogo, size: 34, isOwner: true),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.07),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: const Color(0xFFFE2C55).withValues(alpha: 0.4)),
+                          ),
+                          child: TextField(
+                            controller: _controller,
+                            focusNode: _focusNode,
+                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            onSubmitted: (_) => _sendOwnerComment(),
+                            decoration: InputDecoration(
+                              hintText: _replyingToUser != null
+                                  ? 'Balas @$_replyingToUser sebagai $shopName (Pemilik)...'
+                                  : 'Tulis komen sebagai $shopName (Pemilik Kedai)...',
+                              hintStyle: const TextStyle(color: Colors.white38, fontSize: 12.5),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _sendOwnerComment(),
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Color(0xFFFE2C55), Color(0xFFEC4899)],
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: _sending
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
