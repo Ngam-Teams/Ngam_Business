@@ -17,11 +17,17 @@ import '../../data/orders_service.dart';
 /// allowing merchants to scan customer pickup QR codes, pick from gallery, or input manually.
 class OrderPickupQrScannerScreen extends StatefulWidget {
   final List<OrderModel> allOrders;
+  final List<Map<String, dynamic>>? appointments;
 
   const OrderPickupQrScannerScreen({
     super.key,
     required this.allOrders,
-  });
+  }) : appointments = null;
+
+  const OrderPickupQrScannerScreen.booking({
+    super.key,
+    required List<Map<String, dynamic>> this.appointments,
+  }) : allOrders = const [];
 
   @override
   State<OrderPickupQrScannerScreen> createState() => _OrderPickupQrScannerScreenState();
@@ -40,13 +46,15 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
   String? _lastScannedCode;
   DateTime? _lastScannedTime;
 
+  bool get _isBookingMode => widget.appointments != null;
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  /// Normalizes and verifies the scanned QR code against active and online orders
+  /// Normalizes and verifies the scanned QR code against active and online orders or booking tickets
   Future<void> _processScannedCode(String rawCode) async {
     final trimmed = rawCode.trim();
     if (trimmed.isEmpty || _isProcessing) return;
@@ -64,6 +72,70 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
     setState(() => _isProcessing = true);
 
     try {
+      if (_isBookingMode) {
+        String cleaned = trimmed.toUpperCase();
+        if (cleaned.contains('ID:')) {
+          final m = RegExp(r'ID:([^|\s]+)').firstMatch(cleaned);
+          if (m != null) cleaned = m.group(1)!.trim();
+        }
+        if (cleaned.startsWith('NGAM-BOOKING:')) {
+          cleaned = cleaned.substring('NGAM-BOOKING:'.length).trim();
+        } else if (cleaned.startsWith('NGAM:BOOKING:')) {
+          cleaned = cleaned.substring('NGAM:BOOKING:'.length).trim();
+        } else if (cleaned.startsWith('NGAM:')) {
+          cleaned = cleaned.substring('NGAM:'.length).trim();
+        }
+        cleaned = cleaned.replaceAll('#', '').trim();
+
+        if (cleaned.isEmpty) {
+          return;
+        }
+
+        Map<String, dynamic>? matchedAppt;
+        for (final a in widget.appointments!) {
+          final aid = (a['id']?.toString() ?? '').trim().toUpperCase();
+          final dbId = (a['db_id']?.toString() ?? '').trim().toUpperCase();
+          final meta = a['raw_meta'] is Map ? a['raw_meta'] as Map : const {};
+          final metaBookingId = (meta['booking_id']?.toString() ?? '').trim().toUpperCase();
+          final metaShortRef = (meta['short_ref']?.toString() ?? '').trim().toUpperCase();
+
+          final matchesExact = aid == cleaned ||
+              dbId == cleaned ||
+              metaBookingId == cleaned ||
+              metaShortRef == cleaned;
+          final matchesPartial = cleaned.length >= 6 &&
+              (aid.contains(cleaned) ||
+                  dbId.startsWith(cleaned) ||
+                  dbId.endsWith(cleaned) ||
+                  metaBookingId.contains(cleaned) ||
+                  metaShortRef.contains(cleaned));
+
+          if (matchesExact || matchesPartial) {
+            matchedAppt = a;
+            break;
+          }
+        }
+
+        if (matchedAppt != null) {
+          await SoundService.instance.playOrderChime();
+          await HapticFeedback.heavyImpact();
+          if (mounted) {
+            Navigator.pop(context, matchedAppt);
+          }
+          return;
+        }
+
+        await SoundService.instance.playErrorBeep();
+        await HapticFeedback.vibrate();
+        if (mounted) {
+          showGlassToast(
+            context,
+            'Tiket tempahan tidak ditemui untuk kod ini ($trimmed).',
+            isError: true,
+          );
+        }
+        return;
+      }
       // Strip NGAM-ORDER prefix, #, and trailing whitespaces
       var cleaned = trimmed;
       final upper = trimmed.toUpperCase();
@@ -247,28 +319,32 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
                 ),
               ),
               const SizedBox(height: 20),
-              const Row(
+              Row(
                 children: [
-                  HugeIcon(
+                  const HugeIcon(
                     icon: HugeIcons.strokeRoundedKeyboard,
                     color: Color(0xFF00E5FF),
                     size: 22,
                   ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Masukkan Kod Pesanan Manual',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _isBookingMode ? 'Masukkan ID Tiket Tempahan' : 'Masukkan Kod Pesanan Manual',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Taipkan Kod Pesanan (cth: NGAM-ORDER:... atau 6 aksara ID seperti #A1B2C3), atau gunakan pengimbas USB Barcode:',
-                style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
+              Text(
+                _isBookingMode
+                    ? 'Taipkan ID Tempahan (cth: ID:RZRV-... atau RZRV-261101-ABCDE), atau gunakan pengimbas USB Barcode:'
+                    : 'Taipkan Kod Pesanan (cth: NGAM-ORDER:... atau 6 aksara ID seperti #A1B2C3), atau gunakan pengimbas USB Barcode:',
+                style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -281,7 +357,9 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
                   fontSize: 15,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Cth: NGAM-ORDER:abc12345 atau #ABC123',
+                  hintText: _isBookingMode
+                      ? 'Cth: RZRV-261101-ABCDE'
+                      : 'Cth: NGAM-ORDER:abc12345 atau #ABC123',
                   hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
                   prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00E5FF), size: 20),
                   filled: true,
@@ -480,32 +558,36 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
                       ),
                     ],
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      HugeIcon(
+                      const HugeIcon(
                         icon: HugeIcons.strokeRoundedQrCode,
                         color: Color(0xFF00E5FF),
                         size: 22,
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Halakan kamera ke Kod QR pesanan pelanggan',
-                              style: TextStyle(
+                              _isBookingMode
+                                  ? 'Halakan kamera ke Kod QR tiket tempahan'
+                                  : 'Halakan kamera ke Kod QR pesanan pelanggan',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            SizedBox(height: 2),
+                            const SizedBox(height: 2),
                             Text(
-                              'Kod QR ada pada resit atau aplikasi Ngam pelanggan',
-                              style: TextStyle(
+                              _isBookingMode
+                                  ? 'Kod QR ada pada tiket tempahan atau aplikasi Ngam pelanggan'
+                                  : 'Kod QR ada pada resit atau aplikasi Ngam pelanggan',
+                              style: const TextStyle(
                                 color: Colors.white60,
                                 fontSize: 11,
                               ),
@@ -567,15 +649,17 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
           if (_isProcessing || _isProcessingImage)
             Container(
               color: Colors.black54,
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: Color(0xFF00E5FF)),
-                    SizedBox(height: 16),
+                    const CircularProgressIndicator(color: Color(0xFF00E5FF)),
+                    const SizedBox(height: 16),
                     Text(
-                      'Mengesahkan kod pesanan...',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      _isBookingMode
+                          ? 'Mengesahkan tiket tempahan...'
+                          : 'Mengesahkan kod pesanan...',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                   ],
                 ),

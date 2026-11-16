@@ -10,6 +10,7 @@ import '../../../widgets/glass_toast.dart';
 import '../../../widgets/glass_nav_button.dart';
 import '../../settings/data/business_service.dart';
 import '../../pos/presentation/widgets/payment_terminal_modal.dart';
+import '../../orders/presentation/widgets/order_pickup_qr_scanner_screen.dart';
 
 // ============================================================
 // AppointmentsPage — Merchant Booking & Schedule Management
@@ -604,86 +605,14 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
   }
 
   Future<void> _openBookingQrCheckIn() async {
-    final codeCtrl = TextEditingController();
-    final matched = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF141724),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: const Row(
-          children: [
-            Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF42A5F5)),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Check-In QR Tiket Tempahan',
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
+    final matched = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderPickupQrScannerScreen.booking(
+          appointments: _appointments,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Imbas kod QR tiket pelanggan (ID:RZRV-...) atau masukkan ID Tempahan:',
-              style: TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: codeCtrl,
-              autofocus: true,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              decoration: InputDecoration(
-                hintText: 'Cth: RZRV-261101-ABCDE',
-                hintStyle: const TextStyle(color: Colors.white38),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.06),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF42A5F5),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () {
-              String raw = codeCtrl.text.trim().toUpperCase();
-              if (raw.contains('ID:')) {
-                final m = RegExp(r'ID:([^|]+)').firstMatch(raw);
-                if (m != null) raw = m.group(1)!.trim();
-              }
-              if (raw.isEmpty) {
-                showGlassToast(context, 'Tiket tempahan tidak ditemui.', isError: true);
-                return;
-              }
-              for (final a in _appointments) {
-                final aid = (a['id']?.toString() ?? '').toUpperCase();
-                if (aid == raw || aid.contains(raw)) {
-                  Navigator.pop(ctx, a);
-                  return;
-                }
-              }
-              showGlassToast(context, 'Tiket tempahan tidak ditemui.', isError: true);
-            },
-            child: const Text('Cari & Check-In', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
-    codeCtrl.dispose();
 
     if (matched != null && mounted) {
       _showBookingDetailsModal(matched);
