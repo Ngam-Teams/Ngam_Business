@@ -39,6 +39,7 @@ import '../../features/loyalty/presentation/loyalty_stamps_page.dart';
 import '../../features/settings/presentation/mfa_setup_page.dart';
 import '../../features/settings/presentation/audit_logs_page.dart';
 import '../../features/feed/presentation/feed_management_page.dart';
+import '../../features/integrations/presentation/integrations_page.dart';
 import '../../widgets/dashboard_scaffold.dart';
 import '../../widgets/glass_toast.dart';
 import '../services/merchant_notification_service.dart';
@@ -522,6 +523,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/feed-studio',
       builder: (context, state) => const FeedManagementPage(),
+    ),
+    GoRoute(
+      path: '/integrations',
+      builder: (context, state) => const IntegrationsPage(),
     ),
   ],
 );

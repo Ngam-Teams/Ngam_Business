@@ -997,10 +997,10 @@ class _HomeDashboardState extends State<HomeDashboard> with WidgetsBindingObserv
         onTap: () => context.push('/audit-logs'),
       ),
       (
-        label: 'Peralatan\nKhusus',
-        icon: HugeIcons.strokeRoundedSparkles,
+        label: 'dashboard.action_integrations'.tr(),
+        icon: HugeIcons.strokeRoundedGlobe02,
         color: const Color(0xFFA78BFA),
-        onTap: () => showGlassToast(context, 'Fungsi ini akan ditambah tidak lama lagi.'),
+        onTap: () => context.push('/integrations'),
       ),
     ];
 
