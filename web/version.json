@@ -1,6 +1,6 @@
 {
-  "version": "1.0.26",
-  "build_number": 6,
-  "released_at": "2026-11-16T01:25:00Z",
-  "changelog": "Betulkan pengesanan versi Web/PWA, tambah notifikasi toast kemas kini, dan paparkan label versi hanya dalam Tetapan."
+  "version": "1.0.27",
+  "build_number": 7,
+  "released_at": "2026-11-16T07:15:00Z",
+  "changelog": "Integrasi chat dua hala masa nyata antara Ngam & Ngam Business dengan UI moden, gambar, balasan, status dibaca, dan lencana belum dibaca."
 }

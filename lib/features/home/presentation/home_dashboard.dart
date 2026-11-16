@@ -15,6 +15,7 @@ import '../../../core/utils/file_saver/file_saver.dart';
 import '../../analytics/data/analytics_service.dart';
 import '../../orders/data/orders_service.dart';
 import '../../settings/data/business_service.dart';
+import '../../inbox/data/merchant_chat_service.dart';
 import '../../../core/services/app_update_service.dart';
 import '../../../core/services/ngam_teams_service.dart';
 
@@ -113,6 +114,9 @@ class _HomeDashboardState extends State<HomeDashboard> with WidgetsBindingObserv
           _overviewFuture = _analytics.fetchOverviewStats(forceRefresh: true);
         }
       });
+      if (newId != null && newId.isNotEmpty) {
+        MerchantChatService.refreshUnreadCount(newId);
+      }
     }
   }
 

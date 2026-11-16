@@ -1,36 +1,40 @@
+import 'dart:async';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../widgets/glass_nav_button.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
+import '../data/merchant_chat_service.dart';
 
 // ============================================================
-// MerchantInboxPage — Live Customer Chat & Reservation Support
+// MerchantInboxPage — Real-Time Two-Way Customer Chat Inbox
 // ============================================================
 
 class MerchantInboxPage extends StatefulWidget {
-  const MerchantInboxPage({super.key});
+  final String? initialConversationId;
+  final String? initialCustomerId;
+  final String? initialContextType;
+  final String? initialContextId;
+
+  const MerchantInboxPage({
+    super.key,
+    this.initialConversationId,
+    this.initialCustomerId,
+    this.initialContextType,
+    this.initialContextId,
+  });
 
   @override
   State<MerchantInboxPage> createState() => _MerchantInboxPageState();
 }
 
 class _MerchantInboxPageState extends State<MerchantInboxPage> {
-  int _selectedFilter = 0;
-  static const List<String> _filterKeys = ['all', 'orders', 'bookings', 'support'];
-
-  List<Map<String, dynamic>> _threads = [];
-  Map<String, dynamic>? _activeThread;
-  bool _isLoading = true;
-  bool _isUpdatingStatus = false;
-  String? _businessId;
-  String _businessName = 'Ngam Business';
-
-  final TextEditingController _msgInputController = TextEditingController();
-
+  static const List<String> _filterKeys = ['all', 'unread', 'orders', 'bookings'];
   static const List<String> _quickReplyKeys = [
     'inbox.quick_reply_1',
     'inbox.quick_reply_2',
@@ -39,309 +43,332 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
     'inbox.quick_reply_5',
   ];
 
+  int _selectedFilter = 0;
+  String _searchQuery = '';
+  String? _businessId;
+  String _businessName = 'Ngam Business';
+  bool _isInitializing = true;
+
+  StreamSubscription<List<MerchantConversation>>? _convSub;
+  List<MerchantConversation> _conversations = [];
+  String? _activeConversationId;
+
+  // Active thread state
+  List<MerchantMessage> _messages = [];
+  bool _isLoadingMessages = false;
+  bool _isOtherTyping = false;
+  bool _isUploadingImage = false;
+  bool _isUpdatingStatus = false;
+  MerchantMessage? _replyingTo;
+
+  RealtimeChannel? _threadChannel;
+  Timer? _typingSendTimer;
+  Timer? _typingDisplayTimer;
+
+  final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _msgController = TextEditingController();
+  final ScrollController _msgScrollController = ScrollController();
+  final ImagePicker _picker = ImagePicker();
+
+  String get _currentUserId => Supabase.instance.client.auth.currentUser?.id ?? '';
+
+  MerchantConversation? get _activeConversation {
+    if (_activeConversationId == null) return null;
+    for (final c in _conversations) {
+      if (c.id == _activeConversationId) return c;
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadLiveThreads();
+    _initInbox();
   }
 
-  String _filterLabel(String key) {
-    switch (key) {
-      case 'orders':
-        return 'inbox.filter_orders'.tr();
-      case 'bookings':
-        return 'inbox.filter_bookings'.tr();
-      case 'support':
-        return 'inbox.filter_support'.tr();
-      default:
-        return 'inbox.filter_all'.tr();
-    }
-  }
-
-  String _formatTime(dynamic rawIso) {
-    if (rawIso == null) return '';
-    final dt = DateTime.tryParse(rawIso.toString())?.toLocal();
-    if (dt == null) return '';
-    final now = DateTime.now();
-    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
-      return DateFormat('HH:mm').format(dt);
-    }
-    return DateFormat('dd/MM HH:mm').format(dt);
-  }
-
-  Future<void> _loadLiveThreads() async {
+  Future<void> _initInbox() async {
     try {
       final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
       final businessId = profile?['id']?.toString();
       if (businessId == null || businessId.isEmpty) {
-        if (mounted) setState(() => _isLoading = false);
+        if (mounted) setState(() => _isInitializing = false);
         return;
       }
 
       _businessId = businessId;
       _businessName = (profile?['business_name'] ?? 'Ngam Business').toString();
 
-      final res = await Future.wait([
-        Supabase.instance.client
-            .from('orders')
-            .select('id, owner_user_id, customer_id, customer_name, notes, source, status, total, created_at')
-            .eq('business_id', businessId)
-            .order('created_at', ascending: false)
-            .limit(15),
-        Supabase.instance.client
-            .from('bookings')
-            .select('id, customer_id, customer_name, service_name, booking_date, booking_time, status, booking_metadata, created_at')
-            .eq('business_id', businessId)
-            .order('created_at', ascending: false)
-            .limit(15),
-      ]);
-
-      final orderRows = (res[0] as List?) ?? [];
-      final bookingRows = (res[1] as List?) ?? [];
-
-      // Lookup customer contact info from public.users without failing if RLS blocks
-      final Set<String> customerIds = {};
-      for (final o in orderRows) {
-        final cid = o['customer_id']?.toString().trim() ?? '';
-        final oid = o['owner_user_id']?.toString().trim() ?? '';
-        final src = (o['source'] ?? '').toString().toLowerCase();
-        final effectiveUid = cid.isNotEmpty ? cid : (src != 'pos' ? oid : '');
-        if (effectiveUid.isNotEmpty) customerIds.add(effectiveUid);
-      }
-      for (final b in bookingRows) {
-        final cid = b['customer_id']?.toString().trim() ?? '';
-        if (cid.isNotEmpty) customerIds.add(cid);
-      }
-
-      final Map<String, Map<String, dynamic>> usersMap = {};
-      if (customerIds.isNotEmpty) {
+      String? targetConvId = widget.initialConversationId;
+      if (targetConvId == null &&
+          widget.initialCustomerId != null &&
+          widget.initialCustomerId!.isNotEmpty) {
         try {
-          final usersRes = await Supabase.instance.client
-              .from('users')
-              .select('id, user_name, user_phone')
-              .inFilter('id', customerIds.toList());
-          for (final u in (usersRes as List? ?? [])) {
-            final uid = u['id']?.toString() ?? '';
-            if (uid.isNotEmpty) {
-              usersMap[uid] = Map<String, dynamic>.from(u as Map);
-            }
-          }
+          targetConvId = await MerchantChatService.openOrCreateCustomerConversation(
+            businessId: businessId,
+            customerId: widget.initialCustomerId!,
+            contextType: widget.initialContextType,
+            contextId: widget.initialContextId,
+          );
         } catch (_) {}
       }
 
-      final liveThreads = <Map<String, dynamic>>[];
+      _convSub = MerchantChatService.streamBusinessConversations(businessId).listen(
+        (list) {
+          if (!mounted) return;
+          setState(() {
+            _conversations = list;
+            _isInitializing = false;
+          });
 
-      for (final o in orderRows) {
-        final idStr = o['id'].toString();
-        final cid = o['customer_id']?.toString().trim() ?? '';
-        final oid = o['owner_user_id']?.toString().trim() ?? '';
-        final src = (o['source'] ?? '').toString().toLowerCase();
-        final effectiveUid = cid.isNotEmpty ? cid : (src != 'pos' ? oid : '');
-        final user = effectiveUid.isNotEmpty ? usersMap[effectiveUid] : null;
-        final notes = (o['notes'] ?? '').toString().trim();
-        final cust = (o['customer_name'] ?? user?['user_name'] ?? '').toString().trim();
-        if (cust.isEmpty && notes.isEmpty) continue;
-
-        final shortId = idStr.length > 6 ? idStr.substring(0, 6).toUpperCase() : idStr.toUpperCase();
-        final phone = (user?['user_phone'] ?? '').toString().trim();
-        final status = (o['status'] ?? 'pending').toString().toLowerCase();
-        final timeStr = _formatTime(o['created_at']);
-        final totalStr = ((o['total'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
-
-        liveThreads.add({
-          'id': 'ORD-$shortId',
-          'rawId': idStr,
-          'businessId': businessId,
-          'customerId': effectiveUid.isNotEmpty ? effectiveUid : null,
-          'sourceType': 'order',
-          'status': status,
-          'customerName': cust.isNotEmpty ? cust : 'inbox.customer_fallback'.tr(args: [shortId]),
-          'phone': phone,
-          'filterKey': 'orders',
-          'shortId': shortId,
-          'totalStr': totalStr,
-          'orderRef': 'inbox.order_ref'.tr(args: [shortId, totalStr]),
-          'unread': status == 'pending' ? 1 : 0,
-          'createdAt': o['created_at']?.toString() ?? '',
-          'lastTime': timeStr,
-          'messages': [
-            {
-              'from': 'customer',
-              'text': notes.isNotEmpty ? notes : 'inbox.order_default_msg'.tr(args: [shortId]),
-              'time': timeStr,
-            },
-          ],
-        });
-      }
-
-      for (final b in bookingRows) {
-        final status = (b['status'] ?? 'pending').toString().toLowerCase();
-        if (status == 'holding') continue;
-
-        final idStr = b['id'].toString();
-        final cid = b['customer_id']?.toString().trim() ?? '';
-        final user = cid.isNotEmpty ? usersMap[cid] : null;
-        final meta = b['booking_metadata'] is Map
-            ? Map<String, dynamic>.from(b['booking_metadata'] as Map)
-            : <String, dynamic>{};
-        final cust = (b['customer_name'] ?? meta['customer_name'] ?? user?['user_name'] ?? '').toString().trim();
-        final svc = (b['service_name'] ?? '').toString().trim();
-        final notes = (meta['notes'] ?? '').toString().trim();
-        final fallbackCode = idStr.length >= 5 ? idStr.substring(0, 5).toUpperCase() : idStr.toUpperCase();
-        final ref = (meta['booking_id'] ?? meta['short_ref'] ?? 'BK-$fallbackCode').toString();
-        final phone = (meta['phone'] ?? meta['customer_phone'] ?? user?['user_phone'] ?? '').toString().trim();
-        final dateStr = (b['booking_date'] ?? '').toString();
-        final timeSlot = (b['booking_time'] ?? '').toString();
-        final timeStr = _formatTime(b['created_at']);
-        final displaySvc = svc.isNotEmpty ? svc : 'inbox.service_fallback'.tr();
-
-        liveThreads.add({
-          'id': 'BK-$ref',
-          'rawId': idStr,
-          'businessId': businessId,
-          'customerId': cid.isNotEmpty ? cid : null,
-          'sourceType': 'booking',
-          'status': status,
-          'customerName': cust.isNotEmpty ? cust : 'inbox.booking_customer_fallback'.tr(),
-          'phone': phone,
-          'filterKey': 'bookings',
-          'orderRef': '$ref • $displaySvc ($dateStr)'.trim(),
-          'unread': status == 'pending' ? 1 : 0,
-          'createdAt': b['created_at']?.toString() ?? '',
-          'lastTime': timeStr,
-          'messages': [
-            {
-              'from': 'customer',
-              'text': notes.isNotEmpty
-                  ? notes
-                  : 'inbox.booking_default_msg'.tr(args: [displaySvc, dateStr, timeSlot]),
-              'time': timeStr,
-            },
-          ],
-        });
-      }
-
-      liveThreads.sort((a, b) => (b['createdAt'] as String).compareTo(a['createdAt'] as String));
-
-      if (mounted) {
-        setState(() {
-          _threads = liveThreads;
-          _isLoading = false;
-          if (_threads.isNotEmpty && _activeThread == null) {
-            _activeThread = _threads.first;
+          if (targetConvId != null && list.any((c) => c.id == targetConvId)) {
+            final idToOpen = targetConvId!;
+            targetConvId = null;
+            _selectConversation(idToOpen);
+          } else if (_activeConversationId == null && list.isNotEmpty) {
+            final media = MediaQuery.of(context);
+            final isDesktop = media.size.width >= 768 ||
+                media.orientation == Orientation.landscape ||
+                media.size.width > media.size.height;
+            if (isDesktop) {
+              _selectConversation(list.first.id);
+            }
           }
+        },
+        onError: (_) {
+          if (mounted) setState(() => _isInitializing = false);
+        },
+      );
+    } catch (_) {
+      if (mounted) setState(() => _isInitializing = false);
+    }
+  }
+
+  Future<void> _selectConversation(String conversationId) async {
+    if (_activeConversationId == conversationId && _threadChannel != null) {
+      await MerchantChatService.markAsRead(conversationId);
+      return;
+    }
+
+    _typingDisplayTimer?.cancel();
+    await _threadChannel?.unsubscribe();
+    _threadChannel = null;
+
+    setState(() {
+      _activeConversationId = conversationId;
+      _messages = [];
+      _isLoadingMessages = true;
+      _isOtherTyping = false;
+      _replyingTo = null;
+    });
+
+    await MerchantChatService.markAsRead(conversationId);
+
+    try {
+      final msgs = await MerchantChatService.getMessages(conversationId);
+      if (mounted && _activeConversationId == conversationId) {
+        setState(() {
+          _messages = msgs;
+          _isLoadingMessages = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted && _activeConversationId == conversationId) {
+        setState(() => _isLoadingMessages = false);
+      }
     }
+
+    _threadChannel = MerchantChatService.subscribeToThread(
+      conversationId,
+      onNewMessage: (newMsg) {
+        if (!mounted || _activeConversationId != conversationId) return;
+        setState(() {
+          final existingIdx = _messages.indexWhere(
+            (m) => m.id == newMsg.id || (m.status == 'sending' && m.content == newMsg.content),
+          );
+          if (existingIdx != -1) {
+            _messages[existingIdx] = newMsg;
+          } else {
+            _messages.insert(0, newMsg);
+          }
+        });
+        if (newMsg.senderId != _currentUserId) {
+          MerchantChatService.markAsRead(conversationId);
+        }
+      },
+      onMessageUpdated: (updated) {
+        if (!mounted || _activeConversationId != conversationId) return;
+        final idx = _messages.indexWhere((m) => m.id == updated.id);
+        if (idx != -1) {
+          setState(() => _messages[idx] = updated);
+        }
+      },
+      onTypingStatus: (uid, isTyping) {
+        if (!mounted || _activeConversationId != conversationId) return;
+        if (uid == _currentUserId) return;
+        setState(() => _isOtherTyping = isTyping);
+        if (isTyping) {
+          _typingDisplayTimer?.cancel();
+          _typingDisplayTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted) setState(() => _isOtherTyping = false);
+          });
+        }
+      },
+    );
   }
 
-  List<Map<String, dynamic>> get _filteredThreads {
-    if (_selectedFilter == 0) return _threads;
-    final targetKey = _filterKeys[_selectedFilter];
-    return _threads.where((t) => t['filterKey'] == targetKey).toList();
-  }
-
-  @override
-  void dispose() {
-    _msgInputController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _callCustomer(String phone) async {
-    final clean = phone.replaceAll(RegExp(r'\s+'), '').trim();
-    if (clean.isEmpty) {
-      if (mounted) showGlassToast(context, 'inbox.no_phone_number'.tr(), isError: true);
-      return;
-    }
-    final uri = Uri.parse('tel:$clean');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else {
-      if (mounted) showGlassToast(context, 'inbox.dialer_error'.tr(), isError: true);
-    }
+  void _onInputChanged(String text) {
+    if (_threadChannel == null || _activeConversationId == null) return;
+    _typingSendTimer?.cancel();
+    _threadChannel!.sendBroadcastMessage(
+      event: 'typing',
+      payload: {'user_id': _currentUserId, 'is_typing': true},
+    );
+    _typingSendTimer = Timer(const Duration(seconds: 2), () {
+      _threadChannel?.sendBroadcastMessage(
+        event: 'typing',
+        payload: {'user_id': _currentUserId, 'is_typing': false},
+      );
+    });
   }
 
   Future<void> _sendMessage([String? quickText]) async {
-    final text = quickText ?? _msgInputController.text.trim();
-    if (text.isEmpty || _activeThread == null) return;
+    final conv = _activeConversation;
+    final text = (quickText ?? _msgController.text).trim();
+    if (text.isEmpty || conv == null) return;
 
-    final thread = _activeThread!;
-    setState(() {
-      final messages = thread['messages'] as List<dynamic>;
-      messages.add({
-        'from': 'merchant',
-        'text': text,
-        'timeKey': 'inbox.just_now',
-      });
-      thread['unread'] = 0;
-    });
-
-    if (quickText == null) {
-      _msgInputController.clear();
+    Map<String, dynamic>? replyPayload;
+    if (_replyingTo != null && quickText == null) {
+      final isMe = _replyingTo!.senderId == _currentUserId;
+      replyPayload = {
+        'id': _replyingTo!.id,
+        'content': _replyingTo!.content,
+        'sender_name': isMe ? 'inbox.you_label'.tr() : conv.customerName,
+      };
     }
 
-    // Best-effort push/in-app notification for logged-in Ngam app customers
-    final customerId = thread['customerId']?.toString();
-    final bizId = thread['businessId']?.toString() ?? _businessId;
-    if (customerId != null && customerId.isNotEmpty && bizId != null) {
-      try {
-        await Supabase.instance.client.from('notifications').insert({
-          'user_id': customerId,
-          'business_id': bizId,
-          'title': 'inbox.reply_notif_title'.tr(args: [_businessName]),
-          'message': text,
-          'type': thread['sourceType'] == 'order' ? 'pesanan' : 'tempahan',
-          'reference_id': thread['rawId']?.toString(),
-          'is_read': false,
+    if (quickText == null) {
+      _msgController.clear();
+    }
+    setState(() => _replyingTo = null);
+
+    final pending = MerchantMessage(
+      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      conversationId: conv.id,
+      senderId: _currentUserId,
+      content: text,
+      createdAt: DateTime.now(),
+      status: 'sending',
+      replyToMessage: replyPayload,
+    );
+
+    setState(() => _messages.insert(0, pending));
+    if (_msgScrollController.hasClients) {
+      _msgScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
+
+    try {
+      final actual = await MerchantChatService.sendTextMessage(
+        conversationId: conv.id,
+        content: text,
+        replyToMessage: replyPayload,
+      );
+      if (mounted) {
+        setState(() {
+          final idx = _messages.indexWhere((m) => m.id == pending.id);
+          if (idx != -1) _messages[idx] = actual;
         });
-      } catch (_) {}
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          final idx = _messages.indexWhere((m) => m.id == pending.id);
+          if (idx != -1) _messages[idx] = pending.copyWith(status: 'failed');
+        });
+        showGlassToast(context, 'inbox.send_failed'.tr(), isError: true);
+      }
     }
   }
 
-  Future<void> _confirmThreadAction(Map<String, dynamic> thread) async {
-    if (_isUpdatingStatus) return;
-    final rawId = thread['rawId']?.toString() ?? '';
-    final sourceType = thread['sourceType']?.toString() ?? '';
-    if (rawId.isEmpty) return;
+  Future<void> _pickAndSendImage(ImageSource source) async {
+    final conv = _activeConversation;
+    if (conv == null || _isUploadingImage) return;
+
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 78,
+      );
+      if (picked == null) return;
+
+      setState(() => _isUploadingImage = true);
+      final bytes = await picked.readAsBytes();
+
+      final pending = MerchantMessage(
+        id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+        conversationId: conv.id,
+        senderId: _currentUserId,
+        content: 'Photo',
+        messageType: 'image',
+        createdAt: DateTime.now(),
+        status: 'sending',
+      );
+      setState(() => _messages.insert(0, pending));
+
+      final actual = await MerchantChatService.sendImageMessage(
+        conversationId: conv.id,
+        bytes: bytes,
+        fileName: picked.name,
+      );
+      if (mounted) {
+        setState(() {
+          final idx = _messages.indexWhere((m) => m.id == pending.id);
+          if (idx != -1) _messages[idx] = actual;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        showGlassToast(context, 'inbox.image_send_failed'.tr(), isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
+    }
+  }
+
+  Future<void> _confirmContextAction(MerchantConversation conv) async {
+    if (_isUpdatingStatus || conv.contextId == null || conv.contextType == null) return;
+    if (conv.contextType != 'order' && conv.contextType != 'booking') return;
 
     setState(() => _isUpdatingStatus = true);
     try {
-      final targetStatus = sourceType == 'booking' ? 'confirmed' : 'preparing';
-      final table = sourceType == 'booking' ? 'bookings' : 'orders';
-
-      await Supabase.instance.client
-          .from(table)
-          .update({'status': targetStatus})
-          .eq('id', rawId);
-
-      final customerId = thread['customerId']?.toString();
-      final bizId = thread['businessId']?.toString() ?? _businessId;
-      if (customerId != null && customerId.isNotEmpty && bizId != null) {
-        try {
-          await Supabase.instance.client.from('notifications').insert({
-            'user_id': customerId,
-            'business_id': bizId,
-            'title': 'inbox.reply_notif_title'.tr(args: [_businessName]),
-            'message': sourceType == 'booking'
-                ? 'inbox.booking_confirmed_toast'.tr()
-                : 'inbox.order_preparing_toast'.tr(),
-            'type': sourceType == 'booking' ? 'tempahan' : 'pesanan',
-            'reference_id': rawId,
-            'is_read': false,
-          });
-        } catch (_) {}
-      }
+      final isBooking = conv.contextType == 'booking';
+      final newStatus = await MerchantChatService.confirmOrderOrBooking(
+        sourceType: conv.contextType!,
+        rawId: conv.contextId!,
+        businessId: conv.businessId,
+        businessName: _businessName,
+        customerId: conv.customerId,
+        notifTitle: 'inbox.reply_notif_title'.tr(args: [_businessName]),
+        notifMessage: isBooking
+            ? 'inbox.booking_confirmed_toast'.tr()
+            : 'inbox.order_preparing_toast'.tr(),
+      );
 
       if (mounted) {
         setState(() {
-          thread['status'] = targetStatus;
-          thread['unread'] = 0;
+          final idx = _conversations.indexWhere((c) => c.id == conv.id);
+          if (idx != -1) {
+            _conversations[idx] = _conversations[idx].copyWith(contextStatus: newStatus);
+          }
         });
         showGlassToast(
           context,
-          sourceType == 'booking'
+          isBooking
               ? 'inbox.booking_confirmed_toast'.tr()
               : 'inbox.order_preparing_toast'.tr(),
         );
@@ -355,29 +382,121 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
     }
   }
 
+  Future<void> _callCustomer(String? phone) async {
+    final clean = (phone ?? '').replaceAll(RegExp(r'\s+'), '').trim();
+    if (clean.isEmpty) {
+      if (mounted) showGlassToast(context, 'inbox.no_phone_number'.tr(), isError: true);
+      return;
+    }
+    final uri = Uri.parse('tel:$clean');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      if (mounted) showGlassToast(context, 'inbox.dialer_error'.tr(), isError: true);
+    }
+  }
+
+  List<MerchantConversation> get _filteredConversations {
+    final q = _searchQuery.trim().toLowerCase();
+    return _conversations.where((c) {
+      if (_selectedFilter == 1 && c.unreadCount <= 0) return false;
+      if (_selectedFilter == 2 && c.contextType != 'order') return false;
+      if (_selectedFilter == 3 && c.contextType != 'booking') return false;
+
+      if (q.isNotEmpty) {
+        final nameMatch = c.customerName.toLowerCase().contains(q);
+        final msgMatch = (c.lastMessage ?? '').toLowerCase().contains(q);
+        final refMatch = (c.contextRef ?? '').toLowerCase().contains(q);
+        return nameMatch || msgMatch || refMatch;
+      }
+      return true;
+    }).toList();
+  }
+
+  String _filterLabel(String key) {
+    switch (key) {
+      case 'unread':
+        return 'inbox.filter_unread'.tr();
+      case 'orders':
+        return 'inbox.filter_orders'.tr();
+      case 'bookings':
+        return 'inbox.filter_bookings'.tr();
+      default:
+        return 'inbox.filter_all'.tr();
+    }
+  }
+
+  String _formatConvTime(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+      return DateFormat('HH:mm').format(dt);
+    }
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (dt.year == yesterday.year && dt.month == yesterday.month && dt.day == yesterday.day) {
+      return 'inbox.yesterday'.tr();
+    }
+    return DateFormat('dd/MM').format(dt);
+  }
+
+  String _formatDateDivider(DateTime dt) {
+    final now = DateTime.now();
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+      return 'inbox.today'.tr();
+    }
+    final yesterday = now.subtract(const Duration(days: 1));
+    if (dt.year == yesterday.year && dt.month == yesterday.month && dt.day == yesterday.day) {
+      return 'inbox.yesterday'.tr();
+    }
+    return DateFormat('dd MMM yyyy').format(dt);
+  }
+
+  @override
+  void dispose() {
+    _convSub?.cancel();
+    _typingSendTimer?.cancel();
+    _typingDisplayTimer?.cancel();
+    _threadChannel?.unsubscribe();
+    _searchController.dispose();
+    _msgController.dispose();
+    _msgScrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final isLandscape = media.orientation == Orientation.landscape || media.size.width > media.size.height;
     final isDesktop = media.size.width >= 768 || isLandscape;
+    final active = _activeConversation;
 
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      title: _activeThread != null && !isDesktop ? (_activeThread!['customerName'] as String) : 'inbox.title'.tr(),
-      subtitle: _activeThread != null && !isDesktop ? (_activeThread!['orderRef'] as String) : 'inbox.subtitle'.tr(),
+      title: active != null && !isDesktop ? active.customerName : 'inbox.title'.tr(),
+      subtitle: active != null && !isDesktop
+          ? (_isOtherTyping
+              ? 'inbox.typing'.tr()
+              : (active.contextRef ?? 'inbox.customer_chat_subtitle'.tr()))
+          : 'inbox.subtitle'.tr(),
       onBack: () {
-        if (_activeThread != null && !isDesktop) {
-          setState(() => _activeThread = null);
+        if (active != null && !isDesktop) {
+          _threadChannel?.unsubscribe();
+          _threadChannel = null;
+          setState(() {
+            _activeConversationId = null;
+            _messages = [];
+            _replyingTo = null;
+            _isOtherTyping = false;
+          });
         } else {
           Navigator.pop(context);
         }
       },
       actionItems: [
-        if (_activeThread != null)
+        if (active != null)
           GlassNavPillItem(
             icon: Icons.phone_rounded,
             tooltip: 'inbox.call_customer'.tr(),
-            onTap: () => _callCustomer((_activeThread!['phone'] ?? '').toString()),
+            onTap: () => _callCustomer(active.customerPhone),
           ),
       ],
       body: Padding(
@@ -388,98 +507,180 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
   }
 
   Widget _buildDesktopLayout() {
+    final active = _activeConversation;
     return Row(
       children: [
-        SizedBox(
-          width: 340,
+        Container(
+          width: 360,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0E0E1A),
+            border: Border(right: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+          ),
           child: Column(
             children: [
-              _buildFilterChips(),
+              _buildSearchAndFilters(),
               Expanded(child: _buildThreadList()),
             ],
           ),
         ),
-        const VerticalDivider(width: 1, color: Colors.white12),
         Expanded(
-          child: _activeThread != null ? _buildChatDetail(_activeThread!) : _buildEmptyState(),
+          child: active != null ? _buildChatDetail(active, showDesktopHeader: true) : _buildEmptyState(),
         ),
       ],
     );
   }
 
   Widget _buildMobileLayout() {
-    if (_activeThread != null) {
-      return _buildChatDetail(_activeThread!);
+    final active = _activeConversation;
+    if (active != null) {
+      return _buildChatDetail(active, showDesktopHeader: false);
     }
     return Column(
       children: [
-        _buildFilterChips(),
+        _buildSearchAndFilters(),
         Expanded(child: _buildThreadList()),
       ],
     );
   }
 
-  Widget _buildFilterChips() {
-    return SizedBox(
-      height: 48,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        itemCount: _filterKeys.length,
-        itemBuilder: (ctx, idx) {
-          final isSel = idx == _selectedFilter;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedFilter = idx),
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSel ? const Color(0xFF42A5F5) : const Color(0xFF141424),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: isSel ? const Color(0xFF42A5F5) : Colors.white12),
+  Widget _buildSearchAndFilters() {
+    final totalUnread = _conversations.fold<int>(0, (sum, c) => sum + c.unreadCount);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: TextField(
+            controller: _searchController,
+            onChanged: (v) => setState(() => _searchQuery = v),
+            style: const TextStyle(color: Colors.white, fontSize: 13.5),
+            decoration: InputDecoration(
+              hintText: 'inbox.search_chats'.tr(),
+              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13),
+              prefixIcon: Icon(Icons.search_rounded, color: Colors.white.withValues(alpha: 0.45), size: 19),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.close_rounded, color: Colors.white.withValues(alpha: 0.45), size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: const Color(0xFF151526),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
               ),
-              child: Center(
-                child: Text(
-                  _filterLabel(_filterKeys[idx]),
-                  style: TextStyle(
-                    color: isSel ? Colors.white : Colors.white70,
-                    fontSize: 12,
-                    fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.07)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF42A5F5), width: 1.2),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        ),
+        SizedBox(
+          height: 44,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            itemCount: _filterKeys.length,
+            itemBuilder: (ctx, idx) {
+              final isSel = idx == _selectedFilter;
+              final key = _filterKeys[idx];
+              return GestureDetector(
+                onTap: () => setState(() => _selectedFilter = idx),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: isSel
+                        ? const LinearGradient(colors: [Color(0xFF42A5F5), Color(0xFF2563EB)])
+                        : null,
+                    color: isSel ? null : const Color(0xFF151526),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSel ? Colors.transparent : Colors.white.withValues(alpha: 0.09),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _filterLabel(key),
+                        style: TextStyle(
+                          color: isSel ? Colors.white : Colors.white70,
+                          fontSize: 12,
+                          fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                        ),
+                      ),
+                      if (key == 'unread' && totalUnread > 0) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: isSel ? Colors.white.withValues(alpha: 0.25) : const Color(0xFF42A5F5),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$totalUnread',
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildThreadList() {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF42A5F5)),
-      );
+    if (_isInitializing) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)));
     }
 
-    final list = _filteredThreads;
+    final list = _filteredConversations;
     if (list.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white24, size: 40),
-              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF42A5F5).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const HugeIcon(
+                  icon: HugeIcons.strokeRoundedChatting01,
+                  color: Color(0xFF42A5F5),
+                  size: 34,
+                ),
+              ),
+              const SizedBox(height: 14),
               Text(
                 'inbox.no_chats'.tr(),
-                style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 'inbox.no_messages_desc'.tr(),
-                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -487,49 +688,107 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
         ),
       );
     }
+
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
       itemCount: list.length,
       itemBuilder: (ctx, idx) {
-        final thread = list[idx];
-        final isSel = _activeThread != null && _activeThread!['id'] == thread['id'];
-        final unread = thread['unread'] as int;
-        final messages = thread['messages'] as List<dynamic>;
-        final lastMsg = messages.isNotEmpty ? messages.last['text'] as String : '';
-        final custName = (thread['customerName'] as String).trim();
-        final initial = custName.isNotEmpty ? custName.substring(0, 1).toUpperCase() : '?';
-        final rawLastTime = (thread['lastTime'] ?? '').toString();
-        final displayLastTime = rawLastTime.isNotEmpty ? rawLastTime : 'inbox.recent'.tr();
+        final conv = list[idx];
+        final isSel = conv.id == _activeConversationId;
+        final unread = conv.unreadCount;
+        final initial = conv.customerName.isNotEmpty
+            ? conv.customerName.substring(0, 1).toUpperCase()
+            : '?';
+        final sentByMe = conv.lastMessageSenderId != null &&
+            conv.lastMessageSenderId != conv.customerId;
 
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              _activeThread = thread;
-              thread['unread'] = 0;
-            });
-          },
-          child: Container(
+          onTap: () => _selectConversation(conv.id),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
             margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
-              color: isSel ? const Color(0xFF1E293B) : const Color(0xFF141424),
-              borderRadius: BorderRadius.circular(16),
+              color: isSel
+                  ? const Color(0xFF1A253A)
+                  : (unread > 0 ? const Color(0xFF15182B) : const Color(0xFF131322)),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: isSel
                     ? const Color(0xFF42A5F5)
                     : (unread > 0
                         ? const Color(0xFF42A5F5).withValues(alpha: 0.4)
                         : Colors.white.withValues(alpha: 0.06)),
+                width: isSel ? 1.4 : 1.0,
               ),
+              boxShadow: isSel
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF42A5F5).withValues(alpha: 0.14),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
             ),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: const Color(0xFF42A5F5).withValues(alpha: 0.2),
-                  child: Text(
-                    initial,
-                    style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
-                  ),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF42A5F5), Color(0xFF6C5CE7)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        image: conv.customerAvatarUrl != null && conv.customerAvatarUrl!.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(conv.customerAvatarUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: conv.customerAvatarUrl == null || conv.customerAvatarUrl!.isEmpty
+                          ? Center(
+                              child: Text(
+                                initial,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 17,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                    if (conv.contextType == 'order' || conv.contextType == 'booking')
+                      Positioned(
+                        bottom: -2,
+                        right: -2,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: conv.contextType == 'order'
+                                ? const Color(0xFFF9C80E)
+                                : const Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFF131322), width: 2),
+                          ),
+                          child: Icon(
+                            conv.contextType == 'order'
+                                ? Icons.shopping_bag_rounded
+                                : Icons.calendar_today_rounded,
+                            size: 10,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -537,57 +796,102 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Flexible(
+                          Expanded(
                             child: Text(
-                              custName,
+                              conv.customerName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: unread > 0 ? FontWeight.w800 : FontWeight.w700,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Text(
-                            displayLastTime,
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11),
+                            _formatConvTime(conv.updatedAt),
+                            style: TextStyle(
+                              color: unread > 0
+                                  ? const Color(0xFF42A5F5)
+                                  : Colors.white.withValues(alpha: 0.4),
+                              fontSize: 11,
+                              fontWeight: unread > 0 ? FontWeight.w700 : FontWeight.normal,
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        thread['orderRef'] as String,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Color(0xFFF9C80E), fontSize: 11, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        lastMsg,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: unread > 0 ? Colors.white : Colors.white60,
-                          fontWeight: unread > 0 ? FontWeight.bold : FontWeight.normal,
-                          fontSize: 12,
+                      if (conv.contextRef != null && conv.contextRef!.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          conv.contextRef!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: conv.contextType == 'booking'
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFFF9C80E),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
+                      ],
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (sentByMe && conv.lastMessage != null) ...[
+                            Icon(
+                              conv.lastMessageIsRead ? Icons.done_all_rounded : Icons.done_rounded,
+                              size: 14,
+                              color: conv.lastMessageIsRead
+                                  ? const Color(0xFF00E5FF)
+                                  : Colors.white38,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Expanded(
+                            child: Text(
+                              conv.lastMessage ?? 'inbox.start_conversation_hint'.tr(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: unread > 0 ? Colors.white : Colors.white60,
+                                fontWeight: unread > 0 ? FontWeight.w600 : FontWeight.normal,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ),
+                          if (unread > 0)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF42A5F5), Color(0xFF2563EB)],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF42A5F5).withValues(alpha: 0.45),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '$unread',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                if (unread > 0)
-                  Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF42A5F5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '$unread',
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -596,118 +900,217 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
     );
   }
 
-  Widget _buildChatDetail(Map<String, dynamic> thread) {
-    final messages = thread['messages'] as List<dynamic>;
-    final sourceType = (thread['sourceType'] ?? '').toString();
-    final status = (thread['status'] ?? 'pending').toString().toLowerCase();
-    final isAlreadyConfirmed = sourceType == 'booking'
+  Widget _buildChatDetail(MerchantConversation conv, {required bool showDesktopHeader}) {
+    final hasContext = conv.contextId != null &&
+        conv.contextId!.isNotEmpty &&
+        (conv.contextType == 'order' || conv.contextType == 'booking');
+    final isBooking = conv.contextType == 'booking';
+    final status = (conv.contextStatus ?? 'pending').toLowerCase();
+    final isAlreadyConfirmed = isBooking
         ? (status == 'confirmed' || status == 'completed' || status == 'serving')
         : (status == 'preparing' || status == 'ready' || status == 'completed');
-    final actionLabel = sourceType == 'booking'
+    final actionLabel = isBooking
         ? (isAlreadyConfirmed ? 'inbox.slot_confirmed_badge'.tr() : 'inbox.confirm_slot'.tr())
         : (isAlreadyConfirmed ? 'inbox.order_preparing_badge'.tr() : 'inbox.confirm_order'.tr());
 
     return Column(
       children: [
-        // Pinned context header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: const BoxDecoration(
-            color: Color(0xFF141424),
-            border: Border(bottom: BorderSide(color: Colors.white12)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline_rounded, color: Color(0xFF42A5F5), size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  thread['orderRef'] as String,
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+        if (showDesktopHeader)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF121220),
+              border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 19,
+                  backgroundColor: const Color(0xFF42A5F5).withValues(alpha: 0.2),
+                  backgroundImage: conv.customerAvatarUrl != null && conv.customerAvatarUrl!.isNotEmpty
+                      ? NetworkImage(conv.customerAvatarUrl!)
+                      : null,
+                  child: conv.customerAvatarUrl == null || conv.customerAvatarUrl!.isEmpty
+                      ? Text(
+                          conv.customerName.isNotEmpty ? conv.customerName[0].toUpperCase() : '?',
+                          style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
+                        )
+                      : null,
                 ),
-              ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: isAlreadyConfirmed ? Colors.white54 : const Color(0xFF44CF6C),
-                  side: BorderSide(color: isAlreadyConfirmed ? Colors.white24 : const Color(0xFF44CF6C)),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onPressed: (isAlreadyConfirmed || _isUpdatingStatus)
-                    ? null
-                    : () => _confirmThreadAction(thread),
-                icon: Icon(
-                  isAlreadyConfirmed ? Icons.verified_rounded : Icons.check,
-                  size: 14,
-                ),
-                label: Text(actionLabel, style: const TextStyle(fontSize: 11)),
-              ),
-            ],
-          ),
-        ),
-
-        // Chat message bubbles
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: messages.length,
-            itemBuilder: (ctx, idx) {
-              final msg = messages[idx] as Map<String, dynamic>;
-              final isMerchant = msg['from'] == 'merchant';
-              final msgTime = msg['timeKey'] != null
-                  ? (msg['timeKey'] as String).tr()
-                  : ((msg['time'] ?? '').toString().isNotEmpty
-                      ? msg['time'].toString()
-                      : 'inbox.recent'.tr());
-
-              return Align(
-                alignment: isMerchant ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(ctx).size.width * 0.75),
-                  decoration: BoxDecoration(
-                    color: isMerchant ? const Color(0xFF42A5F5) : const Color(0xFF1B1B2C),
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: isMerchant ? const Radius.circular(16) : Radius.zero,
-                      bottomRight: isMerchant ? Radius.zero : const Radius.circular(16),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                const SizedBox(width: 12),
+                Expanded(
                   child: Column(
-                    crossAxisAlignment: isMerchant ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        msg['text'] as String,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                        conv.customerName,
+                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        msgTime,
-                        style: TextStyle(
-                          color: isMerchant ? Colors.white70 : Colors.white38,
-                          fontSize: 10,
+                      if (_isOtherTyping)
+                        Text(
+                          'inbox.typing'.tr(),
+                          style: const TextStyle(
+                            color: Color(0xFF42A5F5),
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        )
+                      else if (conv.customerPhone != null && conv.customerPhone!.isNotEmpty)
+                        Text(
+                          conv.customerPhone!,
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
                         ),
-                      ),
                     ],
                   ),
                 ),
-              );
-            },
+                if (conv.customerPhone != null && conv.customerPhone!.isNotEmpty)
+                  OutlinedButton.icon(
+                    onPressed: () => _callCustomer(conv.customerPhone),
+                    icon: const Icon(Icons.phone_rounded, size: 15),
+                    label: Text('inbox.call_customer'.tr(), style: const TextStyle(fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+              ],
+            ),
           ),
+
+        // Pinned Order / Booking Context Banner
+        if (hasContext && conv.contextRef != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF141426),
+              border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: (isBooking ? const Color(0xFF10B981) : const Color(0xFFF9C80E))
+                        .withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    isBooking ? Icons.calendar_month_rounded : Icons.receipt_long_rounded,
+                    color: isBooking ? const Color(0xFF10B981) : const Color(0xFFF9C80E),
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    conv.contextRef!,
+                    style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isAlreadyConfirmed ? Colors.white54 : const Color(0xFF44CF6C),
+                    side: BorderSide(
+                      color: isAlreadyConfirmed ? Colors.white24 : const Color(0xFF44CF6C),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: (isAlreadyConfirmed || _isUpdatingStatus)
+                      ? null
+                      : () => _confirmContextAction(conv),
+                  icon: Icon(
+                    isAlreadyConfirmed ? Icons.verified_rounded : Icons.check_rounded,
+                    size: 14,
+                  ),
+                  label: Text(actionLabel, style: const TextStyle(fontSize: 11.5)),
+                ),
+              ],
+            ),
+          ),
+
+        // Message List
+        Expanded(
+          child: _isLoadingMessages
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
+              : _messages.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.waving_hand_rounded, color: Colors.white.withValues(alpha: 0.25), size: 36),
+                          const SizedBox(height: 10),
+                          Text(
+                            'inbox.start_conversation_hint'.tr(),
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      reverse: true,
+                      controller: _msgScrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      itemCount: _messages.length + (_isOtherTyping ? 1 : 0),
+                      itemBuilder: (ctx, idx) {
+                        if (_isOtherTyping) {
+                          if (idx == 0) {
+                            return _buildTypingBubble();
+                          }
+                          idx--;
+                        }
+
+                        final msg = _messages[idx];
+                        final isMerchant = msg.senderId != conv.customerId;
+                        bool showDateDivider = false;
+                        if (idx == _messages.length - 1) {
+                          showDateDivider = true;
+                        } else {
+                          final older = _messages[idx + 1];
+                          if (msg.createdAt.year != older.createdAt.year ||
+                              msg.createdAt.month != older.createdAt.month ||
+                              msg.createdAt.day != older.createdAt.day) {
+                            showDateDivider = true;
+                          }
+                        }
+
+                        final bubble = _buildMessageBubble(msg, isMerchant);
+                        if (showDateDivider) {
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                  ),
+                                  child: Text(
+                                    _formatDateDivider(msg.createdAt),
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.6),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              bubble,
+                            ],
+                          );
+                        }
+                        return bubble;
+                      },
+                    ),
         ),
 
         // Quick Reply Chips
         SizedBox(
-          height: 38,
+          height: 40,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -718,54 +1121,141 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
                 padding: const EdgeInsets.only(right: 8),
                 child: ActionChip(
                   label: Text(chipText, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                  backgroundColor: const Color(0xFF141424),
-                  side: const BorderSide(color: Colors.white12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  backgroundColor: const Color(0xFF151526),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   onPressed: () => _sendMessage(chipText),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
 
-        // Text input bar
+        // Reply Preview Banner
+        if (_replyingTo != null)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF192033),
+              borderRadius: BorderRadius.circular(12),
+              border: const Border(left: BorderSide(color: Color(0xFF42A5F5), width: 3)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _replyingTo!.senderId == _currentUserId
+                            ? 'inbox.you_label'.tr()
+                            : conv.customerName,
+                        style: const TextStyle(
+                          color: Color(0xFF42A5F5),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        _replyingTo!.content,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                  onPressed: () => setState(() => _replyingTo = null),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+
+        // Input Bar
         Container(
           padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
+            left: 12,
+            right: 12,
             top: 8,
             bottom: MediaQuery.of(context).viewInsets.bottom + 12,
           ),
-          decoration: const BoxDecoration(
-            color: Color(0xFF141424),
-            border: Border(top: BorderSide(color: Colors.white12)),
+          decoration: BoxDecoration(
+            color: const Color(0xFF121220),
+            border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
           ),
           child: Row(
             children: [
               IconButton(
-                icon: const HugeIcon(icon: HugeIcons.strokeRoundedCamera01, color: Colors.white54, size: 20),
-                onPressed: () => showGlassToast(context, 'inbox.photo_ready_toast'.tr()),
+                icon: _isUploadingImage
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)),
+                      )
+                    : const HugeIcon(
+                        icon: HugeIcons.strokeRoundedImage01,
+                        color: Colors.white60,
+                        size: 22,
+                      ),
+                onPressed: _isUploadingImage ? null : () => _pickAndSendImage(ImageSource.gallery),
               ),
               Expanded(
                 child: TextField(
-                  controller: _msgInputController,
+                  controller: _msgController,
+                  onChanged: _onInputChanged,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
+                  maxLines: 4,
+                  minLines: 1,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendMessage(),
                   decoration: InputDecoration(
                     hintText: 'inbox.type_message'.tr(),
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.32)),
                     filled: true,
-                    fillColor: const Color(0xFF0F0F1B),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                    fillColor: const Color(0xFF0A0A14),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(22),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(22),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(22),
+                      borderSide: const BorderSide(color: Color(0xFF42A5F5)),
+                    ),
                   ),
-                  onSubmitted: (_) => _sendMessage(),
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.send_rounded, color: Color(0xFF42A5F5), size: 24),
-                onPressed: () => _sendMessage(),
+              GestureDetector(
+                onTap: () => _sendMessage(),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF42A5F5), Color(0xFF2563EB)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF42A5F5).withValues(alpha: 0.4),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                ),
               ),
             ],
           ),
@@ -774,14 +1264,214 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
     );
   }
 
+  Widget _buildTypingBubble() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1B1B2E),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        child: Text(
+          'inbox.typing'.tr(),
+          style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 12, fontStyle: FontStyle.italic),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(MerchantMessage msg, bool isMerchant) {
+    final timeStr = DateFormat('HH:mm').format(msg.createdAt);
+
+    return GestureDetector(
+      onLongPress: () {
+        HapticFeedback.lightImpact();
+        setState(() => _replyingTo = msg);
+      },
+      child: Align(
+        alignment: isMerchant ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: msg.isImage
+              ? const EdgeInsets.all(6)
+              : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+          decoration: BoxDecoration(
+            gradient: isMerchant
+                ? const LinearGradient(
+                    colors: [Color(0xFF42A5F5), Color(0xFF2563EB)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isMerchant ? null : const Color(0xFF1B1B2E),
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(18),
+              topRight: const Radius.circular(18),
+              bottomLeft: isMerchant ? const Radius.circular(18) : const Radius.circular(4),
+              bottomRight: isMerchant ? const Radius.circular(4) : const Radius.circular(18),
+            ),
+            border: isMerchant ? null : Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: isMerchant ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              if (msg.replyToMessage != null) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border(
+                      left: BorderSide(
+                        color: isMerchant ? Colors.white70 : const Color(0xFF42A5F5),
+                        width: 2.5,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        (msg.replyToMessage!['sender_name'] ?? '').toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        (msg.replyToMessage!['content'] ?? '').toString(),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white70, fontSize: 11.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              if (msg.isImage && msg.imageUrl != null && msg.imageUrl!.isNotEmpty)
+                GestureDetector(
+                  onTap: () => _openImageLightbox(msg.imageUrl!),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 240, maxWidth: 260),
+                      child: Image.network(
+                        msg.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Icon(Icons.broken_image_rounded, color: Colors.white54),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  msg.content,
+                  style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.35),
+                ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: msg.isImage ? const EdgeInsets.symmetric(horizontal: 6) : EdgeInsets.zero,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      timeStr,
+                      style: TextStyle(
+                        color: isMerchant ? Colors.white70 : Colors.white38,
+                        fontSize: 10,
+                      ),
+                    ),
+                    if (isMerchant) ...[
+                      const SizedBox(width: 4),
+                      if (msg.status == 'sending')
+                        const Icon(Icons.access_time_rounded, size: 12, color: Colors.white70)
+                      else if (msg.status == 'failed')
+                        const Icon(Icons.error_outline_rounded, size: 12, color: Colors.redAccent)
+                      else
+                        Icon(
+                          msg.isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                          size: 13,
+                          color: msg.isRead ? const Color(0xFF00E5FF) : Colors.white70,
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openImageLightbox(String url) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(url, fit: BoxFit.contain),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+              onPressed: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const HugeIcon(icon: HugeIcons.strokeRoundedChatting01, color: Colors.white24, size: 48),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF42A5F5).withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const HugeIcon(
+              icon: HugeIcons.strokeRoundedChatting01,
+              color: Color(0xFF42A5F5),
+              size: 44,
+            ),
+          ),
           const SizedBox(height: 16),
-          Text('inbox.select_conversation'.tr(), style: const TextStyle(color: Colors.white54, fontSize: 15)),
+          Text(
+            'inbox.select_conversation'.tr(),
+            style: const TextStyle(color: Colors.white54, fontSize: 15, fontWeight: FontWeight.w500),
+          ),
         ],
       ),
     );

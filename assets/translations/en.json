@@ -1170,7 +1170,16 @@
     "quick_reply_2": "Your order is being prepared.",
     "quick_reply_3": "Sure, we have baby chairs ready.",
     "quick_reply_4": "Free parking is available behind the shop.",
-    "quick_reply_5": "Thank you, see you soon!"
+    "quick_reply_5": "Thank you, see you soon!",
+    "filter_unread": "Unread",
+    "typing": "Typing...",
+    "customer_chat_subtitle": "Customer Chat",
+    "start_conversation_hint": "Start a conversation with your customer",
+    "you_label": "You",
+    "send_failed": "Failed to send message",
+    "image_send_failed": "Failed to send image",
+    "today": "Today",
+    "yesterday": "Yesterday"
   },
   "auth": {
     "login_title": "Merchant Login",

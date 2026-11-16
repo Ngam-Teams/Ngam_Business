@@ -1170,7 +1170,16 @@
     "quick_reply_2": "Pesanan anda sedang disiapkan.",
     "quick_reply_3": "Boleh, kami sediakan kerusi bayi.",
     "quick_reply_4": "Tempat letak kereta percuma disediakan di belakang kedai.",
-    "quick_reply_5": "Terima kasih, jumpa sebentar lagi!"
+    "quick_reply_5": "Terima kasih, jumpa sebentar lagi!",
+    "filter_unread": "Belum Dibaca",
+    "typing": "Sedang menaip...",
+    "customer_chat_subtitle": "Sembang Pelanggan",
+    "start_conversation_hint": "Mulakan perbualan dengan pelanggan anda",
+    "you_label": "Anda",
+    "send_failed": "Gagal menghantar mesej",
+    "image_send_failed": "Gagal menghantar gambar",
+    "today": "Hari Ini",
+    "yesterday": "Semalam"
   },
   "auth": {
     "login_title": "Log Masuk Peniaga",

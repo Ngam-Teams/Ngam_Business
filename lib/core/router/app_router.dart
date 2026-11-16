@@ -477,7 +477,15 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/merchant-inbox',
-      builder: (context, state) => const MerchantInboxPage(),
+      builder: (context, state) {
+        final extra = state.extra is Map ? state.extra as Map : null;
+        return MerchantInboxPage(
+          initialConversationId: extra?['conversationId']?.toString(),
+          initialCustomerId: extra?['customerId']?.toString(),
+          initialContextType: extra?['contextType']?.toString(),
+          initialContextId: extra?['contextId']?.toString(),
+        );
+      },
     ),
     GoRoute(
       path: '/kds',

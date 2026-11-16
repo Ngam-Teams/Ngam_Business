@@ -8,6 +8,7 @@ import 'bottom_nav.dart';
 import 'glass_toast.dart';
 import '../features/auth/data/auth_service.dart';
 import '../features/settings/data/business_service.dart';
+import '../features/inbox/data/merchant_chat_service.dart';
 import '../core/services/app_update_service.dart';
 
 /// DashboardScaffold — master responsive layout for Ngam Business.
@@ -844,15 +845,51 @@ class _TopBarActions extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          icon: const HugeIcon(
-            icon: HugeIcons.strokeRoundedNotification02,
-            color: Colors.white54,
-            size: 20,
-            strokeWidth: 2.1,
-          ),
-          tooltip: 'nav.notifications'.tr(),
-          onPressed: () => context.push('/merchant-inbox'),
+        ValueListenableBuilder<int>(
+          valueListenable: MerchantChatService.totalUnreadNotifier,
+          builder: (context, unreadCount, _) {
+            return IconButton(
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const HugeIcon(
+                    icon: HugeIcons.strokeRoundedNotification02,
+                    color: Colors.white54,
+                    size: 20,
+                    strokeWidth: 2.1,
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF42A5F5),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF42A5F5).withValues(alpha: 0.6),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              tooltip: 'nav.notifications'.tr(),
+              onPressed: () => context.push('/merchant-inbox'),
+            );
+          },
         ),
         const SizedBox(width: 8),
         ValueListenableBuilder<Map<String, dynamic>?>(
