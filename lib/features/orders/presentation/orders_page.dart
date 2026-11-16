@@ -1150,36 +1150,100 @@ class _OrdersPageState extends State<OrdersPage> {
                         ),
                       ),
                     ] else if (order.status == 'ready') ...[
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF00C853), Color(0xFF2E7D32)],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.green.withValues(alpha: 0.35),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
+                      Builder(
+                        builder: (btnCtx) {
+                          final bool isUnpaid = order.paymentStatus != 'paid';
+                          final String totalFormatted = fmt.format(order.totalAmount);
+                          return Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: isUnpaid
+                                    ? const [Color(0xFFF59E0B), Color(0xFFD97706)]
+                                    : const [Color(0xFF00C853), Color(0xFF2E7D32)],
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isUnpaid ? Colors.amber : Colors.green).withValues(alpha: 0.35),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                          onPressed: () {
-                            Navigator.pop(modalCtx);
-                            _updateStatus(order, 'completed', paymentStatus: 'paid');
-                          },
-                          icon: const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: Colors.white, size: 18),
-                          label: Text('orders.confirm_pickup_completed'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                        ),
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                foregroundColor: isUnpaid ? Colors.black : Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              onPressed: () async {
+                                if (!isUnpaid) {
+                                  Navigator.pop(modalCtx);
+                                  _updateStatus(order, 'completed', paymentStatus: 'paid');
+                                  return;
+                                }
+                                final shortId = order.id.substring(0, 6).toUpperCase();
+                                final confirmed = await showDialog<bool>(
+                                  context: modalCtx,
+                                  builder: (dlgCtx) => AlertDialog(
+                                    backgroundColor: const Color(0xFF161626),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                      side: BorderSide(color: Colors.amber.withValues(alpha: 0.4)),
+                                    ),
+                                    title: Row(
+                                      children: [
+                                        const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'orders.unpaid_confirm_title'.tr(),
+                                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    content: Text(
+                                      'orders.unpaid_confirm_desc'.tr(args: [shortId, totalFormatted]),
+                                      style: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(dlgCtx, false),
+                                        child: Text('common.cancel'.tr(), style: const TextStyle(color: Colors.white54)),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFFF59E0B),
+                                          foregroundColor: Colors.black,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                        onPressed: () => Navigator.pop(dlgCtx, true),
+                                        child: Text('orders.unpaid_confirm_btn'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true && modalCtx.mounted) {
+                                  Navigator.pop(modalCtx);
+                                  _updateStatus(order, 'completed', paymentStatus: 'paid');
+                                }
+                              },
+                              icon: isUnpaid
+                                  ? const Icon(Icons.payments_rounded, color: Colors.black, size: 18)
+                                  : const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: Colors.white, size: 18),
+                              label: Text(
+                                isUnpaid
+                                    ? 'orders.collect_payment_and_complete'.tr(args: [totalFormatted])
+                                    : 'orders.confirm_pickup_completed'.tr(),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ] else ...[
                       SizedBox(
