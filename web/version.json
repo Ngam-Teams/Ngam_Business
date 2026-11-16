@@ -1,6 +1,6 @@
 {
-  "version": "1.0.29",
-  "build_number": 9,
-  "released_at": "2026-11-16T09:30:00Z",
-  "changelog": "Logo jenama rasmi pada halaman Integrasi & Aplikasi, susun atur lebih bersih, dan dialog kemas kini bergaya glassmorphism."
+  "version": "1.0.30",
+  "build_number": 10,
+  "released_at": "2026-11-16T09:50:00Z",
+  "changelog": "Dialog kemas kini kini menggunakan ikon bersih tanpa kotak, tema biru Ngam GlassConfirmDialog, dan muat semula cache PWA diperkukuh."
 }

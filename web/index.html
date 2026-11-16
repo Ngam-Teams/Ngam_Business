@@ -23,7 +23,7 @@
   <meta name="description" content="Sistem operasi kedai moden untuk rakan niaga Ngam. Urus pesanan QR, giliran pintar dan pantau jualan harian dalam satu platform.">
   <meta name="keywords" content="ngam business, business ngam dev, ngam peniaga, portal peniaga ngam, urus pesanan kedai, qr standee, giliran pintar, smart queue malaysia, sistem kedai makan">
   <meta name="author" content="Ngam Digital Platform">
-  <meta name="app-version" content="1.0.29">
+  <meta name="app-version" content="1.0.30">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://business.ngam.dev/">
 
@@ -153,12 +153,45 @@
         var doReload = function() {
           try {
             var url = new URL(window.location.href);
-            url.searchParams.set('_v', ver);
+            url.searchParams.set("_v", ver);
             window.location.replace(url.toString());
           } catch (e) {
             window.location.reload();
           }
         };
+        var tasks = [];
+        if ("serviceWorker" in navigator && navigator.serviceWorker.getRegistrations) {
+          tasks.push(
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              return Promise.all(regs.map(function(reg) {
+                return reg.unregister();
+              }));
+            }).catch(function() {})
+          );
+        }
+        if ("caches" in window && window.caches && window.caches.keys) {
+          tasks.push(
+            window.caches.keys().then(function(keys) {
+              return Promise.all(keys.map(function(k) {
+                return window.caches.delete(k);
+              }));
+            }).catch(function() {})
+          );
+        }
+        if ("fetch" in window) {
+          ["/index.html", "/flutter_bootstrap.js?v=1.0.30", "/main.dart.js", "/version.json"].forEach(function(p) {
+            tasks.push(fetch(p + "?_t=" + ver, { cache: "reload" }).catch(function() {}));
+          });
+        }
+        if (tasks.length > 0) {
+          Promise.all(tasks).finally(doReload);
+        } else {
+          doReload();
+        }
+      } catch (e) {
+        window.location.reload();
+      }
+    };
         var tasks = [];
         if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
           tasks.push(
@@ -426,6 +459,6 @@
       }
     };
   </script>
-  <script src="flutter_bootstrap.js" async=""></script>
+  <script src="flutter_bootstrap.js?v=1.0.30" async=""></script>
 </body>
 </html>

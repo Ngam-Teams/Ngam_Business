@@ -31,7 +31,7 @@ class AppReleaseInfo {
 }
 
 class AppUpdateService {
-  static const String fallbackVersion = '1.0.29';
+  static const String fallbackVersion = '1.0.30';
   static String? _cachedVersion;
   static bool _startupDialogShown = false;
   static String? _lastNotifiedVersion;
@@ -100,8 +100,8 @@ class AppUpdateService {
     }
   }
 
-  /// Fetch live deployed Web / PWA version from root /version.json
-  static Future<String?> _fetchWebLiveVersion() async {
+  /// Fetch live deployed Web / PWA version and changelog from root /version.json
+  static Future<({String version, String changelog})?> _fetchWebLiveVersion() async {
     if (!kIsWeb) return null;
     try {
       final uri = Uri.base.resolve('/version.json?t=${DateTime.now().millisecondsSinceEpoch}');
@@ -118,7 +118,8 @@ class AppUpdateService {
         final decoded = json.decode(response.body);
         if (decoded is Map && decoded['version'] != null) {
           final ver = decoded['version'].toString().trim();
-          if (ver.isNotEmpty) return ver;
+          final changelog = (decoded['changelog'] ?? '').toString().trim();
+          if (ver.isNotEmpty) return (version: ver, changelog: changelog);
         }
       }
     } catch (e) {
@@ -136,24 +137,28 @@ class AppUpdateService {
       final activeVersion = current ?? await getAppVersion();
 
       final futures = await Future.wait([
-        (kIsWeb && repo == repoName) ? _fetchWebLiveVersion() : Future<String?>.value(null),
+        (kIsWeb && repo == repoName)
+            ? _fetchWebLiveVersion()
+            : Future<({String version, String changelog})?>.value(null),
         _fetchGitHubRelease(repo),
       ]);
 
-      final webVersion = futures[0] as String?;
+      final webInfo = futures[0] as ({String version, String changelog})?;
       final ghRelease = futures[1] as AppReleaseInfo?;
 
-      final bool hasWebNewer = webVersion != null && isNewerVersion(webVersion, activeVersion);
+      final bool hasWebNewer = webInfo != null && isNewerVersion(webInfo.version, activeVersion);
       final bool hasGhNewer = ghRelease != null && isNewerVersion(ghRelease.version, activeVersion);
 
       AppReleaseInfo? result;
       if (hasWebNewer) {
-        final bool sameOrNewerFromWeb =
-            ghRelease != null && !isNewerVersion(ghRelease.version, webVersion);
+        final bool sameGhVersion =
+            ghRelease != null && !isNewerVersion(ghRelease.version, webInfo.version) && !isNewerVersion(webInfo.version, ghRelease.version);
         result = AppReleaseInfo(
-          version: webVersion,
-          title: sameOrNewerFromWeb ? ghRelease.title : '$appName v$webVersion',
-          changelog: sameOrNewerFromWeb ? ghRelease.changelog : '',
+          version: webInfo.version,
+          title: sameGhVersion ? ghRelease.title : '$appName v${webInfo.version}',
+          changelog: webInfo.changelog.isNotEmpty
+              ? webInfo.changelog
+              : (sameGhVersion ? ghRelease.changelog : ''),
           downloadUrl: ghRelease?.downloadUrl ?? 'https://github.com/$orgName/$repo/releases',
           releaseUrl: ghRelease?.releaseUrl ?? 'https://github.com/$orgName/$repo/releases',
           publishedAt: ghRelease?.publishedAt,
@@ -301,7 +306,7 @@ class AppUpdateService {
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.24),
+                    color: Colors.black.withValues(alpha: 0.22),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: Colors.white.withValues(alpha: 0.16),
@@ -323,32 +328,10 @@ class AppUpdateService {
                         // Top header with glowing rocket icon & title
                         Row(
                           children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFF10B981),
-                                    Color(0xFF059669),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.rocket_launch_rounded,
-                                color: Colors.white,
-                                size: 22,
-                              ),
+                            const Icon(
+                              Icons.rocket_launch_rounded,
+                              color: Color(0xFF38BDF8),
+                              size: 22,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -415,13 +398,13 @@ class AppUpdateService {
                                   const Icon(
                                     Icons.arrow_forward_rounded,
                                     size: 14,
-                                    color: Color(0xFF10B981),
+                                    color: Color(0xFF0284C7),
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                                      color: const Color(0xFF0284C7).withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(100),
                                     ),
                                     child: Text(
@@ -429,7 +412,7 @@ class AppUpdateService {
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF34D399),
+                                        color: Color(0xFF38BDF8),
                                       ),
                                     ),
                                   ),
@@ -450,14 +433,14 @@ class AppUpdateService {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF34D399)),
+                                      const Icon(Icons.open_in_new_rounded, size: 13, color: Color(0xFF38BDF8)),
                                       const SizedBox(width: 5),
                                       Text(
                                         'app_update.view_release'.tr(),
                                         style: const TextStyle(
                                           fontSize: 11.5,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF34D399),
+                                          color: Color(0xFF38BDF8),
                                         ),
                                       ),
                                     ],
@@ -559,7 +542,7 @@ class AppUpdateService {
                                           context,
                                           'app_update.reloading_web'.tr(),
                                           type: GlassToastType.info,
-                                          color: const Color(0xFF10B981),
+                                          color: const Color(0xFF0284C7),
                                         );
                                       }
                                       reloadWebPwa(update.version);
@@ -576,17 +559,17 @@ class AppUpdateService {
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                         colors: [
-                                          const Color(0xFF10B981).withValues(alpha: 0.90),
-                                          const Color(0xFF059669).withValues(alpha: 0.78),
+                                          const Color(0xFF0284C7).withValues(alpha: 0.90),
+                                          const Color(0xFF0369A1).withValues(alpha: 0.78),
                                         ],
                                       ),
                                       border: Border.all(
-                                        color: const Color(0xFF6EE7B7).withValues(alpha: 0.60),
+                                        color: const Color(0xFF38BDF8).withValues(alpha: 0.60),
                                         width: 1.0,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFF10B981).withValues(alpha: 0.30),
+                                          color: const Color(0xFF0284C7).withValues(alpha: 0.30),
                                           blurRadius: 12,
                                           offset: const Offset(0, 3),
                                         ),
@@ -651,7 +634,7 @@ class AppUpdateService {
             context,
             'app_update.update_available_tap'.tr(args: [update.version]),
             type: GlassToastType.info,
-            color: const Color(0xFF10B981),
+            color: const Color(0xFF0284C7),
             duration: const Duration(seconds: 5),
           );
         }
