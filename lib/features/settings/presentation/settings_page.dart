@@ -481,7 +481,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   final Color badgeColor =
                       hasUpdate ? Colors.amberAccent : const Color(0xFF44CF6C);
 
-                  return InkWell(
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () {
                       if (update != null) {
                         AppUpdateService.showUpdateDialog(context, update);
@@ -489,27 +490,49 @@ class _SettingsPageState extends State<SettingsPage> {
                         AppUpdateService.checkManually(context);
                       }
                     },
-                    borderRadius: BorderRadius.circular(8),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
                         children: [
+                          HugeIcon(
+                            icon: HugeIcons.strokeRoundedCode,
+                            color: Colors.white54,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 14),
                           Expanded(
-                            child: _buildInfoRow(
-                              label: 'settings.app_version'.tr(),
-                              value: 'v$ver',
-                              icon: HugeIcons.strokeRoundedCode,
-                              valueColor: badgeColor,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'settings.app_version'.tr(),
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'v$ver',
+                                  style: TextStyle(
+                                    color: badgeColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          const SizedBox(width: 12),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: badgeColor.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(6),
-                              border: hasUpdate
-                                  ? Border.all(color: Colors.amberAccent.withValues(alpha: 0.45))
-                                  : null,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: badgeColor.withValues(alpha: hasUpdate ? 0.45 : 0.25),
+                              ),
                             ),
                             child: Text(
                               hasUpdate
