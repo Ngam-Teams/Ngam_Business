@@ -1153,7 +1153,7 @@ class _OrdersPageState extends State<OrdersPage> {
                       Builder(
                         builder: (btnCtx) {
                           final bool isUnpaid = order.paymentStatus != 'paid';
-                          final String totalFormatted = fmt.format(order.totalAmount);
+                          final String totalFormatted = fmt.format(order.total);
                           return Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
