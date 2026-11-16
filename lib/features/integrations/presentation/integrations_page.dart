@@ -229,6 +229,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       descKey: 'integrations.desc_myinvois',
       brandColor: Color(0xFF38BDF8),
       svgLogo: _svgMyInvois,
+      assetLogo: 'assets/images/integrations/myinvois.png',
       fieldLabelKey: 'integrations.tin_label',
       fieldHintKey: 'integrations.tin_hint',
     ),
@@ -248,6 +249,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       descKey: 'integrations.desc_whatsapp',
       brandColor: Color(0xFF25D366),
       svgLogo: _svgWhatsApp,
+      assetLogo: 'assets/images/integrations/whatsapp_business.png',
       fieldLabelKey: 'integrations.phone_id_label',
       fieldHintKey: 'integrations.phone_id_hint',
     ),
@@ -362,6 +364,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
                 width: size,
                 height: size,
                 fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
               )
             : SvgPicture.string(
                 item.svgLogo,
