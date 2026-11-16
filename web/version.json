@@ -1,6 +1,6 @@
 {
-  "version": "1.0.30",
-  "build_number": 10,
-  "released_at": "2026-11-16T09:50:00Z",
-  "changelog": "Dialog kemas kini kini menggunakan ikon bersih tanpa kotak, tema biru Ngam GlassConfirmDialog, dan muat semula cache PWA diperkukuh."
+  "version": "1.0.31",
+  "build_number": 11,
+  "released_at": "2026-11-16T19:23:00Z",
+  "changelog": "Logo rasmi GrabFood, ShopeeFood, foodpanda, Misi Rakyat, Lalamove & GrabExpress HD dalam Integrasi, kad WiFi QR hanya papar bila diaktifkan, serta susunan kemas baris Semak Kemas Kini di Tetapan."
 }
