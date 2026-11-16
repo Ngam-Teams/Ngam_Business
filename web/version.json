@@ -1,6 +1,6 @@
 {
-  "version": "1.0.32",
-  "build_number": 12,
-  "released_at": "2026-11-16T19:30:00Z",
-  "changelog": "Logo rasmi LHDN MyInvois & WhatsApp Business ditambah, kualiti logo Integrasi dipertingkatkan (FilterQuality.high) supaya kekal tajam di Web."
+  "version": "1.0.33",
+  "build_number": 13,
+  "released_at": "2026-11-16T19:35:00Z",
+  "changelog": "Butang Muat Semula Sekarang kini mempunyai fallback muat semula automatik jika cache PWA tidak bertindak balas."
 }
