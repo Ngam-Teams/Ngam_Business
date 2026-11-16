@@ -98,6 +98,7 @@ flutter:
     - assets/splash.png
     - assets/payment_logos.png
     - assets/translations/
+    - assets/images/integrations/
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

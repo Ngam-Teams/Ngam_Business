@@ -23,6 +23,7 @@ class _IntegrationItem {
   final String descKey;
   final Color brandColor;
   final String svgLogo;
+  final String? assetLogo;
   final _IntegrationStatus defaultStatus;
   final String fieldLabelKey;
   final String fieldHintKey;
@@ -35,6 +36,7 @@ class _IntegrationItem {
     required this.descKey,
     required this.brandColor,
     required this.svgLogo,
+    this.assetLogo,
     this.defaultStatus = _IntegrationStatus.available,
     this.fieldLabelKey = 'integrations.store_id_label',
     this.fieldHintKey = 'integrations.store_id_hint',
@@ -167,6 +169,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       descKey: 'integrations.desc_grabfood',
       brandColor: Color(0xFF00B14F),
       svgLogo: _svgGrabFood,
+      assetLogo: 'assets/images/integrations/grabfood.png',
     ),
     _IntegrationItem(
       id: 'shopeefood',
@@ -175,6 +178,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       descKey: 'integrations.desc_shopeefood',
       brandColor: Color(0xFFEE4D2D),
       svgLogo: _svgShopeeFood,
+      assetLogo: 'assets/images/integrations/shopeefood.jpg',
     ),
     _IntegrationItem(
       id: 'foodpanda',
@@ -183,6 +187,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       descKey: 'integrations.desc_foodpanda',
       brandColor: Color(0xFFD70F64),
       svgLogo: _svgFoodpanda,
+      assetLogo: 'assets/images/integrations/foodpanda.jpg',
     ),
     _IntegrationItem(
       id: 'misi',
@@ -191,6 +196,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       descKey: 'integrations.desc_misi',
       brandColor: Color(0xFFF59E0B),
       svgLogo: _svgMisi,
+      assetLogo: 'assets/images/integrations/misi_delivery.jpg',
     ),
     _IntegrationItem(
       id: 'lalamove',
@@ -344,12 +350,19 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(size * 0.28),
-        child: SvgPicture.string(
-          item.svgLogo,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-        ),
+        child: item.assetLogo != null
+            ? Image.asset(
+                item.assetLogo!,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+              )
+            : SvgPicture.string(
+                item.svgLogo,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+              ),
       ),
     );
   }
