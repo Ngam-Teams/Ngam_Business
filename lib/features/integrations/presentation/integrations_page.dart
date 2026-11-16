@@ -170,6 +170,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       brandColor: Color(0xFF00B14F),
       svgLogo: _svgGrabFood,
       assetLogo: 'assets/images/integrations/grabfood.png',
+      defaultStatus: _IntegrationStatus.comingSoon,
     ),
     _IntegrationItem(
       id: 'shopeefood',
@@ -179,6 +180,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       brandColor: Color(0xFFEE4D2D),
       svgLogo: _svgShopeeFood,
       assetLogo: 'assets/images/integrations/shopeefood.jpg',
+      defaultStatus: _IntegrationStatus.comingSoon,
     ),
     _IntegrationItem(
       id: 'foodpanda',
@@ -188,6 +190,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       brandColor: Color(0xFFD70F64),
       svgLogo: _svgFoodpanda,
       assetLogo: 'assets/images/integrations/foodpanda.jpg',
+      defaultStatus: _IntegrationStatus.comingSoon,
     ),
     _IntegrationItem(
       id: 'misi',
@@ -197,6 +200,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       brandColor: Color(0xFFF59E0B),
       svgLogo: _svgMisi,
       assetLogo: 'assets/images/integrations/misi_delivery.jpg',
+      defaultStatus: _IntegrationStatus.comingSoon,
     ),
     _IntegrationItem(
       id: 'lalamove',
