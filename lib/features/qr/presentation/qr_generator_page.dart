@@ -726,8 +726,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                           _buildTableCustomizerCard(),
                           const SizedBox(height: 16),
                         ],
-                        _buildWifiCustomizerCard(),
-                        const SizedBox(height: 16),
+                        if (_selectedMode == QrMode.wifi || _includeWifi) ...[
+                          _buildWifiCustomizerCard(),
+                          const SizedBox(height: 16),
+                        ],
                         if (_selectedMode == QrMode.promo || _includePromoBadge) ...[
                           _buildPromoCustomizerCard(),
                           const SizedBox(height: 16),
@@ -792,8 +794,10 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                     _buildTableCustomizerCard(),
                     const SizedBox(height: 16),
                   ],
-                  _buildWifiCustomizerCard(),
-                  const SizedBox(height: 16),
+                  if (_selectedMode == QrMode.wifi || _includeWifi) ...[
+                    _buildWifiCustomizerCard(),
+                    const SizedBox(height: 16),
+                  ],
                   if (_selectedMode == QrMode.promo || _includePromoBadge) ...[
                     _buildPromoCustomizerCard(),
                     const SizedBox(height: 16),
