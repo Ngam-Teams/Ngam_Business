@@ -1,6 +1,6 @@
 {
-  "version": "1.0.33",
-  "build_number": 13,
-  "released_at": "2026-11-16T19:35:00Z",
-  "changelog": "Butang Muat Semula Sekarang kini mempunyai fallback muat semula automatik jika cache PWA tidak bertindak balas."
+  "version": "1.0.34",
+  "build_number": 14,
+  "released_at": "2026-11-16T19:41:00Z",
+  "changelog": "SQL Accounting dan Custom Webhooks dikeluarkan daripada Integrasi, dan semua integrasi kini ditandakan sebagai Akan Datang."
 }
