@@ -1,6 +1,6 @@
 {
-  "version": "1.0.28",
-  "build_number": 8,
-  "released_at": "2026-11-16T09:00:00Z",
-  "changelog": "Halaman Integrasi & Aplikasi baharu untuk menghubungkan GrabFood, ShopeeFood, foodpanda, Lalamove, pembayaran, perakaunan & automasi."
+  "version": "1.0.29",
+  "build_number": 9,
+  "released_at": "2026-11-16T09:30:00Z",
+  "changelog": "Logo jenama rasmi pada halaman Integrasi & Aplikasi, susun atur lebih bersih, dan dialog kemas kini bergaya glassmorphism."
 }
