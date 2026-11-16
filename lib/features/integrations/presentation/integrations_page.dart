@@ -209,6 +209,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       descKey: 'integrations.desc_lalamove',
       brandColor: Color(0xFFFF6600),
       svgLogo: _svgLalamove,
+      assetLogo: 'assets/images/integrations/lalamove.jpg',
       fieldLabelKey: 'integrations.api_key_label',
       fieldHintKey: 'integrations.api_key_hint',
     ),
@@ -219,6 +220,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       descKey: 'integrations.desc_grabexpress',
       brandColor: Color(0xFF10B981),
       svgLogo: _svgGrabExpress,
+      assetLogo: 'assets/images/integrations/grabexpress.jpg',
     ),
     _IntegrationItem(
       id: 'myinvois',
