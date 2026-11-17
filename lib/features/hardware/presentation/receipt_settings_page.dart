@@ -935,7 +935,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 440, maxHeight: 540),
                 decoration: BoxDecoration(
@@ -1088,9 +1088,6 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       setState(() => _selectedFont = selected);
       FocusManager.instance.primaryFocus?.unfocus();
     }
-        ],
-      ),
-    );
   }
 
   Widget _buildDividerStyleSelector() {
