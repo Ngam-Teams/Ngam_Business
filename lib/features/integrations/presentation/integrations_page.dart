@@ -728,9 +728,20 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       onBack: () => Navigator.pop(context),
       actionItems: [
         GlassNavPillItem(
-          icon: Icons.sync_rounded,
-          tooltip: 'integrations.sync_all'.tr(),
-          onTap: () => showGlassToast(context, 'integrations.sync_success'.tr()),
+          icon: Icons.webhook_rounded,
+          tooltip: 'Custom Webhooks',
+          onTap: () => _openConfigDialog(
+            const _IntegrationItem(
+              id: 'webhooks',
+              name: 'Custom Webhooks',
+              category: 'automation',
+              descKey: 'integrations.desc_webhooks',
+              brandColor: Color(0xFFA78BFA),
+              svgLogo: _svgWebhooks,
+              fieldLabelKey: 'integrations.webhook_url_label',
+              fieldHintKey: 'integrations.webhook_url_hint',
+            ),
+          ),
         ),
       ],
       body: CustomScrollView(

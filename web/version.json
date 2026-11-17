@@ -1,6 +1,6 @@
 {
-  "version": "1.0.34",
-  "build_number": 14,
-  "released_at": "2026-11-16T19:41:00Z",
-  "changelog": "SQL Accounting dan Custom Webhooks dikeluarkan daripada Integrasi, dan semua integrasi kini ditandakan sebagai Akan Datang."
+  "version": "1.0.35",
+  "build_number": 15,
+  "released_at": "2026-11-17T04:07:00Z",
+  "changelog": "Butang muat semula di header Integrasi kini digantikan dengan ikon Webhook untuk akses pantas Custom Webhooks."
 }
