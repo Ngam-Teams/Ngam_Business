@@ -1,6 +1,6 @@
 {
-  "version": "1.0.39",
-  "build_number": 19,
-  "released_at": "2026-11-17T05:19:00Z",
-  "changelog": "Label 17 Google Fonts dibuang dan pemilih fon resit kini menggunakan popup Glassmorphism."
+  "version": "1.0.40",
+  "build_number": 20,
+  "released_at": "2026-11-17T05:50:00Z",
+  "changelog": "Pilihan penjajaran teks kepala resit kini lengkap dengan Kiri, Tengah, dan Kanan."
 }

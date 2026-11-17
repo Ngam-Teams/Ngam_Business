@@ -1155,11 +1155,15 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       child: Row(
         children: [
           Expanded(
-            child: _buildAlignButton(TextAlign.center, 'Tengah Seimbang', Icons.format_align_center_rounded),
+            child: _buildAlignButton(TextAlign.left, 'Kiri', Icons.format_align_left_rounded),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
-            child: _buildAlignButton(TextAlign.left, 'Rapat Kiri', Icons.format_align_left_rounded),
+            child: _buildAlignButton(TextAlign.center, 'Tengah', Icons.format_align_center_rounded),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildAlignButton(TextAlign.right, 'Kanan', Icons.format_align_right_rounded),
           ),
         ],
       ),
@@ -1641,12 +1645,18 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: _headerAlign == TextAlign.center
                     ? CrossAxisAlignment.center
-                    : CrossAxisAlignment.start,
+                    : (_headerAlign == TextAlign.right
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start),
                 children: [
                   // Optional Store Logo
                   if (_includeLogo) ...[
                     Align(
-                      alignment: _headerAlign == TextAlign.center ? Alignment.center : Alignment.centerLeft,
+                      alignment: _headerAlign == TextAlign.center
+                          ? Alignment.center
+                          : (_headerAlign == TextAlign.right
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft),
                       child: Container(
                         width: logoDim,
                         height: logoDim,
