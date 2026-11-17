@@ -1,6 +1,6 @@
 {
-  "version": "1.0.50",
-  "build_number": 30,
-  "released_at": "2026-11-17T08:13:00Z",
-  "changelog": "Betulkan ralat kompilasi web pada halaman Tempahan dan Pengurusan Feed."
+  "version": "1.0.51",
+  "build_number": 31,
+  "released_at": "2026-11-17T12:15:00Z",
+  "changelog": "Sokong muat naik berbilang gambar dan video (carousel) serta nisbah potret/landskap penuh dalam penciptaan siaran Ngam Feed."
 }

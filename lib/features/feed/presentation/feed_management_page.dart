@@ -1033,10 +1033,9 @@ class _FeedPostCardThumbnailState extends State<_FeedPostCardThumbnail> {
   bool _hasError = false;
 
   bool get _isVideo =>
-      widget.post.mediaType == 'video' ||
-      widget.post.mediaUrl.toLowerCase().contains('.mp4') ||
-      widget.post.mediaUrl.toLowerCase().contains('.mov') ||
-      widget.post.mediaUrl.toLowerCase().contains('.webm');
+      widget.post.mediaItems.isNotEmpty
+          ? widget.post.mediaItems.first.isVideo
+          : (widget.post.mediaType == 'video' || FeedMediaItem.isVideoUrl(widget.post.primaryMediaUrl));
 
   @override
   void initState() {
@@ -1048,7 +1047,7 @@ class _FeedPostCardThumbnailState extends State<_FeedPostCardThumbnail> {
 
   void _initVideo() {
     try {
-      final uri = Uri.tryParse(widget.post.mediaUrl);
+      final uri = Uri.tryParse(widget.post.primaryMediaUrl);
       if (uri == null) {
         setState(() => _hasError = true);
         return;
@@ -1187,7 +1186,7 @@ class _FeedPostCardThumbnailState extends State<_FeedPostCardThumbnail> {
       height: widget.height,
       width: double.infinity,
       child: Image.network(
-        widget.post.mediaUrl,
+        widget.post.primaryMediaUrl,
         fit: BoxFit.cover,
         loadingBuilder: (ctx, child, progress) {
           if (progress == null) return child;
@@ -2361,10 +2360,9 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
   late int _liveCommentsCount;
 
   bool get _isVideo =>
-      widget.post.mediaType == 'video' ||
-      widget.post.mediaUrl.toLowerCase().contains('.mp4') ||
-      widget.post.mediaUrl.toLowerCase().contains('.mov') ||
-      widget.post.mediaUrl.toLowerCase().contains('.webm');
+      widget.post.mediaItems.isNotEmpty
+          ? widget.post.mediaItems.first.isVideo
+          : (widget.post.mediaType == 'video' || FeedMediaItem.isVideoUrl(widget.post.primaryMediaUrl));
 
   @override
   void initState() {
@@ -2396,7 +2394,7 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
 
   void _initVideo() {
     try {
-      final uri = Uri.tryParse(widget.post.mediaUrl);
+      final uri = Uri.tryParse(widget.post.primaryMediaUrl);
       if (uri == null) {
         setState(() => _hasVideoError = true);
         return;
@@ -2563,8 +2561,8 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                             ],
                           )
                       : Image.network(
-                          widget.post.mediaUrl,
-                          fit: BoxFit.cover,
+                          widget.post.primaryMediaUrl,
+                          fit: BoxFit.contain,
                           loadingBuilder: (ctx, child, progress) {
                             if (progress == null) return child;
                             return Container(color: const Color(0xFF1E1E2E));

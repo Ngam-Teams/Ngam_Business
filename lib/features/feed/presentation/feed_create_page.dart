@@ -45,24 +45,17 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
   // Step 0 = Pilih Media, Step 1 = Kapsyen & Tetapan (untuk telefon); Desktop tunjuk sebelah-menyebelah
   int _mobileStep = 0;
 
-  String _mediaType = 'video'; // 'video' or 'image'
+  String _mediaType = 'video'; // 'video' or 'image' (active picker tab)
   String _ctaType = 'queue';
   String _ctaText = '⚡ AMBIL GILIRAN';
   bool _isPinned = false;
 
-  // Media state
-  XFile? _selectedFile;
-  Uint8List? _selectedFileBytes;
-  String? _selectedFileName;
-  String? _existingMediaUrl;
-  String? _uploadedR2Url; // Cache URL jika sudah dimuat naik dalam sesi ini
-  bool _showUrlInput = false;
-
-  // Video preview controller
-  VideoPlayerController? _previewController;
-  bool _previewInitialized = false;
-  bool _isPreviewPlaying = true;
+  // Multi-media Carousel state
+  final List<_DraftMediaItem> _mediaItems = [];
+  int _activeMediaIndex = 0;
+  final PageController _previewPageController = PageController();
   bool _isPreviewMuted = false;
+  bool _showUrlInput = false;
 
   // Strict Upload / Submit Lock (Anti 10x Click Bug!)
   bool _isSubmittingLock = false;
@@ -71,6 +64,8 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
   double _compressProgress = 0.0;
   bool _isUploadingToR2 = false;
   double _uploadProgress = 0.0;
+
+  static const int _maxCarouselItems = 10;
 
   static const List<Map<String, dynamic>> _ngamCtaOptions = [
     {
@@ -146,11 +141,19 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
       _ctaType = e.ctaType;
       _ctaText = e.ctaText;
       _isPinned = e.isPinned;
-      _existingMediaUrl = e.mediaUrl;
-      _urlController.text = e.mediaUrl;
       _mobileStep = 1; // Terus ke halaman butiran jika menyunting
-      if (e.mediaType == 'video' && e.mediaUrl.isNotEmpty) {
-        _initNetworkVideoPreview(e.mediaUrl);
+      for (final item in e.mediaItems) {
+        final draft = _DraftMediaItem(
+          type: item.type,
+          uploadedUrl: item.url,
+        );
+        _mediaItems.add(draft);
+        if (draft.type == 'video' && item.url.isNotEmpty) {
+          _initItemVideoPreview(draft, networkUrl: item.url);
+        }
+      }
+      if (_mediaItems.length == 1) {
+        _urlController.text = _mediaItems.first.uploadedUrl ?? '';
       }
     } else {
       final cat = widget.businessCategory.toLowerCase();
@@ -170,26 +173,36 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     _captionController.dispose();
     _serviceTagController.dispose();
     _urlController.dispose();
-    _previewController?.dispose();
+    _previewPageController.dispose();
+    for (final item in _mediaItems) {
+      item.videoController?.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _initNetworkVideoPreview(String url) async {
-    await _previewController?.dispose();
-    setState(() {
-      _previewController = null;
-      _previewInitialized = false;
-    });
+  Future<void> _initItemVideoPreview(_DraftMediaItem item, {String? networkUrl, XFile? localFile}) async {
+    await item.videoController?.dispose();
+    item.videoController = null;
+    item.videoInitialized = false;
     try {
-      final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+      final ctrl = networkUrl != null
+          ? VideoPlayerController.networkUrl(Uri.parse(networkUrl))
+          : (kIsWeb
+              ? VideoPlayerController.networkUrl(Uri.parse(localFile!.path))
+              : VideoPlayerController.networkUrl(Uri.file(localFile!.path)));
       await ctrl.initialize();
       await ctrl.setLooping(true);
-      await ctrl.play();
+      await ctrl.setVolume(_isPreviewMuted ? 0.0 : 1.0);
+      if (_mediaItems.indexOf(item) == _activeMediaIndex) {
+        await ctrl.play();
+        item.isPlaying = true;
+      } else {
+        item.isPlaying = false;
+      }
       if (mounted) {
         setState(() {
-          _previewController = ctrl;
-          _previewInitialized = true;
-          _isPreviewPlaying = true;
+          item.videoController = ctrl;
+          item.videoInitialized = true;
         });
       } else {
         ctrl.dispose();
@@ -199,71 +212,111 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     }
   }
 
-  Future<void> _pickMedia({required bool isVideo, ImageSource source = ImageSource.gallery}) async {
+  Future<void> _pickMedia({required bool isVideo, ImageSource source = ImageSource.gallery, bool append = false}) async {
     if (_isSubmittingLock || _saving) return;
+    if (_mediaItems.length >= _maxCarouselItems && append) {
+      showGlassToast(context, 'Maksimum $_maxCarouselItems media bagi setiap siaran.', isError: true);
+      return;
+    }
+
     try {
-      XFile? picked;
       if (isVideo) {
-        picked = await _picker.pickVideo(
+        final picked = await _picker.pickVideo(
           source: source,
           maxDuration: const Duration(minutes: 3),
         );
-      } else {
-        picked = await _picker.pickImage(
-          source: source,
-          imageQuality: 88,
-          maxWidth: 1440,
-        );
-      }
-      if (picked == null) return;
+        if (picked == null) return;
 
-      final bytes = await picked.readAsBytes();
-      final sizeMb = bytes.length / (1024 * 1024);
-      if (sizeMb > 120) {
-        if (mounted) {
-          showGlassToast(
-            context,
-            'Saiz fail (${sizeMb.toStringAsFixed(1)} MB) melebihi had 120 MB.',
-            isError: true,
-          );
-        }
-        return;
-      }
-
-      await _previewController?.dispose();
-      _previewController = null;
-      _previewInitialized = false;
-
-      setState(() {
-        _mediaType = isVideo ? 'video' : 'image';
-        _selectedFile = picked;
-        _selectedFileBytes = bytes;
-        _selectedFileName = picked!.name;
-        _uploadedR2Url = null; // Reset cache kerana fail baharu dipilih
-        _existingMediaUrl = null;
-        _urlController.clear();
-      });
-
-      if (isVideo) {
-        try {
-          final ctrl = kIsWeb
-              ? VideoPlayerController.networkUrl(Uri.parse(picked.path))
-              : VideoPlayerController.networkUrl(Uri.file(picked.path));
-          await ctrl.initialize();
-          await ctrl.setLooping(true);
-          await ctrl.play();
+        final bytes = await picked.readAsBytes();
+        final sizeMb = bytes.length / (1024 * 1024);
+        if (sizeMb > 120) {
           if (mounted) {
-            setState(() {
-              _previewController = ctrl;
-              _previewInitialized = true;
-              _isPreviewPlaying = true;
-            });
-          } else {
-            ctrl.dispose();
+            showGlassToast(
+              context,
+              'Saiz fail (${sizeMb.toStringAsFixed(1)} MB) melebihi had 120 MB.',
+              isError: true,
+            );
           }
-        } catch (e) {
-          debugPrint('[FeedCreatePage] Local video preview error: $e');
+          return;
         }
+
+        final draft = _DraftMediaItem(
+          file: picked,
+          bytes: bytes,
+          fileName: picked.name,
+          type: 'video',
+        );
+
+        setState(() {
+          _mediaType = 'video';
+          if (!append) {
+            for (final old in _mediaItems) {
+              old.videoController?.dispose();
+            }
+            _mediaItems.clear();
+          }
+          _mediaItems.add(draft);
+          _activeMediaIndex = _mediaItems.length - 1;
+          _urlController.clear();
+        });
+
+        _jumpPreviewTo(_activeMediaIndex);
+        await _initItemVideoPreview(draft, localFile: picked);
+      } else {
+        List<XFile> pickedList = [];
+        if (source == ImageSource.gallery) {
+          pickedList = await _picker.pickMultiImage(
+            imageQuality: 88,
+            maxWidth: 1440,
+          );
+        } else {
+          final single = await _picker.pickImage(
+            source: source,
+            imageQuality: 88,
+            maxWidth: 1440,
+          );
+          if (single != null) pickedList = [single];
+        }
+        if (pickedList.isEmpty) return;
+
+        final int remainingSlots = append ? (_maxCarouselItems - _mediaItems.length) : _maxCarouselItems;
+        final toAdd = pickedList.take(remainingSlots).toList();
+        if (pickedList.length > remainingSlots && mounted) {
+          showGlassToast(context, 'Hanya $_maxCarouselItems media pertama dipilih.');
+        }
+
+        final newDrafts = <_DraftMediaItem>[];
+        for (final f in toAdd) {
+          final bytes = await f.readAsBytes();
+          final sizeMb = bytes.length / (1024 * 1024);
+          if (sizeMb > 25) {
+            if (mounted) {
+              showGlassToast(context, 'Gambar ${f.name} melebihi had 25 MB.', isError: true);
+            }
+            continue;
+          }
+          newDrafts.add(_DraftMediaItem(
+            file: f,
+            bytes: bytes,
+            fileName: f.name,
+            type: 'image',
+          ));
+        }
+        if (newDrafts.isEmpty) return;
+
+        setState(() {
+          _mediaType = 'image';
+          if (!append) {
+            for (final old in _mediaItems) {
+              old.videoController?.dispose();
+            }
+            _mediaItems.clear();
+          }
+          _mediaItems.addAll(newDrafts);
+          _activeMediaIndex = append ? (_mediaItems.length - newDrafts.length) : 0;
+          _urlController.clear();
+        });
+        _jumpPreviewTo(_activeMediaIndex);
       }
     } catch (e) {
       if (mounted) {
@@ -272,25 +325,63 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     }
   }
 
-  void _applyUrlMedia() {
+  void _jumpPreviewTo(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_previewPageController.hasClients && index >= 0 && index < _mediaItems.length) {
+        _previewPageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 240),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    });
+  }
+
+  void _removeMediaAt(int index) {
+    if (index < 0 || index >= _mediaItems.length) return;
+    setState(() {
+      final removed = _mediaItems.removeAt(index);
+      removed.videoController?.dispose();
+      if (_mediaItems.isEmpty) {
+        _activeMediaIndex = 0;
+      } else if (_activeMediaIndex >= _mediaItems.length) {
+        _activeMediaIndex = _mediaItems.length - 1;
+      }
+    });
+    _jumpPreviewTo(_activeMediaIndex);
+  }
+
+  void _applyUrlMedia({bool append = false}) {
     final url = _urlController.text.trim();
     if (url.isEmpty || !url.startsWith('http')) {
       showGlassToast(context, 'Sila masukkan URL media yang sah (https://...)', isError: true);
       return;
     }
-    final lower = url.toLowerCase();
-    final isVid = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.contains('/video/');
+    if (append && _mediaItems.length >= _maxCarouselItems) {
+      showGlassToast(context, 'Maksimum $_maxCarouselItems media bagi setiap siaran.', isError: true);
+      return;
+    }
+    final isVid = FeedMediaItem.isVideoUrl(url);
+    final draft = _DraftMediaItem(
+      type: isVid ? 'video' : 'image',
+      uploadedUrl: url,
+    );
     setState(() {
-      _selectedFile = null;
-      _selectedFileBytes = null;
-      _selectedFileName = null;
-      _uploadedR2Url = null;
-      _existingMediaUrl = url;
-      _mediaType = isVid ? 'video' : 'image';
+      if (!append) {
+        for (final old in _mediaItems) {
+          old.videoController?.dispose();
+        }
+        _mediaItems.clear();
+      }
+      _mediaItems.add(draft);
+      _activeMediaIndex = _mediaItems.length - 1;
+      _mediaType = draft.type;
       _showUrlInput = false;
+      _urlController.clear();
     });
+    _jumpPreviewTo(_activeMediaIndex);
     if (isVid) {
-      _initNetworkVideoPreview(url);
+      _initItemVideoPreview(draft, networkUrl: url);
     }
   }
 
@@ -304,9 +395,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     setState(() {});
   }
 
-  bool get _hasMedia =>
-      (_selectedFileBytes != null && _selectedFileName != null) ||
-      (_existingMediaUrl != null && _existingMediaUrl!.isNotEmpty);
+  bool get _hasMedia => _mediaItems.isNotEmpty;
 
   /// Simpan atau Siar dengan KUNCI IDEMPOTENSI KETAT (_isSubmittingLock).
   /// Walaupun pengguna menekan butang 10 kali ketika lag, ia hanya akan berjalan SEKALI SAHAJA!
@@ -337,61 +426,78 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
 
       setState(() => _saving = true);
 
-      String finalMediaUrl = _uploadedR2Url ?? _existingMediaUrl ?? '';
+      // 2. Muat naik setiap item media ke R2 jika belum ada URL
+      final List<FeedMediaItem> uploadedItems = [];
+      for (int i = 0; i < _mediaItems.length; i++) {
+        final item = _mediaItems[i];
+        if (item.uploadedUrl != null && item.uploadedUrl!.isNotEmpty) {
+          uploadedItems.add(FeedMediaItem(url: item.uploadedUrl!, type: item.type));
+          continue;
+        }
+        if (item.bytes != null && item.fileName != null) {
+          Uint8List bytesToUpload = item.bytes!;
+          final String fileNameToUpload = item.fileName!;
 
-      // 2. Muat naik ke R2 hanya jika belum pernah dimuat naik dalam sesi ini
-      if (_uploadedR2Url == null && _selectedFileBytes != null && _selectedFileName != null) {
-        Uint8List bytesToUpload = _selectedFileBytes!;
-        final String fileNameToUpload = _selectedFileName!;
+          if (item.type == 'video' && item.file != null) {
+            if (mounted) {
+              setState(() {
+                _isCompressing = true;
+                _compressProgress = 0.1;
+              });
+            }
 
-        // Mampatkan video jika video
-        if (_mediaType == 'video' && _selectedFile != null) {
+            final compressResult = await _compressor.compressVideo(
+              filePath: item.file!.path,
+              originalBytes: item.bytes!,
+              onProgress: (p) {
+                if (mounted) setState(() => _compressProgress = p);
+              },
+            );
+            bytesToUpload = compressResult.bytes;
+
+            if (mounted) {
+              setState(() => _isCompressing = false);
+            }
+          }
+
           if (mounted) {
             setState(() {
-              _isCompressing = true;
-              _compressProgress = 0.1;
+              _isUploadingToR2 = true;
+              _uploadProgress = (i / _mediaItems.length).clamp(0.05, 0.95);
             });
           }
 
-          final compressResult = await _compressor.compressVideo(
-            filePath: _selectedFile!.path,
-            originalBytes: _selectedFileBytes!,
+          final mimeType = item.type == 'video' ? 'video/mp4' : 'image/jpeg';
+          final url = await _r2Storage.uploadMedia(
+            bytes: bytesToUpload,
+            fileName: fileNameToUpload,
+            folder: item.type == 'video' ? 'feed_videos' : 'feed_images',
+            mimeType: mimeType,
             onProgress: (p) {
-              if (mounted) setState(() => _compressProgress = p);
+              if (mounted) {
+                setState(() {
+                  _uploadProgress = (i + p) / _mediaItems.length;
+                });
+              }
             },
           );
-          bytesToUpload = compressResult.bytes;
 
-          if (mounted) {
-            setState(() => _isCompressing = false);
-          }
-        }
-
-        if (mounted) {
-          setState(() {
-            _isUploadingToR2 = true;
-            _uploadProgress = 0.05;
-          });
-        }
-
-        final mimeType = _mediaType == 'video' ? 'video/mp4' : 'image/jpeg';
-        finalMediaUrl = await _r2Storage.uploadMedia(
-          bytes: bytesToUpload,
-          fileName: fileNameToUpload,
-          folder: _mediaType == 'video' ? 'feed_videos' : 'feed_images',
-          mimeType: mimeType,
-          onProgress: (p) {
-            if (mounted) setState(() => _uploadProgress = p);
-          },
-        );
-
-        _uploadedR2Url = finalMediaUrl;
-        await _compressor.disposeCache();
-
-        if (mounted) {
-          setState(() => _isUploadingToR2 = false);
+          item.uploadedUrl = url;
+          await _compressor.disposeCache();
+          uploadedItems.add(FeedMediaItem(url: url, type: item.type));
         }
       }
+
+      if (mounted) {
+        setState(() => _isUploadingToR2 = false);
+      }
+
+      if (uploadedItems.isEmpty) {
+        throw Exception('Tiada media berjaya dimuat naik.');
+      }
+
+      final String finalMediaUrl = FeedPostModel.encodeMediaItems(uploadedItems);
+      final String primaryMediaType = uploadedItems.first.type;
 
       // Peta ctaType 'walkin' -> 'queue' di backend supaya pelanggan terus ke tab kedai/giliran,
       // manakala ctaText kekal '🚶 WALK-IN SEKARANG'
@@ -403,7 +509,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
           title: effectiveTitle,
           caption: captionText.isEmpty ? null : captionText,
           mediaUrl: finalMediaUrl,
-          mediaType: _mediaType,
+          mediaType: primaryMediaType,
           category: widget.businessCategory,
           serviceTag: _serviceTagController.text.trim().isEmpty ? null : _serviceTagController.text.trim(),
           ctaType: effectiveCtaType,
@@ -416,7 +522,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
           title: effectiveTitle,
           caption: captionText.isEmpty ? null : captionText,
           mediaUrl: finalMediaUrl,
-          mediaType: _mediaType,
+          mediaType: primaryMediaType,
           category: widget.businessCategory,
           serviceTag: _serviceTagController.text.trim().isEmpty ? null : _serviceTagController.text.trim(),
           ctaType: effectiveCtaType,
@@ -534,7 +640,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     return Column(
       mainAxisSize: isDesktop ? MainAxisSize.min : MainAxisSize.max,
       children: [
-        // Tab Video / Foto ala TikTok
+        // Tab Video / Foto & Carousel ala TikTok
         Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
@@ -546,7 +652,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
             children: [
               Expanded(
                 child: _buildMediaTabChip(
-                  label: 'Video (9:16)',
+                  label: 'Video',
                   icon: HugeIcons.strokeRoundedVideo01,
                   selected: _mediaType == 'video',
                   onTap: () => setState(() => _mediaType = 'video'),
@@ -554,7 +660,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
               ),
               Expanded(
                 child: _buildMediaTabChip(
-                  label: 'Foto / Poster',
+                  label: 'Foto / Carousel',
                   icon: HugeIcons.strokeRoundedImage01,
                   selected: _mediaType == 'image',
                   onTap: () => setState(() => _mediaType = 'image'),
@@ -565,14 +671,14 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
         ),
         const SizedBox(height: 12),
 
-        // Kanvas 9:16
+        // Kanvas Pratonton (Sokong Portrait & Landscape tanpa potong)
         Flexible(
           child: AspectRatio(
             aspectRatio: 9 / 15,
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFF141422),
+                color: Colors.black,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: _hasMedia ? const Color(0xFFEC4899).withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.12),
@@ -592,25 +698,123 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
           ),
         ),
 
+        // Jalur Thumbnail Carousel apabila ada media
+        if (_mediaItems.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 54,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _mediaItems.length + (_mediaItems.length < _maxCarouselItems ? 1 : 0),
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (ctx, i) {
+                if (i == _mediaItems.length) {
+                  return GestureDetector(
+                    onTap: () => _pickMedia(
+                      isVideo: _mediaType == 'video',
+                      source: ImageSource.gallery,
+                      append: true,
+                    ),
+                    child: Container(
+                      width: 48,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFEC4899).withValues(alpha: 0.45)),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_rounded, color: Color(0xFFEC4899), size: 18),
+                          Text('Tambah', style: TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final item = _mediaItems[i];
+                final isSel = i == _activeMediaIndex;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _activeMediaIndex = i);
+                    _jumpPreviewTo(i);
+                  },
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A2E),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSel ? const Color(0xFFEC4899) : Colors.white24,
+                            width: isSel ? 2 : 1,
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: item.type == 'video'
+                            ? const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white70, size: 22))
+                            : (item.bytes != null
+                                ? Image.memory(item.bytes!, fit: BoxFit.cover)
+                                : (item.uploadedUrl != null
+                                    ? Image.network(item.uploadedUrl!, fit: BoxFit.cover)
+                                    : const SizedBox.shrink())),
+                      ),
+                      Positioned(
+                        top: -4,
+                        right: -4,
+                        child: GestureDetector(
+                          onTap: () => _removeMediaAt(i),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Colors.redAccent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 11),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+
         const SizedBox(height: 10),
-        // Pilihan Pantas: Galeri / Kamera / URL
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Pilihan Pantas: Galeri / Tambah / Kamera / URL
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 6,
           children: [
             _buildMiniActionChip(
               icon: Icons.photo_library_rounded,
-              label: 'Galeri',
-              onTap: () => _pickMedia(isVideo: _mediaType == 'video', source: ImageSource.gallery),
+              label: _mediaItems.isEmpty
+                  ? (_mediaType == 'video' ? 'Pilih Video' : 'Pilih Foto')
+                  : 'Tambah ${_mediaType == 'video' ? 'Video' : 'Foto'}',
+              onTap: () => _pickMedia(
+                isVideo: _mediaType == 'video',
+                source: ImageSource.gallery,
+                append: _mediaItems.isNotEmpty,
+              ),
             ),
-            if (!kIsWeb) ...[
-              const SizedBox(width: 8),
+            if (!kIsWeb)
               _buildMiniActionChip(
                 icon: Icons.videocam_rounded,
                 label: _mediaType == 'video' ? 'Rakam' : 'Kamera',
-                onTap: () => _pickMedia(isVideo: _mediaType == 'video', source: ImageSource.camera),
+                onTap: () => _pickMedia(
+                  isVideo: _mediaType == 'video',
+                  source: ImageSource.camera,
+                  append: _mediaItems.isNotEmpty,
+                ),
               ),
-            ],
-            const SizedBox(width: 8),
             _buildMiniActionChip(
               icon: Icons.link_rounded,
               label: 'Pautan URL',
@@ -630,26 +834,30 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
                   decoration: InputDecoration(
                     hintText: 'https://.../video.mp4',
                     hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.06),
+                    filled: false,
+                    fillColor: Colors.transparent,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    border: OutlineInputBorder(
+                    enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFEC4899)),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: _applyUrlMedia,
+                onPressed: () => _applyUrlMedia(append: _mediaItems.isNotEmpty),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFEC4899),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
-                child: const Text('Guna', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text(_mediaItems.isEmpty ? 'Guna' : 'Tambah', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -731,14 +939,15 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
             ),
             const SizedBox(height: 16),
             Text(
-              _mediaType == 'video' ? 'Pilih Video Menegak (9:16)' : 'Pilih Foto / Poster Promosi',
-              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              _mediaType == 'video' ? 'Pilih Video (Portrait / Landscape)' : 'Pilih Gambar / Carousel (Boleh Banyak)',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                'Ketik di sini untuk muat naik dari galeri. Video akan dimampatkan secara pintar sebelum disimpan ke Cloudflare R2.',
+                'Ketik di sini untuk muat naik dari galeri. Boleh pilih berbilang gambar & video dalam satu siaran ala TikTok.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white54, fontSize: 11.5, height: 1.4),
               ),
@@ -753,55 +962,107 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (_mediaType == 'video') ...[
-          if (_previewInitialized && _previewController != null)
-            GestureDetector(
-              onTap: () {
-                if (_previewController!.value.isPlaying) {
-                  _previewController!.pause();
-                  setState(() => _isPreviewPlaying = false);
+        PageView.builder(
+          controller: _previewPageController,
+          itemCount: _mediaItems.length,
+          onPageChanged: (idx) {
+            setState(() => _activeMediaIndex = idx);
+            for (int i = 0; i < _mediaItems.length; i++) {
+              final vc = _mediaItems[i].videoController;
+              if (vc != null && _mediaItems[i].videoInitialized) {
+                if (i == idx) {
+                  vc.play();
+                  _mediaItems[i].isPlaying = true;
                 } else {
-                  _previewController!.play();
-                  setState(() => _isPreviewPlaying = true);
+                  vc.pause();
+                  _mediaItems[i].isPlaying = false;
                 }
-              },
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _previewController!.value.size.width,
-                  height: _previewController!.value.size.height,
-                  child: VideoPlayer(_previewController!),
+              }
+            }
+          },
+          itemBuilder: (ctx, i) {
+            final item = _mediaItems[i];
+            if (item.type == 'video') {
+              final vc = item.videoController;
+              if (item.videoInitialized && vc != null) {
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (vc.value.isPlaying) {
+                        vc.pause();
+                        item.isPlaying = false;
+                      } else {
+                        vc.play();
+                        item.isPlaying = true;
+                      }
+                    });
+                  },
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Center(
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: SizedBox(
+                            width: vc.value.size.width > 0 ? vc.value.size.width : 720,
+                            height: vc.value.size.height > 0 ? vc.value.size.height : 1280,
+                            child: VideoPlayer(vc),
+                          ),
+                        ),
+                      ),
+                      if (!item.isPlaying)
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 36),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              }
+              return const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Color(0xFFEC4899), strokeWidth: 2.5),
+                    SizedBox(height: 10),
+                    Text('Menyediakan pratonton video...', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  ],
                 ),
-              ),
-            )
-          else
-            const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(color: Color(0xFFEC4899), strokeWidth: 2.5),
-                  SizedBox(height: 10),
-                  Text('Menyediakan pratonton video...', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                ],
-              ),
-            ),
-        ] else ...[
-          if (_selectedFileBytes != null)
-            Image.memory(_selectedFileBytes!, fit: BoxFit.cover)
-          else if (_existingMediaUrl != null)
-            Image.network(_existingMediaUrl!, fit: BoxFit.cover),
-        ],
+              );
+            }
 
-        // Play/Pause Indicator overlay
-        if (_mediaType == 'video' && _previewInitialized && !_isPreviewPlaying)
-          Center(
+            if (item.bytes != null) {
+              return Image.memory(item.bytes!, fit: BoxFit.contain);
+            }
+            if (item.uploadedUrl != null) {
+              return Image.network(item.uploadedUrl!, fit: BoxFit.contain);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+
+        // Badge Carousel Counter (1 / N)
+        if (_mediaItems.length > 1)
+          Positioned(
+            top: 12,
+            right: 12,
             child: Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.55),
-                shape: BoxShape.circle,
+                color: Colors.black.withValues(alpha: 0.65),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white24),
               ),
-              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 36),
+              child: Text(
+                '${_activeMediaIndex + 1} / ${_mediaItems.length}',
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
 
@@ -855,36 +1116,29 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
         ),
 
         // Top controls (Mute & Remove)
+        // Butang kecil di penjuru atas (Mute / Padam slide aktif)
         Positioned(
           top: 10,
-          right: 10,
+          left: 10,
           child: Row(
             children: [
-              if (_mediaType == 'video' && _previewInitialized)
+              if (_activeMediaIndex < _mediaItems.length &&
+                  _mediaItems[_activeMediaIndex].type == 'video' &&
+                  _mediaItems[_activeMediaIndex].videoInitialized)
                 _buildCircleIconBtn(
                   icon: _isPreviewMuted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
                   onTap: () {
                     final next = !_isPreviewMuted;
-                    _previewController?.setVolume(next ? 0.0 : 1.0);
+                    for (final item in _mediaItems) {
+                      item.videoController?.setVolume(next ? 0.0 : 1.0);
+                    }
                     setState(() => _isPreviewMuted = next);
                   },
                 ),
               const SizedBox(width: 6),
               _buildCircleIconBtn(
                 icon: Icons.close_rounded,
-                onTap: () async {
-                  await _previewController?.dispose();
-                  setState(() {
-                    _previewController = null;
-                    _previewInitialized = false;
-                    _selectedFile = null;
-                    _selectedFileBytes = null;
-                    _selectedFileName = null;
-                    _uploadedR2Url = null;
-                    _existingMediaUrl = null;
-                    _urlController.clear();
-                  });
-                },
+                onTap: () => _removeMediaAt(_activeMediaIndex),
               ),
             ],
           ),
@@ -1001,21 +1255,37 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (_mediaType == 'image' && _selectedFileBytes != null)
-                        Image.memory(_selectedFileBytes!, fit: BoxFit.cover)
-                      else if (_mediaType == 'image' && _existingMediaUrl != null)
-                        Image.network(_existingMediaUrl!, fit: BoxFit.cover)
-                      else if (_previewInitialized && _previewController != null)
+                      if (_mediaItems.isNotEmpty && _mediaItems.first.type == 'image' && _mediaItems.first.bytes != null)
+                        Image.memory(_mediaItems.first.bytes!, fit: BoxFit.cover)
+                      else if (_mediaItems.isNotEmpty && _mediaItems.first.type == 'image' && _mediaItems.first.uploadedUrl != null)
+                        Image.network(_mediaItems.first.uploadedUrl!, fit: BoxFit.cover)
+                      else if (_mediaItems.isNotEmpty && _mediaItems.first.videoInitialized && _mediaItems.first.videoController != null)
                         FittedBox(
                           fit: BoxFit.cover,
                           child: SizedBox(
-                            width: _previewController!.value.size.width,
-                            height: _previewController!.value.size.height,
-                            child: VideoPlayer(_previewController!),
+                            width: _mediaItems.first.videoController!.value.size.width,
+                            height: _mediaItems.first.videoController!.value.size.height,
+                            child: VideoPlayer(_mediaItems.first.videoController!),
                           ),
                         )
                       else
                         const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white54, size: 28)),
+                      if (_mediaItems.length > 1)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.72),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${_mediaItems.length}x',
+                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
                       Positioned(
                         left: 0,
                         right: 0,
@@ -1356,4 +1626,23 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
       ),
     );
   }
+}
+
+class _DraftMediaItem {
+  final XFile? file;
+  final Uint8List? bytes;
+  final String? fileName;
+  final String type; // 'image' or 'video'
+  String? uploadedUrl;
+  VideoPlayerController? videoController;
+  bool videoInitialized = false;
+  bool isPlaying = true;
+
+  _DraftMediaItem({
+    this.file,
+    this.bytes,
+    this.fileName,
+    required this.type,
+    this.uploadedUrl,
+  });
 }

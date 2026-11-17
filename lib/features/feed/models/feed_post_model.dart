@@ -1,4 +1,38 @@
+import 'dart:convert';
 import 'package:intl/intl.dart';
+
+class FeedMediaItem {
+  final String url;
+  final String type; // 'image' or 'video'
+
+  const FeedMediaItem({
+    required this.url,
+    required this.type,
+  });
+
+  bool get isVideo => type == 'video';
+
+  factory FeedMediaItem.fromJson(Map<String, dynamic> json) {
+    final u = json['url']?.toString().trim() ?? '';
+    final t = json['type']?.toString().trim().toLowerCase();
+    final inferredVideo = t == 'video' || isVideoUrl(u);
+    return FeedMediaItem(url: u, type: inferredVideo ? 'video' : 'image');
+  }
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'type': type,
+      };
+
+  static bool isVideoUrl(String url) {
+    final clean = url.trim().toLowerCase();
+    return clean.endsWith('.mp4') ||
+        clean.endsWith('.mov') ||
+        clean.endsWith('.webm') ||
+        clean.contains('/video/') ||
+        clean.contains('.mp4?');
+  }
+}
 
 class FeedPostModel {
   final String id;
@@ -44,6 +78,42 @@ class FeedPostModel {
   bool get isPublished => status == 'published';
   bool get isDraft => status == 'draft';
   bool get isArchived => status == 'archived';
+
+  List<FeedMediaItem> get mediaItems => parseMediaItems(mediaUrl, mediaType);
+  String get primaryMediaUrl => mediaItems.isNotEmpty ? mediaItems.first.url : mediaUrl;
+  bool get isCarousel => mediaItems.length > 1;
+
+  static List<FeedMediaItem> parseMediaItems(String rawMediaUrl, [String fallbackMediaType = 'image']) {
+    final trimmed = rawMediaUrl.trim();
+    if (trimmed.isEmpty) return const [];
+    if (trimmed.startsWith('[')) {
+      try {
+        final decoded = jsonDecode(trimmed);
+        if (decoded is List) {
+          final items = <FeedMediaItem>[];
+          for (final entry in decoded) {
+            if (entry is Map) {
+              final item = FeedMediaItem.fromJson(Map<String, dynamic>.from(entry));
+              if (item.url.isNotEmpty) items.add(item);
+            } else if (entry is String && entry.trim().isNotEmpty) {
+              final u = entry.trim();
+              items.add(FeedMediaItem(url: u, type: FeedMediaItem.isVideoUrl(u) ? 'video' : 'image'));
+            }
+          }
+          if (items.isNotEmpty) return items;
+        }
+      } catch (_) {}
+    }
+    final isVid = fallbackMediaType.toLowerCase() == 'video' || FeedMediaItem.isVideoUrl(trimmed);
+    return [FeedMediaItem(url: trimmed, type: isVid ? 'video' : 'image')];
+  }
+
+  static String encodeMediaItems(List<FeedMediaItem> items) {
+    final valid = items.where((e) => e.url.trim().isNotEmpty).toList();
+    if (valid.isEmpty) return '';
+    if (valid.length == 1) return valid.first.url.trim();
+    return jsonEncode(valid.map((e) => e.toJson()).toList());
+  }
 
   static DateTime _parseDateTime(dynamic val) {
     if (val == null) return DateTime.now();

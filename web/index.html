@@ -179,7 +179,7 @@
           );
         }
         if ("fetch" in window) {
-          ["/index.html", "/flutter_bootstrap.js?v=1.0.30", "/main.dart.js", "/version.json"].forEach(function(p) {
+          ["/index.html", "/flutter_bootstrap.js?v=1.0.51", "/main.dart.js", "/version.json"].forEach(function(p) {
             tasks.push(fetch(p + "?_t=" + ver, { cache: "reload" }).catch(function() {}));
           });
         }
@@ -459,6 +459,6 @@
       }
     };
   </script>
-  <script src="flutter_bootstrap.js?v=1.0.30" async=""></script>
+  <script src="flutter_bootstrap.js?v=1.0.51" async=""></script>
 </body>
 </html>
