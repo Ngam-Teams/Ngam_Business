@@ -117,7 +117,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
 
   String _currentSignature() {
     final codes = _selectedBottomCodes.map((e) => e.name).toList()..sort();
-    return '$_paperWidth|${_selectedFont.index}|${_headerAlign.index}|${_logoSize.index}|$_includeLogo|$_enableWhatsappReceipt|${codes.join(",")}|${_storeNameCtrl.text}|${_storeTaglineCtrl.text}|${_ssmCtrl.text}|${_sstCtrl.text}|${_addressCtrl.text}|${_phoneCtrl.text}|${_socialCtrl.text}';
+    return '$_paperWidth|${_selectedFont.index}|${_headerAlign.index}|${_logoSize.index}|$_includeLogo|$_enableWhatsappReceipt|${codes.join(",")}|${_storeNameCtrl.text}|${_ssmCtrl.text}|${_sstCtrl.text}|${_addressCtrl.text}|${_phoneCtrl.text}|${_socialCtrl.text}';
   }
 
   // Real Receipt Image Capture
