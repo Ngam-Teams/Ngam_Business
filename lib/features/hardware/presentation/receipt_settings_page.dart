@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
@@ -122,6 +123,41 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   void initState() {
     super.initState();
     _loadBusinessProfile();
+    _loadSavedReceiptSettings();
+  }
+
+  Future<void> _loadSavedReceiptSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _paperWidth = prefs.getInt('receipt_paper_width') ?? _paperWidth;
+        final fontIdx = prefs.getInt('receipt_font_idx');
+        if (fontIdx != null && fontIdx >= 0 && fontIdx < ReceiptFont.values.length) {
+          _selectedFont = ReceiptFont.values[fontIdx];
+        }
+        final alignIdx = prefs.getInt('receipt_header_align');
+        if (alignIdx != null && alignIdx >= 0 && alignIdx < TextAlign.values.length) {
+          _headerAlign = TextAlign.values[alignIdx];
+        }
+        final logoIdx = prefs.getInt('receipt_logo_size');
+        if (logoIdx != null && logoIdx >= 0 && logoIdx < LogoSize.values.length) {
+          _logoSize = LogoSize.values[logoIdx];
+        }
+        _includeLogo = prefs.getBool('receipt_include_logo') ?? _includeLogo;
+        _enableWhatsappReceipt = prefs.getBool('receipt_enable_whatsapp') ?? _enableWhatsappReceipt;
+        final codes = prefs.getStringList('receipt_bottom_codes');
+        if (codes != null) {
+          _selectedBottomCodes
+            ..clear()
+            ..addAll(
+              codes
+                  .map((name) => BottomCodeType.values.where((e) => e.name == name).firstOrNull)
+                  .whereType<BottomCodeType>(),
+            );
+        }
+      });
+    } catch (_) {}
   }
 
   void _loadBusinessProfile() async {
@@ -332,7 +368,21 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   }
 
   @override
-  void _saveTemplate() {
+  Future<void> _saveTemplate() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('receipt_paper_width', _paperWidth);
+      await prefs.setInt('receipt_font_idx', _selectedFont.index);
+      await prefs.setInt('receipt_header_align', _headerAlign.index);
+      await prefs.setInt('receipt_logo_size', _logoSize.index);
+      await prefs.setBool('receipt_include_logo', _includeLogo);
+      await prefs.setBool('receipt_enable_whatsapp', _enableWhatsappReceipt);
+      await prefs.setStringList(
+        'receipt_bottom_codes',
+        _selectedBottomCodes.map((e) => e.name).toList(),
+      );
+    } catch (_) {}
+    if (!mounted) return;
     setState(() => _hasUnsavedChanges = false);
     showGlassToast(context, 'receipt.template_saved'.tr());
   }
@@ -344,21 +394,21 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
     }
     final action = await showDialog<String>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.65),
+      barrierColor: Colors.black.withValues(alpha: 0.55),
       builder: (dialogCtx) => Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: Container(
               constraints: const BoxConstraints(maxWidth: 380),
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: const Color(0xFF141424).withValues(alpha: 0.86),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.16), width: 1.2),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -605,7 +655,6 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           );
                 },
               ),
-            _buildFloatingSaveBar(),
           ],
         ),
       ),
@@ -713,7 +762,25 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         _buildPrinterStatusCard(),
         const SizedBox(height: 28),
 
-        const SizedBox(height: 88),
+        // 10. Save Template Button
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2196F3),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 4,
+            ),
+            onPressed: _saveTemplate,
+            icon: const Icon(Icons.check_circle_rounded, size: 20),
+            label: Text(
+              'receipt.save_settings'.tr(),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+          ),
+        ),
       ],
     );
   }

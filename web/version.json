@@ -1,6 +1,6 @@
 {
-  "version": "1.0.43",
-  "build_number": 23,
-  "released_at": "2026-11-17T06:23:00Z",
-  "changelog": "Membaiki isu popup Simpan Perubahan yang muncul semula selepas menekan butang Simpan."
+  "version": "1.0.44",
+  "build_number": 24,
+  "released_at": "2026-11-17T06:30:00Z",
+  "changelog": "Tetapan resit kini disimpan secara kekal (SharedPreferences), butang Simpan dikembalikan ke bawah, dan popup menggunakan gaya Glassmorphism."
 }
