@@ -1,6 +1,6 @@
 {
-  "version": "1.0.36",
-  "build_number": 16,
-  "released_at": "2026-11-17T04:25:00Z",
-  "changelog": "Integrasi kurier EasyParcel (PosLaju, J&T, Ninja Van, DHL & lain-lain) ditambah dalam halaman Integrasi."
+  "version": "1.0.37",
+  "build_number": 17,
+  "released_at": "2026-11-17T04:45:00Z",
+  "changelog": "Ketinggian kad Integrasi dikurangkan supaya paparan lebih padat dan kemas."
 }

@@ -796,9 +796,9 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
                   return SliverGrid(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: crossAxisCount,
-                      mainAxisSpacing: 14,
+                      mainAxisSpacing: 10,
                       crossAxisSpacing: 14,
-                      mainAxisExtent: 196,
+                      mainAxisExtent: 156,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (ctx, idx) => _buildIntegrationCard(items[idx]),
@@ -897,10 +897,10 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
     final storedId = (_savedConfigs[item.id]?['identifier'] ?? '').toString();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF141424),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: connected
               ? item.brandColor.withValues(alpha: 0.45)
@@ -921,7 +921,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
         children: [
           Row(
             children: [
-              _buildBrandLogo(item, size: 46),
+              _buildBrandLogo(item, size: 40),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
