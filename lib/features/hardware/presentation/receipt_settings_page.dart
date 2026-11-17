@@ -110,7 +110,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   bool _showPaymentMethod = true;
 
   // Bottom Code Selector
-  BottomCodeType _bottomCode = BottomCodeType.qrReceipt;
+  final Set<BottomCodeType> _selectedBottomCodes = {BottomCodeType.qrReceipt};
   bool _enableWhatsappReceipt = true;
 
   // Real Receipt Image Capture
@@ -1362,7 +1362,6 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               _buildCodeOptionChip(BottomCodeType.qrPromo, 'receipt.code_qr_promo'.tr()),
               _buildCodeOptionChip(BottomCodeType.qrWifi, 'receipt.code_qr_wifi'.tr()),
               _buildCodeOptionChip(BottomCodeType.barcode, 'receipt.code_barcode'.tr()),
-              _buildCodeOptionChip(BottomCodeType.none, 'receipt.code_none'.tr()),
             ],
           ),
           const SizedBox(height: 12),
@@ -1393,22 +1392,56 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   }
 
   Widget _buildCodeOptionChip(BottomCodeType type, String label) {
-    final isSelected = _bottomCode == type;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => setState(() => _bottomCode = type),
-      selectedColor: const Color(0xFF2196F3).withValues(alpha: 0.25),
-      backgroundColor: const Color(0xFF0A0A14),
-      labelStyle: TextStyle(
-        color: isSelected ? const Color(0xFF42A5F5) : Colors.white70,
-        fontSize: 11.5,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+    final isSelected = _selectedBottomCodes.contains(type);
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (isSelected) {
+            _selectedBottomCodes.remove(type);
+          } else {
+            _selectedBottomCodes.add(type);
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    const Color(0xFF2196F3).withValues(alpha: 0.28),
+                    const Color(0xFF0284C7).withValues(alpha: 0.16),
+                  ],
+                )
+              : null,
+          color: isSelected ? null : const Color(0xFF0A0A14),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF38BDF8).withValues(alpha: 0.75)
+                : Colors.white.withValues(alpha: 0.12),
+            width: isSelected ? 1.2 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected) ...[
+              const Icon(Icons.check_circle_rounded, color: Color(0xFF38BDF8), size: 14),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? const Color(0xFF7DD3FC) : Colors.white70,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
-      side: BorderSide(
-        color: isSelected ? const Color(0xFF42A5F5) : Colors.white12,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     );
   }
 
@@ -1920,7 +1953,23 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   // BOTTOM CODE SECTION (QR e-Receipt, Promo, WiFi, Barcode, None)
   // ===========================================================================
   Widget _buildBottomCodeSection() {
-    switch (_bottomCode) {
+    if (_selectedBottomCodes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final orderedTypes = [
+      BottomCodeType.qrReceipt,
+      BottomCodeType.qrPromo,
+      BottomCodeType.qrWifi,
+      BottomCodeType.barcode,
+    ].where(_selectedBottomCodes.contains).toList();
+
+    return Column(
+      children: orderedTypes.map(_buildSingleBottomCode).toList(),
+    );
+  }
+
+  Widget _buildSingleBottomCode(BottomCodeType type) {
+    switch (type) {
       case BottomCodeType.qrReceipt:
         return Center(
           child: Column(

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.37",
-  "build_number": 17,
-  "released_at": "2026-11-17T04:45:00Z",
-  "changelog": "Ketinggian kad Integrasi dikurangkan supaya paparan lebih padat dan kemas."
+  "version": "1.0.38",
+  "build_number": 18,
+  "released_at": "2026-11-17T05:16:00Z",
+  "changelog": "Kod Interaktif Bawah Resit kini menyokong pilihan berbilang (multi-select) tanpa butang No Code dan rekaan cip yang lebih kemas."
 }
