@@ -1619,6 +1619,11 @@
     "auto_badge_photo": "FOTO",
     "sort_top": "Teratas",
     "sort_newest": "Terkini",
-    "comments_count": "{} komen"
+    "comments_count": "{} komen",
+    "cta_multi_hint": "Pilihan: pilih 0 hingga 3 butang tindakan (tekan semula untuk nyahpilih jika tidak mahu).",
+    "cta_max_toast": "Maksimum 3 butang CTA sahaja bagi setiap siaran.",
+    "cta_selected_count": "{}/3 dipilih",
+    "cta_none_chip": "Tanpa CTA",
+    "cta_clear_all": "Kosongkan"
   }
 }

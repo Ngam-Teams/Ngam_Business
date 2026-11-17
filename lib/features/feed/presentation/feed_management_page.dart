@@ -867,7 +867,7 @@ class _FeedManagementPageState extends State<FeedManagementPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${post.ctaText} • ${post.formattedDate}',
+                            '${post.ctaSummary} • ${post.formattedDate}',
                             style: const TextStyle(color: Colors.white54, fontSize: 11),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -2868,7 +2868,7 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                               const SizedBox(width: 4),
                               Flexible(
                                 child: Text(
-                                  widget.post.ctaText,
+                                  widget.post.ctaSummary,
                                   style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900),
                                   overflow: TextOverflow.ellipsis,
                                 ),

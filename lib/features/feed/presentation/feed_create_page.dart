@@ -48,8 +48,8 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
   // Step 0 = Pilih Media, Step 1 = Kapsyen & Tetapan (untuk telefon); Desktop tunjuk sebelah-menyebelah
   int _mobileStep = 0;
 
-  String _ctaType = 'queue';
-  String _ctaText = '⚡ AMBIL GILIRAN';
+  static const int _maxCtaCount = 3;
+  final List<String> _selectedCtaKeys = [];
   bool _isPinned = false;
 
   // Multi-media Carousel state (supports mixed videos + photos)
@@ -132,6 +132,27 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     '#walkin',
   ];
 
+  Map<String, dynamic>? _findCtaOption(String key) {
+    for (final opt in _ngamCtaOptions) {
+      if (opt['key'] == key) return opt;
+    }
+    return null;
+  }
+
+  List<FeedCtaItem> get _selectedCtaItems {
+    final items = <FeedCtaItem>[];
+    for (final key in _selectedCtaKeys) {
+      final opt = _findCtaOption(key);
+      if (opt != null) {
+        items.add(FeedCtaItem(
+          type: key == 'walkin' ? 'queue' : key,
+          text: opt['ctaText'] as String,
+        ));
+      }
+    }
+    return items;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -140,8 +161,17 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
       _titleController.text = e.title;
       _captionController.text = e.caption ?? '';
       _serviceTagController.text = e.serviceTag ?? '';
-      _ctaType = e.ctaType;
-      _ctaText = e.ctaText;
+      for (final cta in e.ctaItems) {
+        String matchedKey = cta.type;
+        if (cta.text.toUpperCase().contains('WALK-IN')) {
+          matchedKey = 'walkin';
+        }
+        if (_findCtaOption(matchedKey) != null &&
+            !_selectedCtaKeys.contains(matchedKey) &&
+            _selectedCtaKeys.length < _maxCtaCount) {
+          _selectedCtaKeys.add(matchedKey);
+        }
+      }
       _isPinned = e.isPinned;
       _mobileStep = 1; // Terus ke halaman butiran jika menyunting
       for (final item in e.mediaItems) {
@@ -161,11 +191,11 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     } else {
       final cat = widget.businessCategory.toLowerCase();
       if (cat.contains('cafe') || cat.contains('food') || cat.contains('restaurant')) {
-        _ctaType = 'menu';
-        _ctaText = '🛒 ORDER NOW';
+        _selectedCtaKeys.add('menu');
       } else if (cat.contains('salon') || cat.contains('spa') || cat.contains('clinic')) {
-        _ctaType = 'booking';
-        _ctaText = '📅 BOOKING SEKARANG';
+        _selectedCtaKeys.add('booking');
+      } else {
+        _selectedCtaKeys.add('queue');
       }
     }
   }
@@ -567,9 +597,9 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
       final String finalMediaUrl = FeedPostModel.encodeMediaItems(uploadedItems);
       final String primaryMediaType = uploadedItems.first.type;
 
-      // Peta ctaType 'walkin' -> 'queue' di backend supaya pelanggan terus ke tab kedai/giliran,
-      // manakala ctaText kekal '🚶 WALK-IN SEKARANG'
-      final effectiveCtaType = _ctaType == 'walkin' ? 'queue' : _ctaType;
+      final selectedCtas = _selectedCtaItems;
+      final effectiveCtaType = FeedPostModel.primaryDbCtaType(selectedCtas);
+      final effectiveCtaText = FeedPostModel.encodeCtaText(selectedCtas);
 
       if (widget.existing != null) {
         await _feedService.updatePost(
@@ -581,7 +611,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
           category: widget.businessCategory,
           serviceTag: _serviceTagController.text.trim().isEmpty ? null : _serviceTagController.text.trim(),
           ctaType: effectiveCtaType,
-          ctaText: _ctaText,
+          ctaText: effectiveCtaText,
           status: targetStatus,
           isPinned: _isPinned,
         );
@@ -594,7 +624,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
           category: widget.businessCategory,
           serviceTag: _serviceTagController.text.trim().isEmpty ? null : _serviceTagController.text.trim(),
           ctaType: effectiveCtaType,
-          ctaText: _ctaText,
+          ctaText: effectiveCtaText,
           status: targetStatus,
           isPinned: _isPinned,
         );
@@ -1193,19 +1223,36 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
                       style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
                     ),
                   ),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF8B5CF6)]),
-                    borderRadius: BorderRadius.circular(10),
+                if (_selectedCtaItems.isNotEmpty)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: _selectedCtaItems.asMap().entries.map((entry) {
+                      final isPrimary = entry.key == 0;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                        decoration: BoxDecoration(
+                          gradient: isPrimary
+                              ? const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF8B5CF6)])
+                              : null,
+                          color: isPrimary ? null : Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(10),
+                          border: isPrimary
+                              ? null
+                              : Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                        ),
+                        child: Text(
+                          entry.value.text,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                  child: Text(
-                    _ctaText,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
-                  ),
-                ),
               ],
             ),
           ),
@@ -1442,21 +1489,66 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
 
         const SizedBox(height: 20),
 
-        // Seksyen 2: Butang Tindakan Ngam (Order Now, Booking, Walk-in, Giliran)
-        const Row(
+        // Seksyen 2: Butang Tindakan Ngam (0 hingga 3 pilihan)
+        Row(
           children: [
-            HugeIcon(icon: HugeIcons.strokeRoundedFlash, color: Color(0xFFEC4899), size: 18),
-            SizedBox(width: 8),
-            Text(
-              'Butang Tindakan Pelanggan (CTA Ngam)',
-              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+            const HugeIcon(icon: HugeIcons.strokeRoundedFlash, color: Color(0xFFEC4899), size: 18),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Butang Tindakan Pelanggan (CTA Ngam)',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
             ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: _selectedCtaKeys.isEmpty
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : const Color(0xFFEC4899).withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(
+                  color: _selectedCtaKeys.isEmpty
+                      ? Colors.white.withValues(alpha: 0.14)
+                      : const Color(0xFFEC4899).withValues(alpha: 0.5),
+                ),
+              ),
+              child: Text(
+                _selectedCtaKeys.isEmpty
+                    ? 'feed_create.cta_none_chip'.tr()
+                    : 'feed_create.cta_selected_count'.tr(args: [_selectedCtaKeys.length.toString()]),
+                style: TextStyle(
+                  color: _selectedCtaKeys.isEmpty ? Colors.white60 : const Color(0xFFF9A8D4),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            if (_selectedCtaKeys.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: () => setState(() => _selectedCtaKeys.clear()),
+                borderRadius: BorderRadius.circular(100),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                  ),
+                  child: Text(
+                    'feed_create.cta_clear_all'.tr(),
+                    style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Pilih tindakan terus apabila pelanggan mengetik butang pada video anda di Ngam App.',
-          style: TextStyle(color: Colors.white54, fontSize: 11.5),
+        Text(
+          'feed_create.cta_multi_hint'.tr(),
+          style: const TextStyle(color: Colors.white54, fontSize: 11.5),
         ),
         const SizedBox(height: 12),
 
@@ -1474,65 +1566,95 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
             final opt = _ngamCtaOptions[idx];
             final key = opt['key'] as String;
             final color = opt['color'] as Color;
-            final isSelected = _ctaType == key;
+            final selectedIndex = _selectedCtaKeys.indexOf(key);
+            final isSelected = selectedIndex != -1;
 
             return InkWell(
               onTap: () {
-                setState(() {
-                  _ctaType = key;
-                  _ctaText = opt['ctaText'] as String;
-                });
+                if (isSelected) {
+                  setState(() => _selectedCtaKeys.remove(key));
+                } else if (_selectedCtaKeys.length >= _maxCtaCount) {
+                  showGlassToast(context, 'feed_create.cta_max_toast'.tr(), isError: true);
+                } else {
+                  setState(() => _selectedCtaKeys.add(key));
+                }
               },
               borderRadius: BorderRadius.circular(14),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? color.withValues(alpha: 0.16) : Colors.white.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isSelected ? color : Colors.white.withValues(alpha: 0.1),
-                    width: isSelected ? 1.5 : 1.0,
+              child: Stack(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? color.withValues(alpha: 0.16) : Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isSelected ? color : Colors.white.withValues(alpha: 0.1),
+                        width: isSelected ? 1.5 : 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: HugeIcon(icon: opt['icon'], color: color, size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                opt['label'] as String,
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                opt['desc'] as String,
+                                style: const TextStyle(color: Colors.white54, fontSize: 9.5),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: HugeIcon(icon: opt['icon'], color: color, size: 16),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            opt['label'] as String,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.85),
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                  if (isSelected)
+                    Positioned(
+                      top: 5,
+                      right: 6,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${selectedIndex + 1}',
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            opt['desc'] as String,
-                            style: const TextStyle(color: Colors.white54, fontSize: 9.5),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             );
           },

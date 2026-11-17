@@ -39,6 +39,28 @@ class FeedMediaItem {
   }
 }
 
+class FeedCtaItem {
+  final String type; // 'queue', 'booking', 'menu', 'whatsapp', 'general', 'walkin'
+  final String text;
+
+  const FeedCtaItem({
+    required this.type,
+    required this.text,
+  });
+
+  factory FeedCtaItem.fromJson(Map<String, dynamic> json) {
+    return FeedCtaItem(
+      type: json['type']?.toString().trim() ?? 'general',
+      text: json['text']?.toString().trim() ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'type': type,
+        'text': text,
+      };
+}
+
 class FeedPostModel {
   final String id;
   final String businessId;
@@ -87,6 +109,53 @@ class FeedPostModel {
   List<FeedMediaItem> get mediaItems => parseMediaItems(mediaUrl, mediaType);
   String get primaryMediaUrl => mediaItems.isNotEmpty ? mediaItems.first.url : mediaUrl;
   bool get isCarousel => mediaItems.length > 1;
+
+  List<FeedCtaItem> get ctaItems => parseCtaItems(ctaType, ctaText);
+  String get ctaSummary => ctaItems.isEmpty
+      ? 'Tanpa CTA'
+      : ctaItems.map((e) => e.text).join(' • ');
+
+  static List<FeedCtaItem> parseCtaItems(String rawCtaType, String rawCtaText) {
+    final trimmedText = rawCtaText.trim();
+    if (trimmedText.isEmpty) return const [];
+    if (trimmedText.startsWith('[')) {
+      try {
+        final decoded = jsonDecode(trimmedText);
+        if (decoded is List) {
+          final items = <FeedCtaItem>[];
+          for (final entry in decoded) {
+            if (entry is Map) {
+              final item = FeedCtaItem.fromJson(Map<String, dynamic>.from(entry));
+              if (item.text.isNotEmpty) items.add(item);
+            }
+            if (items.length >= 3) break;
+          }
+          return items;
+        }
+      } catch (_) {}
+    }
+    return [
+      FeedCtaItem(
+        type: rawCtaType.trim().isEmpty ? 'general' : rawCtaType.trim(),
+        text: trimmedText,
+      ),
+    ];
+  }
+
+  static String encodeCtaText(List<FeedCtaItem> items) {
+    final valid = items.where((e) => e.text.trim().isNotEmpty).take(3).toList();
+    if (valid.isEmpty) return '';
+    if (valid.length == 1) return valid.first.text.trim();
+    return jsonEncode(valid.map((e) => e.toJson()).toList());
+  }
+
+  static String primaryDbCtaType(List<FeedCtaItem> items) {
+    if (items.isEmpty) return 'general';
+    final raw = items.first.type.trim().toLowerCase();
+    final mapped = raw == 'walkin' ? 'queue' : raw;
+    const allowed = {'queue', 'booking', 'menu', 'whatsapp', 'general'};
+    return allowed.contains(mapped) ? mapped : 'general';
+  }
 
   static List<FeedMediaItem> parseMediaItems(String rawMediaUrl, [String fallbackMediaType = 'image']) {
     final trimmed = rawMediaUrl.trim();

@@ -1619,6 +1619,11 @@
     "auto_badge_photo": "PHOTO",
     "sort_top": "Top",
     "sort_newest": "Newest",
-    "comments_count": "{} comments"
+    "comments_count": "{} comments",
+    "cta_multi_hint": "Optional: pick 0 to 3 action buttons (tap again to deselect if not needed).",
+    "cta_max_toast": "Maximum 3 CTA buttons per post.",
+    "cta_selected_count": "{}/3 selected",
+    "cta_none_chip": "No CTA",
+    "cta_clear_all": "Clear"
   }
 }
