@@ -125,12 +125,6 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   bool _enableWhatsappReceipt = true;
   String _savedSignature = '';
 
-  String get _storeIdentifier {
-    if (_businessHandle.isNotEmpty) return '@$_businessHandle';
-    if (_businessId.isNotEmpty) return 'store/${Uri.encodeComponent(_businessId)}';
-    return '';
-  }
-
   String _currentSignature() {
     final codes = _selectedBottomCodes.map((e) => e.name).toList()..sort();
     return '$_paperWidth|$_autoPrintOnOrder|$_autoCutPaper|${_selectedFont.index}|${_headerAlign.index}|${_dividerStyle.index}|${_logoSize.index}|$_includeLogo|$_enableWhatsappReceipt|${codes.join(",")}|$_showTagline|$_showSsm|$_showSst|$_showAddress|$_showPhone|$_showSocial|$_showTableNo|$_showCashier|$_showDateTime|$_showSstTax|$_showServiceCharge|$_showRounding|$_showPaymentMethod|${_storeNameCtrl.text}|${_taglineCtrl.text}|${_ssmCtrl.text}|${_sstCtrl.text}|${_addressCtrl.text}|${_phoneCtrl.text}|${_socialCtrl.text}|${_footerMsgCtrl.text}|${_policyCtrl.text}|${_wifiSsidCtrl.text}|${_wifiPassCtrl.text}|${_promoCodeCtrl.text}';
@@ -2381,13 +2375,35 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   }
 
   Widget _buildSingleBottomCode(BottomCodeType type) {
-    final storePath = _storeIdentifier;
-    final storeUrl = storePath.isNotEmpty ? 'https://ngam.dev/$storePath' : 'https://ngam.dev';
-    final storeDisplay = storePath.isNotEmpty ? 'ngam.dev/$storePath' : 'ngam.dev';
+    final cleanStore = _businessHandle.isNotEmpty
+        ? _businessHandle
+        : (_businessId.isNotEmpty ? _businessId : '');
     final qrSize = _paperWidth == 58 ? 84.0 : 96.0;
 
     switch (type) {
       case BottomCodeType.qrReceipt:
+        final receiptTotal = _showServiceCharge ? '33.25' : '30.40';
+        final storeDisplayName = _storeNameCtrl.text.trim().isNotEmpty
+            ? _storeNameCtrl.text.trim()
+            : 'Warung Ngam';
+        final receiptParams = <String, String>{
+          'ref': 'NG-4029-2026',
+          if (cleanStore.isNotEmpty) 'store': cleanStore,
+          if (_businessId.isNotEmpty) 'bid': _businessId,
+          'name': storeDisplayName,
+          'total': receiptTotal,
+          'subtotal': '28.70',
+          if (_showSstTax) 'tax': '1.72',
+          if (_showServiceCharge) 'svc': '2.87',
+          if (_showRounding) 'round': '-0.02',
+          'method': 'DuitNow QR',
+          'date': '2026-09-30T12:45:00',
+          'items':
+              '1x Nasi Lemak Rendang Daging|16.90;;1x + Sambal Sotong Extra|3.50;;1x Teh Tarik Kaw Ais|3.80;;1x Roti Bakar Kaya Butter|4.50',
+        };
+        final receiptUrl =
+            Uri.https('ngam.dev', '/receipt/view', receiptParams).toString();
+
         return Center(
           child: Column(
             children: [
@@ -2400,7 +2416,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   border: Border.all(color: Colors.black12),
                 ),
                 child: QrImageView(
-                  data: storeUrl,
+                  data: receiptUrl,
                   version: QrVersions.auto,
                   errorCorrectionLevel: QrErrorCorrectLevel.M,
                   backgroundColor: Colors.white,
@@ -2411,14 +2427,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 'receipt.qr_scan_receipt_hint'.tr(),
                 style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                storeDisplay,
-                style: _getReceiptFont(color: Colors.black38, fontSize: 7.0),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -2428,12 +2441,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         final promoCode = _promoCodeCtrl.text.trim().isEmpty
             ? 'NGAM10'
             : _promoCodeCtrl.text.trim().toUpperCase();
-        final promoUrl = storePath.isNotEmpty
-            ? 'https://ngam.dev/$storePath?promo=${Uri.encodeComponent(promoCode)}'
-            : 'https://ngam.dev/promo/${Uri.encodeComponent(promoCode)}';
-        final promoDisplay = storePath.isNotEmpty
-            ? 'ngam.dev/$storePath?promo=$promoCode'
-            : 'ngam.dev/promo/$promoCode';
+        final promoUrl = Uri.https(
+          'ngam.dev',
+          '/promo/$promoCode',
+          cleanStore.isNotEmpty ? {'store': cleanStore} : null,
+        ).toString();
 
         return Center(
           child: Column(
@@ -2458,14 +2470,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                   dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 4),
               Text(
                 'receipt.qr_promo_hint'.tr(namedArgs: {'code': promoCode}),
                 style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                promoDisplay,
-                style: _getReceiptFont(color: Colors.black38, fontSize: 7.0),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.57",
-  "build_number": 35,
-  "released_at": "2026-11-17T15:00:00Z",
-  "changelog": "Muat naik Feed bersatu gaya TikTok tanpa tab berasingan (pilih gabungan video & gambar sekaligus dengan pengesanan automatik), susun semula slaid secara seret & lepas (drag-and-drop), medan teks lutsinar tanpa kotak latar gelap, serta paparan pratonton & komen gambar pelanggan."
+  "version": "1.0.58",
+  "build_number": 38,
+  "released_at": "2026-11-17T23:55:00Z",
+  "changelog": "Buang paparan teks pautan URL ngam.dev di bawah QR pada resit Studio Resit, kemas kini pautan QR Resit Digital (/receipt/view) & QR Promo (/promo/<KOD>), serta tambah QR e-Resit boleh imbas pada slip resit terminal POS tanpa pautan URL."
 }

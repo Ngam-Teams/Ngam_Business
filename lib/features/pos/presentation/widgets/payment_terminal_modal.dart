@@ -11,6 +11,7 @@ import '../../../../core/utils/file_saver/file_saver.dart';
 
 import '../../../../core/services/chip_payment_service.dart';
 import '../../../../core/services/sound_service.dart';
+import '../../../settings/data/business_service.dart';
 import '../../../../widgets/glass_toast.dart';
 
 enum TerminalStep {
@@ -1389,6 +1390,67 @@ Dijana oleh Sistem POS Ngam Business
                           ),
                           const SizedBox(height: 8),
                           const Text('Terima kasih daun keladi,\nsudilah datang lagi!', textAlign: TextAlign.center, style: TextStyle(color: Colors.black87, fontSize: 9.5, fontFamily: 'monospace')),
+                          const SizedBox(height: 10),
+                          Builder(
+                            builder: (_) {
+                              final profile = BusinessService.cachedProfile;
+                              final handle = (profile?['business_handle'] ?? '')
+                                  .toString()
+                                  .trim()
+                                  .replaceAll('@', '')
+                                  .toLowerCase();
+                              final bizId = profile?['id']?.toString() ?? '';
+                              final storeName = (profile?['business_name'] ?? 'Warung Ngam')
+                                  .toString()
+                                  .trim();
+                              final refCode = widget.reference?.isNotEmpty == true
+                                  ? widget.reference!
+                                  : widget.orderTitle.split(' ').first;
+                              final itemsEncoded = (widget.itemLines != null && widget.itemLines!.isNotEmpty)
+                                  ? widget.itemLines!.join(';;')
+                                  : '1x Jualan POS|${widget.amount.toStringAsFixed(2)}';
+                              final qrUri = Uri.https('ngam.dev', '/receipt/view', {
+                                'ref': refCode,
+                                if (handle.isNotEmpty) 'store': handle,
+                                if (bizId.isNotEmpty) 'bid': bizId,
+                                'name': storeName,
+                                'total': widget.amount.toStringAsFixed(2),
+                                'method': methodLabel,
+                                'date': DateTime.now().toIso8601String(),
+                                'items': itemsEncoded,
+                              }).toString();
+
+                              return Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: Colors.black12),
+                                    ),
+                                    child: QrImageView(
+                                      data: qrUri,
+                                      version: QrVersions.auto,
+                                      errorCorrectionLevel: QrErrorCorrectLevel.M,
+                                      backgroundColor: Colors.white,
+                                      gapless: true,
+                                      padding: const EdgeInsets.all(4),
+                                      size: 88,
+                                      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
+                                      dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'receipt.qr_scan_receipt_hint'.tr(),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: Colors.black87, fontSize: 8.5, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ),
