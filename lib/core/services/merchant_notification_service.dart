@@ -299,7 +299,7 @@ class MerchantNotificationService {
       title: '💬 $senderName',
       body: content,
       tag: 'msg_$id',
-      url: '/inbox',
+      url: '/merchant-inbox',
     );
 
     // Show In-App Liquid Glass Banner
@@ -310,7 +310,12 @@ class MerchantNotificationService {
       onTap: () {
         final ctx = rootNavigatorKey.currentContext;
         if (ctx != null) {
-          appRouter.go('/inbox');
+          appRouter.push(
+            '/merchant-inbox',
+            extra: {
+              'conversationId': message['conversation_id']?.toString(),
+            },
+          );
         }
       },
     );

@@ -129,6 +129,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
 
               return {
                 'db_id': b['id'],
+                'customer_id': (b['customer_id'] ?? b['user_id'] ?? meta['customer_id'] ?? meta['user_id'] ?? '').toString(),
                 'id': meta['booking_id'] ?? meta['short_ref'] ?? 'BK-${b['id'].toString().substring(0, b['id'].toString().length > 6 ? 6 : b['id'].toString().length)}',
                 'customerName': b['customer_name'] ?? meta['customer_name'] ?? 'Pelanggan Ngam',
                 'phone': (meta['phone'] != null && meta['phone'].toString().trim().isNotEmpty)
@@ -1800,16 +1801,19 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.forum_outlined, color: Color(0xFF38BDF8), size: 19),
-                                        onPressed: () => context.push(
-                                          '/merchant-inbox',
-                                          extra: {
-                                            'customerId': appt['user_id']?.toString(),
-                                            'customerName': appt['customer']?.toString(),
-                                            'contextType': 'appointment',
-                                            'contextId': (appt['raw_id'] ?? appt['id'])?.toString(),
-                                          },
-                                        ),
-                                        tooltip: 'Chat Dalam Aplikasi',
+                                        onPressed: () {
+                                          final custId = (appt['customer_id'] ?? appt['user_id'] ?? '').toString().trim();
+                                          context.push(
+                                            '/merchant-inbox',
+                                            extra: {
+                                              if (custId.isNotEmpty) 'customerId': custId,
+                                              'customerName': appt['customerName']?.toString(),
+                                              'contextType': 'booking',
+                                              'contextId': appt['db_id']?.toString(),
+                                            },
+                                          );
+                                        },
+                                        tooltip: 'inbox.title'.tr(),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 19),

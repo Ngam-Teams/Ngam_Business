@@ -241,6 +241,25 @@ class BusinessService {
           }
         }
 
+        // Ensure merchant owner exists in public.users so customer <-> business chat FK never fails
+        try {
+          final existingUser = await _client
+              .from('users')
+              .select('id')
+              .eq('id', user.id)
+              .maybeSingle();
+          if (existingUser == null) {
+            await _client.from('users').insert({
+              'id': user.id,
+              'role': 'business',
+              'user_name': (profile['business_name'] ?? user.email?.split('@').first ?? 'Peniaga Ngam').toString(),
+              if (user.email != null) 'user_email': user.email,
+              if (profile['business_phone'] != null) 'user_phone': profile['business_phone'].toString(),
+              if (profile['business_logo_url'] != null) 'user_avatar_url': profile['business_logo_url'].toString(),
+            });
+          }
+        } catch (_) {}
+
         await _saveProfileToCache(profile);
         return profile;
       }

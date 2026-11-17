@@ -8,6 +8,7 @@ import '../../settings/data/business_service.dart';
 class OrderModel {
   final String id;
   final String ownerUserId;
+  final String? customerId;
   final String? businessId;
   final double total;
   final String status;
@@ -22,6 +23,7 @@ class OrderModel {
   OrderModel({
     required this.id,
     required this.ownerUserId,
+    this.customerId,
     this.businessId,
     required this.total,
     required this.status,
@@ -42,6 +44,7 @@ class OrderModel {
     return OrderModel(
       id: json['id'] as String,
       ownerUserId: (json['owner_user_id'] as String?) ?? '',
+      customerId: (json['customer_id'] ?? json['owner_user_id'])?.toString(),
       businessId: json['business_id']?.toString(),
       total: (json['total'] as num).toDouble(),
       status: json['status'] as String,
@@ -58,6 +61,7 @@ class OrderModel {
   Map<String, dynamic> toJson() => {
     'id': id,
     'owner_user_id': ownerUserId,
+    if (customerId != null) 'customer_id': customerId,
     'business_id': businessId,
     'total': total,
     'status': status,

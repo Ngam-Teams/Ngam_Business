@@ -1,6 +1,6 @@
 {
-  "version": "1.0.52",
-  "build_number": 32,
-  "released_at": "2026-11-17T12:45:00Z",
-  "changelog": "Betulkan ralat sintaks JavaScript pada ngamReloadPwa di web/index.html dan tambah fallback pembersihan cache terus daripada Dart supaya kemaskini PWA sentiasa memuatkan versi baharu."
+  "version": "1.0.53",
+  "build_number": 33,
+  "released_at": "2026-11-17T13:55:00Z",
+  "changelog": "Auto-daftar profil peniaga dalam public.users untuk elak ralat kunci asing sembang, tambah butang Chat Pelanggan pada Pesanan & Pelanggan, dan baiki pautan peti mesej."
 }

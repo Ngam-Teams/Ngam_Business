@@ -643,6 +643,36 @@ class _OrdersPageState extends State<OrdersPage> {
                                 ],
                               ),
                             ),
+                            if ((order.customerId ?? order.ownerUserId).isNotEmpty &&
+                                order.source.toLowerCase() != 'pos') ...[
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: IconButton(
+                                  icon: const HugeIcon(
+                                    icon: HugeIcons.strokeRoundedChatting01,
+                                    color: Color(0xFF42A5F5),
+                                    size: 20,
+                                  ),
+                                  tooltip: 'inbox.title'.tr(),
+                                  onPressed: () {
+                                    Navigator.of(context).maybePop();
+                                    context.push(
+                                      '/merchant-inbox',
+                                      extra: {
+                                        'customerId': order.customerId ?? order.ownerUserId,
+                                        'customerName': order.customerName,
+                                        'contextType': 'order',
+                                        'contextId': order.id,
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
                             Container(
                               decoration: BoxDecoration(
                                 color: const Color(0xFF25D366).withValues(alpha: 0.15),
@@ -2326,6 +2356,33 @@ class _OrdersPageState extends State<OrdersPage> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if ((order.customerId ?? order.ownerUserId).isNotEmpty &&
+                      order.source.toLowerCase() != 'pos') ...[
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: IconButton(
+                        icon: const HugeIcon(
+                          icon: HugeIcons.strokeRoundedChatting01,
+                          color: Color(0xFF42A5F5),
+                          size: 20,
+                        ),
+                        tooltip: 'inbox.title'.tr(),
+                        onPressed: () => context.push(
+                          '/merchant-inbox',
+                          extra: {
+                            'customerId': order.customerId ?? order.ownerUserId,
+                            'customerName': order.customerName,
+                            'contextType': 'order',
+                            'contextId': order.id,
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFF25D366).withValues(alpha: 0.15),

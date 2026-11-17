@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
@@ -677,6 +678,18 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
                                   ],
                                 ),
                               ),
+                              if ((cust['customerId'] ?? '').toString().trim().isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(Icons.forum_outlined, color: Color(0xFF38BDF8), size: 20),
+                                  tooltip: 'inbox.title'.tr(),
+                                  onPressed: () => context.push(
+                                    '/merchant-inbox',
+                                    extra: {
+                                      'customerId': cust['customerId'].toString().trim(),
+                                      'customerName': cust['name']?.toString(),
+                                    },
+                                  ),
+                                ),
                               IconButton(
                                 icon: const Icon(Icons.card_giftcard_rounded, color: Color(0xFF42A5F5), size: 22),
                                 tooltip: 'customers.send_vip_voucher'.tr(),

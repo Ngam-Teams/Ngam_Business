@@ -140,6 +140,15 @@ class AuthService {
       }
 
       try {
+        await _client.from('users').insert({
+          'id': response.user!.id,
+          'role': 'business',
+          'user_name': businessName.trim().isNotEmpty ? businessName.trim() : 'My Business',
+          'user_email': email.trim(),
+        });
+      } catch (_) {}
+
+      try {
         await _client.from('businesses').insert({
           'owner_user_id': response.user!.id,
           'business_name': businessName.trim().isNotEmpty ? businessName.trim() : 'My Business',

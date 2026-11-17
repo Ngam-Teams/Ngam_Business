@@ -98,6 +98,12 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
       _businessId = businessId;
       _businessName = (profile?['business_name'] ?? 'Ngam Business').toString();
 
+      await MerchantChatService.ensureCurrentMerchantInUsers(
+        businessName: _businessName,
+        businessLogoUrl: profile?['business_logo_url']?.toString(),
+        businessPhone: profile?['business_phone']?.toString(),
+      );
+
       String? targetConvId = widget.initialConversationId;
       if (targetConvId == null &&
           widget.initialCustomerId != null &&
@@ -109,7 +115,9 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
             contextType: widget.initialContextType,
             contextId: widget.initialContextId,
           );
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[MerchantInboxPage] openOrCreateCustomerConversation error: $e');
+        }
       }
 
       _convSub = MerchantChatService.streamBusinessConversations(businessId).listen(

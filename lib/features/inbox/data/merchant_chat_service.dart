@@ -157,6 +157,50 @@ class MerchantChatService {
   static final ValueNotifier<int> totalUnreadNotifier = ValueNotifier<int>(0);
   static final Map<String, Map<String, dynamic>> _userCache = {};
   static final Map<String, Map<String, dynamic>> _contextCache = {};
+  static bool _merchantUserVerified = false;
+  static final RegExp _uuidRegex = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+
+  /// Ensure the currently authenticated merchant/staff user exists in `public.users`
+  /// so foreign keys on `conversations` and `messages` never fail.
+  static Future<void> ensureCurrentMerchantInUsers({
+    String? businessName,
+    String? businessLogoUrl,
+    String? businessPhone,
+  }) async {
+    if (_merchantUserVerified) return;
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+    try {
+      final existing = await _supabase
+          .from('users')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (existing != null) {
+        _merchantUserVerified = true;
+        return;
+      }
+      final fallbackName = (businessName != null && businessName.trim().isNotEmpty)
+          ? businessName.trim()
+          : (user.userMetadata?['business_name']?.toString() ??
+              user.userMetadata?['full_name']?.toString() ??
+              user.email?.split('@').first ??
+              'Peniaga Ngam');
+      await _supabase.from('users').insert({
+        'id': user.id,
+        'role': 'business',
+        'user_name': fallbackName,
+        if (user.email != null) 'user_email': user.email,
+        if (businessPhone != null && businessPhone.isNotEmpty) 'user_phone': businessPhone,
+        if (businessLogoUrl != null && businessLogoUrl.isNotEmpty) 'user_avatar_url': businessLogoUrl,
+      });
+      _merchantUserVerified = true;
+    } catch (e) {
+      debugPrint('[MerchantChatService] ensureCurrentMerchantInUsers error: $e');
+    }
+  }
 
   static Future<void> refreshUnreadCount(String businessId) async {
     try {
@@ -383,6 +427,8 @@ class MerchantChatService {
     final uid = _supabase.auth.currentUser?.id;
     if (uid == null) throw Exception('Not authenticated');
 
+    await ensureCurrentMerchantInUsers();
+
     final payload = <String, dynamic>{
       'conversation_id': conversationId,
       'sender_id': uid,
@@ -403,6 +449,8 @@ class MerchantChatService {
   }) async {
     final uid = _supabase.auth.currentUser?.id;
     if (uid == null) throw Exception('Not authenticated');
+
+    await ensureCurrentMerchantInUsers();
 
     final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'jpg';
     final mimeType = ext == 'png'
@@ -464,18 +512,67 @@ class MerchantChatService {
     String? contextType,
     String? contextId,
   }) async {
-    final res = await _supabase.rpc(
-      'merchant_open_conversation',
-      params: {
-        'p_business_id': businessId,
-        'p_customer_id': customerId,
-        if (contextType != null) 'p_context_type': contextType,
-        if (contextId != null) 'p_context_id': contextId,
-      },
-    );
-    if (res is Map && res['id'] != null) {
-      return res['id'].toString();
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null || customerId.trim().isEmpty) return null;
+
+    await ensureCurrentMerchantInUsers();
+
+    final validContextId = (contextId != null && _uuidRegex.hasMatch(contextId.trim()))
+        ? contextId.trim()
+        : null;
+
+    try {
+      final res = await _supabase.rpc(
+        'merchant_open_conversation',
+        params: {
+          'p_business_id': businessId,
+          'p_customer_id': customerId.trim(),
+          if (contextType != null) 'p_context_type': contextType,
+          if (validContextId != null) 'p_context_id': validContextId,
+        },
+      );
+      if (res is Map && res['id'] != null) {
+        return res['id'].toString();
+      }
+      if (res is List && res.isNotEmpty && res.first is Map && res.first['id'] != null) {
+        return res.first['id'].toString();
+      }
+    } catch (rpcErr) {
+      debugPrint('[MerchantChatService] merchant_open_conversation RPC failed, trying direct fallback: $rpcErr');
     }
+
+    // Direct Fallback: query or insert conversation row directly
+    try {
+      final existing = await _supabase
+          .from('conversations')
+          .select('id')
+          .eq('user1_id', customerId.trim())
+          .eq('business_id', businessId)
+          .limit(1)
+          .maybeSingle();
+
+      if (existing != null && existing['id'] != null) {
+        return existing['id'].toString();
+      }
+
+      final inserted = await _supabase
+          .from('conversations')
+          .insert({
+            'user1_id': customerId.trim(),
+            'user2_id': uid,
+            'business_id': businessId,
+            'context_type': contextType ?? 'general',
+            if (validContextId != null) 'context_id': validContextId,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .select('id')
+          .single();
+
+      return inserted['id']?.toString();
+    } catch (directErr) {
+      debugPrint('[MerchantChatService] Direct fallback failed: $directErr');
+    }
+
     return null;
   }
 
