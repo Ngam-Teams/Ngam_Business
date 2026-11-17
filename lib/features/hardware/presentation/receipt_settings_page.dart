@@ -830,221 +830,264 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'receipt.font_selector_title'.tr(),
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'receipt.font_selector_badge'.tr(),
-                  style: const TextStyle(
-                    color: Color(0xFF42A5F5),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10.5,
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            'receipt.font_selector_title'.tr(),
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFF42A5F5).withValues(alpha: 0.35),
-                width: 1.0,
-              ),
-            ),
-            child: Theme(
-              data: Theme.of(context).copyWith(
-                focusColor: Colors.transparent,
-                hoverColor: Colors.transparent,
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<ReceiptFont>(
-                  value: _selectedFont,
-                  focusColor: Colors.transparent,
-                  isExpanded: true,
-                  dropdownColor: const Color(0xFF141424),
-                  borderRadius: BorderRadius.circular(16),
-                  menuMaxHeight: 400,
-                  itemHeight: 56.0,
-                icon: const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: Color(0xFF42A5F5),
-                  size: 22,
+          GestureDetector(
+            onTap: () => _showFontSelectorDialog(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFF42A5F5).withValues(alpha: 0.35),
+                  width: 1.0,
                 ),
-                selectedItemBuilder: (BuildContext context) {
-                  return ReceiptFont.values.map<Widget>((ReceiptFont font) {
-                    return Row(
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.font_download_rounded,
+                    size: 18,
+                    color: Color(0xFF42A5F5),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.font_download_rounded,
-                          size: 18,
-                          color: Color(0xFF42A5F5),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    font.name,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF42A5F5)
-                                          .withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      font.tagKey.tr(),
-                                      style: const TextStyle(
-                                        color: Color(0xFF42A5F5),
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 9.5,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                        Row(
+                          children: [
+                            Text(
+                              _selectedFont.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                font.previewText,
-                                style: _getReceiptFont(
-                                  fontOverride: font,
-                                  color: Colors.white54,
-                                  fontSize: font == ReceiptFont.vt323 ? 12 : 10.5,
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF42A5F5)
+                                    .withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                _selectedFont.tagKey.tr(),
+                                style: const TextStyle(
+                                  color: Color(0xFF42A5F5),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 9.5,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _selectedFont.previewText,
+                          style: _getReceiptFont(
+                            fontOverride: _selectedFont,
+                            color: Colors.white54,
+                            fontSize: _selectedFont == ReceiptFont.vt323 ? 12 : 10.5,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
-                    );
-                  }).toList();
-                },
-                items: ReceiptFont.values.map((ReceiptFont font) {
-                  final isSelected = _selectedFont == font;
-                  return DropdownMenuItem<ReceiptFont>(
-                    value: font,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF42A5F5),
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showFontSelectorDialog(BuildContext context) async {
+    final selected = await showDialog<ReceiptFont>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      builder: (dialogCtx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 440, maxHeight: 540),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF141424).withValues(alpha: 0.82),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      blurRadius: 32,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 18, 12, 12),
                       child: Row(
                         children: [
+                          const Icon(
+                            Icons.font_download_rounded,
+                            color: Color(0xFF42A5F5),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      font.name,
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? const Color(0xFF42A5F5)
-                                            : Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? const Color(0xFF42A5F5)
-                                                .withValues(alpha: 0.2)
-                                            : Colors.white
-                                                .withValues(alpha: 0.08),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        font.tagKey.tr(),
-                                        style: TextStyle(
-                                          color: isSelected
-                                              ? const Color(0xFF42A5F5)
-                                              : Colors.white60,
-                                          fontSize: 9.5,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  font.previewText,
-                                  style: _getReceiptFont(
-                                    fontOverride: font,
-                                    color: isSelected
-                                        ? const Color(0xFF42A5F5)
-                                        : Colors.white38,
-                                    fontSize: font == ReceiptFont.vt323 ? 13 : 10.5,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
+                            child: Text(
+                              'receipt.font_selector_title'.tr(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                          if (isSelected)
-                            const Icon(
-                              Icons.check_circle_rounded,
-                              color: Color(0xFF42A5F5),
-                              size: 16,
-                            ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(dialogCtx),
+                            icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 20),
+                          ),
                         ],
                       ),
                     ),
-                  );
-                }).toList(),
-                onChanged: (ReceiptFont? newFont) {
-                  if (newFont != null) {
-                    setState(() {
-                      _selectedFont = newFont;
-                    });
-                    FocusManager.instance.primaryFocus?.unfocus();
-                  }
-                },
+                    Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
+                    Flexible(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        shrinkWrap: true,
+                        itemCount: ReceiptFont.values.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 6),
+                        itemBuilder: (_, idx) {
+                          final font = ReceiptFont.values[idx];
+                          final isSelected = font == _selectedFont;
+                          return GestureDetector(
+                            onTap: () => Navigator.pop(dialogCtx, font),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                gradient: isSelected
+                                    ? LinearGradient(
+                                        colors: [
+                                          const Color(0xFF2196F3).withValues(alpha: 0.25),
+                                          const Color(0xFF0284C7).withValues(alpha: 0.14),
+                                        ],
+                                      )
+                                    : null,
+                                color: isSelected ? null : Colors.white.withValues(alpha: 0.04),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? const Color(0xFF38BDF8).withValues(alpha: 0.7)
+                                      : Colors.white.withValues(alpha: 0.06),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              font.name,
+                                              style: TextStyle(
+                                                color: isSelected ? const Color(0xFF7DD3FC) : Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                font.tagKey.tr(),
+                                                style: const TextStyle(
+                                                  color: Color(0xFF42A5F5),
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 9.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          font.previewText,
+                                          style: _getReceiptFont(
+                                            fontOverride: font,
+                                            color: isSelected ? const Color(0xFF7DD3FC) : Colors.white54,
+                                            fontSize: font == ReceiptFont.vt323 ? 13 : 11,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    const Icon(
+                                      Icons.check_circle_rounded,
+                                      color: Color(0xFF38BDF8),
+                                      size: 18,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            ),
           ),
+        );
+      },
+    );
+    if (selected != null && mounted) {
+      setState(() => _selectedFont = selected);
+      FocusManager.instance.primaryFocus?.unfocus();
+    }
         ],
       ),
     );

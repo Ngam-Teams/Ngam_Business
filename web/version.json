@@ -1,6 +1,6 @@
 {
-  "version": "1.0.38",
-  "build_number": 18,
-  "released_at": "2026-11-17T05:16:00Z",
-  "changelog": "Kod Interaktif Bawah Resit kini menyokong pilihan berbilang (multi-select) tanpa butang No Code dan rekaan cip yang lebih kemas."
+  "version": "1.0.39",
+  "build_number": 19,
+  "released_at": "2026-11-17T05:19:00Z",
+  "changelog": "Label 17 Google Fonts dibuang dan pemilih fon resit kini menggunakan popup Glassmorphism."
 }
