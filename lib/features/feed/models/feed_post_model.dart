@@ -25,12 +25,17 @@ class FeedMediaItem {
       };
 
   static bool isVideoUrl(String url) {
-    final clean = url.trim().toLowerCase();
+    final clean = url.trim().toLowerCase().split('?').first;
     return clean.endsWith('.mp4') ||
         clean.endsWith('.mov') ||
         clean.endsWith('.webm') ||
+        clean.endsWith('.m4v') ||
+        clean.endsWith('.mkv') ||
+        clean.endsWith('.avi') ||
+        clean.endsWith('.3gp') ||
         clean.contains('/video/') ||
-        clean.contains('.mp4?');
+        clean.contains('/feed_videos/') ||
+        url.trim().toLowerCase().contains('.mp4?');
   }
 }
 

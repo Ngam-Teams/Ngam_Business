@@ -1604,5 +1604,21 @@
     "desc_sql": "Eksport laporan Z harian, ringkasan cukai & bayaran terus ke SQL Accounting.",
     "desc_whatsapp": "Hantar amaran status pesanan & giliran automatik melalui WhatsApp Business API.",
     "desc_webhooks": "Cetuskan webhook HTTP masa nyata untuk pesanan baharu, bayaran & stok."
+  },
+  "feed_create": {
+    "pick_media_title": "Pilih Video & Gambar (Auto-Kesan)",
+    "pick_media_subtitle": "Pilih video dan/atau beberapa gambar dalam satu siaran ala TikTok. Seret gambar kecil untuk susun urutan.",
+    "btn_pick_media": "Pilih Media",
+    "btn_add_media": "Tambah Media",
+    "btn_camera_photo": "Kamera Foto",
+    "btn_record_video": "Rakam Video",
+    "btn_url": "Pautan URL",
+    "drag_reorder_hint": "Tekan & seret thumbnail untuk susun urutan slaid",
+    "add_short": "Tambah",
+    "auto_badge_video": "VIDEO",
+    "auto_badge_photo": "FOTO",
+    "sort_top": "Teratas",
+    "sort_newest": "Terkini",
+    "comments_count": "{} komen"
   }
 }

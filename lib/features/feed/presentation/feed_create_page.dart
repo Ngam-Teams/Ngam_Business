@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -13,6 +14,8 @@ import '../models/feed_post_model.dart';
 
 /// FeedCreatePage — Halaman Cipta & Muat Naik Video/Post Ala TikTok Studio.
 /// Dilengkapi dengan:
+/// - Pemilihan Media Bersepadu Auto-Kesan (Video & Gambar campur dalam satu siaran)
+/// - Susun semula slaid secara seret (Drag & Drop Reorder ala TikTok Carousel)
 /// - Aliran 2 langkah ala TikTok (1. Pilih & Pratonton Media 9:16 -> 2. Kapsyen, CTA Ngam & Siar/Draf)
 /// - Pilihan CTA terus ke fungsi Ngam (Order Now, Booking, Walk-in / Giliran, Tanya Kedai, Promo)
 /// - Sokongan Simpan ke Draf & Siar Segera
@@ -45,13 +48,13 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
   // Step 0 = Pilih Media, Step 1 = Kapsyen & Tetapan (untuk telefon); Desktop tunjuk sebelah-menyebelah
   int _mobileStep = 0;
 
-  String _mediaType = 'video'; // 'video' or 'image' (active picker tab)
   String _ctaType = 'queue';
   String _ctaText = '⚡ AMBIL GILIRAN';
   bool _isPinned = false;
 
-  // Multi-media Carousel state
+  // Multi-media Carousel state (supports mixed videos + photos)
   final List<_DraftMediaItem> _mediaItems = [];
+  int _mediaUidCounter = 0;
   int _activeMediaIndex = 0;
   final PageController _previewPageController = PageController();
   bool _isPreviewMuted = false;
@@ -137,13 +140,13 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
       _titleController.text = e.title;
       _captionController.text = e.caption ?? '';
       _serviceTagController.text = e.serviceTag ?? '';
-      _mediaType = e.mediaType;
       _ctaType = e.ctaType;
       _ctaText = e.ctaText;
       _isPinned = e.isPinned;
       _mobileStep = 1; // Terus ke halaman butiran jika menyunting
       for (final item in e.mediaItems) {
         final draft = _DraftMediaItem(
+          uid: 'm_${_mediaUidCounter++}',
           type: item.type,
           uploadedUrl: item.url,
         );
@@ -212,117 +215,182 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     }
   }
 
-  Future<void> _pickMedia({required bool isVideo, ImageSource source = ImageSource.gallery, bool append = false}) async {
+  bool _isVideoXFile(XFile file) {
+    final mime = file.mimeType?.toLowerCase().trim() ?? '';
+    if (mime.startsWith('video/')) return true;
+    if (mime.startsWith('image/')) return false;
+    final name = (file.name.isNotEmpty ? file.name : file.path).toLowerCase().split('?').first;
+    return name.endsWith('.mp4') ||
+        name.endsWith('.mov') ||
+        name.endsWith('.webm') ||
+        name.endsWith('.mkv') ||
+        name.endsWith('.avi') ||
+        name.endsWith('.m4v') ||
+        name.endsWith('.3gp');
+  }
+
+  Future<void> _pickMixedMedia({bool append = false}) async {
     if (_isSubmittingLock || _saving) return;
-    if (_mediaItems.length >= _maxCarouselItems && append) {
+    if (append && _mediaItems.length >= _maxCarouselItems) {
       showGlassToast(context, 'Maksimum $_maxCarouselItems media bagi setiap siaran.', isError: true);
       return;
     }
 
     try {
-      if (isVideo) {
-        final picked = await _picker.pickVideo(
-          source: source,
-          maxDuration: const Duration(minutes: 3),
-        );
-        if (picked == null) return;
+      final pickedList = await _picker.pickMultipleMedia(
+        imageQuality: 88,
+        maxWidth: 1440,
+        limit: _maxCarouselItems,
+      );
+      if (pickedList.isEmpty) return;
 
-        final bytes = await picked.readAsBytes();
+      final int remainingSlots = append ? (_maxCarouselItems - _mediaItems.length) : _maxCarouselItems;
+      final toAdd = pickedList.take(remainingSlots).toList();
+      if (pickedList.length > remainingSlots && mounted) {
+        showGlassToast(context, 'Hanya $_maxCarouselItems media pertama dipilih.');
+      }
+
+      final newDrafts = <_DraftMediaItem>[];
+      for (final f in toAdd) {
+        final isVideo = _isVideoXFile(f);
+        final bytes = await f.readAsBytes();
         final sizeMb = bytes.length / (1024 * 1024);
-        if (sizeMb > 120) {
+        final maxMb = isVideo ? 120 : 25;
+        if (sizeMb > maxMb) {
           if (mounted) {
             showGlassToast(
               context,
-              'Saiz fail (${sizeMb.toStringAsFixed(1)} MB) melebihi had 120 MB.',
+              'Fail ${f.name} (${sizeMb.toStringAsFixed(1)} MB) melebihi had $maxMb MB.',
               isError: true,
             );
           }
-          return;
+          continue;
         }
-
-        final draft = _DraftMediaItem(
-          file: picked,
+        newDrafts.add(_DraftMediaItem(
+          uid: 'm_${_mediaUidCounter++}',
+          file: f,
           bytes: bytes,
-          fileName: picked.name,
-          type: 'video',
-        );
+          fileName: f.name,
+          type: isVideo ? 'video' : 'image',
+        ));
+      }
+      if (newDrafts.isEmpty) return;
 
-        setState(() {
-          _mediaType = 'video';
-          if (!append) {
-            for (final old in _mediaItems) {
-              old.videoController?.dispose();
-            }
-            _mediaItems.clear();
+      setState(() {
+        if (!append) {
+          for (final old in _mediaItems) {
+            old.videoController?.dispose();
           }
-          _mediaItems.add(draft);
-          _activeMediaIndex = _mediaItems.length - 1;
-          _urlController.clear();
-        });
-
-        _jumpPreviewTo(_activeMediaIndex);
-        await _initItemVideoPreview(draft, localFile: picked);
-      } else {
-        List<XFile> pickedList = [];
-        if (source == ImageSource.gallery) {
-          pickedList = await _picker.pickMultiImage(
-            imageQuality: 88,
-            maxWidth: 1440,
-          );
-        } else {
-          final single = await _picker.pickImage(
-            source: source,
-            imageQuality: 88,
-            maxWidth: 1440,
-          );
-          if (single != null) pickedList = [single];
+          _mediaItems.clear();
         }
-        if (pickedList.isEmpty) return;
+        _mediaItems.addAll(newDrafts);
+        _activeMediaIndex = append ? (_mediaItems.length - newDrafts.length) : 0;
+        _urlController.clear();
+      });
 
-        final int remainingSlots = append ? (_maxCarouselItems - _mediaItems.length) : _maxCarouselItems;
-        final toAdd = pickedList.take(remainingSlots).toList();
-        if (pickedList.length > remainingSlots && mounted) {
-          showGlassToast(context, 'Hanya $_maxCarouselItems media pertama dipilih.');
+      _jumpPreviewTo(_activeMediaIndex);
+      for (final d in newDrafts) {
+        if (d.type == 'video' && d.file != null) {
+          await _initItemVideoPreview(d, localFile: d.file);
         }
-
-        final newDrafts = <_DraftMediaItem>[];
-        for (final f in toAdd) {
-          final bytes = await f.readAsBytes();
-          final sizeMb = bytes.length / (1024 * 1024);
-          if (sizeMb > 25) {
-            if (mounted) {
-              showGlassToast(context, 'Gambar ${f.name} melebihi had 25 MB.', isError: true);
-            }
-            continue;
-          }
-          newDrafts.add(_DraftMediaItem(
-            file: f,
-            bytes: bytes,
-            fileName: f.name,
-            type: 'image',
-          ));
-        }
-        if (newDrafts.isEmpty) return;
-
-        setState(() {
-          _mediaType = 'image';
-          if (!append) {
-            for (final old in _mediaItems) {
-              old.videoController?.dispose();
-            }
-            _mediaItems.clear();
-          }
-          _mediaItems.addAll(newDrafts);
-          _activeMediaIndex = append ? (_mediaItems.length - newDrafts.length) : 0;
-          _urlController.clear();
-        });
-        _jumpPreviewTo(_activeMediaIndex);
       }
     } catch (e) {
       if (mounted) {
         showGlassToast(context, 'Gagal memilih media: $e', isError: true);
       }
     }
+  }
+
+  Future<void> _pickCameraCapture({required bool isVideo, bool append = false}) async {
+    if (_isSubmittingLock || _saving) return;
+    if (append && _mediaItems.length >= _maxCarouselItems) {
+      showGlassToast(context, 'Maksimum $_maxCarouselItems media bagi setiap siaran.', isError: true);
+      return;
+    }
+
+    try {
+      final XFile? picked = isVideo
+          ? await _picker.pickVideo(
+              source: ImageSource.camera,
+              maxDuration: const Duration(minutes: 3),
+            )
+          : await _picker.pickImage(
+              source: ImageSource.camera,
+              imageQuality: 88,
+              maxWidth: 1440,
+            );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final sizeMb = bytes.length / (1024 * 1024);
+      final maxMb = isVideo ? 120 : 25;
+      if (sizeMb > maxMb) {
+        if (mounted) {
+          showGlassToast(
+            context,
+            'Saiz fail (${sizeMb.toStringAsFixed(1)} MB) melebihi had $maxMb MB.',
+            isError: true,
+          );
+        }
+        return;
+      }
+
+      final draft = _DraftMediaItem(
+        uid: 'm_${_mediaUidCounter++}',
+        file: picked,
+        bytes: bytes,
+        fileName: picked.name,
+        type: isVideo ? 'video' : 'image',
+      );
+
+      setState(() {
+        if (!append) {
+          for (final old in _mediaItems) {
+            old.videoController?.dispose();
+          }
+          _mediaItems.clear();
+        }
+        _mediaItems.add(draft);
+        _activeMediaIndex = _mediaItems.length - 1;
+        _urlController.clear();
+      });
+
+      _jumpPreviewTo(_activeMediaIndex);
+      if (isVideo) {
+        await _initItemVideoPreview(draft, localFile: picked);
+      }
+    } catch (e) {
+      if (mounted) {
+        showGlassToast(context, 'Gagal memilih media: $e', isError: true);
+      }
+    }
+  }
+
+  void _reorderMedia(int oldIndex, int newIndex) {
+    if (oldIndex == newIndex) return;
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final activeUid = (_activeMediaIndex >= 0 && _activeMediaIndex < _mediaItems.length)
+          ? _mediaItems[_activeMediaIndex].uid
+          : null;
+      final moved = _mediaItems.removeAt(oldIndex);
+      _mediaItems.insert(newIndex, moved);
+      if (activeUid != null) {
+        final newActive = _mediaItems.indexWhere((m) => m.uid == activeUid);
+        if (newActive != -1) {
+          _activeMediaIndex = newActive;
+        }
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_previewPageController.hasClients &&
+          _activeMediaIndex >= 0 &&
+          _activeMediaIndex < _mediaItems.length) {
+        _previewPageController.jumpToPage(_activeMediaIndex);
+      }
+    });
   }
 
   void _jumpPreviewTo(int index) {
@@ -363,6 +431,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     }
     final isVid = FeedMediaItem.isVideoUrl(url);
     final draft = _DraftMediaItem(
+      uid: 'm_${_mediaUidCounter++}',
       type: isVid ? 'video' : 'image',
       uploadedUrl: url,
     );
@@ -375,7 +444,6 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
       }
       _mediaItems.add(draft);
       _activeMediaIndex = _mediaItems.length - 1;
-      _mediaType = draft.type;
       _showUrlInput = false;
       _urlController.clear();
     });
@@ -640,38 +708,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     return Column(
       mainAxisSize: isDesktop ? MainAxisSize.min : MainAxisSize.max,
       children: [
-        // Tab Video / Foto & Carousel ala TikTok
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _buildMediaTabChip(
-                  label: 'Video',
-                  icon: HugeIcons.strokeRoundedVideo01,
-                  selected: _mediaType == 'video',
-                  onTap: () => setState(() => _mediaType = 'video'),
-                ),
-              ),
-              Expanded(
-                child: _buildMediaTabChip(
-                  label: 'Foto / Carousel',
-                  icon: HugeIcons.strokeRoundedImage01,
-                  selected: _mediaType == 'image',
-                  onTap: () => setState(() => _mediaType = 'image'),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Kanvas Pratonton (Sokong Portrait & Landscape tanpa potong)
+        // Kanvas Pratonton (Sokong Campuran Video + Foto, Portrait & Landscape tanpa potong)
         Flexible(
           child: AspectRatio(
             aspectRatio: 9 / 15,
@@ -698,126 +735,218 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
           ),
         ),
 
-        // Jalur Thumbnail Carousel apabila ada media
+        // Jalur Thumbnail Carousel Boleh Seret (Drag & Drop Reorder)
         if (_mediaItems.isNotEmpty) ...[
           const SizedBox(height: 10),
+          if (_mediaItems.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.drag_indicator_rounded, color: Color(0xFF00E5FF), size: 13),
+                  const SizedBox(width: 4),
+                  Text(
+                    'feed_create.drag_reorder_hint'.tr(),
+                    style: const TextStyle(color: Colors.white54, fontSize: 10.5, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
           SizedBox(
-            height: 54,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _mediaItems.length + (_mediaItems.length < _maxCarouselItems ? 1 : 0),
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (ctx, i) {
-                if (i == _mediaItems.length) {
-                  return GestureDetector(
-                    onTap: () => _pickMedia(
-                      isVideo: _mediaType == 'video',
-                      source: ImageSource.gallery,
-                      append: true,
-                    ),
-                    child: Container(
-                      width: 48,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFEC4899).withValues(alpha: 0.45)),
-                      ),
-                      child: const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.add_rounded, color: Color(0xFFEC4899), size: 18),
-                          Text('Tambah', style: TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+            height: 60,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Theme(
+                    data: Theme.of(context).copyWith(canvasColor: Colors.transparent),
+                    child: ReorderableListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      buildDefaultDragHandles: false,
+                      proxyDecorator: (child, index, animation) {
+                        return Material(
+                          color: Colors.transparent,
+                          elevation: 6,
+                          shadowColor: const Color(0xFFEC4899).withValues(alpha: 0.4),
+                          child: ScaleTransition(
+                            scale: Tween<double>(begin: 1.0, end: 1.08).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      itemCount: _mediaItems.length,
+                      onReorder: _reorderMedia,
+                      itemBuilder: (ctx, i) {
+                        final item = _mediaItems[i];
+                        final isSel = i == _activeMediaIndex;
+                        final isVid = item.type == 'video';
+                        return ReorderableDragStartListener(
+                          key: ValueKey(item.uid),
+                          index: i,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8, top: 4, bottom: 2),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _activeMediaIndex = i);
+                                _jumpPreviewTo(i);
+                              },
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 50,
+                                    height: 54,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1A1A2E),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isSel ? const Color(0xFFEC4899) : Colors.white24,
+                                        width: isSel ? 2 : 1,
+                                      ),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        if (isVid)
+                                          (item.videoInitialized && item.videoController != null
+                                              ? FittedBox(
+                                                  fit: BoxFit.cover,
+                                                  child: SizedBox(
+                                                    width: item.videoController!.value.size.width > 0
+                                                        ? item.videoController!.value.size.width
+                                                        : 50,
+                                                    height: item.videoController!.value.size.height > 0
+                                                        ? item.videoController!.value.size.height
+                                                        : 54,
+                                                    child: VideoPlayer(item.videoController!),
+                                                  ),
+                                                )
+                                              : const Center(
+                                                  child: Icon(Icons.play_circle_fill_rounded, color: Colors.white70, size: 22),
+                                                ))
+                                        else if (item.bytes != null)
+                                          Image.memory(item.bytes!, fit: BoxFit.cover)
+                                        else if (item.uploadedUrl != null)
+                                          Image.network(item.uploadedUrl!, fit: BoxFit.cover)
+                                        else
+                                          const SizedBox.shrink(),
 
-                final item = _mediaItems[i];
-                final isSel = i == _activeMediaIndex;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _activeMediaIndex = i);
-                    _jumpPreviewTo(i);
-                  },
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
+                                        // Lencana Jenis Media (Auto-kesan Video/Foto) + Nombor Urutan
+                                        Positioned(
+                                          left: 2,
+                                          right: 2,
+                                          bottom: 2,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withValues(alpha: 0.7),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                if (isVid)
+                                                  const Icon(Icons.videocam_rounded, color: Color(0xFF00E5FF), size: 9),
+                                                if (isVid) const SizedBox(width: 2),
+                                                Text(
+                                                  '${i + 1}',
+                                                  style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: -4,
+                                    right: -4,
+                                    child: GestureDetector(
+                                      onTap: () => _removeMediaAt(i),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.redAccent,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 11),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                if (_mediaItems.length < _maxCarouselItems) ...[
+                  const SizedBox(width: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, bottom: 2),
+                    child: GestureDetector(
+                      onTap: () => _pickMixedMedia(append: true),
+                      child: Container(
                         width: 48,
                         height: 54,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A2E),
+                          color: Colors.white.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isSel ? const Color(0xFFEC4899) : Colors.white24,
-                            width: isSel ? 2 : 1,
-                          ),
+                          border: Border.all(color: const Color(0xFFEC4899).withValues(alpha: 0.45)),
                         ),
-                        clipBehavior: Clip.antiAlias,
-                        child: item.type == 'video'
-                            ? const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white70, size: 22))
-                            : (item.bytes != null
-                                ? Image.memory(item.bytes!, fit: BoxFit.cover)
-                                : (item.uploadedUrl != null
-                                    ? Image.network(item.uploadedUrl!, fit: BoxFit.cover)
-                                    : const SizedBox.shrink())),
-                      ),
-                      Positioned(
-                        top: -4,
-                        right: -4,
-                        child: GestureDetector(
-                          onTap: () => _removeMediaAt(i),
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Colors.redAccent,
-                              shape: BoxShape.circle,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.add_rounded, color: Color(0xFFEC4899), size: 18),
+                            Text(
+                              'feed_create.add_short'.tr(),
+                              style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold),
                             ),
-                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 11),
-                          ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                );
-              },
+                ],
+              ],
             ),
           ),
         ],
 
         const SizedBox(height: 10),
-        // Pilihan Pantas: Galeri / Tambah / Kamera / URL
+        // Pilihan Pantas: Galeri Campuran (Auto-Kesan) / Kamera / Rakam / URL
         Wrap(
           alignment: WrapAlignment.center,
           spacing: 8,
           runSpacing: 6,
           children: [
             _buildMiniActionChip(
-              icon: Icons.photo_library_rounded,
+              icon: Icons.perm_media_rounded,
               label: _mediaItems.isEmpty
-                  ? (_mediaType == 'video' ? 'Pilih Video' : 'Pilih Foto')
-                  : 'Tambah ${_mediaType == 'video' ? 'Video' : 'Foto'}',
-              onTap: () => _pickMedia(
-                isVideo: _mediaType == 'video',
-                source: ImageSource.gallery,
-                append: _mediaItems.isNotEmpty,
-              ),
+                  ? 'feed_create.btn_pick_media'.tr()
+                  : 'feed_create.btn_add_media'.tr(),
+              onTap: () => _pickMixedMedia(append: _mediaItems.isNotEmpty),
             ),
-            if (!kIsWeb)
+            if (!kIsWeb) ...[
+              _buildMiniActionChip(
+                icon: Icons.camera_alt_rounded,
+                label: 'feed_create.btn_camera_photo'.tr(),
+                onTap: () => _pickCameraCapture(isVideo: false, append: _mediaItems.isNotEmpty),
+              ),
               _buildMiniActionChip(
                 icon: Icons.videocam_rounded,
-                label: _mediaType == 'video' ? 'Rakam' : 'Kamera',
-                onTap: () => _pickMedia(
-                  isVideo: _mediaType == 'video',
-                  source: ImageSource.camera,
-                  append: _mediaItems.isNotEmpty,
-                ),
+                label: 'feed_create.btn_record_video'.tr(),
+                onTap: () => _pickCameraCapture(isVideo: true, append: _mediaItems.isNotEmpty),
               ),
+            ],
             _buildMiniActionChip(
               icon: Icons.link_rounded,
-              label: 'Pautan URL',
+              label: 'feed_create.btn_url'.tr(),
               onTap: () => setState(() => _showUrlInput = !_showUrlInput),
             ),
           ],
@@ -832,7 +961,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
                   controller: _urlController,
                   style: const TextStyle(color: Colors.white, fontSize: 12),
                   decoration: InputDecoration(
-                    hintText: 'https://.../video.mp4',
+                    hintText: 'https://.../media.mp4',
                     hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
                     filled: false,
                     fillColor: Colors.transparent,
@@ -857,7 +986,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
-                child: Text(_mediaItems.isEmpty ? 'Guna' : 'Tambah', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text(_mediaItems.isEmpty ? 'Guna' : 'feed_create.add_short'.tr(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -866,45 +995,9 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
     );
   }
 
-  Widget _buildMediaTabChip({
-    required String label,
-    required dynamic icon,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          gradient: selected
-              ? const LinearGradient(colors: [Color(0xFFEC4899), Color(0xFF8B5CF6)])
-              : null,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            HugeIcon(icon: icon, color: selected ? Colors.white : Colors.white54, size: 15),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : Colors.white54,
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.bold : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyMediaPicker() {
     return InkWell(
-      onTap: () => _pickMedia(isVideo: _mediaType == 'video', source: ImageSource.gallery),
+      onTap: () => _pickMixedMedia(),
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -931,25 +1024,28 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
                   ),
                 ],
               ),
-              child: HugeIcon(
-                icon: _mediaType == 'video' ? HugeIcons.strokeRoundedVideo01 : HugeIcons.strokeRoundedImage01,
+              child: const HugeIcon(
+                icon: HugeIcons.strokeRoundedVideo01,
                 color: Colors.white,
                 size: 32,
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              _mediaType == 'video' ? 'Pilih Video (Portrait / Landscape)' : 'Pilih Gambar / Carousel (Boleh Banyak)',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                'feed_create.pick_media_title'.tr(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 6),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                'Ketik di sini untuk muat naik dari galeri. Boleh pilih berbilang gambar & video dalam satu siaran ala TikTok.',
+                'feed_create.pick_media_subtitle'.tr(),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white54, fontSize: 11.5, height: 1.4),
+                style: const TextStyle(color: Colors.white54, fontSize: 11.5, height: 1.4),
               ),
             ),
           ],
@@ -1212,7 +1308,11 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
                       decoration: const InputDecoration(
                         hintText: 'Tajuk menarik (cth: Promo Kopi RM5)...',
                         hintStyle: TextStyle(color: Colors.white38, fontSize: 13.5, fontWeight: FontWeight.normal),
+                        filled: false,
+                        fillColor: Colors.transparent,
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                         counterText: '',
                         isDense: true,
                         contentPadding: EdgeInsets.only(bottom: 8),
@@ -1227,7 +1327,11 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
                       decoration: const InputDecoration(
                         hintText: 'Tulis kapsyen, cerita & hashtag untuk tarik pelanggan...',
                         hintStyle: TextStyle(color: Colors.white38, fontSize: 12.5),
+                        filled: false,
+                        fillColor: Colors.transparent,
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.only(top: 6),
                       ),
@@ -1447,15 +1551,19 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
             hintText: 'Cth: 🍔 Set Burger Special • RM14.90',
             hintStyle: const TextStyle(color: Colors.white24, fontSize: 12),
             prefixIcon: const Icon(Icons.local_offer_outlined, color: Color(0xFF00E5FF), size: 18),
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.05),
+            filled: false,
+            fillColor: Colors.transparent,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xFFEC4899)),
             ),
           ),
         ),
@@ -1629,6 +1737,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
 }
 
 class _DraftMediaItem {
+  final String uid;
   final XFile? file;
   final Uint8List? bytes;
   final String? fileName;
@@ -1639,6 +1748,7 @@ class _DraftMediaItem {
   bool isPlaying = true;
 
   _DraftMediaItem({
+    required this.uid,
     this.file,
     this.bytes,
     this.fileName,

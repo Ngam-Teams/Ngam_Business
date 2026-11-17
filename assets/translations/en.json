@@ -1604,5 +1604,21 @@
     "desc_sql": "Export daily Z-reports, tax summaries & payouts directly to SQL Accounting.",
     "desc_whatsapp": "Send automated order status & queue alerts via WhatsApp Business API.",
     "desc_webhooks": "Trigger real-time HTTP webhooks on new orders, payments & stock alerts."
+  },
+  "feed_create": {
+    "pick_media_title": "Select Videos & Photos (Auto-Detect)",
+    "pick_media_subtitle": "Pick videos and/or multiple photos in one post just like TikTok. Drag thumbnails to reorder.",
+    "btn_pick_media": "Select Media",
+    "btn_add_media": "Add Media",
+    "btn_camera_photo": "Take Photo",
+    "btn_record_video": "Record Video",
+    "btn_url": "Media URL",
+    "drag_reorder_hint": "Hold & drag thumbnails to reorder slides",
+    "add_short": "Add",
+    "auto_badge_video": "VIDEO",
+    "auto_badge_photo": "PHOTO",
+    "sort_top": "Top",
+    "sort_newest": "Newest",
+    "comments_count": "{} comments"
   }
 }

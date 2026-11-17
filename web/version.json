@@ -1,6 +1,6 @@
 {
-  "version": "1.0.54",
-  "build_number": 34,
-  "released_at": "2026-11-17T14:35:00Z",
-  "changelog": "Naik taraf penuh Peti Mesej Peniaga setanding aplikasi pelanggan: hantar kamera/pelbagai gambar/video/rakam video, pemain video & kad fail dalam chat, balas/salin/cuba semula/padam mesej, carian dalam chat, WhatsApp pelanggan, auto-simpan draf, serta fallback muat naik media automatik."
+  "version": "1.0.55",
+  "build_number": 35,
+  "released_at": "2026-11-17T15:00:00Z",
+  "changelog": "Muat naik Feed bersatu gaya TikTok tanpa tab berasingan (pilih gabungan video & gambar sekaligus dengan pengesanan automatik), susun semula slaid secara seret & lepas (drag-and-drop), medan teks lutsinar tanpa kotak latar gelap, serta paparan pratonton & komen gambar pelanggan."
 }

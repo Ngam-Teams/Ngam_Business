@@ -2353,23 +2353,33 @@ class _PhoneMockupPreviewDialog extends StatefulWidget {
 }
 
 class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
-  VideoPlayerController? _videoController;
-  bool _isVideoInitialized = false;
+  final PageController _carouselController = PageController();
+  final Map<int, VideoPlayerController> _videoControllers = {};
+  final Set<int> _initializedVideos = {};
+  final Set<int> _erroredVideos = {};
+  int _carouselIndex = 0;
   bool _isMuted = false;
-  bool _hasVideoError = false;
   late int _liveCommentsCount;
 
-  bool get _isVideo =>
-      widget.post.mediaItems.isNotEmpty
-          ? widget.post.mediaItems.first.isVideo
-          : (widget.post.mediaType == 'video' || FeedMediaItem.isVideoUrl(widget.post.primaryMediaUrl));
+  List<FeedMediaItem> get _mediaItems => widget.post.mediaItems.isNotEmpty
+      ? widget.post.mediaItems
+      : [FeedMediaItem(url: widget.post.primaryMediaUrl, type: widget.post.mediaType)];
+
+  FeedMediaItem get _activeMedia => _mediaItems[_carouselIndex.clamp(0, _mediaItems.length - 1)];
+
+  bool get _isVideo => _activeMedia.isVideo;
+
+  VideoPlayerController? get _videoController => _videoControllers[_carouselIndex];
+  bool get _isVideoInitialized => _initializedVideos.contains(_carouselIndex);
 
   @override
   void initState() {
     super.initState();
     _liveCommentsCount = widget.post.commentsCount;
-    if (_isVideo) {
-      _initVideo();
+    for (int i = 0; i < _mediaItems.length; i++) {
+      if (_mediaItems[i].isVideo) {
+        _initVideoForIndex(i, _mediaItems[i].url, autoPlay: i == 0);
+      }
     }
   }
 
@@ -2392,19 +2402,23 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
     );
   }
 
-  void _initVideo() {
+  void _initVideoForIndex(int idx, String url, {required bool autoPlay}) {
     try {
-      final uri = Uri.tryParse(widget.post.primaryMediaUrl);
+      final uri = Uri.tryParse(url);
       if (uri == null) {
-        setState(() => _hasVideoError = true);
+        setState(() => _erroredVideos.add(idx));
         return;
       }
       final controller = VideoPlayerController.networkUrl(uri);
-      _videoController = controller;
+      _videoControllers[idx] = controller;
       controller.initialize().then((_) async {
-        if (mounted) {
-          await controller.setLooping(true);
-          await controller.setVolume(_isMuted ? 0.0 : 1.0);
+        if (!mounted) {
+          controller.dispose();
+          return;
+        }
+        await controller.setLooping(true);
+        await controller.setVolume(_isMuted ? 0.0 : 1.0);
+        if (autoPlay && _carouselIndex == idx) {
           try {
             await controller.play();
           } catch (e) {
@@ -2413,43 +2427,63 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
             _isMuted = true;
             await controller.play();
           }
-          setState(() => _isVideoInitialized = true);
+        }
+        if (mounted) {
+          setState(() => _initializedVideos.add(idx));
         }
       }).catchError((err) {
         debugPrint('[PhoneMockup] Video error: $err');
         if (mounted) {
-          setState(() => _hasVideoError = true);
+          setState(() => _erroredVideos.add(idx));
         }
       });
     } catch (e) {
       debugPrint('[PhoneMockup] Init exception: $e');
-      setState(() => _hasVideoError = true);
+      if (mounted) setState(() => _erroredVideos.add(idx));
     }
   }
 
   @override
   void dispose() {
-    _videoController?.dispose();
+    _carouselController.dispose();
+    for (final c in _videoControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
   void _togglePlayPause() {
-    if (_videoController == null || !_isVideoInitialized) return;
+    final vc = _videoController;
+    if (vc == null || !_isVideoInitialized) return;
     setState(() {
-      if (_videoController!.value.isPlaying) {
-        _videoController!.pause();
+      if (vc.value.isPlaying) {
+        vc.pause();
       } else {
-        _videoController!.play();
+        vc.play();
       }
     });
   }
 
   void _toggleMute() {
-    if (_videoController == null) return;
     setState(() {
       _isMuted = !_isMuted;
-      _videoController!.setVolume(_isMuted ? 0.0 : 1.0);
+      for (final c in _videoControllers.values) {
+        c.setVolume(_isMuted ? 0.0 : 1.0);
+      }
     });
+  }
+
+  void _onCarouselPageChanged(int idx) {
+    setState(() => _carouselIndex = idx);
+    for (final entry in _videoControllers.entries) {
+      if (_initializedVideos.contains(entry.key)) {
+        if (entry.key == idx) {
+          entry.value.play();
+        } else {
+          entry.value.pause();
+        }
+      }
+    }
   }
 
   @override
@@ -2491,84 +2525,89 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
             borderRadius: BorderRadius.circular(isPhone ? 25 : 33),
             child: Stack(
               children: [
-                // Media Layer: Video atau Gambar
+                // Media Layer: Sokong Campuran Carousel Video & Foto
                 Positioned.fill(
-                  child: _isVideo
-                      ? Stack(
+                  child: PageView.builder(
+                    controller: _carouselController,
+                    itemCount: _mediaItems.length,
+                    onPageChanged: _onCarouselPageChanged,
+                    itemBuilder: (ctx, i) {
+                      final item = _mediaItems[i];
+                      if (item.isVideo) {
+                        final vc = _videoControllers[i];
+                        final isInit = _initializedVideos.contains(i);
+                        final hasErr = _erroredVideos.contains(i);
+                        return Stack(
                           alignment: Alignment.center,
                           children: [
-                            if (_isVideoInitialized && _videoController != null)
+                            if (isInit && vc != null)
                               IgnorePointer(
                                 child: SizedBox.expand(
                                   child: FittedBox(
-                                    fit: BoxFit.cover,
+                                    fit: BoxFit.contain,
                                     clipBehavior: Clip.hardEdge,
                                     child: SizedBox(
-                                      width: _videoController!.value.size.width > 0
-                                          ? _videoController!.value.size.width
-                                          : 16,
-                                      height: _videoController!.value.size.height > 0
-                                          ? _videoController!.value.size.height
-                                          : 9,
-                                      child: VideoPlayer(_videoController!),
+                                      width: vc.value.size.width > 0 ? vc.value.size.width : 16,
+                                      height: vc.value.size.height > 0 ? vc.value.size.height : 9,
+                                      child: VideoPlayer(vc),
                                     ),
                                   ),
                                 ),
                               )
-                              else if (_hasVideoError)
-                                Container(
-                                  color: const Color(0xFF1E1B4B),
-                                  child: const Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.error_outline_rounded, color: Colors.white38, size: 40),
-                                        SizedBox(height: 8),
-                                        Text('Gagal memuat video', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                              else
-                                Container(
-                                  color: const Color(0xFF0F172A),
-                                  child: const Center(
-                                    child: CircularProgressIndicator(color: Color(0xFFEC4899)),
+                            else if (hasErr)
+                              Container(
+                                color: const Color(0xFF1E1B4B),
+                                child: const Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.error_outline_rounded, color: Colors.white38, size: 40),
+                                      SizedBox(height: 8),
+                                      Text('Gagal memuat video', style: TextStyle(color: Colors.white54, fontSize: 12)),
+                                    ],
                                   ),
                                 ),
-
-                              // Interactive tap capture overlay
-                              Positioned.fill(
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: _togglePlayPause,
+                              )
+                            else
+                              Container(
+                                color: const Color(0xFF0F172A),
+                                child: const Center(
+                                  child: CircularProgressIndicator(color: Color(0xFFEC4899)),
                                 ),
                               ),
-
-                              // Animated pause indicator
-                              if (_isVideoInitialized && _videoController != null && !_videoController!.value.isPlaying)
-                                IgnorePointer(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black54,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white38),
-                                    ),
-                                    child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 42),
+                            Positioned.fill(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: _togglePlayPause,
+                              ),
+                            ),
+                            if (isInit && vc != null && !vc.value.isPlaying)
+                              IgnorePointer(
+                                child: Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white38),
                                   ),
+                                  child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 42),
                                 ),
-                            ],
-                          )
-                      : Image.network(
-                          widget.post.primaryMediaUrl,
-                          fit: BoxFit.contain,
-                          loadingBuilder: (ctx, child, progress) {
-                            if (progress == null) return child;
-                            return Container(color: const Color(0xFF1E1E2E));
-                          },
-                          errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade900),
-                        ),
+                              ),
+                          ],
+                        );
+                      }
+
+                      return Image.network(
+                        item.url,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (ctx, child, progress) {
+                          if (progress == null) return child;
+                          return Container(color: const Color(0xFF1E1E2E));
+                        },
+                        errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade900),
+                      );
+                    },
+                  ),
                 ),
 
                 // Gradient Overlay
@@ -2589,6 +2628,27 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                     ),
                   ),
                 ),
+
+                // Carousel counter badge when multiple slides
+                if (_mediaItems.length > 1)
+                  Positioned(
+                    top: 44,
+                    right: 14,
+                    child: IgnorePointer(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Text(
+                          '${_carouselIndex + 1} / ${_mediaItems.length}',
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // Top Bar Mockup
                 Positioned(
@@ -2935,6 +2995,14 @@ class _OwnerPostCommentsSheetState extends State<_OwnerPostCommentsSheet> {
     return '${dt.day}/${dt.month}';
   }
 
+  ({String text, String imageUrl}) _extractCommentTextAndImage(String raw) {
+    final imgRegex = RegExp(r'\[\[IMG:([^\]]+)\]\]', caseSensitive: false);
+    final match = imgRegex.firstMatch(raw);
+    final imageUrl = match != null ? (match.group(1) ?? '').trim() : '';
+    final cleanText = raw.replaceAll(imgRegex, '').trim();
+    return (text: cleanText, imageUrl: imageUrl);
+  }
+
   Future<void> _sendOwnerComment({String? presetText}) async {
     final text = (presetText ?? _controller.text).trim();
     if (text.isEmpty || _sending) return;
@@ -3195,7 +3263,9 @@ class _OwnerPostCommentsSheetState extends State<_OwnerPostCommentsSheet> {
                             final String cid = c['id']?.toString() ?? '';
                             final String user = c['user']?.toString() ?? 'Pelanggan Ngam';
                             final String? avatar = c['avatar']?.toString();
-                            final String text = c['text']?.toString() ?? '';
+                            final parsed = _extractCommentTextAndImage(c['text']?.toString() ?? '');
+                            final String text = parsed.text;
+                            final String imageUrl = parsed.imageUrl;
                             final String time = _formatTimeAgo(c['createdAt']?.toString() ?? '');
                             final int likes = (c['likes'] as num?)?.toInt() ?? 0;
                             final bool isLiked = c['isLiked'] == true;
@@ -3234,11 +3304,27 @@ class _OwnerPostCommentsSheetState extends State<_OwnerPostCommentsSheet> {
                                               if (isOwner) _buildOwnerBadge(),
                                             ],
                                           ),
-                                          const SizedBox(height: 3),
-                                          Text(
-                                            text,
-                                            style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.35),
-                                          ),
+                                          if (text.isNotEmpty) ...[
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              text,
+                                              style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.35),
+                                            ),
+                                          ],
+                                          if (imageUrl.isNotEmpty) ...[
+                                            const SizedBox(height: 6),
+                                            ClipRRect(
+                                              borderRadius: BorderRadius.circular(10),
+                                              child: ConstrainedBox(
+                                                constraints: const BoxConstraints(maxWidth: 132, maxHeight: 144),
+                                                child: Image.network(
+                                                  imageUrl,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                           const SizedBox(height: 6),
                                           Row(
                                             children: [
@@ -3307,6 +3393,7 @@ class _OwnerPostCommentsSheetState extends State<_OwnerPostCommentsSheet> {
                                         final String rid = r['id']?.toString() ?? '';
                                         final String rUser = r['user']?.toString() ?? 'Pelanggan';
                                         final String rTarget = r['replyToUser']?.toString() ?? '';
+                                        final rParsed = _extractCommentTextAndImage(r['text']?.toString() ?? '');
                                         final bool rIsOwner = r['isOwner'] == true;
                                         final int rLikes = (r['likes'] as num?)?.toInt() ?? 0;
                                         final bool rLiked = r['isLiked'] == true;
@@ -3346,11 +3433,27 @@ class _OwnerPostCommentsSheetState extends State<_OwnerPostCommentsSheet> {
                                                         ],
                                                       ],
                                                     ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      r['text']?.toString() ?? '',
-                                                      style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
-                                                    ),
+                                                    if (rParsed.text.isNotEmpty) ...[
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        rParsed.text,
+                                                        style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+                                                      ),
+                                                    ],
+                                                    if (rParsed.imageUrl.isNotEmpty) ...[
+                                                      const SizedBox(height: 6),
+                                                      ClipRRect(
+                                                        borderRadius: BorderRadius.circular(10),
+                                                        child: ConstrainedBox(
+                                                          constraints: const BoxConstraints(maxWidth: 120, maxHeight: 132),
+                                                          child: Image.network(
+                                                            rParsed.imageUrl,
+                                                            fit: BoxFit.cover,
+                                                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                     const SizedBox(height: 4),
                                                     Row(
                                                       children: [
@@ -3498,7 +3601,11 @@ class _OwnerPostCommentsSheetState extends State<_OwnerPostCommentsSheet> {
                                   ? 'Balas @$_replyingToUser sebagai $shopName (Pemilik)...'
                                   : 'Tulis komen sebagai $shopName (Pemilik Kedai)...',
                               hintStyle: const TextStyle(color: Colors.white38, fontSize: 12.5),
+                              filled: false,
+                              fillColor: Colors.transparent,
                               border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
                               contentPadding: const EdgeInsets.symmetric(vertical: 10),
                             ),
                           ),
