@@ -113,7 +113,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   // Bottom Code Selector
   final Set<BottomCodeType> _selectedBottomCodes = {BottomCodeType.qrReceipt};
   bool _enableWhatsappReceipt = true;
-  bool _hasUnsavedChanges = false;
+  String _savedSignature = '';
+
+  String _currentSignature() {
+    final codes = _selectedBottomCodes.map((e) => e.name).toList()..sort();
+    return '$_paperWidth|${_selectedFont.index}|${_headerAlign.index}|${_logoSize.index}|$_includeLogo|$_enableWhatsappReceipt|${codes.join(",")}|${_storeNameCtrl.text}|${_storeTaglineCtrl.text}|${_ssmCtrl.text}|${_sstCtrl.text}|${_addressCtrl.text}|${_phoneCtrl.text}|${_socialCtrl.text}';
+  }
 
   // Real Receipt Image Capture
   final GlobalKey _receiptKey = GlobalKey();
@@ -157,6 +162,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             );
         }
       });
+      _savedSignature = _currentSignature();
     } catch (_) {}
   }
 
@@ -383,12 +389,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       );
     } catch (_) {}
     if (!mounted) return;
-    setState(() => _hasUnsavedChanges = false);
+    setState(() => _savedSignature = _currentSignature());
     showGlassToast(context, 'receipt.template_saved'.tr());
   }
 
   Future<void> _handleBackPressed() async {
-    if (!_hasUnsavedChanges) {
+    if (_savedSignature.isEmpty || _currentSignature() == _savedSignature) {
       if (mounted) Navigator.pop(context);
       return;
     }
@@ -465,11 +471,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
 
     if (!mounted) return;
     if (action == 'save') {
-      _saveTemplate();
-      Navigator.pop(context);
+      await _saveTemplate();
+      if (mounted) Navigator.pop(context);
     } else if (action == 'discard') {
-      setState(() => _hasUnsavedChanges = false);
-      Navigator.pop(context);
+      setState(() => _savedSignature = _currentSignature());
+      if (mounted) Navigator.pop(context);
     }
   }
 
@@ -537,7 +543,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_hasUnsavedChanges,
+      canPop: _savedSignature.isEmpty || _currentSignature() == _savedSignature,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           _handleBackPressed();
