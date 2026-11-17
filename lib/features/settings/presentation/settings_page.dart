@@ -1335,9 +1335,22 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           child: Row(
             children: [
-              Text(
-                code == 'ms' ? '🇲🇾' : '🇬🇧',
-                style: const TextStyle(fontSize: 22),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF42A5F5).withValues(alpha: 0.18)
+                      : Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  code == 'ms' ? 'BM' : 'EN',
+                  style: TextStyle(
+                    color: isSelected ? const Color(0xFF42A5F5) : Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(

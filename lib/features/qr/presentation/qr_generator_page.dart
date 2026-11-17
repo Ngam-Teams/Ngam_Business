@@ -1750,9 +1750,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildLanguagePillItem('ms', '🇲🇾 Bahasa Melayu'),
+          _buildLanguagePillItem('ms', 'Bahasa Melayu'),
           const SizedBox(width: 4),
-          _buildLanguagePillItem('en', '🇬🇧 English'),
+          _buildLanguagePillItem('en', 'English'),
         ],
       ),
     );
@@ -1830,7 +1830,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
               Expanded(
                 child: _buildLanguageOptionCard(
                   code: 'ms',
-                  flag: '🇲🇾',
+                  badge: 'BM',
                   title: 'Bahasa Melayu',
                   subtitle: 'Gaya tempatan & mesra',
                 ),
@@ -1839,7 +1839,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
               Expanded(
                 child: _buildLanguageOptionCard(
                   code: 'en',
-                  flag: '🇬🇧',
+                  badge: 'EN',
                   title: 'English',
                   subtitle: 'Tourist / global standard',
                 ),
@@ -1853,7 +1853,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
 
   Widget _buildLanguageOptionCard({
     required String code,
-    required String flag,
+    required String badge,
     required String title,
     required String subtitle,
   }) {
@@ -1892,7 +1892,21 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(flag, style: const TextStyle(fontSize: 20)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isSelected ? _accentColor.withValues(alpha: 0.22) : Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    badge,
+                    style: GoogleFonts.outfit(
+                      color: isSelected ? _accentColor : Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
                 if (isSelected)
                   Icon(Icons.check_circle_rounded, color: _accentColor, size: 16),
               ],
