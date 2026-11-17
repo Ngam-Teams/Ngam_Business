@@ -92,6 +92,16 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   final _socialCtrl = TextEditingController(text: 'IG/TikTok: @warungngam');
   final _footerMsgCtrl = TextEditingController(text: 'Terima kasih daun keladi, sudilah datang lagi!');
   final _policyCtrl = TextEditingController(text: 'Sah untuk pertukaran dalam 3 hari bersama resit asal.');
+  final _wifiSsidCtrl = TextEditingController();
+  final _wifiPassCtrl = TextEditingController();
+  final _promoCodeCtrl = TextEditingController(text: 'NGAM10');
+
+  String _businessId = BusinessService.cachedProfile?['id']?.toString() ?? '';
+  String _businessHandle = (BusinessService.cachedProfile?['business_handle'] ?? '')
+      .toString()
+      .trim()
+      .replaceAll('@', '')
+      .toLowerCase();
 
   // Info Visibility Toggles
   bool _showTagline = true;
@@ -115,9 +125,15 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   bool _enableWhatsappReceipt = true;
   String _savedSignature = '';
 
+  String get _storeIdentifier {
+    if (_businessHandle.isNotEmpty) return '@$_businessHandle';
+    if (_businessId.isNotEmpty) return 'store/${Uri.encodeComponent(_businessId)}';
+    return '';
+  }
+
   String _currentSignature() {
     final codes = _selectedBottomCodes.map((e) => e.name).toList()..sort();
-    return '$_paperWidth|$_autoPrintOnOrder|$_autoCutPaper|${_selectedFont.index}|${_headerAlign.index}|${_dividerStyle.index}|${_logoSize.index}|$_includeLogo|$_enableWhatsappReceipt|${codes.join(",")}|$_showTagline|$_showSsm|$_showSst|$_showAddress|$_showPhone|$_showSocial|$_showTableNo|$_showCashier|$_showDateTime|$_showSstTax|$_showServiceCharge|$_showRounding|$_showPaymentMethod|${_storeNameCtrl.text}|${_taglineCtrl.text}|${_ssmCtrl.text}|${_sstCtrl.text}|${_addressCtrl.text}|${_phoneCtrl.text}|${_socialCtrl.text}|${_footerMsgCtrl.text}|${_policyCtrl.text}';
+    return '$_paperWidth|$_autoPrintOnOrder|$_autoCutPaper|${_selectedFont.index}|${_headerAlign.index}|${_dividerStyle.index}|${_logoSize.index}|$_includeLogo|$_enableWhatsappReceipt|${codes.join(",")}|$_showTagline|$_showSsm|$_showSst|$_showAddress|$_showPhone|$_showSocial|$_showTableNo|$_showCashier|$_showDateTime|$_showSstTax|$_showServiceCharge|$_showRounding|$_showPaymentMethod|${_storeNameCtrl.text}|${_taglineCtrl.text}|${_ssmCtrl.text}|${_sstCtrl.text}|${_addressCtrl.text}|${_phoneCtrl.text}|${_socialCtrl.text}|${_footerMsgCtrl.text}|${_policyCtrl.text}|${_wifiSsidCtrl.text}|${_wifiPassCtrl.text}|${_promoCodeCtrl.text}';
   }
 
   // Real Receipt Image Capture
@@ -193,6 +209,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         if (savedFooter != null) _footerMsgCtrl.text = savedFooter;
         final savedPolicy = prefs.getString('receipt_policy');
         if (savedPolicy != null) _policyCtrl.text = savedPolicy;
+        final savedWifiSsid = prefs.getString('receipt_wifi_ssid');
+        if (savedWifiSsid != null && savedWifiSsid.isNotEmpty) _wifiSsidCtrl.text = savedWifiSsid;
+        final savedWifiPass = prefs.getString('receipt_wifi_pass');
+        if (savedWifiPass != null) _wifiPassCtrl.text = savedWifiPass;
+        final savedPromo = prefs.getString('receipt_promo_code');
+        if (savedPromo != null && savedPromo.isNotEmpty) _promoCodeCtrl.text = savedPromo;
 
         final codes = prefs.getStringList('receipt_bottom_codes');
         if (codes != null) {
@@ -214,6 +236,26 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       final profile = await BusinessService().getBusinessProfile();
       if (profile != null && mounted) {
         setState(() {
+          _businessId = profile['id']?.toString() ?? _businessId;
+          final handle = (profile['business_handle'] ?? '')
+              .toString()
+              .trim()
+              .replaceAll('@', '')
+              .toLowerCase();
+          if (handle.isNotEmpty) {
+            _businessHandle = handle;
+          }
+          final settings = profile['settings'] as Map<String, dynamic>?;
+          if (settings != null) {
+            final ssid = settings['wifi_ssid']?.toString().trim() ?? '';
+            if (ssid.isNotEmpty && _wifiSsidCtrl.text.isEmpty) {
+              _wifiSsidCtrl.text = ssid;
+            }
+            final pass = settings['wifi_password']?.toString().trim() ?? '';
+            if (pass.isNotEmpty && _wifiPassCtrl.text.isEmpty) {
+              _wifiPassCtrl.text = pass;
+            }
+          }
           final profileName = (profile['business_name'] ?? profile['name'])?.toString().trim();
           if (profileName != null && profileName.isNotEmpty) {
             _storeNameCtrl.text = profileName.toUpperCase();
@@ -275,6 +317,9 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
     _socialCtrl.dispose();
     _footerMsgCtrl.dispose();
     _policyCtrl.dispose();
+    _wifiSsidCtrl.dispose();
+    _wifiPassCtrl.dispose();
+    _promoCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -450,6 +495,9 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       await prefs.setString('receipt_social', _socialCtrl.text.trim());
       await prefs.setString('receipt_footer_msg', _footerMsgCtrl.text.trim());
       await prefs.setString('receipt_policy', _policyCtrl.text.trim());
+      await prefs.setString('receipt_wifi_ssid', _wifiSsidCtrl.text.trim());
+      await prefs.setString('receipt_wifi_pass', _wifiPassCtrl.text.trim());
+      await prefs.setString('receipt_promo_code', _promoCodeCtrl.text.trim().toUpperCase());
       await prefs.setStringList(
         'receipt_bottom_codes',
         _selectedBottomCodes.map((e) => e.name).toList(),
@@ -1686,12 +1734,31 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildCodeOptionChip(BottomCodeType.qrReceipt, 'receipt.code_qr_receipt'.tr()),
-              _buildCodeOptionChip(BottomCodeType.qrPromo, 'receipt.code_qr_promo'.tr()),
-              _buildCodeOptionChip(BottomCodeType.qrWifi, 'receipt.code_qr_wifi'.tr()),
-              _buildCodeOptionChip(BottomCodeType.barcode, 'receipt.code_barcode'.tr()),
+              _buildCodeOptionChip(BottomCodeType.qrReceipt, 'receipt.code_qr_receipt'.tr(), HugeIcons.strokeRoundedQrCode),
+              _buildCodeOptionChip(BottomCodeType.qrPromo, 'receipt.code_qr_promo'.tr(), HugeIcons.strokeRoundedCoupon02),
+              _buildCodeOptionChip(BottomCodeType.qrWifi, 'receipt.code_qr_wifi'.tr(), HugeIcons.strokeRoundedWifi01),
+              _buildCodeOptionChip(BottomCodeType.barcode, 'receipt.code_barcode'.tr(), HugeIcons.strokeRoundedInvoice),
             ],
           ),
+          if (_selectedBottomCodes.contains(BottomCodeType.qrPromo)) ...[
+            const SizedBox(height: 12),
+            _buildTextField(
+              controller: _promoCodeCtrl,
+              label: 'receipt.promo_code_label'.tr(),
+            ),
+          ],
+          if (_selectedBottomCodes.contains(BottomCodeType.qrWifi)) ...[
+            const SizedBox(height: 12),
+            _buildTextField(
+              controller: _wifiSsidCtrl,
+              label: 'receipt.wifi_ssid_label'.tr(),
+            ),
+            const SizedBox(height: 8),
+            _buildTextField(
+              controller: _wifiPassCtrl,
+              label: 'receipt.wifi_pass_label'.tr(),
+            ),
+          ],
           const SizedBox(height: 12),
           const Divider(color: Colors.white10, height: 1),
           const SizedBox(height: 8),
@@ -1719,7 +1786,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
     );
   }
 
-  Widget _buildCodeOptionChip(BottomCodeType type, String label) {
+  Widget _buildCodeOptionChip(BottomCodeType type, String label, dynamic icon) {
     final isSelected = _selectedBottomCodes.contains(type);
     return GestureDetector(
       onTap: () {
@@ -1755,10 +1822,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isSelected) ...[
-              const Icon(Icons.check_circle_rounded, color: Color(0xFF38BDF8), size: 14),
-              const SizedBox(width: 6),
-            ],
+            HugeIcon(
+              icon: icon,
+              color: isSelected ? const Color(0xFF38BDF8) : Colors.white54,
+              size: 14,
+            ),
+            const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
@@ -2302,7 +2371,21 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
     );
   }
 
+  String _escapeWifiQrValue(String input) {
+    return input
+        .replaceAll(r'\', r'\\')
+        .replaceAll(';', r'\;')
+        .replaceAll(':', r'\:')
+        .replaceAll(',', r'\,')
+        .replaceAll('"', r'\"');
+  }
+
   Widget _buildSingleBottomCode(BottomCodeType type) {
+    final storePath = _storeIdentifier;
+    final storeUrl = storePath.isNotEmpty ? 'https://ngam.dev/$storePath' : 'https://ngam.dev';
+    final storeDisplay = storePath.isNotEmpty ? 'ngam.dev/$storePath' : 'ngam.dev';
+    final qrSize = _paperWidth == 58 ? 84.0 : 96.0;
+
     switch (type) {
       case BottomCodeType.qrReceipt:
         return Center(
@@ -2310,18 +2393,20 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
             children: [
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.black12),
                 ),
                 child: QrImageView(
-                  data: 'https://ngam.dev/receipt/NG4029',
+                  data: storeUrl,
                   version: QrVersions.auto,
-                  errorCorrectionLevel: QrErrorCorrectLevel.L,
-                  padding: const EdgeInsets.all(2),
-                  size: _paperWidth == 58 ? 68 : 80,
+                  errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  backgroundColor: Colors.white,
+                  gapless: true,
+                  padding: const EdgeInsets.all(4),
+                  size: qrSize,
                   eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
                   dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
                 ),
@@ -2332,7 +2417,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
-                'ngam.dev/receipt/NG4029',
+                storeDisplay,
                 style: _getReceiptFont(color: Colors.black38, fontSize: 7.0),
               ),
             ],
@@ -2340,34 +2425,46 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         );
 
       case BottomCodeType.qrPromo:
+        final promoCode = _promoCodeCtrl.text.trim().isEmpty
+            ? 'NGAM10'
+            : _promoCodeCtrl.text.trim().toUpperCase();
+        final promoUrl = storePath.isNotEmpty
+            ? 'https://ngam.dev/$storePath?promo=${Uri.encodeComponent(promoCode)}'
+            : 'https://ngam.dev/promo/${Uri.encodeComponent(promoCode)}';
+        final promoDisplay = storePath.isNotEmpty
+            ? 'ngam.dev/$storePath?promo=$promoCode'
+            : 'ngam.dev/promo/$promoCode';
+
         return Center(
           child: Column(
             children: [
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.black12),
                 ),
                 child: QrImageView(
-                  data: 'https://ngam.dev/promo/NGAM10',
+                  data: promoUrl,
                   version: QrVersions.auto,
-                  errorCorrectionLevel: QrErrorCorrectLevel.L,
-                  padding: const EdgeInsets.all(2),
-                  size: _paperWidth == 58 ? 68 : 80,
+                  errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  backgroundColor: Colors.white,
+                  gapless: true,
+                  padding: const EdgeInsets.all(4),
+                  size: qrSize,
                   eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
                   dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
                 ),
               ),
               const SizedBox(height: 3),
               Text(
-                '🎁 10% OFF Lawatan Seterusnya! (KOD: NGAM10)',
+                'receipt.qr_promo_hint'.tr(namedArgs: {'code': promoCode}),
                 style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
-                'ngam.dev/promo/NGAM10',
+                promoDisplay,
                 style: _getReceiptFont(color: Colors.black38, fontSize: 7.0),
               ),
             ],
@@ -2375,23 +2472,36 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         );
 
       case BottomCodeType.qrWifi:
+        final rawSsid = _wifiSsidCtrl.text.trim().isNotEmpty
+            ? _wifiSsidCtrl.text.trim()
+            : ((BusinessService.cachedProfile?['settings'] as Map?)?['wifi_ssid']?.toString().trim() ?? '');
+        final displaySsid = rawSsid.isNotEmpty ? rawSsid : 'WiFi_Kedai';
+        final rawPass = _wifiPassCtrl.text.trim().isNotEmpty
+            ? _wifiPassCtrl.text.trim()
+            : ((BusinessService.cachedProfile?['settings'] as Map?)?['wifi_password']?.toString().trim() ?? '');
+        final wifiPayload = rawPass.isEmpty
+            ? 'WIFI:T:nopass;S:${_escapeWifiQrValue(displaySsid)};;'
+            : 'WIFI:T:WPA;S:${_escapeWifiQrValue(displaySsid)};P:${_escapeWifiQrValue(rawPass)};;';
+
         return Center(
           child: Column(
             children: [
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.black12),
                 ),
                 child: QrImageView(
-                  data: 'WIFI:T:WPA;S:${(BusinessService.cachedProfile?["settings"] as Map?)?["wifi_ssid"]?.toString() ?? "WiFi_Kedai"};P:${(BusinessService.cachedProfile?["settings"] as Map?)?["wifi_password"]?.toString() ?? ""};;',
+                  data: wifiPayload,
                   version: QrVersions.auto,
-                  errorCorrectionLevel: QrErrorCorrectLevel.L,
-                  padding: const EdgeInsets.all(2),
-                  size: _paperWidth == 58 ? 68 : 80,
+                  errorCorrectionLevel: QrErrorCorrectLevel.M,
+                  backgroundColor: Colors.white,
+                  gapless: true,
+                  padding: const EdgeInsets.all(4),
+                  size: qrSize,
                   eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
                   dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Colors.black),
                 ),
@@ -2402,7 +2512,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                 style: _getReceiptFont(color: Colors.black87, fontSize: 7.5, fontWeight: FontWeight.bold),
               ),
               Text(
-                'SSID: ${(BusinessService.cachedProfile?["settings"] as Map?)?["wifi_ssid"]?.toString() ?? "WiFi_Kedai"}',
+                'SSID: $displaySsid',
                 style: _getReceiptFont(color: Colors.black45, fontSize: 7.0),
               ),
             ],
