@@ -1,6 +1,6 @@
 {
-  "version": "1.0.40",
-  "build_number": 20,
-  "released_at": "2026-11-17T05:50:00Z",
-  "changelog": "Pilihan penjajaran teks kepala resit kini lengkap dengan Kiri, Tengah, dan Kanan."
+  "version": "1.0.41",
+  "build_number": 21,
+  "released_at": "2026-11-17T06:00:00Z",
+  "changelog": "Label saiz logo resit diringkaskan kepada Small/Medium/Large supaya tidak melimpah."
 }
