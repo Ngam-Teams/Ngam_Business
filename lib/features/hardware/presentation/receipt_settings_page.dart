@@ -513,12 +513,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         ],
         body: Stack(
           children: [
-            Listener(
-              onPointerDown: (_) {
-                if (!_hasUnsavedChanges) _hasUnsavedChanges = true;
-              },
-              child: LayoutBuilder(
-                builder: (context, constraints) {
+            LayoutBuilder(
+              builder: (context, constraints) {
           final isLandscape = constraints.maxWidth > constraints.maxHeight;
           final isWide = constraints.maxWidth >= 780 || isLandscape;
 
@@ -609,7 +605,6 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           );
                 },
               ),
-            ),
             _buildFloatingSaveBar(),
           ],
         ),

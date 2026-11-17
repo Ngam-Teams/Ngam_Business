@@ -1,6 +1,6 @@
 {
-  "version": "1.0.42",
-  "build_number": 22,
-  "released_at": "2026-11-17T06:03:00Z",
-  "changelog": "Butang Simpan Resit kini terapung seperti navbar di bawah skrin, dengan popup pengesahan jika keluar tanpa menyimpan."
+  "version": "1.0.43",
+  "build_number": 23,
+  "released_at": "2026-11-17T06:23:00Z",
+  "changelog": "Membaiki isu popup Simpan Perubahan yang muncul semula selepas menekan butang Simpan."
 }
