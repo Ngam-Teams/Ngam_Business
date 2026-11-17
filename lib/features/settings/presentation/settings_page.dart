@@ -51,6 +51,8 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  bool _isCheckingUpdate = false;
+
   @override
   void dispose() {
     BusinessService.profileNotifier.removeListener(_onProfileUpdated);
@@ -483,13 +485,22 @@ class _SettingsPageState extends State<SettingsPage> {
 
                   return GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      if (update != null) {
-                        AppUpdateService.showUpdateDialog(context, update);
-                      } else {
-                        AppUpdateService.checkManually(context);
-                      }
-                    },
+                    onTap: _isCheckingUpdate
+                        ? null
+                        : () async {
+                            if (update != null) {
+                              AppUpdateService.showUpdateDialog(context, update);
+                            } else {
+                              setState(() => _isCheckingUpdate = true);
+                              try {
+                                await AppUpdateService.checkManually(context);
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isCheckingUpdate = false);
+                                }
+                              }
+                            }
+                          },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
@@ -534,15 +545,31 @@ class _SettingsPageState extends State<SettingsPage> {
                                 color: badgeColor.withValues(alpha: hasUpdate ? 0.45 : 0.25),
                               ),
                             ),
-                            child: Text(
-                              hasUpdate
-                                  ? 'app_update.update_pill'.tr(args: [update.version])
-                                  : 'settings.check_updates'.tr(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: badgeColor,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (_isCheckingUpdate) ...[
+                                  SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: badgeColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                Text(
+                                  hasUpdate
+                                      ? 'app_update.update_pill'.tr(args: [update.version])
+                                      : 'settings.check_updates'.tr(),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: badgeColor,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
