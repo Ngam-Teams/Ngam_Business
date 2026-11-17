@@ -701,8 +701,6 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
                           ),
                           const SizedBox(height: 20),
                           _buildReceiptPaper(),
-                          const SizedBox(height: 20),
-                          _buildDownloadButton(),
                         ],
                       ),
                     ),
@@ -719,8 +717,6 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _buildReceiptPaper(),
-                const SizedBox(height: 16),
-                _buildDownloadButton(),
                 const SizedBox(height: 28),
                 _buildControlsColumn(),
               ],
@@ -2457,25 +2453,6 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       child: CustomPaint(
         painter: _SerratedPainter(isTop: isTop),
       ),
-    );
-  }
-
-  // ===========================================================================
-  // DOWNLOAD BUTTON
-  // ===========================================================================
-  Widget _buildDownloadButton() {
-    return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.white,
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      ),
-      onPressed: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
-      icon: _isDownloadingReceipt
-          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-          : const Icon(Icons.download_rounded, size: 18, color: Color(0xFF42A5F5)),
-      label: const Text('Muat Turun Resit Resolusi Tinggi (HD)', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
     );
   }
 
