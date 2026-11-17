@@ -1,6 +1,6 @@
 {
-  "version": "1.0.53",
-  "build_number": 33,
-  "released_at": "2026-11-17T13:55:00Z",
-  "changelog": "Auto-daftar profil peniaga dalam public.users untuk elak ralat kunci asing sembang, tambah butang Chat Pelanggan pada Pesanan & Pelanggan, dan baiki pautan peti mesej."
+  "version": "1.0.54",
+  "build_number": 34,
+  "released_at": "2026-11-17T14:35:00Z",
+  "changelog": "Naik taraf penuh Peti Mesej Peniaga setanding aplikasi pelanggan: hantar kamera/pelbagai gambar/video/rakam video, pemain video & kad fail dalam chat, balas/salin/cuba semula/padam mesej, carian dalam chat, WhatsApp pelanggan, auto-simpan draf, serta fallback muat naik media automatik."
 }

@@ -105,9 +105,55 @@ class MerchantMessage {
     this.replyToMessage,
   });
 
+  bool get isVideo {
+    if (messageType == 'video') return true;
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      final lower = imageUrl!.toLowerCase().split('?').first;
+      return lower.endsWith('.mp4') ||
+          lower.endsWith('.mov') ||
+          lower.endsWith('.webm') ||
+          lower.endsWith('.m4v');
+    }
+    return false;
+  }
+
+  bool get isFile {
+    if (messageType == 'file' || messageType == 'document') return true;
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      final lower = imageUrl!.toLowerCase().split('?').first;
+      return lower.endsWith('.pdf') ||
+          lower.endsWith('.doc') ||
+          lower.endsWith('.docx') ||
+          lower.endsWith('.csv') ||
+          lower.endsWith('.txt') ||
+          lower.endsWith('.xls') ||
+          lower.endsWith('.xlsx');
+    }
+    return false;
+  }
+
   bool get isImage =>
       messageType == 'image' ||
-      (imageUrl != null && imageUrl!.isNotEmpty && messageType != 'file');
+      (imageUrl != null && imageUrl!.isNotEmpty && !isVideo && !isFile);
+
+  String get displayFileName {
+    if (fileName != null && fileName!.trim().isNotEmpty) return fileName!.trim();
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      final uri = Uri.tryParse(imageUrl!);
+      if (uri != null && uri.pathSegments.isNotEmpty) {
+        return uri.pathSegments.last;
+      }
+    }
+    return content.isNotEmpty ? content : 'File';
+  }
+
+  String get formattedFileSize {
+    final bytes = fileSize;
+    if (bytes == null || bytes <= 0) return '';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
 
   factory MerchantMessage.fromJson(Map<String, dynamic> json) {
     return MerchantMessage(
@@ -158,48 +204,108 @@ class MerchantChatService {
   static final Map<String, Map<String, dynamic>> _userCache = {};
   static final Map<String, Map<String, dynamic>> _contextCache = {};
   static bool _merchantUserVerified = false;
+  static final Set<String> _healedBusinesses = {};
   static final RegExp _uuidRegex = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
   );
 
   /// Ensure the currently authenticated merchant/staff user exists in `public.users`
-  /// so foreign keys on `conversations` and `messages` never fail.
+  /// and heal any business conversations so foreign keys and RLS on `conversations`
+  /// and `messages` never fail.
   static Future<void> ensureCurrentMerchantInUsers({
+    String? businessId,
     String? businessName,
     String? businessLogoUrl,
     String? businessPhone,
   }) async {
-    if (_merchantUserVerified) return;
     final user = _supabase.auth.currentUser;
     if (user == null) return;
-    try {
-      final existing = await _supabase
-          .from('users')
-          .select('id')
-          .eq('id', user.id)
-          .maybeSingle();
-      if (existing != null) {
-        _merchantUserVerified = true;
-        return;
+
+    if (!_merchantUserVerified) {
+      try {
+        final existing = await _supabase
+            .from('users')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+        if (existing != null) {
+          _merchantUserVerified = true;
+        } else {
+          final fallbackName = (businessName != null && businessName.trim().isNotEmpty)
+              ? businessName.trim()
+              : (user.userMetadata?['business_name']?.toString() ??
+                  user.userMetadata?['full_name']?.toString() ??
+                  user.email?.split('@').first ??
+                  'Peniaga Ngam');
+          await _supabase.from('users').insert({
+            'id': user.id,
+            'role': 'business',
+            'user_name': fallbackName,
+            if (user.email != null) 'user_email': user.email,
+            if (businessPhone != null && businessPhone.isNotEmpty) 'user_phone': businessPhone,
+            if (businessLogoUrl != null && businessLogoUrl.isNotEmpty) 'user_avatar_url': businessLogoUrl,
+          });
+          _merchantUserVerified = true;
+        }
+      } catch (e) {
+        debugPrint('[MerchantChatService] ensureCurrentMerchantInUsers error: $e');
       }
-      final fallbackName = (businessName != null && businessName.trim().isNotEmpty)
-          ? businessName.trim()
-          : (user.userMetadata?['business_name']?.toString() ??
-              user.userMetadata?['full_name']?.toString() ??
-              user.email?.split('@').first ??
-              'Peniaga Ngam');
-      await _supabase.from('users').insert({
-        'id': user.id,
-        'role': 'business',
-        'user_name': fallbackName,
-        if (user.email != null) 'user_email': user.email,
-        if (businessPhone != null && businessPhone.isNotEmpty) 'user_phone': businessPhone,
-        if (businessLogoUrl != null && businessLogoUrl.isNotEmpty) 'user_avatar_url': businessLogoUrl,
-      });
-      _merchantUserVerified = true;
-    } catch (e) {
-      debugPrint('[MerchantChatService] ensureCurrentMerchantInUsers error: $e');
     }
+
+    if (businessId != null &&
+        businessId.isNotEmpty &&
+        !_healedBusinesses.contains(businessId)) {
+      _healedBusinesses.add(businessId);
+      // 1. Ensure owner is also in team_members so legacy is_active_staff_of(business_id) passes
+      try {
+        final member = await _supabase
+            .from('team_members')
+            .select('id, is_active')
+            .eq('business_id', businessId)
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle();
+        if (member == null) {
+          await _supabase.from('team_members').insert({
+            'business_id': businessId,
+            'user_id': user.id,
+            'full_name': businessName ?? 'Owner',
+            if (user.email != null) 'email': user.email,
+            'role': 'owner',
+            'is_active': true,
+          });
+        } else if (member['is_active'] != true) {
+          await _supabase
+              .from('team_members')
+              .update({'is_active': true})
+              .eq('id', member['id']);
+        }
+      } catch (_) {}
+
+      // 2. Heal any conversations where user2_id was temporarily set to customer's user1_id
+      try {
+        await _supabase
+            .from('conversations')
+            .update({'user2_id': user.id})
+            .eq('business_id', businessId)
+            .neq('user2_id', user.id);
+      } catch (_) {}
+    }
+  }
+
+  static Future<void> _syncConversationPreview({
+    required String conversationId,
+    required String senderId,
+    required String lastMessage,
+  }) async {
+    try {
+      await _supabase.from('conversations').update({
+        'last_message': lastMessage,
+        'last_message_sender_id': senderId,
+        'last_message_is_read': false,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', conversationId);
+    } catch (_) {}
   }
 
   static Future<void> refreshUnreadCount(String businessId) async {
@@ -378,6 +484,7 @@ class MerchantChatService {
     String conversationId, {
     required void Function(MerchantMessage) onNewMessage,
     required void Function(MerchantMessage) onMessageUpdated,
+    void Function(String deletedId)? onMessageDeleted,
     required void Function(String userId, bool isTyping) onTypingStatus,
   }) {
     return _supabase
@@ -406,6 +513,17 @@ class MerchantChatService {
           ),
           callback: (payload) {
             onMessageUpdated(MerchantMessage.fromJson(payload.newRecord));
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.delete,
+          schema: 'public',
+          table: 'messages',
+          callback: (payload) {
+            final oldId = payload.oldRecord['id']?.toString();
+            if (oldId != null && onMessageDeleted != null) {
+              onMessageDeleted(oldId);
+            }
           },
         )
         .onBroadcast(
@@ -439,6 +557,11 @@ class MerchantChatService {
     };
 
     final res = await _supabase.from('messages').insert(payload).select().single();
+    await _syncConversationPreview(
+      conversationId: conversationId,
+      senderId: uid,
+      lastMessage: content,
+    );
     return MerchantMessage.fromJson(Map<String, dynamic>.from(res));
   }
 
@@ -446,6 +569,7 @@ class MerchantChatService {
     required String conversationId,
     required Uint8List bytes,
     required String fileName,
+    Map<String, dynamic>? replyToMessage,
   }) async {
     final uid = _supabase.auth.currentUser?.id;
     if (uid == null) throw Exception('Not authenticated');
@@ -459,23 +583,12 @@ class MerchantChatService {
     final safeName = '${DateTime.now().millisecondsSinceEpoch}_$uid.$ext';
     final folder = 'chat/$conversationId';
 
-    String imageUrl;
-    if (R2StorageService().isConfigured) {
-      imageUrl = await R2StorageService().uploadMedia(
-        bytes: bytes,
-        fileName: safeName,
-        folder: folder,
-        mimeType: mimeType,
-      );
-    } else {
-      final path = '$conversationId/$safeName';
-      await _supabase.storage.from('chat_images').uploadBinary(
-            path,
-            bytes,
-            fileOptions: FileOptions(contentType: mimeType, upsert: true),
-          );
-      imageUrl = _supabase.storage.from('chat_images').getPublicUrl(path);
-    }
+    final imageUrl = await R2StorageService().uploadMedia(
+      bytes: bytes,
+      fileName: safeName,
+      folder: folder,
+      mimeType: mimeType,
+    );
 
     final payload = <String, dynamic>{
       'conversation_id': conversationId,
@@ -486,10 +599,119 @@ class MerchantChatService {
       'file_name': safeName,
       'file_size': bytes.lengthInBytes,
       'is_read': false,
+      if (replyToMessage != null) 'reply_to_message': replyToMessage,
     };
 
     final res = await _supabase.from('messages').insert(payload).select().single();
+    await _syncConversationPreview(
+      conversationId: conversationId,
+      senderId: uid,
+      lastMessage: '📷 Photo',
+    );
     return MerchantMessage.fromJson(Map<String, dynamic>.from(res));
+  }
+
+  static Future<MerchantMessage> sendVideoMessage({
+    required String conversationId,
+    required Uint8List bytes,
+    required String fileName,
+    Map<String, dynamic>? replyToMessage,
+  }) async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) throw Exception('Not authenticated');
+
+    await ensureCurrentMerchantInUsers();
+
+    final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'mp4';
+    final mimeType = ext == 'mov'
+        ? 'video/quicktime'
+        : (ext == 'webm' ? 'video/webm' : 'video/mp4');
+    final safeName = '${DateTime.now().millisecondsSinceEpoch}_$uid.$ext';
+    final folder = 'chat/$conversationId';
+
+    final videoUrl = await R2StorageService().uploadMedia(
+      bytes: bytes,
+      fileName: safeName,
+      folder: folder,
+      mimeType: mimeType,
+    );
+
+    final payload = <String, dynamic>{
+      'conversation_id': conversationId,
+      'sender_id': uid,
+      'content': 'Video',
+      'image_url': videoUrl,
+      'message_type': 'video',
+      'file_name': fileName,
+      'file_size': bytes.lengthInBytes,
+      'is_read': false,
+      if (replyToMessage != null) 'reply_to_message': replyToMessage,
+    };
+
+    final res = await _supabase.from('messages').insert(payload).select().single();
+    await _syncConversationPreview(
+      conversationId: conversationId,
+      senderId: uid,
+      lastMessage: '🎬 Video',
+    );
+    return MerchantMessage.fromJson(Map<String, dynamic>.from(res));
+  }
+
+  static Future<MerchantMessage> sendFileMessage({
+    required String conversationId,
+    required Uint8List bytes,
+    required String fileName,
+    Map<String, dynamic>? replyToMessage,
+  }) async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) throw Exception('Not authenticated');
+
+    await ensureCurrentMerchantInUsers();
+
+    final lower = fileName.toLowerCase();
+    final mimeType = lower.endsWith('.pdf')
+        ? 'application/pdf'
+        : (lower.endsWith('.csv')
+            ? 'text/csv'
+            : (lower.endsWith('.txt') ? 'text/plain' : 'application/octet-stream'));
+    final safeName = '${DateTime.now().millisecondsSinceEpoch}_$fileName';
+    final folder = 'chat/$conversationId';
+
+    final fileUrl = await R2StorageService().uploadMedia(
+      bytes: bytes,
+      fileName: safeName,
+      folder: folder,
+      mimeType: mimeType,
+    );
+
+    final payload = <String, dynamic>{
+      'conversation_id': conversationId,
+      'sender_id': uid,
+      'content': 'File',
+      'image_url': fileUrl,
+      'message_type': 'file',
+      'file_name': fileName,
+      'file_size': bytes.lengthInBytes,
+      'is_read': false,
+      if (replyToMessage != null) 'reply_to_message': replyToMessage,
+    };
+
+    final res = await _supabase.from('messages').insert(payload).select().single();
+    await _syncConversationPreview(
+      conversationId: conversationId,
+      senderId: uid,
+      lastMessage: '📎 $fileName',
+    );
+    return MerchantMessage.fromJson(Map<String, dynamic>.from(res));
+  }
+
+  static Future<void> deleteMessage(String messageId) async {
+    await _supabase.from('messages').delete().eq('id', messageId);
+  }
+
+  static Future<void> deleteConversation(String conversationId) async {
+    await _supabase.from('messages').delete().eq('conversation_id', conversationId);
+    await _supabase.from('conversations').delete().eq('id', conversationId);
   }
 
   static Future<void> markAsRead(String conversationId) async {
@@ -504,6 +726,12 @@ class MerchantChatService {
     } catch (e) {
       debugPrint('markAsRead error: $e');
     }
+    try {
+      await _supabase
+          .from('conversations')
+          .update({'business_unread_count': 0})
+          .eq('id', conversationId);
+    } catch (_) {}
   }
 
   static Future<String?> openOrCreateCustomerConversation({
@@ -515,7 +743,7 @@ class MerchantChatService {
     final uid = _supabase.auth.currentUser?.id;
     if (uid == null || customerId.trim().isEmpty) return null;
 
-    await ensureCurrentMerchantInUsers();
+    await ensureCurrentMerchantInUsers(businessId: businessId);
 
     final validContextId = (contextId != null && _uuidRegex.hasMatch(contextId.trim()))
         ? contextId.trim()
