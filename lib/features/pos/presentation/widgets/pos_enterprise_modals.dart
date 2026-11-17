@@ -267,15 +267,18 @@ class _PosItemModifierModalState extends State<PosItemModifierModal> {
                       children: _availableVariants.map((v) {
                         final vName = v['name']?.toString() ?? 'Standard';
                         final vDelta = (v['price_delta'] as num?)?.toDouble() ??
-                            (v['price'] as num?)?.toDouble() ??
-                            0.0;
+                            (v['price'] != null
+                                ? ((v['price'] as num).toDouble() - widget.product.price)
+                                : 0.0);
                         final isSel = _selectedVariant == vName;
 
                         return ChoiceChip(
                           label: Text(
                             vDelta > 0
                                 ? '$vName (+RM ${vDelta.toStringAsFixed(2)})'
-                                : vName,
+                                : (vDelta < 0
+                                    ? '$vName (-RM ${vDelta.abs().toStringAsFixed(2)})'
+                                    : vName),
                           ),
                           selected: isSel,
                           selectedColor: const Color(0xFF42A5F5),

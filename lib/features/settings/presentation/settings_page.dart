@@ -436,6 +436,18 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: HugeIcons.strokeRoundedPrinter,
             onTap: () => context.push('/receipt-settings'),
           ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'dashboard.action_Bookings'.tr(),
+            icon: HugeIcons.strokeRoundedCalendar03,
+            onTap: () => context.push('/appointments'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'dashboard.action_integrations'.tr(),
+            icon: HugeIcons.strokeRoundedPlugSocket,
+            onTap: () => context.push('/integrations'),
+          ),
         ],
       ),
     );

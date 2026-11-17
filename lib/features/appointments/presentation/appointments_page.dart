@@ -1798,6 +1798,19 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                                         tooltip: 'Panggil Telefon',
                                       ),
                                       IconButton(
+                                        icon: const Icon(Icons.forum_outlined, color: Color(0xFF38BDF8), size: 19),
+                                        onPressed: () => context.push(
+                                          '/merchant-inbox',
+                                          extra: {
+                                            'customerId': appt['user_id']?.toString(),
+                                            'customerName': appt['customer']?.toString(),
+                                            'contextType': 'appointment',
+                                            'contextId': (appt['raw_id'] ?? appt['id'])?.toString(),
+                                          },
+                                        ),
+                                        tooltip: 'Chat Dalam Aplikasi',
+                                      ),
+                                      IconButton(
                                         icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 19),
                                         onPressed: () => _sendWhatsAppReminder(appt),
                                         tooltip: 'Hantar WhatsApp Peringatan',

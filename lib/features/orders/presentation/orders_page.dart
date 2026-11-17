@@ -2366,12 +2366,74 @@ class _OrdersPageState extends State<OrdersPage> {
                   ] else if (order.status == 'ready') ...[
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
-                      onPressed: () => _updateStatus(order, 'completed', paymentStatus: 'paid'),
-                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedCheckmarkBadge01, color: Colors.white, size: 16),
-                      label: Text('orders.action_done'.tr()),
+                      onPressed: () async {
+                        if (order.paymentStatus == 'paid') {
+                          _updateStatus(order, 'completed', paymentStatus: 'paid');
+                          return;
+                        }
+                        final shortId = order.id.substring(0, 6).toUpperCase();
+                        final totalFormatted = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ').format(order.total);
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (dlgCtx) => AlertDialog(
+                            backgroundColor: const Color(0xFF161626),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                              side: BorderSide(color: Colors.amber.withValues(alpha: 0.4)),
+                            ),
+                            title: Row(
+                              children: [
+                                const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'orders.unpaid_confirm_title'.tr(),
+                                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            content: Text(
+                              'orders.unpaid_confirm_desc'.tr(args: [shortId, totalFormatted]),
+                              style: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dlgCtx, false),
+                                child: Text('common.cancel'.tr(), style: const TextStyle(color: Colors.white54)),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFF59E0B),
+                                  foregroundColor: Colors.black,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: () => Navigator.pop(dlgCtx, true),
+                                child: Text('orders.unpaid_confirm_btn'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true && mounted) {
+                          _updateStatus(order, 'completed', paymentStatus: 'paid');
+                        }
+                      },
+                      icon: HugeIcon(
+                        icon: order.paymentStatus != 'paid'
+                            ? HugeIcons.strokeRoundedAlert02
+                            : HugeIcons.strokeRoundedCheckmarkBadge01,
+                        color: order.paymentStatus != 'paid' ? Colors.black : Colors.white,
+                        size: 16,
+                      ),
+                      label: Text(
+                        order.paymentStatus != 'paid'
+                            ? 'orders.unpaid_confirm_btn'.tr()
+                            : 'orders.action_done'.tr(),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                        backgroundColor: order.paymentStatus != 'paid' ? const Color(0xFFF59E0B) : Colors.green,
+                        foregroundColor: order.paymentStatus != 'paid' ? Colors.black : Colors.white,
                       ),
                     ),
                   ],

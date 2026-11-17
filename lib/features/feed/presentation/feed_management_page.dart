@@ -2454,9 +2454,12 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final shopName = widget.businessProfile?['name']?.toString() ?? 'Kedai Anda';
-    final shopHandle = widget.businessProfile?['handle']?.toString() ?? '@${shopName.replaceAll(' ', '').toLowerCase()}';
-    final logoUrl = widget.businessProfile?['logo_url']?.toString();
+    final shopName = (widget.businessProfile?['business_name'] ?? widget.businessProfile?['name'])?.toString() ?? 'Kedai Anda';
+    final rawHandle = (widget.businessProfile?['business_handle'] ?? widget.businessProfile?['handle'])?.toString();
+    final shopHandle = (rawHandle != null && rawHandle.isNotEmpty)
+        ? (rawHandle.startsWith('@') ? rawHandle : '@$rawHandle')
+        : '@${shopName.replaceAll(' ', '').toLowerCase()}';
+    final logoUrl = (widget.businessProfile?['business_logo_url'] ?? widget.businessProfile?['logo_url'])?.toString();
 
     final screenHeight = MediaQuery.sizeOf(context).height;
     final screenWidth = MediaQuery.sizeOf(context).width;
@@ -2707,8 +2710,19 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                       const SizedBox(height: 12),
 
                       // Share Icon
-                      const Icon(Icons.share_rounded, color: Colors.white, size: 24),
-                      const Text('Kongsi', style: TextStyle(color: Colors.white, fontSize: 10)),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: widget.post.videoUrl));
+                          showGlassToast(context, 'Pautan video telah disalin!');
+                        },
+                        child: const Column(
+                          children: [
+                            Icon(Icons.share_rounded, color: Colors.white, size: 24),
+                            Text('Kongsi', style: TextStyle(color: Colors.white, fontSize: 10)),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -2723,18 +2737,24 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Shop Handle
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              shopHandle,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                              overflow: TextOverflow.ellipsis,
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/business-profile');
+                        },
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                shopHandle,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.verified_rounded, color: Color(0xFF42A5F5), size: 14),
-                        ],
+                            const SizedBox(width: 4),
+                            const Icon(Icons.verified_rounded, color: Color(0xFF42A5F5), size: 14),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 3),
 
@@ -2757,27 +2777,42 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                       const SizedBox(height: 8),
 
                       // CTA Button
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF00E5FF), Color(0xFF0284C7)],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.bolt_rounded, color: Colors.black, size: 14),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                widget.post.ctaText,
-                                style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          final cta = widget.post.ctaType;
+                          if (cta == 'booking') {
+                            context.push('/appointments');
+                          } else if (cta == 'whatsapp') {
+                            context.push('/merchant-inbox');
+                          } else if (cta == 'queue') {
+                            context.push('/queue');
+                          } else {
+                            context.push('/product-catalogue');
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF00E5FF), Color(0xFF0284C7)],
                             ),
-                          ],
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.bolt_rounded, color: Colors.black, size: 14),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  widget.post.ctaText,
+                                  style: const TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.w900),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],

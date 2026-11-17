@@ -1,6 +1,6 @@
 {
-  "version": "1.0.46",
-  "build_number": 26,
-  "released_at": "2026-11-17T06:57:00Z",
-  "changelog": "Butang Semak Kemas Kini di Tetapan kini memaparkan ikon berputar (loading) semasa menyemak."
+  "version": "1.0.47",
+  "build_number": 27,
+  "released_at": "2026-11-17T07:14:00Z",
+  "changelog": "Simpanan penuh semua tetapan resit, kiraan harga varian POS tepat, pengesahan pesanan belum bayar pada kad Pesanan, butang Chat dalam Tempahan, serta pautan Tempahan & Integrasi di Tetapan."
 }

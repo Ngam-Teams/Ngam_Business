@@ -117,7 +117,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
 
   String _currentSignature() {
     final codes = _selectedBottomCodes.map((e) => e.name).toList()..sort();
-    return '$_paperWidth|${_selectedFont.index}|${_headerAlign.index}|${_logoSize.index}|$_includeLogo|$_enableWhatsappReceipt|${codes.join(",")}|${_storeNameCtrl.text}|${_ssmCtrl.text}|${_sstCtrl.text}|${_addressCtrl.text}|${_phoneCtrl.text}|${_socialCtrl.text}';
+    return '$_paperWidth|$_autoPrintOnOrder|$_autoCutPaper|${_selectedFont.index}|${_headerAlign.index}|${_dividerStyle.index}|${_logoSize.index}|$_includeLogo|$_enableWhatsappReceipt|${codes.join(",")}|$_showTagline|$_showSsm|$_showSst|$_showAddress|$_showPhone|$_showSocial|$_showTableNo|$_showCashier|$_showDateTime|$_showSstTax|$_showServiceCharge|$_showRounding|$_showPaymentMethod|${_storeNameCtrl.text}|${_taglineCtrl.text}|${_ssmCtrl.text}|${_sstCtrl.text}|${_addressCtrl.text}|${_phoneCtrl.text}|${_socialCtrl.text}|${_footerMsgCtrl.text}|${_policyCtrl.text}';
   }
 
   // Real Receipt Image Capture
@@ -127,8 +127,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   @override
   void initState() {
     super.initState();
-    _loadBusinessProfile();
-    _loadSavedReceiptSettings();
+    _initReceiptSettings();
+  }
+
+  Future<void> _initReceiptSettings() async {
+    await _loadBusinessProfile();
+    await _loadSavedReceiptSettings();
   }
 
   Future<void> _loadSavedReceiptSettings() async {
@@ -137,6 +141,8 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       if (!mounted) return;
       setState(() {
         _paperWidth = prefs.getInt('receipt_paper_width') ?? _paperWidth;
+        _autoPrintOnOrder = prefs.getBool('receipt_auto_print') ?? _autoPrintOnOrder;
+        _autoCutPaper = prefs.getBool('receipt_auto_cut') ?? _autoCutPaper;
         final fontIdx = prefs.getInt('receipt_font_idx');
         if (fontIdx != null && fontIdx >= 0 && fontIdx < ReceiptFont.values.length) {
           _selectedFont = ReceiptFont.values[fontIdx];
@@ -145,12 +151,49 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         if (alignIdx != null && alignIdx >= 0 && alignIdx < TextAlign.values.length) {
           _headerAlign = TextAlign.values[alignIdx];
         }
+        final divIdx = prefs.getInt('receipt_divider_style');
+        if (divIdx != null && divIdx >= 0 && divIdx < DividerStyle.values.length) {
+          _dividerStyle = DividerStyle.values[divIdx];
+        }
         final logoIdx = prefs.getInt('receipt_logo_size');
         if (logoIdx != null && logoIdx >= 0 && logoIdx < LogoSize.values.length) {
           _logoSize = LogoSize.values[logoIdx];
         }
         _includeLogo = prefs.getBool('receipt_include_logo') ?? _includeLogo;
         _enableWhatsappReceipt = prefs.getBool('receipt_enable_whatsapp') ?? _enableWhatsappReceipt;
+        _showTagline = prefs.getBool('receipt_show_tagline') ?? _showTagline;
+        _showSsm = prefs.getBool('receipt_show_ssm') ?? _showSsm;
+        _showSst = prefs.getBool('receipt_show_sst') ?? _showSst;
+        _showAddress = prefs.getBool('receipt_show_address') ?? _showAddress;
+        _showPhone = prefs.getBool('receipt_show_phone') ?? _showPhone;
+        _showSocial = prefs.getBool('receipt_show_social') ?? _showSocial;
+        _showTableNo = prefs.getBool('receipt_show_table_no') ?? _showTableNo;
+        _showCashier = prefs.getBool('receipt_show_cashier') ?? _showCashier;
+        _showDateTime = prefs.getBool('receipt_show_datetime') ?? _showDateTime;
+        _showSstTax = prefs.getBool('receipt_show_sst_tax') ?? _showSstTax;
+        _showServiceCharge = prefs.getBool('receipt_show_service_charge') ?? _showServiceCharge;
+        _showRounding = prefs.getBool('receipt_show_rounding') ?? _showRounding;
+        _showPaymentMethod = prefs.getBool('receipt_show_payment_method') ?? _showPaymentMethod;
+
+        final savedStoreName = prefs.getString('receipt_store_name');
+        if (savedStoreName != null && savedStoreName.isNotEmpty) _storeNameCtrl.text = savedStoreName;
+        final savedTagline = prefs.getString('receipt_tagline');
+        if (savedTagline != null) _taglineCtrl.text = savedTagline;
+        final savedSsm = prefs.getString('receipt_ssm');
+        if (savedSsm != null) _ssmCtrl.text = savedSsm;
+        final savedSst = prefs.getString('receipt_sst');
+        if (savedSst != null) _sstCtrl.text = savedSst;
+        final savedAddress = prefs.getString('receipt_address');
+        if (savedAddress != null) _addressCtrl.text = savedAddress;
+        final savedPhone = prefs.getString('receipt_phone');
+        if (savedPhone != null) _phoneCtrl.text = savedPhone;
+        final savedSocial = prefs.getString('receipt_social');
+        if (savedSocial != null) _socialCtrl.text = savedSocial;
+        final savedFooter = prefs.getString('receipt_footer_msg');
+        if (savedFooter != null) _footerMsgCtrl.text = savedFooter;
+        final savedPolicy = prefs.getString('receipt_policy');
+        if (savedPolicy != null) _policyCtrl.text = savedPolicy;
+
         final codes = prefs.getStringList('receipt_bottom_codes');
         if (codes != null) {
           _selectedBottomCodes
@@ -166,7 +209,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
     } catch (_) {}
   }
 
-  void _loadBusinessProfile() async {
+  Future<void> _loadBusinessProfile() async {
     try {
       final profile = await BusinessService().getBusinessProfile();
       if (profile != null && mounted) {
@@ -373,16 +416,40 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
     );
   }
 
-  @override
   Future<void> _saveTemplate() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('receipt_paper_width', _paperWidth);
+      await prefs.setBool('receipt_auto_print', _autoPrintOnOrder);
+      await prefs.setBool('receipt_auto_cut', _autoCutPaper);
       await prefs.setInt('receipt_font_idx', _selectedFont.index);
       await prefs.setInt('receipt_header_align', _headerAlign.index);
+      await prefs.setInt('receipt_divider_style', _dividerStyle.index);
       await prefs.setInt('receipt_logo_size', _logoSize.index);
       await prefs.setBool('receipt_include_logo', _includeLogo);
       await prefs.setBool('receipt_enable_whatsapp', _enableWhatsappReceipt);
+      await prefs.setBool('receipt_show_tagline', _showTagline);
+      await prefs.setBool('receipt_show_ssm', _showSsm);
+      await prefs.setBool('receipt_show_sst', _showSst);
+      await prefs.setBool('receipt_show_address', _showAddress);
+      await prefs.setBool('receipt_show_phone', _showPhone);
+      await prefs.setBool('receipt_show_social', _showSocial);
+      await prefs.setBool('receipt_show_table_no', _showTableNo);
+      await prefs.setBool('receipt_show_cashier', _showCashier);
+      await prefs.setBool('receipt_show_datetime', _showDateTime);
+      await prefs.setBool('receipt_show_sst_tax', _showSstTax);
+      await prefs.setBool('receipt_show_service_charge', _showServiceCharge);
+      await prefs.setBool('receipt_show_rounding', _showRounding);
+      await prefs.setBool('receipt_show_payment_method', _showPaymentMethod);
+      await prefs.setString('receipt_store_name', _storeNameCtrl.text.trim());
+      await prefs.setString('receipt_tagline', _taglineCtrl.text.trim());
+      await prefs.setString('receipt_ssm', _ssmCtrl.text.trim());
+      await prefs.setString('receipt_sst', _sstCtrl.text.trim());
+      await prefs.setString('receipt_address', _addressCtrl.text.trim());
+      await prefs.setString('receipt_phone', _phoneCtrl.text.trim());
+      await prefs.setString('receipt_social', _socialCtrl.text.trim());
+      await prefs.setString('receipt_footer_msg', _footerMsgCtrl.text.trim());
+      await prefs.setString('receipt_policy', _policyCtrl.text.trim());
       await prefs.setStringList(
         'receipt_bottom_codes',
         _selectedBottomCodes.map((e) => e.name).toList(),
