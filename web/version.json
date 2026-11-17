@@ -1,6 +1,6 @@
 {
-  "version": "1.0.49",
-  "build_number": 29,
-  "released_at": "2026-11-17T08:05:00Z",
-  "changelog": "Betulkan kod QR resit (pautan kedai sebenar, promo, WiFi sah & lebih mudah diimbas), serta buang emoji dan ganti dengan HugeIcons pada pilihan kod resit."
+  "version": "1.0.50",
+  "build_number": 30,
+  "released_at": "2026-11-17T08:13:00Z",
+  "changelog": "Betulkan ralat kompilasi web pada halaman Tempahan dan Pengurusan Feed."
 }

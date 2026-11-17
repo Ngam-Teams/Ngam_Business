@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
@@ -2713,7 +2715,7 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                       GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () {
-                          Clipboard.setData(ClipboardData(text: widget.post.videoUrl));
+                          Clipboard.setData(ClipboardData(text: widget.post.mediaUrl));
                           showGlassToast(context, 'Pautan video telah disalin!');
                         },
                         child: const Column(
@@ -2739,8 +2741,9 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                       // Shop Handle
                       GestureDetector(
                         onTap: () {
+                          final router = GoRouter.of(context);
                           Navigator.pop(context);
-                          context.push('/business-profile');
+                          router.push('/business-profile');
                         },
                         child: Row(
                           children: [
@@ -2779,16 +2782,17 @@ class _PhoneMockupPreviewDialogState extends State<_PhoneMockupPreviewDialog> {
                       // CTA Button
                       GestureDetector(
                         onTap: () {
+                          final router = GoRouter.of(context);
                           Navigator.pop(context);
                           final cta = widget.post.ctaType;
                           if (cta == 'booking') {
-                            context.push('/appointments');
+                            router.push('/appointments');
                           } else if (cta == 'whatsapp') {
-                            context.push('/merchant-inbox');
+                            router.push('/merchant-inbox');
                           } else if (cta == 'queue') {
-                            context.push('/queue');
+                            router.push('/queue');
                           } else {
-                            context.push('/product-catalogue');
+                            router.push('/product-catalogue');
                           }
                         },
                         child: Container(
