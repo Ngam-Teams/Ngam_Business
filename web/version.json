@@ -1,6 +1,6 @@
 {
-  "version": "1.0.41",
-  "build_number": 21,
-  "released_at": "2026-11-17T06:00:00Z",
-  "changelog": "Label saiz logo resit diringkaskan kepada Small/Medium/Large supaya tidak melimpah."
+  "version": "1.0.42",
+  "build_number": 22,
+  "released_at": "2026-11-17T06:03:00Z",
+  "changelog": "Butang Simpan Resit kini terapung seperti navbar di bawah skrin, dengan popup pengesahan jika keluar tanpa menyimpan."
 }

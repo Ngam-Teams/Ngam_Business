@@ -112,6 +112,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   // Bottom Code Selector
   final Set<BottomCodeType> _selectedBottomCodes = {BottomCodeType.qrReceipt};
   bool _enableWhatsappReceipt = true;
+  bool _hasUnsavedChanges = false;
 
   // Real Receipt Image Capture
   final GlobalKey _receiptKey = GlobalKey();
@@ -331,26 +332,193 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   }
 
   @override
+  void _saveTemplate() {
+    setState(() => _hasUnsavedChanges = false);
+    showGlassToast(context, 'receipt.template_saved'.tr());
+  }
+
+  Future<void> _handleBackPressed() async {
+    if (!_hasUnsavedChanges) {
+      if (mounted) Navigator.pop(context);
+      return;
+    }
+    final action = await showDialog<String>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      builder: (dialogCtx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 380),
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: const Color(0xFF141424).withValues(alpha: 0.86),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.save_rounded, color: Color(0xFF38BDF8), size: 32),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Simpan Perubahan?',
+                    style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Anda mempunyai perubahan tetapan resit yang belum disimpan. Simpan sebelum keluar?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white70,
+                            side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () => Navigator.pop(dialogCtx, 'discard'),
+                          child: const Text('Keluar Sahaja', style: TextStyle(fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0284C7),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          onPressed: () => Navigator.pop(dialogCtx, 'save'),
+                          child: const Text('Simpan & Keluar', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    if (action == 'save') {
+      _saveTemplate();
+      Navigator.pop(context);
+    } else if (action == 'discard') {
+      setState(() => _hasUnsavedChanges = false);
+      Navigator.pop(context);
+    }
+  }
+
+  Widget _buildFloatingSaveBar() {
+    return Positioned(
+      left: 20,
+      right: 20,
+      bottom: 18,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: GestureDetector(
+                onTap: _saveTemplate,
+                child: Container(
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF2196F3).withValues(alpha: 0.92),
+                        const Color(0xFF0284C7).withValues(alpha: 0.88),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: const Color(0xFF38BDF8).withValues(alpha: 0.65),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0284C7).withValues(alpha: 0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'receipt.save_settings'.tr(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return GlassScaffold(
-      backgroundColor: const Color(0xFF0A0A14),
-      title: 'receipt.title'.tr(),
-      subtitle: 'receipt.subtitle'.tr(),
-      actionItems: [
-        GlassNavPillItem(
-          icon: HugeIcons.strokeRoundedDownload04,
-          tooltip: 'receipt.download_receipt'.tr(),
-          isLoading: _isDownloadingReceipt,
-          onTap: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
-        ),
-        GlassNavPillItem(
-          icon: HugeIcons.strokeRoundedPrinter,
-          tooltip: 'receipt.test_print'.tr(),
-          onTap: _printTestReceipt,
-        ),
-      ],
-      body: LayoutBuilder(
-        builder: (context, constraints) {
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _handleBackPressed();
+        }
+      },
+      child: GlassScaffold(
+        backgroundColor: const Color(0xFF0A0A14),
+        title: 'receipt.title'.tr(),
+        subtitle: 'receipt.subtitle'.tr(),
+        onBack: _handleBackPressed,
+        actionItems: [
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedDownload04,
+            tooltip: 'receipt.download_receipt'.tr(),
+            isLoading: _isDownloadingReceipt,
+            onTap: _isDownloadingReceipt ? null : _captureAndSaveReceipt,
+          ),
+          GlassNavPillItem(
+            icon: HugeIcons.strokeRoundedPrinter,
+            tooltip: 'receipt.test_print'.tr(),
+            onTap: _printTestReceipt,
+          ),
+        ],
+        body: Stack(
+          children: [
+            Listener(
+              onPointerDown: (_) {
+                if (!_hasUnsavedChanges) _hasUnsavedChanges = true;
+              },
+              child: LayoutBuilder(
+                builder: (context, constraints) {
           final isLandscape = constraints.maxWidth > constraints.maxHeight;
           final isWide = constraints.maxWidth >= 780 || isLandscape;
 
@@ -439,7 +607,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               ],
             ),
           );
-        },
+                },
+              ),
+            ),
+            _buildFloatingSaveBar(),
+          ],
+        ),
       ),
     );
   }
@@ -545,27 +718,7 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
         _buildPrinterStatusCard(),
         const SizedBox(height: 28),
 
-        // 10. Save Template Button
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2196F3),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 4,
-            ),
-            onPressed: () {
-              showGlassToast(context, 'receipt.template_saved'.tr());
-            },
-            icon: const Icon(Icons.check_circle_rounded, size: 20),
-            label: Text(
-              'receipt.save_settings'.tr(),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-          ),
-        ),
+        const SizedBox(height: 88),
       ],
     );
   }
