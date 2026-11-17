@@ -179,37 +179,9 @@
           );
         }
         if ("fetch" in window) {
-          ["/index.html", "/flutter_bootstrap.js?v=1.0.51", "/main.dart.js", "/version.json"].forEach(function(p) {
+          ["/index.html", "/flutter_bootstrap.js?v=1.0.52", "/main.dart.js", "/version.json"].forEach(function(p) {
             tasks.push(fetch(p + "?_t=" + ver, { cache: "reload" }).catch(function() {}));
           });
-        }
-        if (tasks.length > 0) {
-          Promise.all(tasks).finally(doReload);
-        } else {
-          doReload();
-        }
-      } catch (e) {
-        window.location.reload();
-      }
-    };
-        var tasks = [];
-        if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistrations) {
-          tasks.push(
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-              return Promise.all(regs.map(function(reg) {
-                return reg.unregister();
-              }));
-            }).catch(function() {})
-          );
-        }
-        if ('caches' in window && window.caches && window.caches.keys) {
-          tasks.push(
-            window.caches.keys().then(function(keys) {
-              return Promise.all(keys.map(function(k) {
-                return window.caches.delete(k);
-              }));
-            }).catch(function() {})
-          );
         }
         if (tasks.length > 0) {
           Promise.all(tasks).finally(doReload);
@@ -459,6 +431,6 @@
       }
     };
   </script>
-  <script src="flutter_bootstrap.js?v=1.0.51" async=""></script>
+  <script src="flutter_bootstrap.js?v=1.0.52" async=""></script>
 </body>
 </html>
