@@ -1577,6 +1577,7 @@
     "desc_foodpanda": "Centralize foodpanda orders and update store busy mode automatically.",
     "desc_misi": "Accept community delivery orders from Misi Rakyat with zero commission.",
     "desc_lalamove": "Dispatch instant Lalamove riders for self-delivery & catering orders.",
+    "desc_easyparcel": "Ship product orders via PosLaju, J&T, Ninja Van, DHL & more with one API.",
     "desc_grabexpress": "Book GrabExpress on-demand couriers straight from order details.",
     "desc_duitnow": "Instant DuitNow QR static & dynamic checkout with real-time verification.",
     "desc_chip": "Accept FPX, cards & e-wallets seamlessly via CHIP Collect.",

@@ -1577,6 +1577,7 @@
     "desc_foodpanda": "Pusatkan pesanan foodpanda dan kemas kini mod sibuk kedai secara automatik.",
     "desc_misi": "Terima pesanan penghantaran komuniti Misi Rakyat tanpa komisen tinggi.",
     "desc_lalamove": "Tempah penunggang Lalamove serta-merta untuk penghantaran sendiri & katering.",
+    "desc_easyparcel": "Pos pesanan produk melalui PosLaju, J&T, Ninja Van, DHL & lain-lain dengan satu API.",
     "desc_grabexpress": "Tempah kurier GrabExpress atas permintaan terus daripada butiran pesanan.",
     "desc_duitnow": "Pembayaran DuitNow QR statik & dinamik dengan pengesahan masa nyata.",
     "desc_chip": "Terima FPX, kad & e-dompet dengan lancar melalui CHIP Collect.",

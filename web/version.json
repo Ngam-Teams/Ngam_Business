@@ -1,6 +1,6 @@
 {
-  "version": "1.0.35",
-  "build_number": 15,
-  "released_at": "2026-11-17T04:07:00Z",
-  "changelog": "Butang muat semula di header Integrasi kini digantikan dengan ikon Webhook untuk akses pantas Custom Webhooks."
+  "version": "1.0.36",
+  "build_number": 16,
+  "released_at": "2026-11-17T04:25:00Z",
+  "changelog": "Integrasi kurier EasyParcel (PosLaju, J&T, Ninja Van, DHL & lain-lain) ditambah dalam halaman Integrasi."
 }

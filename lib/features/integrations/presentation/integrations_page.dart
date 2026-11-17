@@ -225,6 +225,18 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       defaultStatus: _IntegrationStatus.comingSoon,
     ),
     _IntegrationItem(
+      id: 'easyparcel',
+      name: 'EasyParcel',
+      category: 'logistics',
+      descKey: 'integrations.desc_easyparcel',
+      brandColor: Color(0xFFEC008C),
+      svgLogo: _svgLalamove,
+      assetLogo: 'assets/images/integrations/easyparcel.jpg',
+      defaultStatus: _IntegrationStatus.comingSoon,
+      fieldLabelKey: 'integrations.api_key_label',
+      fieldHintKey: 'integrations.api_key_hint',
+    ),
+    _IntegrationItem(
       id: 'myinvois',
       name: 'LHDN MyInvois',
       category: 'accounting',
