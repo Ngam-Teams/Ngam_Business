@@ -299,14 +299,15 @@ class MerchantDisputeService {
 
   static Future<void> respondDispute({
     required String disputeId,
-    required String decision, // 'agree_refund' | 'counter_evidence'
+    required String decision, // 'agree_refund' | 'counter_evidence' | 'counter' | 'escalate'
     String? responseText,
     List<String> evidenceUrls = const [],
   }) async {
+    final action = decision == 'counter_evidence' ? 'counter' : decision;
     await _db.rpc('respond_dispute_case', params: {
       'p_dispute_id': disputeId,
-      'p_decision': decision,
-      'p_response_text': responseText,
+      'p_action': action,
+      'p_response_text': responseText ?? '',
       'p_evidence_urls': evidenceUrls,
     });
   }
