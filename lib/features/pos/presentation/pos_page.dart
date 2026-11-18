@@ -2564,7 +2564,7 @@ class _PosPageState extends State<PosPage> {
                 shape: BoxShape.circle,
               ),
               child: const HugeIcon(
-                icon: HugeIcons.strokeRoundedShoppingCart01,
+                icon: HugeIcons.strokeRoundedShoppingCart02,
                 color: Colors.white30,
                 size: 36,
               ),

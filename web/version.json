@@ -1,6 +1,6 @@
 {
-  "version": "1.0.58",
-  "build_number": 38,
-  "released_at": "2026-11-17T23:55:00Z",
-  "changelog": "Buang paparan teks pautan URL ngam.dev di bawah QR pada resit Studio Resit, kemas kini pautan QR Resit Digital (/receipt/view) & QR Promo (/promo/<KOD>), serta tambah QR e-Resit boleh imbas pada slip resit terminal POS tanpa pautan URL."
+  "version": "1.0.59",
+  "build_number": 39,
+  "released_at": "2026-11-18T02:58:00Z",
+  "changelog": "Semua ikon beg beli-belah ditukar kepada ikon troli (ShoppingCart02)."
 }
