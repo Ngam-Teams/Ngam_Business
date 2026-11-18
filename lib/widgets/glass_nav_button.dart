@@ -262,6 +262,7 @@ class GlassNavButton extends StatelessWidget {
           '/audit-logs',
           '/payroll',
           '/loyalty',
+          '/help-center',
         }.contains(currentPath)) {
           resolvedFallback = '/settings';
         } else if (currentPath == '/kds') {

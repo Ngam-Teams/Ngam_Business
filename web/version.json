@@ -1,6 +1,6 @@
 {
-  "version": "1.0.60",
-  "build_number": 40,
-  "released_at": "2026-11-18T04:45:00Z",
-  "changelog": "Tukar semua baki ikon beg beli-belah kepada ikon troli (HugeIcons.strokeRoundedShoppingCart02) pada Analitik, Papan Pemuka, Pesanan, Mesej, Profil Perniagaan, Promosi dan Feed."
+  "version": "1.0.61",
+  "build_number": 41,
+  "released_at": "2026-11-18T05:15:00Z",
+  "changelog": "Pelancaran Pusat Bantuan Peniaga (FAQ, Lapor Pepijat & Maklum Balas beserta muat naik gambar R2, serta Penjejak Tiket Sokongan masa nyata)."
 }
