@@ -394,7 +394,7 @@ Laporan dijana secara automatik oleh Ngam Business
                       subtitle: 'analytics.orders_total_badge'.tr(args: [displayedOrders.toString()]),
                       accentColor: const Color(0xFF44CF6C),
                       badgeColor: const Color(0xFF44CF6C),
-                      icon: HugeIcons.strokeRoundedShoppingBag01,
+                      icon: HugeIcons.strokeRoundedShoppingCart02,
                       sparklineData: ordSpark,
                     ),
                     StatCard(

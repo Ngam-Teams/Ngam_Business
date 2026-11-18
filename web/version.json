@@ -1,6 +1,6 @@
 {
-  "version": "1.0.59",
-  "build_number": 39,
-  "released_at": "2026-11-18T02:58:00Z",
-  "changelog": "Semua ikon beg beli-belah ditukar kepada ikon troli (ShoppingCart02)."
+  "version": "1.0.60",
+  "build_number": 40,
+  "released_at": "2026-11-18T04:45:00Z",
+  "changelog": "Tukar semua baki ikon beg beli-belah kepada ikon troli (HugeIcons.strokeRoundedShoppingCart02) pada Analitik, Papan Pemuka, Pesanan, Mesej, Profil Perniagaan, Promosi dan Feed."
 }

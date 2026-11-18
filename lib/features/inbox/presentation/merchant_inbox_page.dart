@@ -1332,7 +1332,7 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
                           ),
                           child: Icon(
                             conv.contextType == 'order'
-                                ? Icons.shopping_bag_rounded
+                                ? Icons.shopping_cart_rounded
                                 : Icons.calendar_today_rounded,
                             size: 10,
                             color: Colors.black87,

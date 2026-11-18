@@ -1601,7 +1601,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       _buildServiceModeCard(
         title: 'business_profile.mode_order_title'.tr(),
         subtitle: 'business_profile.mode_order_desc'.tr(),
-        icon: HugeIcons.strokeRoundedShoppingBag01,
+        icon: HugeIcons.strokeRoundedShoppingCart02,
         accentColor: const Color(0xFFF59E0B),
         isEnabled: _enableOrder,
         onToggle: (val) {

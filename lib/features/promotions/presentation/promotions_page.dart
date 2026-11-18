@@ -560,7 +560,7 @@ class _PromotionsPageState extends State<PromotionsPage> {
                           : (voucher.isFreeItem
                               ? Icons.card_giftcard_rounded
                               : (voucher.isBuyXGetY
-                                  ? Icons.shopping_bag_outlined
+                                  ? Icons.shopping_cart_outlined
                                   : (voucher.isPointsMultiplier
                                       ? Icons.stars_rounded
                                       : (voucher.isFreeShipping
@@ -1241,7 +1241,7 @@ class _VoucherEditorModalState extends State<_VoucherEditorModal> {
                         _buildTypeChip('percentage', 'Diskaun %', Icons.percent_rounded, const Color(0xFF42A5F5)),
                         _buildTypeChip('fixed_amount', 'Potongan Tunai (RM)', Icons.monetization_on_outlined, const Color(0xFF44CF6C)),
                         _buildTypeChip('free_item', '🎁 Item / Servis Percuma', Icons.card_giftcard_rounded, const Color(0xFFFF9800)),
-                        _buildTypeChip('buy_x_get_y', '🛍️ Beli 2 Percuma 1 (BOGO)', Icons.shopping_bag_outlined, const Color(0xFFAB47BC)),
+                        _buildTypeChip('buy_x_get_y', '🛍️ Beli 2 Percuma 1 (BOGO)', Icons.shopping_cart_outlined, const Color(0xFFAB47BC)),
                         _buildTypeChip('points_multiplier', '⭐ Poin Ahli (2x / 3x)', Icons.stars_rounded, Colors.amber),
                       ],
                     ),

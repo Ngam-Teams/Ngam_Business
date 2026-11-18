@@ -1175,7 +1175,7 @@ class _OrdersPageState extends State<OrdersPage> {
                             Navigator.pop(modalCtx);
                             _updateStatus(order, 'ready');
                           },
-                          icon: const HugeIcon(icon: HugeIcons.strokeRoundedShoppingBag01, color: Colors.black, size: 18),
+                          icon: const HugeIcon(icon: HugeIcons.strokeRoundedShoppingCart02, color: Colors.black, size: 18),
                           label: Text('orders.mark_ready'.tr(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                         ),
                       ),
@@ -2413,7 +2413,7 @@ class _OrdersPageState extends State<OrdersPage> {
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: () => _updateStatus(order, 'ready'),
-                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedShoppingBag01, color: Colors.black, size: 16),
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedShoppingCart02, color: Colors.black, size: 16),
                       label: Text('orders.action_ready'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00E676),

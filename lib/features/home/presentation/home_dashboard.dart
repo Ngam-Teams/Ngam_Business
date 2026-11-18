@@ -168,7 +168,7 @@ class _HomeDashboardState extends State<HomeDashboard> with WidgetsBindingObserv
             subtitle: todayOrders > 0
                 ? 'dashboard.stat_orders_count'.tr(args: [todayOrders.toString()])
                 : 'dashboard.stat_active'.tr(),
-            icon: HugeIcons.strokeRoundedShoppingBag01,
+            icon: HugeIcons.strokeRoundedShoppingCart02,
             accentColor: const Color(0xFF44CF6C),
             sparklineData: todayOrdSpark,
             onTap: () => switchAppShellTab(1),
@@ -688,7 +688,7 @@ class _HomeDashboardState extends State<HomeDashboard> with WidgetsBindingObserv
                     : const Color(0xFF42A5F5);
         final dynamic ic = isBooking
             ? HugeIcons.strokeRoundedCalendar01
-            : HugeIcons.strokeRoundedShoppingBag01;
+            : HugeIcons.strokeRoundedShoppingCart02;
         return (
           time: _formatRelativeTime((map['created_at'] ?? '').toString(), context),
           event: (map['event'] ?? '').toString(),

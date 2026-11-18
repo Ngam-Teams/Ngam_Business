@@ -92,7 +92,7 @@ class _FeedCreatePageState extends State<FeedCreatePage> {
       'label': 'Order Now',
       'ctaText': '🛒 ORDER NOW',
       'desc': 'Buka menu & bakul untuk pesan terus',
-      'icon': HugeIcons.strokeRoundedShoppingBag01,
+      'icon': HugeIcons.strokeRoundedShoppingCart02,
       'color': Color(0xFFF59E0B),
     },
     {
