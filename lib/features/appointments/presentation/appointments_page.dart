@@ -12,6 +12,8 @@ import '../../../widgets/glass_nav_button.dart';
 import '../../settings/data/business_service.dart';
 import '../../pos/presentation/widgets/payment_terminal_modal.dart';
 import '../../orders/presentation/widgets/order_pickup_qr_scanner_screen.dart';
+import '../../inbox/data/merchant_dispute_service.dart';
+import '../../inbox/presentation/merchant_dispute_room_page.dart';
 
 // ============================================================
 // AppointmentsPage — Merchant Booking & Schedule Management
@@ -226,6 +228,43 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
       await launchUrl(uri);
     } else {
       if (mounted) showGlassToast(context, 'Could not launch phone dialer', isError: true);
+    }
+  }
+
+  Future<void> _openDisputeRoomForAppointment(Map<String, dynamic> appt) async {
+    final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+    final bizId = _businessId ?? profile?['id']?.toString() ?? '';
+    final bizName = (profile?['business_name'] ?? 'Ngam Business').toString();
+    final dbId = appt['db_id']?.toString();
+    final bookingRef = appt['id']?.toString();
+
+    final dispute = await MerchantDisputeService.fetchDisputeByBooking(
+      bookingId: dbId,
+      bookingRef: bookingRef,
+    );
+    if (!mounted) return;
+    if (dispute != null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MerchantDisputeRoomPage(
+            initialDispute: dispute,
+            businessName: bizName,
+          ),
+        ),
+      );
+      return;
+    }
+    if (bizId.isNotEmpty) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MerchantDisputesListPage(
+            businessId: bizId,
+            businessName: bizName,
+          ),
+        ),
+      );
     }
   }
 
@@ -922,21 +961,48 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.15),
+                        color: Colors.orange.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.45)),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 22),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Pelanggan telah memfailkan pertikaian. Sila hubungi pelanggan melalui WhatsApp untuk menyelesaikan isu.',
-                              style: const TextStyle(
-                                color: Colors.orangeAccent,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                          Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 22),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'dispute.dispute_banner_desc'.tr(),
+                                  style: const TextStyle(
+                                    color: Colors.orangeAccent,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFF59E0B),
+                                foregroundColor: Colors.black,
+                                padding: const EdgeInsets.symmetric(vertical: 11),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              onPressed: () {
+                                Navigator.pop(modalCtx);
+                                _openDisputeRoomForAppointment(appt);
+                              },
+                              icon: const Icon(Icons.forum_rounded, size: 17),
+                              label: Text(
+                                'dispute.open_room_btn'.tr(),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
                               ),
                             ),
                           ),
@@ -1749,24 +1815,28 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
 
                               if (status == AppointmentStatus.disputed) ...[
                                 const SizedBox(height: 10),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
-                                  ),
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 18),
-                                      SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'Pelanggan telah memfailkan pertikaian. Dana ditahan oleh Ngam. Sila hubungi pelanggan melalui WhatsApp untuk selesaikan isu.',
-                                          style: TextStyle(color: Colors.orangeAccent, fontSize: 11.5, fontWeight: FontWeight.w600),
+                                GestureDetector(
+                                  onTap: () => _openDisputeRoomForAppointment(appt),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withValues(alpha: 0.16),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: Colors.orange.withValues(alpha: 0.48)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.forum_rounded, color: Colors.orangeAccent, size: 18),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            '${'dispute.dispute_banner_desc'.tr()} (${'dispute.open_room_btn'.tr()})',
+                                            style: const TextStyle(color: Colors.orangeAccent, fontSize: 11.5, fontWeight: FontWeight.w700),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                        const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.orangeAccent),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],

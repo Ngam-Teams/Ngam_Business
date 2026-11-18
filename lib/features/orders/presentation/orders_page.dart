@@ -20,6 +20,8 @@ import '../../settings/data/business_service.dart';
 import '../../../core/services/sound_service.dart';
 import 'widgets/order_pickup_qr_scanner_screen.dart';
 import '../../../widgets/glass_toast.dart';
+import '../../inbox/data/merchant_dispute_service.dart';
+import '../../inbox/presentation/merchant_dispute_room_page.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -442,6 +444,37 @@ class _OrdersPageState extends State<OrdersPage> {
     }
   }
 
+  Future<void> _openDisputeRoomForOrder(OrderModel order) async {
+    final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+    final bizId = order.businessId ?? profile?['id']?.toString() ?? '';
+    final bizName = (profile?['business_name'] ?? 'Ngam Business').toString();
+    final dispute = await MerchantDisputeService.fetchDisputeByOrder(order.id);
+    if (!mounted) return;
+    if (dispute != null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MerchantDisputeRoomPage(
+            initialDispute: dispute,
+            businessName: bizName,
+          ),
+        ),
+      );
+      return;
+    }
+    if (bizId.isNotEmpty) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MerchantDisputesListPage(
+            businessId: bizId,
+            businessName: bizName,
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildOrderDetailsContent(OrderModel order, BuildContext modalCtx, {required bool isDialog}) {
     final shortId = order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase();
     final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
@@ -465,6 +498,14 @@ class _OrdersPageState extends State<OrdersPage> {
       case 'completed':
         statusColor = const Color(0xFF2ECC71);
         statusBgColor = const Color(0xFF2ECC71).withValues(alpha: 0.2);
+        break;
+      case 'disputed':
+        statusColor = const Color(0xFFF59E0B);
+        statusBgColor = const Color(0xFFF59E0B).withValues(alpha: 0.22);
+        break;
+      case 'refunded':
+        statusColor = const Color(0xFFA855F7);
+        statusBgColor = const Color(0xFFA855F7).withValues(alpha: 0.2);
         break;
       case 'cancelled':
       default:
@@ -1275,6 +1316,33 @@ class _OrdersPageState extends State<OrdersPage> {
                           );
                         },
                       ),
+                    ] else if (order.status == 'disputed' || order.status == 'refunded') ...[
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF59E0B),
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(modalCtx);
+                            _openDisputeRoomForOrder(order);
+                          },
+                          icon: const HugeIcon(
+                            icon: HugeIcons.strokeRoundedShield01,
+                            color: Colors.black,
+                            size: 18,
+                          ),
+                          label: Text(
+                            'dispute.open_room_btn'.tr(),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                          ),
+                        ),
+                      ),
                     ] else ...[
                       SizedBox(
                         width: double.infinity,
@@ -1694,14 +1762,17 @@ class _OrdersPageState extends State<OrdersPage> {
                     _checkForNewOrders(allOrders);
                   });
 
-                  // Group by active lifecycle vs completed/cancelled
+                  // Group by disputed vs active lifecycle vs completed/cancelled/refunded
+                  final disputedOrders = allOrders.where((o) => o.status == 'disputed').toList();
                   final pendingOrders = allOrders.where((o) =>
                       o.status == 'pending' ||
                       o.status == 'preparing' ||
                       o.status == 'in_progress' ||
                       o.status == 'ready').toList();
                   final completedOrders = allOrders.where((o) =>
-                      o.status == 'completed' || o.status == 'cancelled').toList();
+                      o.status == 'completed' ||
+                      o.status == 'cancelled' ||
+                      o.status == 'refunded').toList();
 
                   if (allOrders.isEmpty) {
                     return _buildEmptyState();
@@ -1717,6 +1788,35 @@ class _OrdersPageState extends State<OrdersPage> {
                         // 1-Row Quick Action Buttons (Live Board, Export CSV, Verify QR)
                         _buildQuickActionsRow(allOrders),
                         const SizedBox(height: 16),
+
+                        // Section: Dalam Pertikaian (Escrow Held)
+                        if (disputedOrders.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFF59E0B),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'dispute.disputed_section'.tr(),
+                                style: const TextStyle(
+                                  color: Color(0xFFFBBF24),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ...disputedOrders.map((o) => _buildOrderCard(o)),
+                          const SizedBox(height: 16),
+                        ],
 
                         // Section: Aktif (Pending, Preparing, Ready)
                         if (pendingOrders.isNotEmpty) ...[
@@ -2242,6 +2342,20 @@ class _OrdersPageState extends State<OrdersPage> {
     try {
       final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
     final isPending = order.status == 'pending';
+    final isDisputed = order.status == 'disputed';
+    final isRefunded = order.status == 'refunded';
+    final badgeBg = isDisputed
+        ? const Color(0xFFF59E0B).withValues(alpha: 0.22)
+        : (isRefunded
+            ? const Color(0xFFA855F7).withValues(alpha: 0.2)
+            : (isPending
+                ? Colors.orangeAccent.withValues(alpha: 0.2)
+                : Colors.green.withValues(alpha: 0.2)));
+    final badgeFg = isDisputed
+        ? const Color(0xFFFBBF24)
+        : (isRefunded
+            ? const Color(0xFFC084FC)
+            : (isPending ? Colors.orangeAccent : Colors.greenAccent));
     
     return GestureDetector(
       onTap: () => _showOrderDetailsModal(order),
@@ -2249,10 +2363,14 @@ class _OrdersPageState extends State<OrdersPage> {
       child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isPending ? const Color(0xFF42A5F5).withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.05),
+        color: isDisputed
+            ? const Color(0xFFF59E0B).withValues(alpha: 0.10)
+            : (isPending ? const Color(0xFF42A5F5).withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.05)),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isPending ? const Color(0xFF42A5F5).withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.1),
+          color: isDisputed
+              ? const Color(0xFFF59E0B).withValues(alpha: 0.45)
+              : (isPending ? const Color(0xFF42A5F5).withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.1)),
         ),
       ),
       padding: const EdgeInsets.all(16),
@@ -2267,13 +2385,13 @@ class _OrdersPageState extends State<OrdersPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isPending ? Colors.orangeAccent.withValues(alpha: 0.2) : Colors.green.withValues(alpha: 0.2),
+                      color: badgeBg,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       order.status.toUpperCase(),
                       style: TextStyle(
-                        color: isPending ? Colors.orangeAccent : Colors.greenAccent,
+                        color: badgeFg,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.61",
-  "build_number": 41,
-  "released_at": "2026-11-18T05:15:00Z",
-  "changelog": "Pelancaran Pusat Bantuan Peniaga (FAQ, Lapor Pepijat & Maklum Balas beserta muat naik gambar R2, serta Penjejak Tiket Sokongan masa nyata)."
+  "version": "1.0.62",
+  "build_number": 42,
+  "released_at": "2026-11-18T18:15:00Z",
+  "changelog": "Bilik Mediasi Pertikaian 3-Hala untuk Peniaga (balas bukti foto R2, setuju refund atau panggil Admin Ngam Mediator) dalam Pesanan, Janji Temu & Inbox."
 }

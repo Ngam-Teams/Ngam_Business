@@ -12,6 +12,8 @@ import '../../../widgets/glass_nav_button.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
 import '../data/merchant_chat_service.dart';
+import '../data/merchant_dispute_service.dart';
+import 'merchant_dispute_room_page.dart';
 
 // ============================================================
 // MerchantInboxPage — Real-Time Two-Way Customer Chat Inbox
@@ -1239,10 +1241,80 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
-      itemCount: list.length,
-      itemBuilder: (ctx, idx) {
+    return Column(
+      children: [
+        if (_businessId != null && _businessId!.isNotEmpty)
+          StreamBuilder<List<MerchantDisputeCase>>(
+            stream: MerchantDisputeService.watchBusinessDisputes(_businessId!),
+            builder: (ctx, snap) {
+              final active = (snap.data ?? const <MerchantDisputeCase>[])
+                  .where((d) => !d.isResolved)
+                  .toList();
+              if (active.isEmpty) return const SizedBox.shrink();
+              return GestureDetector(
+                onTap: () {
+                  if (active.length == 1) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MerchantDisputeRoomPage(
+                          initialDispute: active.first,
+                          businessName: _businessName,
+                        ),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MerchantDisputesListPage(
+                          businessId: _businessId!,
+                          businessName: _businessName,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(14, 6, 14, 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.45),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const HugeIcon(
+                        icon: HugeIcons.strokeRoundedShield01,
+                        color: Color(0xFFF59E0B),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'dispute.active_disputes_banner'.tr(args: [active.length.toString()]),
+                          style: const TextStyle(
+                            color: Color(0xFFFBBF24),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, size: 13, color: Color(0xFFFBBF24)),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+            itemCount: list.length,
+            itemBuilder: (ctx, idx) {
         final conv = list[idx];
         final isSel = conv.id == _activeConversationId;
         final unread = conv.unreadCount;
@@ -1448,6 +1520,9 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
           ),
         );
       },
+          ),
+        ),
+      ],
     );
   }
 
