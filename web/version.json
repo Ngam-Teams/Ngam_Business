@@ -1,6 +1,6 @@
 {
-  "version": "1.0.62",
-  "build_number": 42,
-  "released_at": "2026-11-18T18:15:00Z",
-  "changelog": "Bilik Mediasi Pertikaian 3-Hala untuk Peniaga (balas bukti foto R2, setuju refund atau panggil Admin Ngam Mediator) dalam Pesanan, Janji Temu & Inbox."
+  "version": "1.0.63",
+  "build_number": 43,
+  "released_at": "2026-11-18T18:10:00Z",
+  "changelog": "Buang nilai hardcoded contoh kedai pada Studio Resit dan asingkan simpanan tetapan resit mengikut ID kedai supaya maklumat kedai lain tidak bercampur."
 }

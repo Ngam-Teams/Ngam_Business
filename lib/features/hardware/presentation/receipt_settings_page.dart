@@ -82,19 +82,19 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   String _logoUrl = '';
   Uint8List? _customLogoBytes;
 
-  // Receipt Content Controllers
-  final _storeNameCtrl = TextEditingController(text: 'WARUNG NGAM MELAKA');
-  final _taglineCtrl = TextEditingController(text: 'Port Santai Makanan & Kopi Padu');
-  final _ssmCtrl = TextEditingController(text: 'SSM: 202401039821 1560944-X');
-  final _sstCtrl = TextEditingController(text: 'SST ID: W10-1808-32000456');
-  final _addressCtrl = TextEditingController(text: 'No 45, Jalan Hang Tuah, Bandar Hilir, Melaka');
-  final _phoneCtrl = TextEditingController(text: '+60 17-234 5678');
-  final _socialCtrl = TextEditingController(text: 'IG/TikTok: @warungngam');
-  final _footerMsgCtrl = TextEditingController(text: 'Terima kasih daun keladi, sudilah datang lagi!');
-  final _policyCtrl = TextEditingController(text: 'Sah untuk pertukaran dalam 3 hari bersama resit asal.');
+  // Receipt Content Controllers (diisi dari profil kedai sebenar & tetapan disimpan per kedai)
+  final _storeNameCtrl = TextEditingController();
+  final _taglineCtrl = TextEditingController();
+  final _ssmCtrl = TextEditingController();
+  final _sstCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _socialCtrl = TextEditingController();
+  final _footerMsgCtrl = TextEditingController(text: 'Terima kasih, sila datang lagi!');
+  final _policyCtrl = TextEditingController();
   final _wifiSsidCtrl = TextEditingController();
   final _wifiPassCtrl = TextEditingController();
-  final _promoCodeCtrl = TextEditingController(text: 'NGAM10');
+  final _promoCodeCtrl = TextEditingController();
 
   String _businessId = BusinessService.cachedProfile?['id']?.toString() ?? '';
   String _businessHandle = (BusinessService.cachedProfile?['business_handle'] ?? '')
@@ -103,13 +103,15 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       .replaceAll('@', '')
       .toLowerCase();
 
+  String _k(String base) => _businessId.isNotEmpty ? '${base}_$_businessId' : base;
+
   // Info Visibility Toggles
-  bool _showTagline = true;
-  bool _showSsm = true;
-  bool _showSst = true;
+  bool _showTagline = false;
+  bool _showSsm = false;
+  bool _showSst = false;
   bool _showAddress = true;
   bool _showPhone = true;
-  bool _showSocial = true;
+  bool _showSocial = false;
 
   // Transaction & Finance Toggles
   bool _showTableNo = true;
@@ -150,67 +152,67 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
       final prefs = await SharedPreferences.getInstance();
       if (!mounted) return;
       setState(() {
-        _paperWidth = prefs.getInt('receipt_paper_width') ?? _paperWidth;
-        _autoPrintOnOrder = prefs.getBool('receipt_auto_print') ?? _autoPrintOnOrder;
-        _autoCutPaper = prefs.getBool('receipt_auto_cut') ?? _autoCutPaper;
-        final fontIdx = prefs.getInt('receipt_font_idx');
+        _paperWidth = prefs.getInt(_k('receipt_paper_width')) ?? _paperWidth;
+        _autoPrintOnOrder = prefs.getBool(_k('receipt_auto_print')) ?? _autoPrintOnOrder;
+        _autoCutPaper = prefs.getBool(_k('receipt_auto_cut')) ?? _autoCutPaper;
+        final fontIdx = prefs.getInt(_k('receipt_font_idx'));
         if (fontIdx != null && fontIdx >= 0 && fontIdx < ReceiptFont.values.length) {
           _selectedFont = ReceiptFont.values[fontIdx];
         }
-        final alignIdx = prefs.getInt('receipt_header_align');
+        final alignIdx = prefs.getInt(_k('receipt_header_align'));
         if (alignIdx != null && alignIdx >= 0 && alignIdx < TextAlign.values.length) {
           _headerAlign = TextAlign.values[alignIdx];
         }
-        final divIdx = prefs.getInt('receipt_divider_style');
+        final divIdx = prefs.getInt(_k('receipt_divider_style'));
         if (divIdx != null && divIdx >= 0 && divIdx < DividerStyle.values.length) {
           _dividerStyle = DividerStyle.values[divIdx];
         }
-        final logoIdx = prefs.getInt('receipt_logo_size');
+        final logoIdx = prefs.getInt(_k('receipt_logo_size'));
         if (logoIdx != null && logoIdx >= 0 && logoIdx < LogoSize.values.length) {
           _logoSize = LogoSize.values[logoIdx];
         }
-        _includeLogo = prefs.getBool('receipt_include_logo') ?? _includeLogo;
-        _enableWhatsappReceipt = prefs.getBool('receipt_enable_whatsapp') ?? _enableWhatsappReceipt;
-        _showTagline = prefs.getBool('receipt_show_tagline') ?? _showTagline;
-        _showSsm = prefs.getBool('receipt_show_ssm') ?? _showSsm;
-        _showSst = prefs.getBool('receipt_show_sst') ?? _showSst;
-        _showAddress = prefs.getBool('receipt_show_address') ?? _showAddress;
-        _showPhone = prefs.getBool('receipt_show_phone') ?? _showPhone;
-        _showSocial = prefs.getBool('receipt_show_social') ?? _showSocial;
-        _showTableNo = prefs.getBool('receipt_show_table_no') ?? _showTableNo;
-        _showCashier = prefs.getBool('receipt_show_cashier') ?? _showCashier;
-        _showDateTime = prefs.getBool('receipt_show_datetime') ?? _showDateTime;
-        _showSstTax = prefs.getBool('receipt_show_sst_tax') ?? _showSstTax;
-        _showServiceCharge = prefs.getBool('receipt_show_service_charge') ?? _showServiceCharge;
-        _showRounding = prefs.getBool('receipt_show_rounding') ?? _showRounding;
-        _showPaymentMethod = prefs.getBool('receipt_show_payment_method') ?? _showPaymentMethod;
+        _includeLogo = prefs.getBool(_k('receipt_include_logo')) ?? _includeLogo;
+        _enableWhatsappReceipt = prefs.getBool(_k('receipt_enable_whatsapp')) ?? _enableWhatsappReceipt;
+        _showTagline = prefs.getBool(_k('receipt_show_tagline')) ?? _showTagline;
+        _showSsm = prefs.getBool(_k('receipt_show_ssm')) ?? _showSsm;
+        _showSst = prefs.getBool(_k('receipt_show_sst')) ?? _showSst;
+        _showAddress = prefs.getBool(_k('receipt_show_address')) ?? _showAddress;
+        _showPhone = prefs.getBool(_k('receipt_show_phone')) ?? _showPhone;
+        _showSocial = prefs.getBool(_k('receipt_show_social')) ?? _showSocial;
+        _showTableNo = prefs.getBool(_k('receipt_show_table_no')) ?? _showTableNo;
+        _showCashier = prefs.getBool(_k('receipt_show_cashier')) ?? _showCashier;
+        _showDateTime = prefs.getBool(_k('receipt_show_datetime')) ?? _showDateTime;
+        _showSstTax = prefs.getBool(_k('receipt_show_sst_tax')) ?? _showSstTax;
+        _showServiceCharge = prefs.getBool(_k('receipt_show_service_charge')) ?? _showServiceCharge;
+        _showRounding = prefs.getBool(_k('receipt_show_rounding')) ?? _showRounding;
+        _showPaymentMethod = prefs.getBool(_k('receipt_show_payment_method')) ?? _showPaymentMethod;
 
-        final savedStoreName = prefs.getString('receipt_store_name');
+        final savedStoreName = prefs.getString(_k('receipt_store_name'));
         if (savedStoreName != null && savedStoreName.isNotEmpty) _storeNameCtrl.text = savedStoreName;
-        final savedTagline = prefs.getString('receipt_tagline');
+        final savedTagline = prefs.getString(_k('receipt_tagline'));
         if (savedTagline != null) _taglineCtrl.text = savedTagline;
-        final savedSsm = prefs.getString('receipt_ssm');
+        final savedSsm = prefs.getString(_k('receipt_ssm'));
         if (savedSsm != null) _ssmCtrl.text = savedSsm;
-        final savedSst = prefs.getString('receipt_sst');
+        final savedSst = prefs.getString(_k('receipt_sst'));
         if (savedSst != null) _sstCtrl.text = savedSst;
-        final savedAddress = prefs.getString('receipt_address');
+        final savedAddress = prefs.getString(_k('receipt_address'));
         if (savedAddress != null) _addressCtrl.text = savedAddress;
-        final savedPhone = prefs.getString('receipt_phone');
+        final savedPhone = prefs.getString(_k('receipt_phone'));
         if (savedPhone != null) _phoneCtrl.text = savedPhone;
-        final savedSocial = prefs.getString('receipt_social');
+        final savedSocial = prefs.getString(_k('receipt_social'));
         if (savedSocial != null) _socialCtrl.text = savedSocial;
-        final savedFooter = prefs.getString('receipt_footer_msg');
+        final savedFooter = prefs.getString(_k('receipt_footer_msg'));
         if (savedFooter != null) _footerMsgCtrl.text = savedFooter;
-        final savedPolicy = prefs.getString('receipt_policy');
+        final savedPolicy = prefs.getString(_k('receipt_policy'));
         if (savedPolicy != null) _policyCtrl.text = savedPolicy;
-        final savedWifiSsid = prefs.getString('receipt_wifi_ssid');
+        final savedWifiSsid = prefs.getString(_k('receipt_wifi_ssid'));
         if (savedWifiSsid != null && savedWifiSsid.isNotEmpty) _wifiSsidCtrl.text = savedWifiSsid;
-        final savedWifiPass = prefs.getString('receipt_wifi_pass');
+        final savedWifiPass = prefs.getString(_k('receipt_wifi_pass'));
         if (savedWifiPass != null) _wifiPassCtrl.text = savedWifiPass;
-        final savedPromo = prefs.getString('receipt_promo_code');
+        final savedPromo = prefs.getString(_k('receipt_promo_code'));
         if (savedPromo != null && savedPromo.isNotEmpty) _promoCodeCtrl.text = savedPromo;
 
-        final codes = prefs.getStringList('receipt_bottom_codes');
+        final codes = prefs.getStringList(_k('receipt_bottom_codes'));
         if (codes != null) {
           _selectedBottomCodes
             ..clear()
@@ -238,6 +240,10 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
               .toLowerCase();
           if (handle.isNotEmpty) {
             _businessHandle = handle;
+            if (_socialCtrl.text.isEmpty) {
+              _socialCtrl.text = '@$handle';
+              _showSocial = true;
+            }
           }
           final settings = profile['settings'] as Map<String, dynamic>?;
           if (settings != null) {
@@ -254,6 +260,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           if (profileName != null && profileName.isNotEmpty) {
             _storeNameCtrl.text = profileName.toUpperCase();
           }
+          final tagline = (profile['tagline'] ?? profile['business_tagline'])?.toString().trim();
+          if (tagline != null && tagline.isNotEmpty) {
+            _taglineCtrl.text = tagline;
+            _showTagline = true;
+          }
           final logo = (profile['business_logo_url'] ?? profile['logo_url'])?.toString().trim();
           if (logo != null && logo.isNotEmpty) {
             _logoUrl = logo;
@@ -269,10 +280,12 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
           final ssm = profile['ssm_number']?.toString().trim();
           if (ssm != null && ssm.isNotEmpty) {
             _ssmCtrl.text = 'SSM: $ssm';
+            _showSsm = true;
           }
           final sst = profile['sst_id']?.toString().trim();
           if (sst != null && sst.isNotEmpty) {
             _sstCtrl.text = 'SST ID: $sst';
+            _showSst = true;
           }
         });
       }
@@ -458,42 +471,42 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
   Future<void> _saveTemplate() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('receipt_paper_width', _paperWidth);
-      await prefs.setBool('receipt_auto_print', _autoPrintOnOrder);
-      await prefs.setBool('receipt_auto_cut', _autoCutPaper);
-      await prefs.setInt('receipt_font_idx', _selectedFont.index);
-      await prefs.setInt('receipt_header_align', _headerAlign.index);
-      await prefs.setInt('receipt_divider_style', _dividerStyle.index);
-      await prefs.setInt('receipt_logo_size', _logoSize.index);
-      await prefs.setBool('receipt_include_logo', _includeLogo);
-      await prefs.setBool('receipt_enable_whatsapp', _enableWhatsappReceipt);
-      await prefs.setBool('receipt_show_tagline', _showTagline);
-      await prefs.setBool('receipt_show_ssm', _showSsm);
-      await prefs.setBool('receipt_show_sst', _showSst);
-      await prefs.setBool('receipt_show_address', _showAddress);
-      await prefs.setBool('receipt_show_phone', _showPhone);
-      await prefs.setBool('receipt_show_social', _showSocial);
-      await prefs.setBool('receipt_show_table_no', _showTableNo);
-      await prefs.setBool('receipt_show_cashier', _showCashier);
-      await prefs.setBool('receipt_show_datetime', _showDateTime);
-      await prefs.setBool('receipt_show_sst_tax', _showSstTax);
-      await prefs.setBool('receipt_show_service_charge', _showServiceCharge);
-      await prefs.setBool('receipt_show_rounding', _showRounding);
-      await prefs.setBool('receipt_show_payment_method', _showPaymentMethod);
-      await prefs.setString('receipt_store_name', _storeNameCtrl.text.trim());
-      await prefs.setString('receipt_tagline', _taglineCtrl.text.trim());
-      await prefs.setString('receipt_ssm', _ssmCtrl.text.trim());
-      await prefs.setString('receipt_sst', _sstCtrl.text.trim());
-      await prefs.setString('receipt_address', _addressCtrl.text.trim());
-      await prefs.setString('receipt_phone', _phoneCtrl.text.trim());
-      await prefs.setString('receipt_social', _socialCtrl.text.trim());
-      await prefs.setString('receipt_footer_msg', _footerMsgCtrl.text.trim());
-      await prefs.setString('receipt_policy', _policyCtrl.text.trim());
-      await prefs.setString('receipt_wifi_ssid', _wifiSsidCtrl.text.trim());
-      await prefs.setString('receipt_wifi_pass', _wifiPassCtrl.text.trim());
-      await prefs.setString('receipt_promo_code', _promoCodeCtrl.text.trim().toUpperCase());
+      await prefs.setInt(_k('receipt_paper_width'), _paperWidth);
+      await prefs.setBool(_k('receipt_auto_print'), _autoPrintOnOrder);
+      await prefs.setBool(_k('receipt_auto_cut'), _autoCutPaper);
+      await prefs.setInt(_k('receipt_font_idx'), _selectedFont.index);
+      await prefs.setInt(_k('receipt_header_align'), _headerAlign.index);
+      await prefs.setInt(_k('receipt_divider_style'), _dividerStyle.index);
+      await prefs.setInt(_k('receipt_logo_size'), _logoSize.index);
+      await prefs.setBool(_k('receipt_include_logo'), _includeLogo);
+      await prefs.setBool(_k('receipt_enable_whatsapp'), _enableWhatsappReceipt);
+      await prefs.setBool(_k('receipt_show_tagline'), _showTagline);
+      await prefs.setBool(_k('receipt_show_ssm'), _showSsm);
+      await prefs.setBool(_k('receipt_show_sst'), _showSst);
+      await prefs.setBool(_k('receipt_show_address'), _showAddress);
+      await prefs.setBool(_k('receipt_show_phone'), _showPhone);
+      await prefs.setBool(_k('receipt_show_social'), _showSocial);
+      await prefs.setBool(_k('receipt_show_table_no'), _showTableNo);
+      await prefs.setBool(_k('receipt_show_cashier'), _showCashier);
+      await prefs.setBool(_k('receipt_show_datetime'), _showDateTime);
+      await prefs.setBool(_k('receipt_show_sst_tax'), _showSstTax);
+      await prefs.setBool(_k('receipt_show_service_charge'), _showServiceCharge);
+      await prefs.setBool(_k('receipt_show_rounding'), _showRounding);
+      await prefs.setBool(_k('receipt_show_payment_method'), _showPaymentMethod);
+      await prefs.setString(_k('receipt_store_name'), _storeNameCtrl.text.trim());
+      await prefs.setString(_k('receipt_tagline'), _taglineCtrl.text.trim());
+      await prefs.setString(_k('receipt_ssm'), _ssmCtrl.text.trim());
+      await prefs.setString(_k('receipt_sst'), _sstCtrl.text.trim());
+      await prefs.setString(_k('receipt_address'), _addressCtrl.text.trim());
+      await prefs.setString(_k('receipt_phone'), _phoneCtrl.text.trim());
+      await prefs.setString(_k('receipt_social'), _socialCtrl.text.trim());
+      await prefs.setString(_k('receipt_footer_msg'), _footerMsgCtrl.text.trim());
+      await prefs.setString(_k('receipt_policy'), _policyCtrl.text.trim());
+      await prefs.setString(_k('receipt_wifi_ssid'), _wifiSsidCtrl.text.trim());
+      await prefs.setString(_k('receipt_wifi_pass'), _wifiPassCtrl.text.trim());
+      await prefs.setString(_k('receipt_promo_code'), _promoCodeCtrl.text.trim().toUpperCase());
       await prefs.setStringList(
-        'receipt_bottom_codes',
+        _k('receipt_bottom_codes'),
         _selectedBottomCodes.map((e) => e.name).toList(),
       );
     } catch (_) {}
