@@ -14,6 +14,8 @@ class ProductModel {
   final String? category;
   final String? subCategory;
   final String? imageUrl;
+  final List<String> imageUrls;
+  final String? videoUrl;
   final String? description;
   final String? sku;
   final String? barcode;
@@ -46,6 +48,8 @@ class ProductModel {
     this.category,
     this.subCategory,
     this.imageUrl,
+    this.imageUrls = const [],
+    this.videoUrl,
     this.description,
     this.sku,
     this.barcode,
@@ -67,7 +71,7 @@ class ProductModel {
   });
 
   bool get isService => itemType == 'service';
-  bool get isProduct => itemType != 'service';
+  bool get isProduct => !isService;
   bool get hasDiscount => compareAtPrice != null && compareAtPrice! > price;
   double? get discountPercent => hasDiscount ? (((compareAtPrice! - price) / compareAtPrice!) * 100) : null;
   double? get profitMargin => (costPrice != null && costPrice! > 0 && price > costPrice!)
@@ -76,7 +80,39 @@ class ProductModel {
   bool get isLowStock => isProduct && trackInventory && stock <= lowStockThreshold && stock > 0;
   bool get isOutOfStock => isProduct && trackInventory && stock <= 0;
 
+  List<String> get galleryImages {
+    final out = <String>[];
+    if (imageUrl != null && imageUrl!.trim().isNotEmpty) {
+      out.add(imageUrl!.trim());
+    }
+    for (final u in imageUrls) {
+      final clean = u.trim();
+      if (clean.isNotEmpty && !out.contains(clean)) {
+        out.add(clean);
+      }
+    }
+    return out;
+  }
+
+  static List<String> _parseImageList(Map<String, dynamic> json) {
+    final out = <String>[];
+    final primary = json['image_url']?.toString().trim() ?? '';
+    if (primary.isNotEmpty) out.add(primary);
+    final raw = json['image_urls'];
+    if (raw is List) {
+      for (final item in raw) {
+        final s = item?.toString().trim() ?? '';
+        if (s.isNotEmpty && !out.contains(s)) {
+          out.add(s);
+        }
+      }
+    }
+    return out;
+  }
+
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    final gallery = _parseImageList(json);
+    final rawVideo = json['video_url']?.toString().trim();
     return ProductModel(
       id: json['id'] as String,
       name: json['name'] as String? ?? 'Unnamed Item',
@@ -87,7 +123,9 @@ class ProductModel {
       taxRate: (json['tax_rate'] as num?)?.toDouble() ?? 0.0,
       category: json['category'] as String?,
       subCategory: json['sub_category'] as String?,
-      imageUrl: json['image_url'] as String?,
+      imageUrl: gallery.isNotEmpty ? gallery.first : (json['image_url'] as String?),
+      imageUrls: gallery,
+      videoUrl: (rawVideo != null && rawVideo.isNotEmpty) ? rawVideo : null,
       description: json['description'] as String?,
       sku: json['sku'] as String?,
       barcode: json['barcode'] as String?,
@@ -120,6 +158,8 @@ class ProductModel {
         'category': category,
         'sub_category': subCategory,
         'image_url': imageUrl,
+        'image_urls': imageUrls,
+        'video_url': videoUrl,
         'description': description,
         'sku': sku,
         'barcode': barcode,

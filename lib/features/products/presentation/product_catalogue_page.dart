@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../widgets/glass_toast.dart';
 import '../../pos/models/product_model.dart';
@@ -416,6 +418,52 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
                         ],
                       ),
                     ),
+
+                    if ((item.videoUrl != null && item.videoUrl!.isNotEmpty) ||
+                        item.galleryImages.length > 1)
+                      Positioned(
+                        right: 8,
+                        bottom: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (item.videoUrl != null && item.videoUrl!.isNotEmpty) ...[
+                                const Icon(Icons.play_circle_fill_rounded,
+                                    color: Color(0xFF42A5F5), size: 12),
+                                if (item.galleryImages.length > 1)
+                                  const SizedBox(width: 4),
+                              ],
+                              if (item.galleryImages.length > 1)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.collections_rounded,
+                                        color: Colors.white70, size: 11),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '${item.galleryImages.length}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -589,8 +637,16 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   List<Map<String, dynamic>> _variants = [];
   List<Map<String, dynamic>> _modifiers = [];
 
-  XFile? _imageFile;
-  Uint8List? _imageBytes;
+  static const int _maxGalleryPhotos = 9;
+  static const int _maxVideoSizeMb = 80;
+
+  final List<_ProductPhotoDraft> _galleryItems = [];
+  String? _existingVideoUrl;
+  XFile? _pickedVideoFile;
+  Uint8List? _pickedVideoBytes;
+  VideoPlayerController? _videoPreviewCtrl;
+  bool _videoPreviewReady = false;
+  bool _videoPlaying = false;
   bool _isSaving = false;
 
   static const _unitOptions = ['pcs', 'pack', 'kg', 'g', 'cup', 'box', 'portion', 'set'];
@@ -632,11 +688,22 @@ class _AddProductSheetState extends State<_AddProductSheet> {
 
       _variants = List<Map<String, dynamic>>.from(p.variants);
       _modifiers = List<Map<String, dynamic>>.from(p.modifiers);
+
+      for (final url in p.galleryImages) {
+        if (_galleryItems.length < _maxGalleryPhotos) {
+          _galleryItems.add(_ProductPhotoDraft(existingUrl: url));
+        }
+      }
+      if (p.videoUrl != null && p.videoUrl!.trim().isNotEmpty) {
+        _existingVideoUrl = p.videoUrl!.trim();
+        _initVideoPreview(networkUrl: _existingVideoUrl);
+      }
     }
   }
 
   @override
   void dispose() {
+    _videoPreviewCtrl?.dispose();
     _nameController.dispose();
     _categoryController.dispose();
     _subCategoryController.dispose();
@@ -654,16 +721,128 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800);
-    if (picked != null) {
-      final bytes = await picked.readAsBytes();
+  Future<void> _initVideoPreview({String? networkUrl, XFile? localFile}) async {
+    await _videoPreviewCtrl?.dispose();
+    _videoPreviewCtrl = null;
+    if (mounted) {
       setState(() {
-        _imageFile = picked;
-        _imageBytes = bytes;
+        _videoPreviewReady = false;
+        _videoPlaying = false;
       });
     }
+    try {
+      final ctrl = networkUrl != null
+          ? VideoPlayerController.networkUrl(Uri.parse(networkUrl))
+          : (kIsWeb
+              ? VideoPlayerController.networkUrl(Uri.parse(localFile!.path))
+              : VideoPlayerController.networkUrl(Uri.file(localFile!.path)));
+      await ctrl.initialize();
+      await ctrl.setLooping(true);
+      await ctrl.setVolume(0.0);
+      if (mounted) {
+        setState(() {
+          _videoPreviewCtrl = ctrl;
+          _videoPreviewReady = true;
+          _videoPlaying = false;
+        });
+      } else {
+        ctrl.dispose();
+      }
+    } catch (_) {
+      // Fallback safely when browser codec cannot decode preview frame
+    }
+  }
+
+  Future<void> _pickMultipleImages() async {
+    final remaining = _maxGalleryPhotos - _galleryItems.length;
+    if (remaining <= 0) {
+      showGlassToast(
+        context,
+        'products.max_photos_reached'.tr(args: ['$_maxGalleryPhotos']),
+        isError: true,
+      );
+      return;
+    }
+    final picker = ImagePicker();
+    final picked = await picker.pickMultiImage(maxWidth: 1400, imageQuality: 85);
+    if (picked.isEmpty) return;
+
+    final toAdd = picked.take(remaining).toList();
+    if (picked.length > remaining && mounted) {
+      showGlassToast(
+        context,
+        'products.max_photos_reached'.tr(args: ['$_maxGalleryPhotos']),
+      );
+    }
+
+    final drafts = <_ProductPhotoDraft>[];
+    for (final file in toAdd) {
+      final bytes = await file.readAsBytes();
+      drafts.add(_ProductPhotoDraft(localBytes: bytes, localName: file.name));
+    }
+    if (mounted && drafts.isNotEmpty) {
+      setState(() {
+        _galleryItems.addAll(drafts);
+      });
+    }
+  }
+
+  void _setCoverPhoto(int index) {
+    if (index <= 0 || index >= _galleryItems.length) return;
+    setState(() {
+      final chosen = _galleryItems.removeAt(index);
+      _galleryItems.insert(0, chosen);
+    });
+  }
+
+  void _removePhoto(int index) {
+    if (index < 0 || index >= _galleryItems.length) return;
+    setState(() {
+      _galleryItems.removeAt(index);
+    });
+  }
+
+  Future<void> _pickProductVideo() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(seconds: 60),
+    );
+    if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
+    final sizeMb = bytes.length / (1024 * 1024);
+    if (sizeMb > _maxVideoSizeMb) {
+      if (mounted) {
+        showGlassToast(
+          context,
+          'products.video_too_large'.tr(args: ['$_maxVideoSizeMb']),
+          isError: true,
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _existingVideoUrl = null;
+        _pickedVideoFile = picked;
+        _pickedVideoBytes = bytes;
+      });
+    }
+    await _initVideoPreview(localFile: picked);
+  }
+
+  void _removeProductVideo() {
+    _videoPreviewCtrl?.dispose();
+    setState(() {
+      _videoPreviewCtrl = null;
+      _videoPreviewReady = false;
+      _videoPlaying = false;
+      _existingVideoUrl = null;
+      _pickedVideoFile = null;
+      _pickedVideoBytes = null;
+    });
   }
 
   void _addVariantDialog() {
@@ -764,16 +943,13 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     final deposit = double.tryParse(_depositController.text) ?? 0.0;
     final maxPax = int.tryParse(_maxPaxController.text) ?? 1;
 
-    Uint8List? imageBytes;
-    String? imageExt;
-
-    if (_imageBytes != null && _imageFile != null) {
-      imageBytes = _imageBytes;
-      imageExt = _imageFile!.name.split('.').last;
-    } else if (_imageFile != null) {
-      imageBytes = await _imageFile!.readAsBytes();
-      imageExt = _imageFile!.name.split('.').last;
-    }
+    final galleryUploads = _galleryItems
+        .map((g) => ProductGalleryDraftUpload(
+              localBytes: g.localBytes,
+              localName: g.localName,
+              existingUrl: g.existingUrl,
+            ))
+        .toList();
 
     bool success = false;
 
@@ -810,8 +986,11 @@ class _AddProductSheetState extends State<_AddProductSheet> {
       success = await _service.updateProduct(
         widget.existingProduct!.id,
         updates,
-        imageBytes: imageBytes,
-        imageExt: imageExt,
+        galleryItems: galleryUploads,
+        newVideoBytes: _pickedVideoBytes,
+        newVideoFileName: _pickedVideoFile?.name,
+        existingVideoUrl: _existingVideoUrl,
+        updateMedia: true,
       );
     } else {
       // Add new
@@ -841,8 +1020,9 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         depositAmount: deposit,
         serviceLocation: _serviceLocation,
         maxPax: maxPax,
-        imageBytes: imageBytes,
-        imageExt: imageExt,
+        galleryItems: galleryUploads,
+        videoBytes: _pickedVideoBytes,
+        videoFileName: _pickedVideoFile?.name,
       );
       success = product != null;
     }
@@ -985,58 +1165,11 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ─── Image Picker ────────────────────────────────────────
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Container(
-                        height: 140,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.04),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                          image: _imageBytes != null
-                              ? DecorationImage(
-                                  image: MemoryImage(_imageBytes!),
-                                  fit: BoxFit.cover,
-                                )
-                              : (widget.existingProduct?.imageUrl != null
-                                  ? DecorationImage(
-                                      image: NetworkImage(widget.existingProduct!.imageUrl!),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null),
-                        ),
-                        child: _imageBytes == null && widget.existingProduct?.imageUrl == null
-                            ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  HugeIcon(
-                                    icon: HugeIcons.strokeRoundedCamera01,
-                                    color: Colors.white.withValues(alpha: 0.4),
-                                    size: 26,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'products.upload_cover_image'.tr(),
-                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13),
-                                  ),
-                                ],
-                              )
-                            : const Align(
-                                alignment: Alignment.topRight,
-                                child: Padding(
-                                  padding: EdgeInsets.all(10),
-                                  child: CircleAvatar(
-                                    backgroundColor: Colors.black54,
-                                    radius: 16,
-                                    child: Icon(Icons.edit, color: Colors.white, size: 16),
-                                  ),
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
+                    // ─── Shopee-Style Multi-Image Gallery & Video Section ────
+                    _buildMediaGallerySection(),
+                    const SizedBox(height: 14),
+                    _buildProductVideoSection(),
+                    const SizedBox(height: 12),
                     // ─── Aspect Ratio Recommendation Guide ───
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -1593,6 +1726,440 @@ class _AddProductSheetState extends State<_AddProductSheet> {
       ),
     );
   }
+
+  Widget _buildMediaGallerySection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.collections_rounded,
+                  color: Color(0xFF42A5F5), size: 17),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'products.product_photos'.tr(args: ['${_galleryItems.length}']),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (_galleryItems.length < _maxGalleryPhotos)
+                TextButton.icon(
+                  onPressed: _pickMultipleImages,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  icon: const Icon(Icons.add_photo_alternate_outlined,
+                      color: Color(0xFF42A5F5), size: 16),
+                  label: Text(
+                    'products.add_photos'.tr(),
+                    style: const TextStyle(
+                      color: Color(0xFF42A5F5),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 98,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _galleryItems.length < _maxGalleryPhotos
+                  ? _galleryItems.length + 1
+                  : _galleryItems.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, idx) {
+                if (idx == _galleryItems.length) {
+                  return InkWell(
+                    onTap: _pickMultipleImages,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: 96,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: const Color(0xFF42A5F5).withValues(alpha: 0.35),
+                          width: 1.1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          HugeIcon(
+                            icon: HugeIcons.strokeRoundedCamera01,
+                            color: const Color(0xFF42A5F5).withValues(alpha: 0.85),
+                            size: 22,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'products.add_photos'.tr(),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.72),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final item = _galleryItems[idx];
+                final isCover = idx == 0;
+                return GestureDetector(
+                  onTap: isCover ? null : () => _setCoverPhoto(idx),
+                  child: Container(
+                    width: 96,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isCover
+                            ? const Color(0xFF42A5F5)
+                            : Colors.white.withValues(alpha: 0.14),
+                        width: isCover ? 1.8 : 1.0,
+                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (item.localBytes != null)
+                          Image.memory(item.localBytes!, fit: BoxFit.cover)
+                        else if (item.existingUrl != null)
+                          Image.network(
+                            item.existingUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(
+                              child: Icon(Icons.broken_image_outlined,
+                                  color: Colors.white38, size: 22),
+                            ),
+                          ),
+                        // Top-right remove button
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => _removePhoto(idx),
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.68),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                color: Colors.white,
+                                size: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Cover badge on index 0
+                        if (isCover)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 3),
+                              color: const Color(0xFF42A5F5).withValues(alpha: 0.9),
+                              child: Text(
+                                'products.cover_badge'.tr(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (_galleryItems.length > 1) ...[
+            const SizedBox(height: 8),
+            Text(
+              'products.tap_to_set_cover'.tr(),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.45),
+                fontSize: 10.5,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductVideoSection() {
+    final hasVideo = (_pickedVideoBytes != null) ||
+        (_existingVideoUrl != null && _existingVideoUrl!.isNotEmpty);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: hasVideo
+              ? const Color(0xFF8B5CF6).withValues(alpha: 0.45)
+              : Colors.white.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.video_library_rounded,
+                  color: Color(0xFFA78BFA), size: 17),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'products.product_video'.tr(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (hasVideo) ...[
+                TextButton(
+                  onPressed: _pickProductVideo,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'products.change_video'.tr(),
+                    style: const TextStyle(
+                      color: Color(0xFF42A5F5),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                TextButton(
+                  onPressed: _removeProductVideo,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'products.remove_video'.tr(),
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (!hasVideo)
+            InkWell(
+              onTap: _pickProductVideo,
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8B5CF6).withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.videocam_rounded,
+                        color: Color(0xFFA78BFA),
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'products.upload_product_video'.tr(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'products.video_hint'.tr(),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: Colors.white38, size: 20),
+                  ],
+                ),
+              ),
+            )
+          else
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                height: 170,
+                width: double.infinity,
+                color: Colors.black.withValues(alpha: 0.55),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_videoPreviewReady && _videoPreviewCtrl != null)
+                      FittedBox(
+                        fit: BoxFit.contain,
+                        child: SizedBox(
+                          width: _videoPreviewCtrl!.value.size.width > 0
+                              ? _videoPreviewCtrl!.value.size.width
+                              : 320,
+                          height: _videoPreviewCtrl!.value.size.height > 0
+                              ? _videoPreviewCtrl!.value.size.height
+                              : 180,
+                          child: VideoPlayer(_videoPreviewCtrl!),
+                        ),
+                      )
+                    else
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.play_circle_filled_rounded,
+                              color: Color(0xFFA78BFA), size: 36),
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              _pickedVideoFile?.name ?? 'video.mp4',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (_videoPreviewReady && _videoPreviewCtrl != null)
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            if (_videoPreviewCtrl!.value.isPlaying) {
+                              _videoPreviewCtrl!.pause();
+                              _videoPlaying = false;
+                            } else {
+                              _videoPreviewCtrl!.play();
+                              _videoPlaying = true;
+                            }
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.55),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Icon(
+                            _videoPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 26,
+                          ),
+                        ),
+                      ),
+                    if (_pickedVideoBytes != null)
+                      Positioned(
+                        left: 10,
+                        bottom: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${(_pickedVideoBytes!.length / (1024 * 1024)).toStringAsFixed(1)} MB',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductPhotoDraft {
+  final Uint8List? localBytes;
+  final String? localName;
+  final String? existingUrl;
+
+  const _ProductPhotoDraft({
+    this.localBytes,
+    this.localName,
+    this.existingUrl,
+  });
 }
 
 class _OptionInputDialog extends StatefulWidget {

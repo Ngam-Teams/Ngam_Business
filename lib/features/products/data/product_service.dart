@@ -2,9 +2,22 @@ import 'dart:async';
 import 'dart:typed_data';
 import '../../../core/services/cache_service.dart';
 import '../../../core/services/image_compression_service.dart';
+import '../../../core/services/r2_storage_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../pos/models/product_model.dart';
 import '../../settings/data/business_service.dart';
+
+class ProductGalleryDraftUpload {
+  final Uint8List? localBytes;
+  final String? localName;
+  final String? existingUrl;
+
+  const ProductGalleryDraftUpload({
+    this.localBytes,
+    this.localName,
+    this.existingUrl,
+  });
+}
 
 class ProductService {
   final SupabaseClient _client;
@@ -81,6 +94,67 @@ class ProductService {
         });
   }
 
+  Future<String> _uploadProductImage(Uint8List rawBytes, {String? fileName}) async {
+    final compressed = await ImageCompressionService.compress(
+      bytes: rawBytes,
+      type: ImageCompressionType.product,
+    );
+    final safeName = 'prod_${DateTime.now().millisecondsSinceEpoch}.${compressed.extension}';
+    return R2StorageService().uploadMedia(
+      bytes: compressed.bytes,
+      fileName: fileName != null && fileName.isNotEmpty ? '${DateTime.now().millisecondsSinceEpoch}_${compressed.extension}.$safeName' : safeName,
+      folder: 'products/images',
+      mimeType: compressed.mimeType,
+    );
+  }
+
+  Future<String> _uploadProductVideo(Uint8List bytes, {String? fileName}) async {
+    final name = (fileName ?? 'product_video.mp4').trim();
+    final lower = name.toLowerCase();
+    String mime = 'video/mp4';
+    if (lower.endsWith('.mov')) {
+      mime = 'video/quicktime';
+    } else if (lower.endsWith('.webm')) {
+      mime = 'video/webm';
+    } else if (lower.endsWith('.m4v')) {
+      mime = 'video/x-m4v';
+    }
+    return R2StorageService().uploadMedia(
+      bytes: bytes,
+      fileName: name.isNotEmpty ? name : 'product_video.mp4',
+      folder: 'products/videos',
+      mimeType: mime,
+    );
+  }
+
+  Future<List<String>> _resolveGalleryUrls(
+    List<ProductGalleryDraftUpload> galleryItems, {
+    Uint8List? legacyImageBytes,
+    String? legacyImageExt,
+  }) async {
+    final urls = <String>[];
+    if (galleryItems.isNotEmpty) {
+      for (final item in galleryItems) {
+        if (item.existingUrl != null && item.existingUrl!.trim().isNotEmpty) {
+          urls.add(item.existingUrl!.trim());
+        } else if (item.localBytes != null) {
+          final uploaded = await _uploadProductImage(
+            item.localBytes!,
+            fileName: item.localName,
+          );
+          urls.add(uploaded);
+        }
+      }
+    } else if (legacyImageBytes != null) {
+      final uploaded = await _uploadProductImage(
+        legacyImageBytes,
+        fileName: legacyImageExt != null ? 'cover.$legacyImageExt' : null,
+      );
+      urls.add(uploaded);
+    }
+    return urls;
+  }
+
   /// Adds a new product or service
   Future<ProductModel?> addProduct({
     required String name,
@@ -111,25 +185,23 @@ class ProductService {
     int maxPax = 1,
     Uint8List? imageBytes,
     String? imageExt,
+    List<ProductGalleryDraftUpload> galleryItems = const [],
+    Uint8List? videoBytes,
+    String? videoFileName,
   }) async {
     try {
       final shopId = await _getShopId();
       if (shopId == null) return null;
 
-      String? imageUrl;
-      if (imageBytes != null) {
-        final compressed = await ImageCompressionService.compress(
-          bytes: imageBytes,
-          type: ImageCompressionType.product,
-        );
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.${compressed.extension}';
-        final path = 'products/$fileName';
-        await _client.storage.from('business-assets').uploadBinary(
-          path, 
-          compressed.bytes,
-          fileOptions: FileOptions(contentType: compressed.mimeType, upsert: true),
-        );
-        imageUrl = _client.storage.from('business-assets').getPublicUrl(path);
+      final resolvedGallery = await _resolveGalleryUrls(
+        galleryItems,
+        legacyImageBytes: imageBytes,
+        legacyImageExt: imageExt,
+      );
+
+      String? uploadedVideoUrl;
+      if (videoBytes != null) {
+        uploadedVideoUrl = await _uploadProductVideo(videoBytes, fileName: videoFileName);
       }
 
       final data = {
@@ -160,7 +232,9 @@ class ProductService {
         'deposit_amount': depositAmount,
         'service_location': serviceLocation,
         'max_pax': maxPax,
-        if (imageUrl != null) 'image_url': imageUrl,
+        if (resolvedGallery.isNotEmpty) 'image_url': resolvedGallery.first,
+        'image_urls': resolvedGallery,
+        if (uploadedVideoUrl != null) 'video_url': uploadedVideoUrl,
       };
 
       final response = await _client
@@ -177,25 +251,37 @@ class ProductService {
 
   /// Updates an existing product
   Future<bool> updateProduct(
-    String productId, 
+    String productId,
     Map<String, dynamic> updates, {
     Uint8List? imageBytes,
     String? imageExt,
+    List<ProductGalleryDraftUpload>? galleryItems,
+    Uint8List? newVideoBytes,
+    String? newVideoFileName,
+    String? existingVideoUrl,
+    bool updateMedia = false,
   }) async {
     try {
-      if (imageBytes != null) {
-        final compressed = await ImageCompressionService.compress(
-          bytes: imageBytes,
-          type: ImageCompressionType.product,
+      if (updateMedia && galleryItems != null) {
+        final resolvedGallery = await _resolveGalleryUrls(galleryItems);
+        updates['image_url'] = resolvedGallery.isNotEmpty ? resolvedGallery.first : null;
+        updates['image_urls'] = resolvedGallery;
+
+        if (newVideoBytes != null) {
+          updates['video_url'] = await _uploadProductVideo(
+            newVideoBytes,
+            fileName: newVideoFileName,
+          );
+        } else {
+          updates['video_url'] = (existingVideoUrl != null && existingVideoUrl.trim().isNotEmpty)
+              ? existingVideoUrl.trim()
+              : null;
+        }
+      } else if (imageBytes != null) {
+        final imageUrl = await _uploadProductImage(
+          imageBytes,
+          fileName: imageExt != null ? 'cover.$imageExt' : null,
         );
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.${compressed.extension}';
-        final path = 'products/$fileName';
-        await _client.storage.from('business-assets').uploadBinary(
-          path, 
-          compressed.bytes,
-          fileOptions: FileOptions(contentType: compressed.mimeType, upsert: true),
-        );
-        final imageUrl = _client.storage.from('business-assets').getPublicUrl(path);
         updates['image_url'] = imageUrl;
       }
 

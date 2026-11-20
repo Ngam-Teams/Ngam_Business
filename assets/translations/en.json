@@ -455,7 +455,19 @@
     "modifier_price": "Additional Price (RM)",
     "image_upload_success": "Product image successfully uploaded",
     "image_upload_failed": "Failed to upload product image",
-    "upload_cover_image": "Upload Cover Image"
+    "upload_cover_image": "Upload Cover Image",
+    "product_photos": "Photos ({}/9)",
+    "add_photos": "Add Photos",
+    "cover_badge": "Cover",
+    "tap_to_set_cover": "Tap a photo to set as Cover. Supports multi-select.",
+    "max_photos_reached": "Maximum {} photos allowed per item",
+    "product_video": "Product Video (Shopee Style)",
+    "upload_product_video": "Add Showcase Video",
+    "video_hint": "Max 60s • 80 MB • MP4 / MOV",
+    "change_video": "Change",
+    "remove_video": "Remove",
+    "video_too_large": "Video size exceeds {} MB limit",
+    "uploading_media": "Uploading photos & video..."
   },
   "inventory": {
     "title": "Inventory Management",

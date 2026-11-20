@@ -455,7 +455,19 @@
     "modifier_price": "Harga Tambahan (RM)",
     "image_upload_success": "Gambar produk berjaya dimuat naik",
     "image_upload_failed": "Gagal memuat naik gambar produk",
-    "upload_cover_image": "Muat Naik Gambar Produk"
+    "upload_cover_image": "Muat Naik Gambar Produk",
+    "product_photos": "Gambar Produk / Servis ({}/9)",
+    "add_photos": "Tambah Gambar",
+    "cover_badge": "Utama",
+    "tap_to_set_cover": "Tekan mana-mana gambar untuk jadikan gambar utama. Boleh pilih banyak sekaligus.",
+    "max_photos_reached": "Maksimum {} gambar dibenarkan bagi setiap item",
+    "product_video": "Video Produk / Servis (Gaya Shopee)",
+    "upload_product_video": "Muat Naik Video",
+    "video_hint": "Maks 60 saat • 80 MB • MP4 / MOV",
+    "change_video": "Tukar",
+    "remove_video": "Padam",
+    "video_too_large": "Saiz fail video melebihi had {} MB",
+    "uploading_media": "Sedang memuat naik gambar & video..."
   },
   "inventory": {
     "title": "Pengurusan Inventori",

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.67",
-  "build_number": 47,
-  "released_at": "2026-11-20T11:50:00Z",
-  "changelog": "Sokongan suntingan terus (edit) bagi Varian & Add-ons sedia ada serta reka bentuk popup glassmorphism gaya navbar pada katalog produk."
+  "version": "1.0.68",
+  "build_number": 48,
+  "released_at": "2026-11-20T13:15:00Z",
+  "changelog": "Sokongan muat naik gambar produk/servis berbilang (sehingga 9 gambar) dan bahagian muat naik video produk gaya Shopee terus ke Cloudflare R2."
 }
