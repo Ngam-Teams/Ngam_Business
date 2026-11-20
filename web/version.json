@@ -1,6 +1,6 @@
 {
-  "version": "1.0.65",
-  "build_number": 45,
-  "released_at": "2026-11-19T23:57:00Z",
-  "changelog": "Tambah fungsi Import dari Pautan Google Maps atau koordinat dalam Profil Kedai untuk mengisi alamat, poskod, bandar, negeri dan pin GPS secara automatik."
+  "version": "1.0.66",
+  "build_number": 46,
+  "released_at": "2026-11-20T00:29:00Z",
+  "changelog": "Baiki jenis parameter fungsi Muat Semula Mesej dalam bilik sembang Ngam Business supaya build Web lulus dan berfungsi memuat semula mesej."
 }

@@ -163,8 +163,8 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
     }
   }
 
-  Future<void> _selectConversation(String conversationId) async {
-    if (_activeConversationId == conversationId && _threadChannel != null) {
+  Future<void> _selectConversation(String conversationId, {bool forceReload = false}) async {
+    if (!forceReload && _activeConversationId == conversationId && _threadChannel != null) {
       await MerchantChatService.markAsRead(conversationId);
       return;
     }
@@ -1140,7 +1140,7 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
           label: 'inbox.refresh_chat'.tr(),
           materialIcon: Icons.refresh_rounded,
           color: const Color(0xFFA78BFA),
-          onTap: () => _selectConversation(conv),
+          onTap: () => _selectConversation(conv.id, forceReload: true),
         ),
         _GlassDropdownOption(
           label: 'inbox.delete_chat_title'.tr(),
