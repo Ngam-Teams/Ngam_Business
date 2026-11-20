@@ -1,6 +1,6 @@
 {
-  "version": "1.0.66",
-  "build_number": 46,
-  "released_at": "2026-11-20T00:29:00Z",
-  "changelog": "Baiki jenis parameter fungsi Muat Semula Mesej dalam bilik sembang Ngam Business supaya build Web lulus dan berfungsi memuat semula mesej."
+  "version": "1.0.67",
+  "build_number": 47,
+  "released_at": "2026-11-20T11:50:00Z",
+  "changelog": "Sokongan suntingan terus (edit) bagi Varian & Add-ons sedia ada serta reka bentuk popup glassmorphism gaya navbar pada katalog produk."
 }

@@ -669,11 +669,13 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   void _addVariantDialog() {
     showDialog(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (ctx) => _OptionInputDialog(
         title: 'products.add_variant'.tr(),
         nameLabel: 'products.variant_name'.tr(),
         priceLabel: 'products.variant_price'.tr(),
         initialPrice: _priceController.text,
+        submitLabel: 'common.add'.tr(),
         onAdd: (name, pr) {
           setState(() {
             _variants.add({'name': name, 'price': pr});
@@ -683,17 +685,65 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     );
   }
 
+  void _editVariantDialog(int index) {
+    final item = _variants[index];
+    final currentName = (item['name'] ?? '').toString();
+    final currentPrice = ((item['price'] as num?) ?? 0.0).toStringAsFixed(2);
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (ctx) => _OptionInputDialog(
+        title: 'products.edit_variant'.tr(),
+        nameLabel: 'products.variant_name'.tr(),
+        priceLabel: 'products.variant_price'.tr(),
+        initialName: currentName,
+        initialPrice: currentPrice,
+        submitLabel: 'common.save'.tr(),
+        onAdd: (name, pr) {
+          setState(() {
+            _variants[index] = {'name': name, 'price': pr};
+          });
+        },
+      ),
+    );
+  }
+
   void _addModifierDialog() {
     showDialog(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
       builder: (ctx) => _OptionInputDialog(
         title: 'products.add_modifier'.tr(),
         nameLabel: 'products.modifier_name'.tr(),
         priceLabel: 'products.modifier_price'.tr(),
         initialPrice: '0.00',
+        submitLabel: 'common.add'.tr(),
         onAdd: (name, pr) {
           setState(() {
             _modifiers.add({'name': name, 'price': pr});
+          });
+        },
+      ),
+    );
+  }
+
+  void _editModifierDialog(int index) {
+    final item = _modifiers[index];
+    final currentName = (item['name'] ?? '').toString();
+    final currentPrice = ((item['price'] as num?) ?? 0.0).toStringAsFixed(2);
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      builder: (ctx) => _OptionInputDialog(
+        title: 'products.edit_modifier'.tr(),
+        nameLabel: 'products.modifier_name'.tr(),
+        priceLabel: 'products.modifier_price'.tr(),
+        initialName: currentName,
+        initialPrice: currentPrice,
+        submitLabel: 'common.save'.tr(),
+        onAdd: (name, pr) {
+          setState(() {
+            _modifiers[index] = {'name': name, 'price': pr};
           });
         },
       ),
@@ -1342,17 +1392,15 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                     else
                       Wrap(
                         spacing: 8,
-                        children: _variants.map((v) {
-                          return Chip(
-                            backgroundColor: Colors.white.withValues(alpha: 0.08),
-                            label: Text(
-                              '${v['name']} • RM ${(v['price'] as num).toStringAsFixed(2)}',
-                              style: const TextStyle(color: Colors.white, fontSize: 11),
-                            ),
-                            deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white54),
-                            onDeleted: () => setState(() => _variants.remove(v)),
+                        runSpacing: 8,
+                        children: List.generate(_variants.length, (i) {
+                          final v = _variants[i];
+                          return _buildEditableOptionChip(
+                            label: '${v['name']} • RM ${(v['price'] as num).toStringAsFixed(2)}',
+                            onTap: () => _editVariantDialog(i),
+                            onDelete: () => setState(() => _variants.removeAt(i)),
                           );
-                        }).toList(),
+                        }),
                       ),
                     const SizedBox(height: 16),
 
@@ -1373,17 +1421,15 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                     else
                       Wrap(
                         spacing: 8,
-                        children: _modifiers.map((m) {
-                          return Chip(
-                            backgroundColor: Colors.white.withValues(alpha: 0.08),
-                            label: Text(
-                              '${m['name']} (+RM ${(m['price'] as num).toStringAsFixed(2)})',
-                              style: const TextStyle(color: Colors.white, fontSize: 11),
-                            ),
-                            deleteIcon: const Icon(Icons.close, size: 14, color: Colors.white54),
-                            onDeleted: () => setState(() => _modifiers.remove(m)),
+                        runSpacing: 8,
+                        children: List.generate(_modifiers.length, (i) {
+                          final m = _modifiers[i];
+                          return _buildEditableOptionChip(
+                            label: '${m['name']} (+RM ${(m['price'] as num).toStringAsFixed(2)})',
+                            onTap: () => _editModifierDialog(i),
+                            onDelete: () => setState(() => _modifiers.removeAt(i)),
                           );
-                        }).toList(),
+                        }),
                       ),
                     const SizedBox(height: 28),
 
@@ -1497,20 +1543,74 @@ class _AddProductSheetState extends State<_AddProductSheet> {
       ),
     );
   }
+  Widget _buildEditableOptionChip({
+    required String label,
+    required VoidCallback onTap,
+    required VoidCallback onDelete,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.14),
+              width: 1.0,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.edit_outlined, size: 13, color: Color(0xFF42A5F5)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onDelete,
+                behavior: HitTestBehavior.opaque,
+                child: const Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(Icons.close_rounded, size: 15, color: Colors.white54),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _OptionInputDialog extends StatefulWidget {
   final String title;
   final String nameLabel;
   final String priceLabel;
+  final String initialName;
   final String initialPrice;
+  final String submitLabel;
   final void Function(String name, double price) onAdd;
 
   const _OptionInputDialog({
     required this.title,
     required this.nameLabel,
     required this.priceLabel,
+    this.initialName = '',
     required this.initialPrice,
+    required this.submitLabel,
     required this.onAdd,
   });
 
@@ -1525,7 +1625,7 @@ class _OptionInputDialogState extends State<_OptionInputDialog> {
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController();
+    _nameCtrl = TextEditingController(text: widget.initialName);
     _priceCtrl = TextEditingController(text: widget.initialPrice);
   }
 
@@ -1536,56 +1636,151 @@ class _OptionInputDialogState extends State<_OptionInputDialog> {
     super.dispose();
   }
 
+  InputDecoration _glassFieldDecoration(String label, bool isDark) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(
+        color: isDark ? Colors.white60 : Colors.black54,
+        fontSize: 12.5,
+      ),
+      filled: true,
+      fillColor: isDark
+          ? Colors.white.withValues(alpha: 0.04)
+          : Colors.black.withValues(alpha: 0.04),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.35),
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(
+          color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.35),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFF42A5F5), width: 1.2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF1E1E2C),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(widget.title, style: const TextStyle(color: Colors.white, fontSize: 16)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameCtrl,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: widget.nameLabel,
-              labelStyle: const TextStyle(color: Colors.white54),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.28)
+                    : Colors.white.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.4),
+                  width: 1.0,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _nameCtrl,
+                    autofocus: true,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: 14,
+                    ),
+                    decoration: _glassFieldDecoration(widget.nameLabel, isDark),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _priceCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: 14,
+                    ),
+                    decoration: _glassFieldDecoration(widget.priceLabel, isDark),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          'common.cancel'.tr(),
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : Colors.black54,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF42A5F5),
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 18, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () {
+                          final name = _nameCtrl.text.trim();
+                          final pr = double.tryParse(_priceCtrl.text) ?? 0.0;
+                          if (name.isNotEmpty) {
+                            widget.onAdd(name, pr);
+                            Navigator.pop(context);
+                          }
+                        },
+                        child: Text(
+                          widget.submitLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _priceCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              labelText: widget.priceLabel,
-              labelStyle: const TextStyle(color: Colors.white54),
-            ),
-          ),
-        ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('common.cancel'.tr(), style: const TextStyle(color: Colors.white54)),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF42A5F5),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          onPressed: () {
-            final name = _nameCtrl.text.trim();
-            final pr = double.tryParse(_priceCtrl.text) ?? 0.0;
-            if (name.isNotEmpty) {
-              widget.onAdd(name, pr);
-              Navigator.pop(context);
-            }
-          },
-          child: Text('common.add'.tr(), style: const TextStyle(color: Colors.white)),
-        ),
-      ],
     );
   }
 }
