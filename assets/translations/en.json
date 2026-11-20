@@ -467,7 +467,8 @@
     "change_video": "Change",
     "remove_video": "Remove",
     "video_too_large": "Video size exceeds {} MB limit",
-    "uploading_media": "Uploading photos & video..."
+    "uploading_media": "Uploading photos & video...",
+    "validation_required_fields": "Please fill in the Product/Service Name and Selling Price above."
   },
   "inventory": {
     "title": "Inventory Management",

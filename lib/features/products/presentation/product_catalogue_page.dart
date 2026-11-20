@@ -647,7 +647,9 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   VideoPlayerController? _videoPreviewCtrl;
   bool _videoPreviewReady = false;
   bool _videoPlaying = false;
+  final ScrollController _scrollController = ScrollController();
   bool _isSaving = false;
+  String? _saveError;
 
   static const _unitOptions = ['pcs', 'pack', 'kg', 'g', 'cup', 'box', 'portion', 'set'];
   static const _durationOptions = [15, 30, 45, 60, 90, 120];
@@ -704,6 +706,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   @override
   void dispose() {
     _videoPreviewCtrl?.dispose();
+    _scrollController.dispose();
     _nameController.dispose();
     _categoryController.dispose();
     _subCategoryController.dispose();
@@ -930,9 +933,24 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      final msg = 'products.validation_required_fields'.tr();
+      setState(() => _saveError = msg);
+      showGlassToast(context, msg, isError: true);
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+      return;
+    }
 
-    setState(() => _isSaving = true);
+    setState(() {
+      _isSaving = true;
+      _saveError = null;
+    });
 
     final price = double.tryParse(_priceController.text) ?? 0.0;
     final compareAt = double.tryParse(_compareAtPriceController.text);
@@ -1037,8 +1055,12 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         );
         Navigator.pop(context, true);
       } else {
-        showGlassToast(context, 'Failed to save item', isError: true);
-        setState(() => _isSaving = false);
+        final errText = _service.lastError ?? 'Failed to save item';
+        setState(() {
+          _isSaving = false;
+          _saveError = errText;
+        });
+        showGlassToast(context, errText, isError: true);
       }
     }
   }
@@ -1073,6 +1095,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
             child: Form(
               key: _formKey,
               child: SingleChildScrollView(
+                controller: _scrollController,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1564,7 +1587,41 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                           );
                         }),
                       ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
+
+                    if (_saveError != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.redAccent.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.error_outline_rounded,
+                                color: Colors.redAccent, size: 17),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _saveError!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ] else
+                      const SizedBox(height: 8),
 
                     // ─── Save Button ─────────────────────────────────────────
                     SizedBox(

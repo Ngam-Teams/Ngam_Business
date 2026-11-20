@@ -467,7 +467,8 @@
     "change_video": "Tukar",
     "remove_video": "Padam",
     "video_too_large": "Saiz fail video melebihi had {} MB",
-    "uploading_media": "Sedang memuat naik gambar & video..."
+    "uploading_media": "Sedang memuat naik gambar & video...",
+    "validation_required_fields": "Sila lengkapkan Nama Produk/Servis dan Harga Jualan di bahagian atas."
   },
   "inventory": {
     "title": "Pengurusan Inventori",

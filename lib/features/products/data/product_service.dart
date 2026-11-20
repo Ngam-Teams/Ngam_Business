@@ -22,6 +22,7 @@ class ProductGalleryDraftUpload {
 class ProductService {
   final SupabaseClient _client;
   final BusinessService _businessService;
+  String? lastError;
 
   ProductService({SupabaseClient? client, BusinessService? businessService})
       : _client = client ?? Supabase.instance.client,
@@ -29,7 +30,7 @@ class ProductService {
 
   Future<String?> _getShopId() async {
     final profile = await _businessService.getBusinessProfile();
-    return profile?['id'];
+    return profile?['id']?.toString();
   }
 
   /// Fetches all products (including unavailable ones) for the catalogue
@@ -95,16 +96,33 @@ class ProductService {
   }
 
   Future<String> _uploadProductImage(Uint8List rawBytes, {String? fileName}) async {
-    final compressed = await ImageCompressionService.compress(
-      bytes: rawBytes,
-      type: ImageCompressionType.product,
-    );
-    final safeName = 'prod_${DateTime.now().millisecondsSinceEpoch}.${compressed.extension}';
+    Uint8List uploadBytes = rawBytes;
+    String ext = 'jpg';
+    String mime = 'image/jpeg';
+    try {
+      final compressed = await ImageCompressionService.compress(
+        bytes: rawBytes,
+        type: ImageCompressionType.product,
+      );
+      uploadBytes = compressed.bytes;
+      ext = compressed.extension;
+      mime = compressed.mimeType;
+    } catch (_) {
+      final lower = (fileName ?? '').toLowerCase();
+      if (lower.endsWith('.png')) {
+        ext = 'png';
+        mime = 'image/png';
+      } else if (lower.endsWith('.webp')) {
+        ext = 'webp';
+        mime = 'image/webp';
+      }
+    }
+    final safeName = 'prod_${DateTime.now().millisecondsSinceEpoch}.$ext';
     return R2StorageService().uploadMedia(
-      bytes: compressed.bytes,
-      fileName: fileName != null && fileName.isNotEmpty ? '${DateTime.now().millisecondsSinceEpoch}_${compressed.extension}.$safeName' : safeName,
+      bytes: uploadBytes,
+      fileName: safeName,
       folder: 'products/images',
-      mimeType: compressed.mimeType,
+      mimeType: mime,
     );
   }
 
@@ -155,6 +173,15 @@ class ProductService {
     return urls;
   }
 
+  bool _isMissingMediaColumnError(Object error) {
+    final msg = error.toString().toLowerCase();
+    return (msg.contains('image_urls') || msg.contains('video_url')) &&
+        (msg.contains('pgrst204') ||
+            msg.contains('schema cache') ||
+            msg.contains('column') ||
+            msg.contains('42703'));
+  }
+
   /// Adds a new product or service
   Future<ProductModel?> addProduct({
     required String name,
@@ -189,9 +216,13 @@ class ProductService {
     Uint8List? videoBytes,
     String? videoFileName,
   }) async {
+    lastError = null;
     try {
       final shopId = await _getShopId();
-      if (shopId == null) return null;
+      if (shopId == null) {
+        lastError = 'Profil kedai tidak dijumpai. Sila cuba log masuk semula.';
+        return null;
+      }
 
       final resolvedGallery = await _resolveGalleryUrls(
         galleryItems,
@@ -204,7 +235,7 @@ class ProductService {
         uploadedVideoUrl = await _uploadProductVideo(videoBytes, fileName: videoFileName);
       }
 
-      final data = {
+      final data = <String, dynamic>{
         'shop_id': shopId,
         'name': name,
         'item_type': itemType,
@@ -237,14 +268,30 @@ class ProductService {
         if (uploadedVideoUrl != null) 'video_url': uploadedVideoUrl,
       };
 
-      final response = await _client
-          .from('business_products')
-          .insert(data)
-          .select()
-          .single();
-
-      return ProductModel.fromJson(response);
+      try {
+        final response = await _client
+            .from('business_products')
+            .insert(data)
+            .select()
+            .single();
+        return ProductModel.fromJson(response);
+      } catch (insertErr) {
+        // Fallback if database migration 20261120_product_gallery_and_video.sql has not been run yet
+        if (_isMissingMediaColumnError(insertErr)) {
+          final fallbackData = Map<String, dynamic>.from(data)
+            ..remove('image_urls')
+            ..remove('video_url');
+          final response = await _client
+              .from('business_products')
+              .insert(fallbackData)
+              .select()
+              .single();
+          return ProductModel.fromJson(response);
+        }
+        rethrow;
+      }
     } catch (e) {
+      lastError = e.toString().replaceFirst('Exception: ', '');
       return null;
     }
   }
@@ -261,6 +308,7 @@ class ProductService {
     String? existingVideoUrl,
     bool updateMedia = false,
   }) async {
+    lastError = null;
     try {
       if (updateMedia && galleryItems != null) {
         final resolvedGallery = await _resolveGalleryUrls(galleryItems);
@@ -290,9 +338,21 @@ class ProductService {
         updates['is_active'] = updates.remove('is_available');
       }
 
-      await _client.from('business_products').update(updates).eq('id', productId);
-      return true;
+      try {
+        await _client.from('business_products').update(updates).eq('id', productId);
+        return true;
+      } catch (updateErr) {
+        if (_isMissingMediaColumnError(updateErr)) {
+          final fallbackUpdates = Map<String, dynamic>.from(updates)
+            ..remove('image_urls')
+            ..remove('video_url');
+          await _client.from('business_products').update(fallbackUpdates).eq('id', productId);
+          return true;
+        }
+        rethrow;
+      }
     } catch (e) {
+      lastError = e.toString().replaceFirst('Exception: ', '');
       return false;
     }
   }

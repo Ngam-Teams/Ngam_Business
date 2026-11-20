@@ -114,7 +114,7 @@ class ProductModel {
     final gallery = _parseImageList(json);
     final rawVideo = json['video_url']?.toString().trim();
     return ProductModel(
-      id: json['id'] as String,
+      id: (json['id'] ?? '').toString(),
       name: json['name'] as String? ?? 'Unnamed Item',
       itemType: json['item_type'] as String? ?? 'product',
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
@@ -129,21 +129,21 @@ class ProductModel {
       description: json['description'] as String?,
       sku: json['sku'] as String?,
       barcode: json['barcode'] as String?,
-      stock: json['stock'] as int? ?? 0,
+      stock: (json['stock'] as num?)?.toInt() ?? 0,
       trackInventory: json['track_inventory'] as bool? ?? true,
-      lowStockThreshold: json['low_stock_threshold'] as int? ?? 5,
+      lowStockThreshold: (json['low_stock_threshold'] as num?)?.toInt() ?? 5,
       unit: json['unit'] as String? ?? 'pcs',
       tags: (json['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
       isAvailable: json['is_active'] as bool? ?? (json['is_available'] as bool? ?? true),
       isFeatured: json['is_featured'] as bool? ?? false,
       isHalal: json['is_halal'] as bool? ?? false,
-      variants: (json['variants'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [],
-      modifiers: (json['modifiers'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [],
-      durationMinutes: json['duration_minutes'] as int? ?? 30,
-      bufferMinutes: json['buffer_minutes'] as int? ?? 0,
+      variants: (json['variants'] as List?)?.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
+      modifiers: (json['modifiers'] as List?)?.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() ?? [],
+      durationMinutes: (json['duration_minutes'] as num?)?.toInt() ?? 30,
+      bufferMinutes: (json['buffer_minutes'] as num?)?.toInt() ?? 0,
       depositAmount: (json['deposit_amount'] as num?)?.toDouble() ?? 0.0,
       serviceLocation: json['service_location'] as String? ?? 'in_store',
-      maxPax: json['max_pax'] as int? ?? 1,
+      maxPax: (json['max_pax'] as num?)?.toInt() ?? 1,
     );
   }
 
