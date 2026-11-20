@@ -1206,7 +1206,16 @@
     "delete_chat_title": "Padam Perbualan?",
     "delete_chat_desc": "Tindakan ini akan memadam semua mesej dalam perbualan ini secara kekal.",
     "whatsapp_customer": "WhatsApp Pelanggan",
-    "search_in_chat": "Cari dalam perbualan..."
+    "search_in_chat": "Cari dalam perbualan...",
+    "contact_options": "Hubungi Pelanggan",
+    "telegram_customer": "Telegram",
+    "telegram_error": "Tidak dapat membuka Telegram",
+    "more_options": "Pilihan Lanjut",
+    "toggle_quick_replies": "Papar/Sorok Balasan Pantas",
+    "copy_phone": "Salin No. Telefon",
+    "phone_copied_toast": "No. telefon disalin",
+    "refresh_chat": "Muat Semula Mesej",
+    "replying_to": "Membalas {}"
   },
   "auth": {
     "login_title": "Log Masuk Peniaga",

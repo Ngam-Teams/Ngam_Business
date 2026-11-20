@@ -1206,7 +1206,16 @@
     "delete_chat_title": "Delete Conversation?",
     "delete_chat_desc": "This will permanently delete all messages in this conversation.",
     "whatsapp_customer": "WhatsApp Customer",
-    "search_in_chat": "Search in conversation..."
+    "search_in_chat": "Search in conversation...",
+    "contact_options": "Contact Customer",
+    "telegram_customer": "Telegram",
+    "telegram_error": "Could not open Telegram",
+    "more_options": "More Options",
+    "toggle_quick_replies": "Toggle Quick Replies",
+    "copy_phone": "Copy Phone Number",
+    "phone_copied_toast": "Phone number copied",
+    "refresh_chat": "Refresh Messages",
+    "replying_to": "Replying to {}"
   },
   "auth": {
     "login_title": "Merchant Login",

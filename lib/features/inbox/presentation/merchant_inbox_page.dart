@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -51,6 +52,7 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
   String _searchQuery = '';
   String _threadSearchQuery = '';
   bool _showThreadSearch = false;
+  bool _showQuickReplies = true;
   String? _businessId;
   String _businessName = 'Ngam Business';
   bool _isInitializing = true;
@@ -913,6 +915,245 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
     }
   }
 
+  Future<void> _telegramCustomer(String? phone) async {
+    var clean = (phone ?? '').replaceAll(RegExp(r'[^0-9+]'), '').trim();
+    if (clean.isEmpty) {
+      if (mounted) showGlassToast(context, 'inbox.no_phone_number'.tr(), isError: true);
+      return;
+    }
+    if (clean.startsWith('0')) {
+      clean = '+60${clean.substring(1)}';
+    } else if (!clean.startsWith('+')) {
+      clean = '+$clean';
+    }
+    final uri = Uri.parse('https://t.me/$clean');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) showGlassToast(context, 'inbox.telegram_error'.tr(), isError: true);
+    }
+  }
+
+  Future<void> _showGlassDropdown({
+    required BuildContext anchorContext,
+    required List<_GlassDropdownOption> options,
+  }) async {
+    final RenderBox? box = anchorContext.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final Offset offset = box.localToGlobal(Offset.zero);
+    final Size size = box.size;
+    final Size screen = MediaQuery.of(context).size;
+
+    const double menuWidth = 220;
+    final double rightSpace = screen.width - (offset.dx + size.width);
+    final double rightPos = rightSpace.clamp(12.0, screen.width - menuWidth - 12.0);
+    final double topPos = offset.dy + size.height + 10;
+
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'dropdown',
+      barrierColor: Colors.black.withValues(alpha: 0.25),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (dialogCtx, _, __) {
+        return Stack(
+          children: [
+            Positioned(
+              top: topPos,
+              right: rightPos,
+              child: Material(
+                color: Colors.transparent,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                    child: Container(
+                      width: menuWidth,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF141826).withValues(alpha: 0.84),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          width: 1.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.42),
+                            blurRadius: 24,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(options.length, (i) {
+                          final opt = options[i];
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (opt.showDividerBefore && i > 0)
+                                Divider(
+                                  height: 1,
+                                  indent: 14,
+                                  endIndent: 14,
+                                  color: Colors.white.withValues(alpha: 0.10),
+                                ),
+                              InkWell(
+                                onTap: () {
+                                  Navigator.pop(dialogCtx);
+                                  opt.onTap();
+                                },
+                                borderRadius: BorderRadius.circular(14),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 11,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 30,
+                                        height: 30,
+                                        decoration: BoxDecoration(
+                                          color: opt.color.withValues(alpha: 0.16),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Center(
+                                          child: opt.materialIcon != null
+                                              ? Icon(
+                                                  opt.materialIcon,
+                                                  color: opt.color,
+                                                  size: 16,
+                                                )
+                                              : HugeIcon(
+                                                  icon: opt.hugeIcon!,
+                                                  color: opt.color,
+                                                  size: 16,
+                                                ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          opt.label,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: opt.isDestructive
+                                                ? Colors.redAccent
+                                                : Colors.white.withValues(alpha: 0.94),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      transitionBuilder: (_, anim, __, child) {
+        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.94, end: 1.0).animate(curved),
+            alignment: Alignment.topRight,
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  void _openContactDropdown(BuildContext anchorContext, MerchantConversation conv) {
+    _showGlassDropdown(
+      anchorContext: anchorContext,
+      options: [
+        _GlassDropdownOption(
+          label: 'inbox.call_customer'.tr(),
+          hugeIcon: HugeIcons.strokeRoundedCall02,
+          color: const Color(0xFF42A5F5),
+          onTap: () => _callCustomer(conv.customerPhone),
+        ),
+        _GlassDropdownOption(
+          label: 'inbox.whatsapp_customer'.tr(),
+          hugeIcon: HugeIcons.strokeRoundedWhatsapp,
+          color: const Color(0xFF25D366),
+          onTap: () => _whatsappCustomer(conv.customerPhone),
+        ),
+        _GlassDropdownOption(
+          label: 'inbox.telegram_customer'.tr(),
+          hugeIcon: HugeIcons.strokeRoundedTelegram,
+          color: const Color(0xFF229ED9),
+          onTap: () => _telegramCustomer(conv.customerPhone),
+        ),
+      ],
+    );
+  }
+
+  void _openMoreActionsDropdown(BuildContext anchorContext, MerchantConversation conv) {
+    _showGlassDropdown(
+      anchorContext: anchorContext,
+      options: [
+        _GlassDropdownOption(
+          label: 'inbox.search_in_chat'.tr(),
+          hugeIcon: HugeIcons.strokeRoundedSearch01,
+          color: const Color(0xFF42A5F5),
+          onTap: () => setState(() {
+            _showThreadSearch = !_showThreadSearch;
+            if (!_showThreadSearch) {
+              _threadSearchQuery = '';
+              _threadSearchController.clear();
+            }
+          }),
+        ),
+        _GlassDropdownOption(
+          label: 'inbox.toggle_quick_replies'.tr(),
+          hugeIcon: HugeIcons.strokeRoundedMessage01,
+          color: const Color(0xFF38BDF8),
+          onTap: () => setState(() => _showQuickReplies = !_showQuickReplies),
+        ),
+        if (conv.customerPhone != null && conv.customerPhone!.isNotEmpty)
+          _GlassDropdownOption(
+            label: 'inbox.copy_phone'.tr(),
+            hugeIcon: HugeIcons.strokeRoundedCopy01,
+            color: const Color(0xFF10B981),
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: conv.customerPhone!));
+              if (mounted) showGlassToast(context, 'inbox.phone_copied_toast'.tr());
+            },
+          ),
+        _GlassDropdownOption(
+          label: 'inbox.refresh_chat'.tr(),
+          materialIcon: Icons.refresh_rounded,
+          color: const Color(0xFFA78BFA),
+          onTap: () => _selectConversation(conv),
+        ),
+        _GlassDropdownOption(
+          label: 'inbox.delete_chat_title'.tr(),
+          hugeIcon: HugeIcons.strokeRoundedDelete02,
+          color: Colors.redAccent,
+          isDestructive: true,
+          showDividerBefore: true,
+          onTap: () => _confirmDeleteConversation(conv),
+        ),
+      ],
+    );
+  }
+
   List<MerchantConversation> get _filteredConversations {
     final q = _searchQuery.trim().toLowerCase();
     return _conversations.where((c) {
@@ -989,6 +1230,20 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
     super.dispose();
   }
 
+  void _closeActiveThread() {
+    _threadChannel?.unsubscribe();
+    _threadChannel = null;
+    setState(() {
+      _activeConversationId = null;
+      _messages = [];
+      _replyingTo = null;
+      _isOtherTyping = false;
+      _showThreadSearch = false;
+      _threadSearchQuery = '';
+      _threadSearchController.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -996,61 +1251,27 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
     final isDesktop = media.size.width >= 768 || isLandscape;
     final active = _activeConversation;
 
+    // On mobile inside an active chat, match Ngam's full-bleed floating glass chat UI
+    if (active != null && !isDesktop) {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          _closeActiveThread();
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF0A0A14),
+          resizeToAvoidBottomInset: true,
+          body: _buildChatDetail(active, showDesktopHeader: false),
+        ),
+      );
+    }
+
     return GlassScaffold(
       backgroundColor: const Color(0xFF0A0A14),
-      title: active != null && !isDesktop ? active.customerName : 'inbox.title'.tr(),
-      subtitle: active != null && !isDesktop
-          ? (_isOtherTyping
-              ? 'inbox.typing'.tr()
-              : (active.contextRef ?? 'inbox.customer_chat_subtitle'.tr()))
-          : 'inbox.subtitle'.tr(),
-      onBack: () {
-        if (active != null && !isDesktop) {
-          _threadChannel?.unsubscribe();
-          _threadChannel = null;
-          setState(() {
-            _activeConversationId = null;
-            _messages = [];
-            _replyingTo = null;
-            _isOtherTyping = false;
-            _showThreadSearch = false;
-            _threadSearchQuery = '';
-          });
-        } else {
-          Navigator.pop(context);
-        }
-      },
-      actionItems: [
-        if (active != null) ...[
-          GlassNavPillItem(
-            icon: Icons.search_rounded,
-            tooltip: 'inbox.search_in_chat'.tr(),
-            onTap: () => setState(() {
-              _showThreadSearch = !_showThreadSearch;
-              if (!_showThreadSearch) {
-                _threadSearchQuery = '';
-                _threadSearchController.clear();
-              }
-            }),
-          ),
-          if (active.customerPhone != null && active.customerPhone!.isNotEmpty)
-            GlassNavPillItem(
-              icon: Icons.chat_rounded,
-              tooltip: 'inbox.whatsapp_customer'.tr(),
-              onTap: () => _whatsappCustomer(active.customerPhone),
-            ),
-          GlassNavPillItem(
-            icon: Icons.phone_rounded,
-            tooltip: 'inbox.call_customer'.tr(),
-            onTap: () => _callCustomer(active.customerPhone),
-          ),
-          GlassNavPillItem(
-            icon: Icons.delete_outline_rounded,
-            tooltip: 'inbox.delete_chat_title'.tr(),
-            onTap: () => _confirmDeleteConversation(active),
-          ),
-        ],
-      ],
+      title: 'inbox.title'.tr(),
+      subtitle: 'inbox.subtitle'.tr(),
+      onBack: () => Navigator.pop(context),
       body: Padding(
         padding: const EdgeInsets.only(top: 68),
         child: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
@@ -1540,201 +1761,14 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
         : (isAlreadyConfirmed ? 'inbox.order_preparing_badge'.tr() : 'inbox.confirm_order'.tr());
     final visibleMessages = _filteredMessages;
 
-    return Column(
+    final double topInset = showDesktopHeader ? 0.0 : MediaQuery.of(context).padding.top;
+    final double headerClearance = topInset + 72 + (hasContext && conv.contextRef != null ? 58 : 0) + (_showThreadSearch ? 56 : 0);
+    final double bottomClearance = (_showQuickReplies ? 136 : 88) + (_replyingTo != null ? 58 : 0);
+
+    return Stack(
       children: [
-        if (showDesktopHeader)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF121220),
-              border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 19,
-                  backgroundColor: const Color(0xFF42A5F5).withValues(alpha: 0.2),
-                  backgroundImage: conv.customerAvatarUrl != null && conv.customerAvatarUrl!.isNotEmpty
-                      ? NetworkImage(conv.customerAvatarUrl!)
-                      : null,
-                  child: conv.customerAvatarUrl == null || conv.customerAvatarUrl!.isEmpty
-                      ? Text(
-                          conv.customerName.isNotEmpty ? conv.customerName[0].toUpperCase() : '?',
-                          style: const TextStyle(color: Color(0xFF42A5F5), fontWeight: FontWeight.bold),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        conv.customerName,
-                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
-                      ),
-                      if (_isOtherTyping)
-                        Text(
-                          'inbox.typing'.tr(),
-                          style: const TextStyle(
-                            color: Color(0xFF42A5F5),
-                            fontSize: 12,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        )
-                      else if (conv.customerPhone != null && conv.customerPhone!.isNotEmpty)
-                        Text(
-                          conv.customerPhone!,
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
-                        ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'inbox.search_in_chat'.tr(),
-                  icon: Icon(
-                    Icons.search_rounded,
-                    color: _showThreadSearch ? const Color(0xFF42A5F5) : Colors.white70,
-                    size: 20,
-                  ),
-                  onPressed: () => setState(() {
-                    _showThreadSearch = !_showThreadSearch;
-                    if (!_showThreadSearch) {
-                      _threadSearchQuery = '';
-                      _threadSearchController.clear();
-                    }
-                  }),
-                ),
-                if (conv.customerPhone != null && conv.customerPhone!.isNotEmpty) ...[
-                  IconButton(
-                    tooltip: 'inbox.whatsapp_customer'.tr(),
-                    icon: const HugeIcon(
-                      icon: HugeIcons.strokeRoundedWhatsapp,
-                      color: Color(0xFF25D366),
-                      size: 20,
-                    ),
-                    onPressed: () => _whatsappCustomer(conv.customerPhone),
-                  ),
-                  const SizedBox(width: 4),
-                  OutlinedButton.icon(
-                    onPressed: () => _callCustomer(conv.customerPhone),
-                    icon: const Icon(Icons.phone_rounded, size: 15),
-                    label: Text('inbox.call_customer'.tr(), style: const TextStyle(fontSize: 12)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white70,
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ],
-                const SizedBox(width: 4),
-                IconButton(
-                  tooltip: 'inbox.delete_chat_title'.tr(),
-                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                  onPressed: () => _confirmDeleteConversation(conv),
-                ),
-              ],
-            ),
-          ),
-
-        // In-Thread Message Search Bar
-        if (_showThreadSearch)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF141426),
-              border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
-            ),
-            child: TextField(
-              controller: _threadSearchController,
-              autofocus: true,
-              onChanged: (v) => setState(() => _threadSearchQuery = v),
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              decoration: InputDecoration(
-                hintText: 'inbox.search_in_chat'.tr(),
-                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 12.5),
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF42A5F5), size: 18),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
-                  onPressed: () => setState(() {
-                    _showThreadSearch = false;
-                    _threadSearchQuery = '';
-                    _threadSearchController.clear();
-                  }),
-                ),
-                filled: false,
-                fillColor: Colors.transparent,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF42A5F5)),
-                ),
-              ),
-            ),
-          ),
-
-        // Pinned Order / Booking Context Banner
-        if (hasContext && conv.contextRef != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF141426),
-              border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: (isBooking ? const Color(0xFF10B981) : const Color(0xFFF9C80E))
-                        .withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    isBooking ? Icons.calendar_month_rounded : Icons.receipt_long_rounded,
-                    color: isBooking ? const Color(0xFF10B981) : const Color(0xFFF9C80E),
-                    size: 16,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    conv.contextRef!,
-                    style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: isAlreadyConfirmed ? Colors.white54 : const Color(0xFF44CF6C),
-                    side: BorderSide(
-                      color: isAlreadyConfirmed ? Colors.white24 : const Color(0xFF44CF6C),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: (isAlreadyConfirmed || _isUpdatingStatus)
-                      ? null
-                      : () => _confirmContextAction(conv),
-                  icon: Icon(
-                    isAlreadyConfirmed ? Icons.verified_rounded : Icons.check_rounded,
-                    size: 14,
-                  ),
-                  label: Text(actionLabel, style: const TextStyle(fontSize: 11.5)),
-                ),
-              ],
-            ),
-          ),
-
-        // Message List
-        Expanded(
+        // ─── 1. Full-Bleed Message List (scrolls behind floating glass header & input) ───
+        Positioned.fill(
           child: _isLoadingMessages
               ? const Center(child: CircularProgressIndicator(color: Color(0xFF42A5F5)))
               : visibleMessages.isEmpty
@@ -1754,18 +1788,29 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
                   : ListView.builder(
                       reverse: true,
                       controller: _msgScrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(12, headerClearance, 12, bottomClearance),
                       itemCount: visibleMessages.length + (_isOtherTyping ? 1 : 0),
                       itemBuilder: (ctx, idx) {
                         if (_isOtherTyping) {
                           if (idx == 0) {
-                            return _buildTypingBubble();
+                            return _buildTypingBubble(conv);
                           }
                           idx--;
                         }
 
                         final msg = visibleMessages[idx];
                         final isMerchant = msg.senderId != conv.customerId;
+
+                        // Show avatar on last message of an incoming customer group (matching Ngam)
+                        bool showAvatar = true;
+                        if (idx > 0) {
+                          final newer = visibleMessages[idx - 1];
+                          if (newer.senderId == msg.senderId) {
+                            showAvatar = false;
+                          }
+                        }
+
                         bool showDateDivider = false;
                         if (idx == visibleMessages.length - 1) {
                           showDateDivider = true;
@@ -1778,7 +1823,15 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
                           }
                         }
 
-                        final bubble = _buildMessageBubble(msg, isMerchant);
+                        final bubble = _MerchantSwipeToReply(
+                          isMe: isMerchant,
+                          onSwipe: () {
+                            HapticFeedback.lightImpact();
+                            setState(() => _replyingTo = msg);
+                          },
+                          child: _buildMessageBubble(msg, isMerchant, conv, showAvatar: showAvatar),
+                        );
+
                         if (showDateDivider) {
                           return Column(
                             mainAxisSize: MainAxisSize.min,
@@ -1811,410 +1864,803 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
                     ),
         ),
 
-        // Quick Reply Chips
-        SizedBox(
-          height: 40,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _quickReplyKeys.length,
-            itemBuilder: (ctx, idx) {
-              final chipText = _quickReplyKeys[idx].tr();
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ActionChip(
-                  label: Text(chipText, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                  backgroundColor: const Color(0xFF151526),
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  onPressed: () => _sendMessage(chipText),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 6),
-
-        // Reply Preview Banner
-        if (_replyingTo != null)
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF192033),
-              borderRadius: BorderRadius.circular(12),
-              border: const Border(left: BorderSide(color: Color(0xFF42A5F5), width: 3)),
-            ),
-            child: Row(
+        // ─── 2. Floating Glass Top Header (Exact Ngam Style + Contact & More Glass Dropdowns) ───
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            top: !showDesktopHeader,
+            bottom: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _replyingTo!.senderId == _currentUserId
-                            ? 'inbox.you_label'.tr()
-                            : conv.customerName,
-                        style: const TextStyle(
-                          color: Color(0xFF42A5F5),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Left Expanded Glass Pill: [Back] + [Avatar] + [Customer Name]
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(30),
+                            child: BackdropFilter(
+                              filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.16),
+                                    width: 1.0,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.24),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    if (!showDesktopHeader)
+                                      GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: _closeActiveThread,
+                                        child: const Padding(
+                                          padding: EdgeInsets.only(right: 10.0),
+                                          child: HugeIcon(
+                                            icon: HugeIcons.strokeRoundedArrowLeft01,
+                                            color: Colors.white,
+                                            size: 20,
+                                          ),
+                                        ),
+                                      ),
+                                    CircleAvatar(
+                                      radius: 15,
+                                      backgroundColor: const Color(0xFF42A5F5).withValues(alpha: 0.22),
+                                      backgroundImage: conv.customerAvatarUrl != null && conv.customerAvatarUrl!.isNotEmpty
+                                          ? NetworkImage(conv.customerAvatarUrl!)
+                                          : null,
+                                      child: conv.customerAvatarUrl == null || conv.customerAvatarUrl!.isEmpty
+                                          ? Text(
+                                              conv.customerName.isNotEmpty ? conv.customerName[0].toUpperCase() : '?',
+                                              style: const TextStyle(
+                                                color: Color(0xFF42A5F5),
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 9),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            conv.customerName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          if (_isOtherTyping)
+                                            Text(
+                                              'inbox.typing'.tr(),
+                                              style: const TextStyle(
+                                                color: Color(0xFF42A5F5),
+                                                fontSize: 10.5,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      Text(
-                        _replyingTo!.content,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+
+                        // Right 2-Icon Glass Pill: [Phone/Contact Dropdown | Three-Dot Advanced Dropdown]
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(30),
+                          child: BackdropFilter(
+                            filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.16),
+                                  width: 1.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.24),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Builder(
+                                    builder: (btnCtx) => GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => _openContactDropdown(btnCtx, conv),
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        child: HugeIcon(
+                                          icon: HugeIcons.strokeRoundedCall02,
+                                          color: Color(0xFF42A5F5),
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Builder(
+                                    builder: (btnCtx) => GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () => _openMoreActionsDropdown(btnCtx, conv),
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        child: Icon(
+                                          Icons.more_vert_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
-                  onPressed: () => setState(() => _replyingTo = null),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
+
+                // Floating Glass In-Thread Search Bar (when toggled from 3-dot dropdown)
+                if (_showThreadSearch)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 2, 14, 4),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF141826).withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                          ),
+                          child: TextField(
+                            controller: _threadSearchController,
+                            autofocus: true,
+                            onChanged: (v) => setState(() => _threadSearchQuery = v),
+                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: 'inbox.search_in_chat'.tr(),
+                              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
+                              prefixIcon: const HugeIcon(
+                                icon: HugeIcons.strokeRoundedSearch01,
+                                color: Color(0xFF42A5F5),
+                                size: 17,
+                              ),
+                              prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                                onPressed: () => setState(() {
+                                  _showThreadSearch = false;
+                                  _threadSearchQuery = '';
+                                  _threadSearchController.clear();
+                                }),
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Floating Glass Order / Booking Context Banner
+                if (hasContext && conv.contextRef != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 2, 14, 4),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF141826).withValues(alpha: 0.78),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: (isBooking ? const Color(0xFF10B981) : const Color(0xFFF9C80E))
+                                      .withValues(alpha: 0.16),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  isBooking ? Icons.calendar_month_rounded : Icons.receipt_long_rounded,
+                                  color: isBooking ? const Color(0xFF10B981) : const Color(0xFFF9C80E),
+                                  size: 15,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  conv.contextRef!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: isAlreadyConfirmed ? Colors.white54 : const Color(0xFF44CF6C),
+                                  side: BorderSide(
+                                    color: isAlreadyConfirmed ? Colors.white24 : const Color(0xFF44CF6C),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: (isAlreadyConfirmed || _isUpdatingStatus)
+                                    ? null
+                                    : () => _confirmContextAction(conv),
+                                icon: Icon(
+                                  isAlreadyConfirmed ? Icons.verified_rounded : Icons.check_rounded,
+                                  size: 13,
+                                ),
+                                label: Text(actionLabel, style: const TextStyle(fontSize: 11)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
+        ),
 
-        // Input Bar
-        Container(
-          padding: EdgeInsets.only(
-            left: 12,
-            right: 12,
-            top: 8,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-          ),
-          decoration: BoxDecoration(
-            color: const Color(0xFF121220),
-            border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'inbox.attach_media_tooltip'.tr(),
-                icon: _isUploadingMedia
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF42A5F5)),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.add_rounded,
-                          color: Colors.white70,
-                          size: 20,
+        // ─── 3. Floating Bottom Section (Quick Replies + Reply Preview + Ngam Glass Input Pill) ───
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Floating Glass Quick-Reply Pills (Exact Ngam Style)
+                  if (_showQuickReplies) ...[
+                    SizedBox(
+                      height: 36,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: _quickReplyKeys.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (ctx, idx) {
+                          final chipText = _quickReplyKeys[idx].tr();
+                          return GestureDetector(
+                            onTap: () => _sendMessage(chipText),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: BackdropFilter(
+                                filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.48),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.22),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      chipText,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Floating Glass Reply Preview Banner
+                  if (_replyingTo != null) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF141826).withValues(alpha: 0.82),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 3,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF42A5F5),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'inbox.replying_to'.tr(args: [
+                                        _replyingTo!.senderId == _currentUserId
+                                            ? 'inbox.you_label'.tr()
+                                            : conv.customerName,
+                                      ]),
+                                      style: const TextStyle(
+                                        color: Color(0xFF42A5F5),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      _replyingTo!.content,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                                onPressed: () => setState(() => _replyingTo = null),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                onPressed: _isUploadingMedia ? null : _showAttachmentSheet,
-              ),
-              IconButton(
-                tooltip: 'inbox.attach_gallery'.tr(),
-                icon: const HugeIcon(
-                  icon: HugeIcons.strokeRoundedImage01,
-                  color: Colors.white60,
-                  size: 21,
-                ),
-                onPressed: _isUploadingMedia ? null : _pickAndSendMultiImages,
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _msgController,
-                  onChanged: _onInputChanged,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  maxLines: 4,
-                  minLines: 1,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
-                  decoration: InputDecoration(
-                    hintText: 'inbox.type_message'.tr(),
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
-                    filled: false,
-                    fillColor: Colors.transparent,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(22),
-                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(22),
-                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(22),
-                      borderSide: const BorderSide(color: Color(0xFF42A5F5)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => _sendMessage(),
-                child: Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF42A5F5), Color(0xFF2563EB)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF42A5F5).withValues(alpha: 0.4),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Floating Glass Input Pill + Floating Blue Glass Send Button (Exact Ngam Style)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(32),
+                          child: BackdropFilter(
+                            filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(32),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.16),
+                                  width: 1.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.24),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: _isUploadingMedia ? null : _showAttachmentSheet,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(6.0),
+                                      child: HugeIcon(
+                                        icon: HugeIcons.strokeRoundedAttachment01,
+                                        color: Colors.grey.shade400,
+                                        size: 21,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _msgController,
+                                      onChanged: _onInputChanged,
+                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                      maxLines: 4,
+                                      minLines: 1,
+                                      textInputAction: TextInputAction.send,
+                                      onSubmitted: (_) => _sendMessage(),
+                                      decoration: InputDecoration(
+                                        filled: false,
+                                        hintText: 'inbox.type_message'.tr(),
+                                        hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                                        border: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _isUploadingMedia ? null : () => _sendMessage(),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: BackdropFilter(
+                            filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF42A5F5).withValues(alpha: 0.45),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: const Color(0xFF42A5F5).withValues(alpha: 0.65),
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Center(
+                                child: _isUploadingMedia
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const HugeIcon(
+                                        icon: HugeIcons.strokeRoundedSent02,
+                                        color: Colors.white,
+                                        size: 23,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildTypingBubble() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1B1B2E),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomRight: Radius.circular(16),
+  Widget _buildTypingBubble(MerchantConversation conv) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: const Color(0xFF42A5F5),
+            backgroundImage: conv.customerAvatarUrl != null && conv.customerAvatarUrl!.isNotEmpty
+                ? NetworkImage(conv.customerAvatarUrl!)
+                : null,
+            child: conv.customerAvatarUrl == null || conv.customerAvatarUrl!.isEmpty
+                ? Text(
+                    conv.customerName.isNotEmpty ? conv.customerName[0].toUpperCase() : '?',
+                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  )
+                : null,
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-        ),
-        child: Text(
-          'inbox.typing'.tr(),
-          style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 12, fontStyle: FontStyle.italic),
-        ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Color(0xFF2C2C2E),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                bottomLeft: Radius.circular(4),
+              ),
+            ),
+            child: Text(
+              'inbox.typing'.tr(),
+              style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMessageBubble(MerchantMessage msg, bool isMerchant) {
-    final timeStr = DateFormat('HH:mm').format(msg.createdAt);
+  Widget _buildMessageBubble(
+    MerchantMessage msg,
+    bool isMerchant,
+    MerchantConversation conv, {
+    bool showAvatar = true,
+  }) {
+    final timeStr = DateFormat('h:mm a').format(msg.createdAt);
     final isMedia = msg.isImage || msg.isVideo;
 
     return GestureDetector(
       onLongPress: () => _showMessageActions(msg, isMerchant),
-      child: Align(
-        alignment: isMerchant ? Alignment.centerRight : Alignment.centerLeft,
-        child: Column(
-          crossAxisAlignment: isMerchant ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: isMerchant ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Container(
-              margin: EdgeInsets.only(bottom: msg.status == 'failed' ? 4 : 10),
-              padding: isMedia
-                  ? const EdgeInsets.all(6)
-                  : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-              decoration: BoxDecoration(
-                gradient: isMerchant
-                    ? const LinearGradient(
-                        colors: [Color(0xFF42A5F5), Color(0xFF2563EB)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+            if (!isMerchant && showAvatar) ...[
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: const Color(0xFF42A5F5),
+                backgroundImage: conv.customerAvatarUrl != null && conv.customerAvatarUrl!.isNotEmpty
+                    ? NetworkImage(conv.customerAvatarUrl!)
+                    : null,
+                child: conv.customerAvatarUrl == null || conv.customerAvatarUrl!.isEmpty
+                    ? Text(
+                        conv.customerName.isNotEmpty ? conv.customerName[0].toUpperCase() : '?',
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                       )
                     : null,
-                color: isMerchant ? null : const Color(0xFF1B1B2E),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(18),
-                  topRight: const Radius.circular(18),
-                  bottomLeft: isMerchant ? const Radius.circular(18) : const Radius.circular(4),
-                  bottomRight: isMerchant ? const Radius.circular(4) : const Radius.circular(18),
-                ),
-                border: isMerchant ? null : Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.16),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
+              const SizedBox(width: 8),
+            ] else if (!isMerchant) ...[
+              const SizedBox(width: 36),
+            ],
+            Flexible(
               child: Column(
                 crossAxisAlignment: isMerchant ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
-                  if (msg.replyToMessage != null) ...[
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border(
-                          left: BorderSide(
-                            color: isMerchant ? Colors.white70 : const Color(0xFF42A5F5),
-                            width: 2.5,
-                          ),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            (msg.replyToMessage!['sender_name'] ?? '').toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            (msg.replyToMessage!['content'] ?? '').toString(),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white70, fontSize: 11.5),
-                          ),
-                        ],
+                  Container(
+                    margin: EdgeInsets.only(bottom: msg.status == 'failed' ? 4 : 2),
+                    padding: isMedia
+                        ? const EdgeInsets.all(6)
+                        : const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
+                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+                    decoration: BoxDecoration(
+                      color: isMerchant ? const Color(0xFF42A5F5) : const Color(0xFF2C2C2E),
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(20),
+                        topRight: const Radius.circular(20),
+                        bottomLeft: Radius.circular(isMerchant || !showAvatar ? 20 : 4),
+                        bottomRight: Radius.circular(isMerchant && showAvatar ? 4 : 20),
                       ),
                     ),
-                  ],
-                  if (msg.isVideo && msg.imageUrl != null && msg.imageUrl!.isNotEmpty)
-                    _MerchantChatVideoPlayer(videoUrl: msg.imageUrl!)
-                  else if (msg.isImage && msg.imageUrl != null && msg.imageUrl!.isNotEmpty)
-                    GestureDetector(
-                      onTap: () => _openImageLightbox(msg.imageUrl!),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 260, maxWidth: 270),
-                          child: Image.network(
-                            msg.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Icon(Icons.broken_image_rounded, color: Colors.white54),
+                    child: Column(
+                      crossAxisAlignment: isMerchant ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                      children: [
+                        if (msg.replyToMessage != null) ...[
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border(
+                                left: BorderSide(
+                                  color: isMerchant ? Colors.white : const Color(0xFF42A5F5),
+                                  width: 3.5,
+                                ),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  (msg.replyToMessage!['sender_name'] ?? '').toString(),
+                                  style: TextStyle(
+                                    color: isMerchant ? Colors.white : const Color(0xFF42A5F5),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 1),
+                                Text(
+                                  (msg.replyToMessage!['content'] ?? '').toString(),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                ),
+                              ],
                             ),
                           ),
+                        ],
+                        if (msg.isVideo && msg.imageUrl != null && msg.imageUrl!.isNotEmpty)
+                          _MerchantChatVideoPlayer(videoUrl: msg.imageUrl!)
+                        else if (msg.isImage && msg.imageUrl != null && msg.imageUrl!.isNotEmpty)
+                          GestureDetector(
+                            onTap: () => _openImageLightbox(msg.imageUrl!),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxHeight: 280, maxWidth: 270),
+                                child: Image.network(
+                                  msg.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Icon(Icons.broken_image_rounded, color: Colors.white54),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        else if (msg.isFile && msg.imageUrl != null && msg.imageUrl!.isNotEmpty)
+                          GestureDetector(
+                            onTap: () async {
+                              final uri = Uri.tryParse(msg.imageUrl!);
+                              if (uri != null) {
+                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const HugeIcon(
+                                    icon: HugeIcons.strokeRoundedFile01,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          msg.displayFileName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            decoration: TextDecoration.underline,
+                                          ),
+                                        ),
+                                        if (msg.formattedFileSize.isNotEmpty)
+                                          Text(
+                                            msg.formattedFileSize,
+                                            style: const TextStyle(color: Colors.white70, fontSize: 10.5),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            msg.content,
+                            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.35),
+                          ),
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: isMedia ? const EdgeInsets.symmetric(horizontal: 6) : EdgeInsets.zero,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                timeStr,
+                                style: TextStyle(
+                                  color: isMerchant ? Colors.white70 : Colors.white54,
+                                  fontSize: 10.5,
+                                ),
+                              ),
+                              if (isMerchant) ...[
+                                const SizedBox(width: 4),
+                                if (msg.status == 'sending')
+                                  const Icon(Icons.access_time_rounded, size: 12, color: Colors.white70)
+                                else if (msg.status == 'failed')
+                                  const Icon(Icons.error_outline_rounded, size: 12, color: Colors.redAccent)
+                                else
+                                  Icon(
+                                    msg.isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                                    size: 13,
+                                    color: msg.isRead ? const Color(0xFF00E5FF) : Colors.white70,
+                                  ),
+                              ],
+                            ],
+                          ),
                         ),
-                      ),
-                    )
-                  else if (msg.isFile && msg.imageUrl != null && msg.imageUrl!.isNotEmpty)
-                    GestureDetector(
-                      onTap: () async {
-                        final uri = Uri.tryParse(msg.imageUrl!);
-                        if (uri != null) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                      ],
+                    ),
+                  ),
+                  if (msg.status == 'failed')
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: GestureDetector(
+                        onTap: () => _retryMessage(msg),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const HugeIcon(
-                              icon: HugeIcons.strokeRoundedFile01,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 8),
-                            Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    msg.displayFileName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                  ),
-                                  if (msg.formattedFileSize.isNotEmpty)
-                                    Text(
-                                      msg.formattedFileSize,
-                                      style: const TextStyle(color: Colors.white70, fontSize: 10.5),
-                                    ),
-                                ],
+                            const Icon(Icons.refresh_rounded, size: 13, color: Colors.redAccent),
+                            const SizedBox(width: 4),
+                            Text(
+                              'inbox.action_retry'.tr(),
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    )
-                  else
-                    Text(
-                      msg.content,
-                      style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.35),
                     ),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: isMedia ? const EdgeInsets.symmetric(horizontal: 6) : EdgeInsets.zero,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          timeStr,
-                          style: TextStyle(
-                            color: isMerchant ? Colors.white70 : Colors.white38,
-                            fontSize: 10,
-                          ),
-                        ),
-                        if (isMerchant) ...[
-                          const SizedBox(width: 4),
-                          if (msg.status == 'sending')
-                            const Icon(Icons.access_time_rounded, size: 12, color: Colors.white70)
-                          else if (msg.status == 'failed')
-                            const Icon(Icons.error_outline_rounded, size: 12, color: Colors.redAccent)
-                          else
-                            Icon(
-                              msg.isRead ? Icons.done_all_rounded : Icons.done_rounded,
-                              size: 13,
-                              color: msg.isRead ? const Color(0xFF00E5FF) : Colors.white70,
-                            ),
-                        ],
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
-            if (msg.status == 'failed')
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: GestureDetector(
-                  onTap: () => _retryMessage(msg),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.refresh_rounded, size: 13, color: Colors.redAccent),
-                      const SizedBox(width: 4),
-                      Text(
-                        'inbox.action_retry'.tr(),
-                        style: const TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -2402,3 +2848,115 @@ class _MerchantChatVideoPlayerState extends State<_MerchantChatVideoPlayer> {
     );
   }
 }
+
+class _GlassDropdownOption {
+  final String label;
+  final dynamic hugeIcon;
+  final IconData? materialIcon;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isDestructive;
+  final bool showDividerBefore;
+
+  const _GlassDropdownOption({
+    required this.label,
+    this.hugeIcon,
+    this.materialIcon,
+    required this.color,
+    required this.onTap,
+    this.isDestructive = false,
+    this.showDividerBefore = false,
+  });
+}
+
+class _MerchantSwipeToReply extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onSwipe;
+  final bool isMe;
+
+  const _MerchantSwipeToReply({
+    required this.child,
+    required this.onSwipe,
+    required this.isMe,
+  });
+
+  @override
+  State<_MerchantSwipeToReply> createState() => _MerchantSwipeToReplyState();
+}
+
+class _MerchantSwipeToReplyState extends State<_MerchantSwipeToReply>
+    with SingleTickerProviderStateMixin {
+  double _dragOffset = 0.0;
+  static const double _maxDrag = 60.0;
+  late AnimationController _animCtrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    )..addListener(() {
+        setState(() => _dragOffset = _anim.value);
+      });
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  void _resetDrag() {
+    _anim = Tween<double>(begin: _dragOffset, end: 0.0).animate(
+      CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut),
+    );
+    _animCtrl.forward(from: 0.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragUpdate: (details) {
+        setState(() {
+          _dragOffset += details.delta.dx;
+          if (widget.isMe) {
+            _dragOffset = _dragOffset.clamp(-_maxDrag, 0.0);
+          } else {
+            _dragOffset = _dragOffset.clamp(0.0, _maxDrag);
+          }
+        });
+      },
+      onHorizontalDragEnd: (_) {
+        if (_dragOffset.abs() >= _maxDrag * 0.75) {
+          widget.onSwipe();
+        }
+        _resetDrag();
+      },
+      onHorizontalDragCancel: _resetDrag,
+      child: Stack(
+        alignment: widget.isMe ? Alignment.centerRight : Alignment.centerLeft,
+        children: [
+          if (_dragOffset.abs() > 10)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: HugeIcon(
+                icon: HugeIcons.strokeRoundedShare01,
+                color: Colors.white.withValues(
+                  alpha: (_dragOffset.abs() / _maxDrag).clamp(0.0, 0.85),
+                ),
+                size: 20,
+              ),
+            ),
+          Transform.translate(
+            offset: Offset(_dragOffset, 0),
+            child: widget.child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+

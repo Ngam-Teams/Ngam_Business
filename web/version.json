@@ -1,6 +1,6 @@
 {
-  "version": "1.0.63",
-  "build_number": 43,
-  "released_at": "2026-11-18T18:10:00Z",
-  "changelog": "Buang nilai hardcoded contoh kedai pada Studio Resit dan asingkan simpanan tetapan resit mengikut ID kedai supaya maklumat kedai lain tidak bercampur."
+  "version": "1.0.64",
+  "build_number": 44,
+  "released_at": "2026-11-19T18:34:00Z",
+  "changelog": "Reka bentuk baharu bilik sembang Ngam Business mengikut gaya glassmorphism Ngam dengan dropdown kaca Hubungi (Telefon, WhatsApp, Telegram), menu 3-titik lanjutan, serta sokongan swipe-to-reply."
 }
