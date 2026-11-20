@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
@@ -27,6 +30,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _detectingGps = false;
+  bool _importingGps = false;
   String? _businessId;
 
   // Identity Controllers
@@ -43,6 +47,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   final _websiteController = TextEditingController();
 
   // Address Controllers
+  final _gmapsLinkController = TextEditingController();
   final _addressLineController = TextEditingController();
   final _postcodeController = TextEditingController();
   final _cityController = TextEditingController();
@@ -472,6 +477,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     _emailController.dispose();
     _websiteController.dispose();
     _addressLineController.dispose();
+    _gmapsLinkController.dispose();
     _postcodeController.dispose();
     _cityController.dispose();
     _countryController.dispose();
@@ -618,6 +624,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                         ),
                         const SizedBox(height: 16),
                         _buildCardContainer([
+                          _buildGoogleMapsImportBox(),
+                          const SizedBox(height: 16),
                           _buildTextField(
                             label: 'business_profile.street_label'.tr(),
                             controller: _addressLineController,
@@ -2209,6 +2217,314 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       }
     } finally {
       if (mounted) setState(() => _detectingGps = false);
+    }
+  }
+
+  Widget _buildGoogleMapsImportBox() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF3B82F6).withValues(alpha: 0.28),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const HugeIcon(
+                icon: HugeIcons.strokeRoundedLocation01,
+                color: Color(0xFF60A5FA),
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'business_profile.gmaps_import_title'.tr(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _gmapsLinkController,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _importingGps ? null : _importFromGoogleMapsLink(),
+                  decoration: InputDecoration(
+                    hintText: 'business_profile.gmaps_import_hint'.tr(),
+                    hintStyle: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.35),
+                      fontSize: 12,
+                    ),
+                    filled: true,
+                    fillColor: Colors.black.withValues(alpha: 0.25),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF60A5FA)),
+                    ),
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 40,
+                child: ElevatedButton(
+                  onPressed: _importingGps ? null : _importFromGoogleMapsLink,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _importingGps
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'business_profile.gmaps_import_btn'.tr(),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  LatLng? _extractLatLngFromText(String raw) {
+    final decoded = Uri.decodeFull(raw);
+    final patterns = [
+      RegExp(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)'),
+      RegExp(r'@(-?\d+\.\d+),(-?\d+\.\d+)'),
+      RegExp(r'[?&](?:q|ll|query|center)=(-?\d+\.\d+),(-?\d+\.\d+)'),
+      RegExp(r'^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$'),
+    ];
+    for (final rx in patterns) {
+      final m = rx.firstMatch(decoded) ?? rx.firstMatch(raw);
+      if (m != null) {
+        final lat = double.tryParse(m.group(1) ?? '');
+        final lng = double.tryParse(m.group(2) ?? '');
+        if (lat != null && lng != null && lat.abs() <= 90 && lng.abs() <= 180) {
+          return LatLng(lat, lng);
+        }
+      }
+    }
+    return null;
+  }
+
+  String? _matchMalaysianState(String rawState) {
+    final lower = rawState.toLowerCase().trim();
+    if (lower.isEmpty) return null;
+    if (lower.contains('pulau pinang') || lower.contains('penang')) return 'Penang';
+    if (lower.contains('kuala lumpur')) return 'Kuala Lumpur';
+    if (lower.contains('malacca') || lower.contains('melaka')) return 'Melaka';
+    if (lower.contains('negeri sembilan')) return 'Negeri Sembilan';
+    for (final st in _malaysianStates) {
+      if (lower.contains(st.toLowerCase())) return st;
+    }
+    return null;
+  }
+
+  Future<void> _importFromGoogleMapsLink() async {
+    final rawInput = _gmapsLinkController.text.trim();
+    if (rawInput.isEmpty) {
+      showGlassToast(context, 'business_profile.gmaps_empty_error'.tr(), isError: true);
+      return;
+    }
+
+    setState(() => _importingGps = true);
+    try {
+      String workingUrl = rawInput;
+      LatLng? coords = _extractLatLngFromText(workingUrl);
+
+      final isShortLink = workingUrl.contains('maps.app.goo.gl') ||
+          workingUrl.contains('goo.gl/maps');
+
+      if (coords == null && isShortLink) {
+        if (kIsWeb) {
+          if (mounted) {
+            showGlassToast(
+              context,
+              'business_profile.gmaps_short_link_web_error'.tr(),
+              isError: true,
+            );
+          }
+          return;
+        }
+        try {
+          var currentUri = Uri.parse(workingUrl);
+          final client = http.Client();
+          try {
+            for (int hop = 0; hop < 5; hop++) {
+              final req = http.Request('GET', currentUri)..followRedirects = false;
+              final streamed = await client.send(req).timeout(const Duration(seconds: 6));
+              final loc = streamed.headers['location'];
+              if (loc == null || loc.isEmpty) break;
+              currentUri = currentUri.resolve(loc);
+              workingUrl = currentUri.toString();
+              coords = _extractLatLngFromText(workingUrl);
+              if (coords != null) break;
+            }
+          } finally {
+            client.close();
+          }
+        } catch (_) {}
+      }
+
+      // Fallback: if URL contains /place/<Place+Name>/ try Nominatim search
+      if (coords == null) {
+        String? queryText;
+        final placeMatch = RegExp(r'/maps/place/([^/@?]+)').firstMatch(workingUrl);
+        if (placeMatch != null) {
+          queryText = Uri.decodeComponent(placeMatch.group(1)!.replaceAll('+', ' ')).trim();
+        } else if (!workingUrl.startsWith('http')) {
+          queryText = workingUrl;
+        }
+        if (queryText != null && queryText.isNotEmpty) {
+          final searchUri = Uri.parse(
+            'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(queryText)}&format=json&addressdetails=1&limit=1&countrycodes=my',
+          );
+          final res = await http
+              .get(
+                searchUri,
+                headers: kIsWeb ? null : const {'User-Agent': 'NgamBusiness/1.0 (contact@ngam.dev)'},
+              )
+              .timeout(const Duration(seconds: 5));
+          if (res.statusCode == 200) {
+            final list = json.decode(utf8.decode(res.bodyBytes)) as List;
+            if (list.isNotEmpty) {
+              final first = list.first as Map<String, dynamic>;
+              final lat = double.tryParse(first['lat']?.toString() ?? '');
+              final lng = double.tryParse(first['lon']?.toString() ?? '');
+              if (lat != null && lng != null) {
+                coords = LatLng(lat, lng);
+              }
+            }
+          }
+        }
+      }
+
+      if (coords == null) {
+        if (mounted) {
+          showGlassToast(context, 'business_profile.gmaps_not_found_error'.tr(), isError: true);
+        }
+        return;
+      }
+
+      setState(() {
+        _latitude = coords!.latitude;
+        _longitude = coords.longitude;
+      });
+
+      bool addressFilled = false;
+      try {
+        final revUri = Uri.parse(
+          'https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json&addressdetails=1',
+        );
+        final revRes = await http
+            .get(
+              revUri,
+              headers: kIsWeb ? null : const {'User-Agent': 'NgamBusiness/1.0 (contact@ngam.dev)'},
+            )
+            .timeout(const Duration(seconds: 5));
+
+        if (revRes.statusCode == 200 && mounted) {
+          final data = json.decode(utf8.decode(revRes.bodyBytes)) as Map<String, dynamic>;
+          final addr = data['address'] as Map<String, dynamic>? ?? {};
+          final houseNo = addr['house_number']?.toString() ?? '';
+          final road = addr['road']?.toString() ?? '';
+          final suburb = addr['suburb']?.toString() ?? addr['neighbourhood']?.toString() ?? '';
+          final postcode = addr['postcode']?.toString() ?? '';
+          final city = (addr['city'] ?? addr['town'] ?? addr['county'] ?? '').toString();
+          final stateRaw = (addr['state'] ?? '').toString();
+          final country = (addr['country'] ?? '').toString();
+
+          final streetParts = [
+            if (houseNo.isNotEmpty) houseNo,
+            if (road.isNotEmpty) road,
+            if (suburb.isNotEmpty && suburb != road) suburb,
+          ];
+          setState(() {
+            if (streetParts.isNotEmpty) {
+              _addressLineController.text = streetParts.join(', ');
+              addressFilled = true;
+            } else if ((data['display_name']?.toString() ?? '').isNotEmpty) {
+              _addressLineController.text = data['display_name'].toString().split(',').take(2).join(',').trim();
+              addressFilled = true;
+            }
+            if (postcode.isNotEmpty) _postcodeController.text = postcode;
+            if (city.isNotEmpty) _cityController.text = city;
+            final matchedState = _matchMalaysianState(stateRaw);
+            if (matchedState != null) _selectedState = matchedState;
+            if (country.isNotEmpty) _countryController.text = country;
+          });
+        }
+      } catch (_) {}
+
+      if (_businessId != null) {
+        await _service.updateBusinessProfile(_businessId!, {
+          'latitude': _latitude,
+          'longitude': _longitude,
+          if (_addressLineController.text.trim().isNotEmpty)
+            'address_line': _addressLineController.text.trim(),
+          if (_postcodeController.text.trim().isNotEmpty)
+            'postcode': _postcodeController.text.trim(),
+          if (_cityController.text.trim().isNotEmpty)
+            'business_city': _cityController.text.trim(),
+          if (_selectedState != null && _selectedState!.isNotEmpty)
+            'state': _selectedState,
+        });
+      }
+
+      if (mounted) {
+        _gmapsLinkController.clear();
+        showGlassToast(
+          context,
+          addressFilled
+              ? 'business_profile.gmaps_success_toast'.tr()
+              : 'business_profile.gmaps_coords_only_toast'.tr(args: [
+                  _latitude!.toStringAsFixed(4),
+                  _longitude!.toStringAsFixed(4),
+                ]),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _importingGps = false);
     }
   }
 

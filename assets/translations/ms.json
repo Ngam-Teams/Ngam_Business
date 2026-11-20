@@ -904,7 +904,16 @@
     "upload_failed": "Muat naik gagal. Ralat storan awan.",
     "upload_error": "Muat naik gagal: {}",
     "logo_name": "Logo",
-    "cover_name": "Gambar Kulit"
+    "cover_name": "Gambar Kulit",
+    "gmaps_import_title": "Import dari Pautan Google Maps",
+    "gmaps_import_hint": "Tampal pautan Google Maps atau koordinat (cth. 4.8519, 100.7426)",
+    "gmaps_import_btn": "Import",
+    "gmaps_importing": "Mengimport...",
+    "gmaps_empty_error": "Sila tampal pautan Google Maps atau koordinat terlebih dahulu.",
+    "gmaps_success_toast": "Lokasi berjaya diimport! Alamat & koordinat GPS dikemas kini.",
+    "gmaps_coords_only_toast": "Koordinat GPS berjaya diimport! ({}, {})",
+    "gmaps_short_link_web_error": "Pautan pendek (maps.app.goo.gl) disekat oleh pelayar web. Buka pautan itu & salin URL penuh, atau guna Pin Lokasi di Peta.",
+    "gmaps_not_found_error": "Koordinat tidak ditemui dalam pautan tersebut. Cuba URL penuh Google Maps atau Pin Lokasi di Peta."
   },
   "operating_hours": {
     "title": "Waktu Operasi",

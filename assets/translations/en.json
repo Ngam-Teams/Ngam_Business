@@ -904,7 +904,16 @@
     "upload_failed": "Upload failed. Storage bucket error.",
     "upload_error": "Upload failed: {}",
     "logo_name": "Logo",
-    "cover_name": "Cover photo"
+    "cover_name": "Cover photo",
+    "gmaps_import_title": "Import from Google Maps Link",
+    "gmaps_import_hint": "Paste Google Maps URL or coordinates (e.g. 4.8519, 100.7426)",
+    "gmaps_import_btn": "Import",
+    "gmaps_importing": "Importing...",
+    "gmaps_empty_error": "Please paste a Google Maps link or coordinates first.",
+    "gmaps_success_toast": "Location imported! Address & GPS coordinates updated.",
+    "gmaps_coords_only_toast": "GPS coordinates imported! ({}, {})",
+    "gmaps_short_link_web_error": "Short links (maps.app.goo.gl) cannot be expanded in browser. Open the link and copy the full URL or tap Pin Location on Map.",
+    "gmaps_not_found_error": "Could not extract coordinates from that link. Try the full Google Maps URL or Pin Location on Map."
   },
   "operating_hours": {
     "title": "Operating Hours",
