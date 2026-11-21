@@ -1,6 +1,6 @@
 {
-  "version": "1.0.69",
-  "build_number": 49,
-  "released_at": "2026-11-20T14:00:00Z",
-  "changelog": "Pembaikan cipta/kemas kini produk supaya ralat dipaparkan terus di skrin, auto-tatal ke medan wajib kosong & fallback automatik jika lajur galeri/video belum ditambah di Supabase."
+  "version": "1.0.70",
+  "build_number": 50,
+  "released_at": "2026-11-21T00:42:00Z",
+  "changelog": "Seragamkan ikon pelancar, tetapan splash screen natif serta skrin percikan PWA Ngam Business mengikut rekaan rasmi Ngam."
 }
