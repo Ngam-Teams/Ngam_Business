@@ -1,6 +1,6 @@
 {
-  "version": "1.0.71",
-  "build_number": 51,
-  "released_at": "2026-11-23T07:05:09Z",
-  "changelog": "Pendekkan URL kod QR e-Resit pada pratonton tetapan resit & terminal POS supaya bintik QR lebih besar dan mudah diimbas, serta tambah git hook auto-naik versi setiap commit."
+  "version": "1.0.72",
+  "build_number": 52,
+  "released_at": "2026-11-23T10:15:43Z",
+  "changelog": "Kemas kini metadata Google Search Site Name (WebSite JSON-LD, og:site_name & application-name) supaya hasil carian memaparkan 'Ngam Business'."
 }
