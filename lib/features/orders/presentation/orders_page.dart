@@ -219,9 +219,11 @@ class _OrdersPageState extends State<OrdersPage> {
       return;
     }
 
-    // 2. JIKA PESANAN MASIH BELUM SIAP DIMASAK ('pending' / 'preparing'):
+    // 2. JIKA PESANAN MASIH BELUM SIAP DISEDIAKAN ('pending' / 'preparing'):
     if (order.status == 'pending' || order.status == 'preparing' || order.status == 'in_progress') {
-      final statusLabel = order.status == 'pending' ? 'Diterima (Belum Dimasak)' : 'Sedang Dimasak di Dapur';
+      final statusLabel = order.status == 'pending'
+          ? 'orders.status_pending_unprepared'.tr()
+          : 'orders.status_in_preparation'.tr();
       
       showModalBottomSheet(
         context: context,
@@ -248,13 +250,13 @@ class _OrdersPageState extends State<OrdersPage> {
                 ),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Pesanan Belum Sedia di Dapur!',
-                style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+              Text(
+                'orders.not_ready_title'.tr(),
+                style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Text(
-                'Pesanan #$shortId masih dalam status "$statusLabel" dan belum ditandakan "Sedia".\n\nAdakah pesanan sudah siap dan anda ingin terus serahkan kepada pelanggan sekarang?',
+                'orders.not_ready_desc'.tr(args: [shortId, statusLabel]),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13, height: 1.4),
               ),
@@ -1033,10 +1035,10 @@ class _OrdersPageState extends State<OrdersPage> {
                                 ],
                               ),
                               const SizedBox(height: 6),
-                              Text(
-                                order.notes!,
-                                style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
-                              ),
+                                Text(
+                                  _normalizeOrderNotes(order.notes!),
+                                  style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                                ),
                             ],
                           ),
                         ),
@@ -1181,7 +1183,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                   Navigator.pop(modalCtx);
                                   _updateStatus(order, 'preparing');
                                 },
-                                icon: const HugeIcon(icon: HugeIcons.strokeRoundedRestaurant01, color: Colors.white, size: 18),
+                                icon: const HugeIcon(icon: HugeIcons.strokeRoundedPackage, color: Colors.white, size: 18),
                                 label: Text('orders.accept_order'.tr(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
                               ),
                             ),
@@ -2520,7 +2522,7 @@ class _OrdersPageState extends State<OrdersPage> {
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: () => _updateStatus(order, 'preparing'),
-                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedRestaurant01, color: Colors.white, size: 16),
+                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedPackage, color: Colors.white, size: 16),
                       label: Text('orders.action_cook'.tr()),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00B0FF),
@@ -2640,7 +2642,7 @@ class _OrdersPageState extends State<OrdersPage> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                'Notes: ${order.notes}',
+                'Notes: ${_normalizeOrderNotes(order.notes!)}',
                 style: const TextStyle(color: Colors.white70, fontSize: 13, fontStyle: FontStyle.italic),
               ),
             ),
@@ -2683,5 +2685,13 @@ class _OrdersPageState extends State<OrdersPage> {
         ),
       );
     }
+  }
+
+  String _normalizeOrderNotes(String raw) {
+    return raw
+        .replaceAll('[Bungkus (Ambil Pantas)]', '[Ambil Sendiri (Segera)]')
+        .replaceAll('[Bungkus:', '[Ambil Sendiri:')
+        .replaceAll('[Take Away (Quick Pickup)]', '[Self-Pickup (Immediate)]')
+        .replaceAll('[Take Away:', '[Self-Pickup:');
   }
 }

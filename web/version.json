@@ -1,6 +1,6 @@
 {
-  "version": "1.0.72",
-  "build_number": 52,
-  "released_at": "2026-11-23T10:15:43Z",
-  "changelog": "Kemas kini metadata Google Search Site Name (WebSite JSON-LD, og:site_name & application-name) supaya hasil carian memaparkan 'Ngam Business'."
+  "version": "1.0.73",
+  "build_number": 53,
+  "released_at": "2026-11-23T12:17:46Z",
+  "changelog": "Guna istilah & ikon pesanan universal merentas semua jenis perniagaan (Sediakan & ikon pakej menggantikan Masak & ikon garpu/pisau, Papan Pesanan Langsung, serta normalisasi nota Ambil Sendiri)."
 }

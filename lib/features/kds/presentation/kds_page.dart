@@ -527,7 +527,7 @@ class _KdsPageState extends State<KdsPage> {
             ),
             const SizedBox(height: 20),
             const Text(
-              'Tiada Pesanan Aktif di Dapur',
+              'Tiada Pesanan Aktif',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,

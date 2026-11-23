@@ -425,9 +425,9 @@ class _PosItemModifierModalState extends State<PosItemModifierModal> {
 
                     const SizedBox(height: 18),
 
-                    // 3. Special Kitchen / Item Note
+                    // 3. Special Item / Order Note
                     const Text(
-                      '3. NOTA KHAS DAPUR / PESANAN',
+                      '3. NOTA KHAS ITEM / PESANAN',
                       style: TextStyle(
                         color: Colors.amber,
                         fontSize: 11,
