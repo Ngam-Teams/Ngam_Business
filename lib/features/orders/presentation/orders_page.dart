@@ -689,11 +689,18 @@ class _OrdersPageState extends State<OrdersPage> {
                             if ((order.customerId ?? order.ownerUserId).isNotEmpty &&
                                 order.source.toLowerCase() != 'pos') ...[
                               Container(
+                                width: 40,
+                                height: 40,
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+                                  style: IconButton.styleFrom(
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
                                   icon: const HugeIcon(
                                     icon: HugeIcons.strokeRoundedChatting01,
                                     color: Color(0xFF42A5F5),
@@ -717,11 +724,18 @@ class _OrdersPageState extends State<OrdersPage> {
                               const SizedBox(width: 8),
                             ],
                             Container(
+                              width: 40,
+                              height: 40,
                               decoration: BoxDecoration(
                                 color: const Color(0xFF25D366).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+                                style: IconButton.styleFrom(
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
                                 icon: const HugeIcon(
                                   icon: HugeIcons.strokeRoundedWhatsapp,
                                   color: Color(0xFF25D366),
@@ -2479,11 +2493,18 @@ class _OrdersPageState extends State<OrdersPage> {
                   if ((order.customerId ?? order.ownerUserId).isNotEmpty &&
                       order.source.toLowerCase() != 'pos') ...[
                     Container(
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+                        style: IconButton.styleFrom(
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                         icon: const HugeIcon(
                           icon: HugeIcons.strokeRoundedChatting01,
                           color: Color(0xFF42A5F5),
@@ -2504,11 +2525,18 @@ class _OrdersPageState extends State<OrdersPage> {
                     const SizedBox(width: 8),
                   ],
                   Container(
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       color: const Color(0xFF25D366).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+                      style: IconButton.styleFrom(
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       icon: const HugeIcon(
                         icon: HugeIcons.strokeRoundedWhatsapp,
                         color: Color(0xFF25D366),
@@ -2520,97 +2548,124 @@ class _OrdersPageState extends State<OrdersPage> {
                   ),
                   if (order.status == 'pending') ...[
                     const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () => _updateStatus(order, 'preparing'),
-                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedPackage, color: Colors.white, size: 16),
-                      label: Text('orders.action_cook'.tr()),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00B0FF),
-                        foregroundColor: Colors.white,
+                    SizedBox(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _updateStatus(order, 'preparing'),
+                        icon: const HugeIcon(icon: HugeIcons.strokeRoundedPackage, color: Colors.white, size: 16),
+                        label: Text('orders.action_cook'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00B0FF),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(0, 40),
+                          maximumSize: const Size(double.infinity, 40),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.standard,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
                   ] else if (order.status == 'preparing' || order.status == 'in_progress') ...[
                     const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () => _updateStatus(order, 'ready'),
-                      icon: const HugeIcon(icon: HugeIcons.strokeRoundedShoppingCart02, color: Colors.black, size: 16),
-                      label: Text('orders.action_ready'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00E676),
-                        foregroundColor: Colors.black,
+                    SizedBox(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _updateStatus(order, 'ready'),
+                        icon: const HugeIcon(icon: HugeIcons.strokeRoundedShoppingCart02, color: Colors.black, size: 16),
+                        label: Text('orders.action_ready'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00E676),
+                          foregroundColor: Colors.black,
+                          minimumSize: const Size(0, 40),
+                          maximumSize: const Size(double.infinity, 40),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.standard,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
                   ] else if (order.status == 'ready') ...[
                     const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        if (order.paymentStatus == 'paid') {
-                          _updateStatus(order, 'completed', paymentStatus: 'paid');
-                          return;
-                        }
-                        final shortId = order.id.substring(0, 6).toUpperCase();
-                        final totalFormatted = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ').format(order.total);
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (dlgCtx) => AlertDialog(
-                            backgroundColor: const Color(0xFF161626),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              side: BorderSide(color: Colors.amber.withValues(alpha: 0.4)),
-                            ),
-                            title: Row(
-                              children: [
-                                const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'orders.unpaid_confirm_title'.tr(),
-                                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    SizedBox(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          if (order.paymentStatus == 'paid') {
+                            _updateStatus(order, 'completed', paymentStatus: 'paid');
+                            return;
+                          }
+                          final shortId = order.id.substring(0, 6).toUpperCase();
+                          final totalFormatted = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ').format(order.total);
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (dlgCtx) => AlertDialog(
+                              backgroundColor: const Color(0xFF161626),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                                side: BorderSide(color: Colors.amber.withValues(alpha: 0.4)),
+                              ),
+                              title: Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'orders.unpaid_confirm_title'.tr(),
+                                      style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
                                   ),
+                                ],
+                              ),
+                              content: Text(
+                                'orders.unpaid_confirm_desc'.tr(args: [shortId, totalFormatted]),
+                                style: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dlgCtx, false),
+                                  child: Text('common.cancel'.tr(), style: const TextStyle(color: Colors.white54)),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFF59E0B),
+                                    foregroundColor: Colors.black,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onPressed: () => Navigator.pop(dlgCtx, true),
+                                  child: Text('orders.unpaid_confirm_btn'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
                                 ),
                               ],
                             ),
-                            content: Text(
-                              'orders.unpaid_confirm_desc'.tr(args: [shortId, totalFormatted]),
-                              style: const TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(dlgCtx, false),
-                                child: Text('common.cancel'.tr(), style: const TextStyle(color: Colors.white54)),
-                              ),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFF59E0B),
-                                  foregroundColor: Colors.black,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                                onPressed: () => Navigator.pop(dlgCtx, true),
-                                child: Text('orders.unpaid_confirm_btn'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (confirmed == true && mounted) {
-                          _updateStatus(order, 'completed', paymentStatus: 'paid');
-                        }
-                      },
-                      icon: HugeIcon(
-                        icon: order.paymentStatus != 'paid'
-                            ? HugeIcons.strokeRoundedAlert02
-                            : HugeIcons.strokeRoundedCheckmarkBadge01,
-                        color: order.paymentStatus != 'paid' ? Colors.black : Colors.white,
-                        size: 16,
-                      ),
-                      label: Text(
-                        order.paymentStatus != 'paid'
-                            ? 'orders.unpaid_confirm_btn'.tr()
-                            : 'orders.action_done'.tr(),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: order.paymentStatus != 'paid' ? const Color(0xFFF59E0B) : Colors.green,
-                        foregroundColor: order.paymentStatus != 'paid' ? Colors.black : Colors.white,
+                          );
+                          if (confirmed == true && mounted) {
+                            _updateStatus(order, 'completed', paymentStatus: 'paid');
+                          }
+                        },
+                        icon: HugeIcon(
+                          icon: order.paymentStatus != 'paid'
+                              ? HugeIcons.strokeRoundedAlert02
+                              : HugeIcons.strokeRoundedCheckmarkBadge01,
+                          color: order.paymentStatus != 'paid' ? Colors.black : Colors.white,
+                          size: 16,
+                        ),
+                        label: Text(
+                          order.paymentStatus != 'paid'
+                              ? 'orders.unpaid_confirm_btn'.tr()
+                              : 'orders.action_done'.tr(),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: order.paymentStatus != 'paid' ? const Color(0xFFF59E0B) : Colors.green,
+                          foregroundColor: order.paymentStatus != 'paid' ? Colors.black : Colors.white,
+                          minimumSize: const Size(0, 40),
+                          maximumSize: const Size(double.infinity, 40),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.standard,
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
                       ),
                     ),
                   ],
