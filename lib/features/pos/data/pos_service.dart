@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/audit_service.dart';
 import '../../../core/services/cache_service.dart';
+import '../../../core/utils/ngam_ref.dart';
 import '../../settings/data/business_service.dart';
 import '../models/product_model.dart';
 import '../models/order_model.dart';
@@ -329,6 +331,22 @@ class PosService {
         }
       }
     }
+
+    final createdId = order['id']?.toString() ?? '';
+    final posRef = NgamRef.pos(createdId);
+    unawaited(AuditService.log(
+      action: 'POS_SALE_COMPLETED',
+      severity: 'info',
+      targetType: 'pos',
+      targetId: createdId.isNotEmpty ? createdId : posRef,
+      description: 'Jualan kaunter POS #$posRef selesai (RM ${total.toStringAsFixed(2)}, ${items.length} item, ${paymentMethodName.toUpperCase()}).',
+      metadata: {
+        'pos_ref': posRef,
+        'total': total,
+        'items_count': items.length,
+        'payment_method': paymentMethodName,
+      },
+    ));
   }
 
   // ---------------------------------------------------------------------------
@@ -427,5 +445,18 @@ class PosService {
         }
       }
     } catch (_) {}
+
+    final posRef = NgamRef.pos(orderId);
+    unawaited(AuditService.log(
+      action: 'POS_ORDER_VOIDED',
+      severity: 'critical',
+      targetType: 'pos',
+      targetId: orderId,
+      description: 'Transaksi POS #$posRef dibatalkan/refund. Sebab: $reason',
+      metadata: {
+        'pos_ref': posRef,
+        'reason': reason,
+      },
+    ));
   }
 }

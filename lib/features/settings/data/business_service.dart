@@ -1,3 +1,5 @@
+import 'dart:async';
+import '../../../core/services/audit_service.dart';
 import '../../../core/services/image_compression_service.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -500,6 +502,14 @@ class BusinessService {
       final updated = Map<String, dynamic>.from(_cachedProfile!)..addAll(sanitized);
       await _saveProfileToCache(updated);
     }
+    unawaited(AuditService.log(
+      action: 'BUSINESS_PROFILE_UPDATED',
+      severity: 'info',
+      targetType: 'business',
+      targetId: businessId,
+      description: 'Profil perniagaan dikemas kini (${sanitized.keys.join(", ")}).',
+      metadata: {'fields': sanitized.keys.toList()},
+    ));
   }
 
   /// Initialize default settings row for a business
@@ -550,6 +560,14 @@ class BusinessService {
         debugPrint('Fallback business_settings failed: $err');
       }
     }
+    unawaited(AuditService.log(
+      action: 'BUSINESS_SETTINGS_UPDATED',
+      severity: 'info',
+      targetType: 'business_settings',
+      targetId: businessId,
+      description: 'Tetapan operasi perniagaan dikemas kini.',
+      metadata: {'fields': settings.keys.toList()},
+    ));
   }
 
   /// Save or alter business compliance & banking info
@@ -581,6 +599,14 @@ class BusinessService {
         debugPrint('Fallback business_compliance failed: $err');
       }
     }
+    unawaited(AuditService.log(
+      action: 'BUSINESS_COMPLIANCE_UPDATED',
+      severity: 'warning',
+      targetType: 'business_compliance',
+      targetId: businessId,
+      description: 'Maklumat pematuhan SSM / akaun bank perniagaan dikemas kini.',
+      metadata: {'fields': compliance.keys.toList()},
+    ));
   }
 
   /// Save or alter all business details in a unified transaction/flow

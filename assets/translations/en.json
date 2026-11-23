@@ -1040,7 +1040,19 @@
     "filter_warning": "Warning",
     "filter_info": "Information",
     "search_hint": "Search audit log records...",
-    "no_logs_desc": "Security activities and critical transactions will appear here."
+    "no_logs_desc": "Security activities and critical transactions will appear here.",
+    "generate_test_log": "Record Activation Log",
+    "test_log_description": "Tamper-resistant security audit trail has been verified and activated.",
+    "test_log_success": "Activation audit log recorded successfully.",
+    "test_log_failed": "Failed to record audit log. Ensure the audit_logs SQL migration has been executed.",
+    "export_csv": "Export CSV",
+    "export_csv_success": "Audit log CSV exported successfully!",
+    "export_csv_empty": "No audit logs to export.",
+    "refresh_tooltip": "Refresh logs",
+    "missing_table_title": "Audit Logs Table Not Active Yet",
+    "missing_table_desc": "Please run supabase/migrations/20261123_audit_logs_and_triggers.sql in Supabase SQL Editor to activate tamper-resistant audit logging.",
+    "data_label": "Metadata",
+    "reference_badge": "Ref: {}"
   },
   "mfa": {
     "title": "Two-Factor Authentication TOTP",

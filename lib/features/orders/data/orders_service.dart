@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/audit_service.dart';
 import '../../../core/services/cache_service.dart';
 import '../../../core/utils/ngam_ref.dart';
 
@@ -332,6 +333,28 @@ class OrdersService {
         if (effectivePaymentStatus != null) 'payment_status': effectivePaymentStatus,
       };
       await _client.from('orders').update(payload).eq('id', orderId);
+
+      final orderRef = NgamRef.order(orderId);
+      final lowerStatus = newStatus.toLowerCase();
+      final lowerPay = (effectivePaymentStatus ?? '').toLowerCase();
+      final bool isRefund = lowerPay == 'refunded' || lowerPay == 'refund_pending';
+      final bool isCancel = lowerStatus == 'cancelled';
+      unawaited(AuditService.log(
+        action: isRefund
+            ? 'ORDER_REFUNDED'
+            : (isCancel ? 'ORDER_CANCELLED' : 'ORDER_STATUS_UPDATED'),
+        severity: isRefund ? 'critical' : (isCancel ? 'warning' : 'info'),
+        targetType: 'order',
+        targetId: orderId,
+        description: isCancel
+            ? 'Pesanan #$orderRef dibatalkan${isRefund ? " (status bayaran: ${lowerPay.toUpperCase()})" : ""}.'
+            : 'Status pesanan #$orderRef dikemas kini kepada ${newStatus.toUpperCase()}${lowerPay.isNotEmpty ? " (bayaran: ${lowerPay.toUpperCase()})" : ""}.',
+        metadata: {
+          'order_ref': orderRef,
+          'new_status': newStatus,
+          if (effectivePaymentStatus != null) 'payment_status': effectivePaymentStatus,
+        },
+      ));
       return true;
     } catch (e) {
       debugPrint('[OrdersService] updateOrderStatus error ($orderId -> $newStatus): $e');

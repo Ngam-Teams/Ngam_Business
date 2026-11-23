@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import '../../../core/services/audit_service.dart';
 import '../../../core/services/cache_service.dart';
 import '../../../core/services/image_compression_service.dart';
 import '../../../core/services/r2_storage_service.dart';
@@ -274,7 +275,16 @@ class ProductService {
             .insert(data)
             .select()
             .single();
-        return ProductModel.fromJson(response);
+        final created = ProductModel.fromJson(response);
+        unawaited(AuditService.log(
+          action: 'PRODUCT_CREATED',
+          severity: 'info',
+          targetType: 'product',
+          targetId: created.id,
+          description: 'Item baharu "${created.name}" ditambah ke katalog (RM ${created.price.toStringAsFixed(2)}).',
+          metadata: {'product_name': created.name, 'price': created.price, 'item_type': created.itemType},
+        ));
+        return created;
       } catch (insertErr) {
         // Fallback if database migration 20261120_product_gallery_and_video.sql has not been run yet
         if (_isMissingMediaColumnError(insertErr)) {
@@ -286,7 +296,16 @@ class ProductService {
               .insert(fallbackData)
               .select()
               .single();
-          return ProductModel.fromJson(response);
+          final created = ProductModel.fromJson(response);
+          unawaited(AuditService.log(
+            action: 'PRODUCT_CREATED',
+            severity: 'info',
+            targetType: 'product',
+            targetId: created.id,
+            description: 'Item baharu "${created.name}" ditambah ke katalog (RM ${created.price.toStringAsFixed(2)}).',
+            metadata: {'product_name': created.name, 'price': created.price, 'item_type': created.itemType},
+          ));
+          return created;
         }
         rethrow;
       }
@@ -338,8 +357,27 @@ class ProductService {
         updates['is_active'] = updates.remove('is_available');
       }
 
+      void logProductUpdate() {
+        final prodName = (updates['name'] ?? productId).toString();
+        final hasPriceUpdate = updates.containsKey('price');
+        unawaited(AuditService.log(
+          action: hasPriceUpdate ? 'PRODUCT_PRICE_CHANGED' : 'PRODUCT_UPDATED',
+          severity: hasPriceUpdate ? 'warning' : 'info',
+          targetType: 'product',
+          targetId: productId,
+          description: hasPriceUpdate
+              ? 'Butiran & harga item "$prodName" dikemas kini (RM ${((updates['price'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2)}).'
+              : 'Butiran item "$prodName" dikemas kini.',
+          metadata: {
+            'fields': updates.keys.toList(),
+            if (hasPriceUpdate) 'new_price': updates['price'],
+          },
+        ));
+      }
+
       try {
         await _client.from('business_products').update(updates).eq('id', productId);
+        logProductUpdate();
         return true;
       } catch (updateErr) {
         if (_isMissingMediaColumnError(updateErr)) {
@@ -347,6 +385,7 @@ class ProductService {
             ..remove('image_urls')
             ..remove('video_url');
           await _client.from('business_products').update(fallbackUpdates).eq('id', productId);
+          logProductUpdate();
           return true;
         }
         rethrow;
@@ -364,6 +403,14 @@ class ProductService {
       await _client.from('business_products').update({
         'stock': safeStock,
       }).eq('id', productId);
+      unawaited(AuditService.log(
+        action: 'PRODUCT_STOCK_UPDATED',
+        severity: 'info',
+        targetType: 'product',
+        targetId: productId,
+        description: 'Stok inventori item dikemas kini kepada $safeStock unit.',
+        metadata: {'new_stock': safeStock},
+      ));
       return true;
     } catch (e) {
       return false;
@@ -396,6 +443,13 @@ class ProductService {
   Future<bool> deleteProduct(String productId) async {
     try {
       await _client.from('business_products').delete().eq('id', productId);
+      unawaited(AuditService.log(
+        action: 'PRODUCT_DELETED',
+        severity: 'critical',
+        targetType: 'product',
+        targetId: productId,
+        description: 'Item katalog ($productId) telah dipadam.',
+      ));
       return true;
     } catch (e) {
       return false;

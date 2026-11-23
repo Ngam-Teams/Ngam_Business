@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import '../../../core/services/audit_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/glass_nav_button.dart';
 import '../../settings/data/business_service.dart';
@@ -369,6 +370,18 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
             query = query.eq('business_id', _businessId!);
           }
           await query;
+          unawaited(AuditService.log(
+            action: 'BOOKING_COMPLETED',
+            severity: 'info',
+            targetType: 'booking',
+            targetId: dbId.toString(),
+            description: 'Tempahan #${appt['id']} selesai dibayar (RM ${amount.toStringAsFixed(2)}, ${result.paymentMethod.toUpperCase()}).',
+            metadata: {
+              'booking_ref': appt['id']?.toString(),
+              'amount': amount,
+              'payment_method': result.paymentMethod,
+            },
+          ));
         } catch (_) {}
       }
 
@@ -636,6 +649,18 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
           query = query.eq('business_id', _businessId!);
         }
         await query;
+        unawaited(AuditService.log(
+          action: 'BOOKING_CANCELLED',
+          severity: isPaid ? 'critical' : 'warning',
+          targetType: 'booking',
+          targetId: dbId.toString(),
+          description: 'Tempahan #${appt['id']} dibatalkan oleh peniaga ($selectedReason).',
+          metadata: {
+            'booking_ref': appt['id']?.toString(),
+            'reason': selectedReason,
+            'is_paid': isPaid,
+          },
+        ));
       } catch (e) {
         debugPrint('Error rejecting booking: $e');
       }

@@ -1040,7 +1040,19 @@
     "filter_warning": "Amaran",
     "filter_info": "Informasi",
     "search_hint": "Cari rekod log audit...",
-    "no_logs_desc": "Aktiviti keselamatan dan transaksi penting akan dipaparkan di sini."
+    "no_logs_desc": "Aktiviti keselamatan dan transaksi penting akan dipaparkan di sini.",
+    "generate_test_log": "Rekod Log Pengaktifan",
+    "test_log_description": "Sistem jejak audit keselamatan kalis ubah suai telah disahkan dan diaktifkan.",
+    "test_log_success": "Log audit pengaktifan berjaya direkodkan.",
+    "test_log_failed": "Gagal merekodkan log audit. Pastikan fail SQL audit_logs telah dijalankan di Supabase.",
+    "export_csv": "Eksport CSV",
+    "export_csv_success": "Fail CSV log audit berjaya dimuat turun!",
+    "export_csv_empty": "Tiada rekod log audit untuk dieksport.",
+    "refresh_tooltip": "Muat semula log",
+    "missing_table_title": "Jadual Audit Logs Belum Diaktifkan",
+    "missing_table_desc": "Sila jalankan fail SQL supabase/migrations/20261123_audit_logs_and_triggers.sql di Supabase SQL Editor untuk mengaktifkan rekod audit kalis ubah suai.",
+    "data_label": "Data",
+    "reference_badge": "Ruj: {}"
   },
   "mfa": {
     "title": "Pengesahan Dua Faktor TOTP",
