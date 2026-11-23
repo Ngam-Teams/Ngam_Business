@@ -1,6 +1,6 @@
 {
-  "version": "1.0.74",
-  "build_number": 54,
-  "released_at": "2026-11-23T14:57:00Z",
+  "version": "1.0.75",
+  "build_number": 55,
+  "released_at": "2026-11-23T16:56:00Z",
   "changelog": "Seragamkan ketinggian butang Sembang, WhatsApp, dan tindakan status pesanan (Sediakan/Sedia/Selesai) kepada 40px pada kad pesanan."
 }
