@@ -1,6 +1,6 @@
 {
-  "version": "1.0.75",
-  "build_number": 55,
-  "released_at": "2026-11-23T16:56:00Z",
-  "changelog": "Seragamkan ketinggian butang Sembang, WhatsApp, dan tindakan status pesanan (Sediakan/Sedia/Selesai) kepada 40px pada kad pesanan."
+  "version": "1.0.76",
+  "build_number": 56,
+  "released_at": "2026-11-23T17:05:00Z",
+  "changelog": "Seragamkan nombor rujukan 14-aksara tanpa sempang (NO, NB, NP, NS, ND, NR, NW, NT) pada Pesanan, Kaunter POS, Pengimbas QR, Pengeluaran, Pertikaian & Sokongan."
 }

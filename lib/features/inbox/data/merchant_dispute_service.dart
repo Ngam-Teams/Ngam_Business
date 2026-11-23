@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/r2_storage_service.dart';
+import '../../../core/utils/ngam_ref.dart';
 
 // =============================================================================
 // Ngam Business — Merchant Dispute & 3-Way Mediation Service
@@ -71,6 +72,10 @@ class MerchantDisputeCase {
   bool get isEscalated =>
       status == 'escalated' || status == 'under_review';
 
+  /// `NR` — Ngam Refund reference (cth: `NR2611233D9E4B`)
+  String get refundReference =>
+      NgamRef.refund(id, createdAt: resolvedAt ?? createdAt);
+
   factory MerchantDisputeCase.fromJson(Map<String, dynamic> j) {
     List<String> parseList(dynamic raw) {
       if (raw is List) {
@@ -82,9 +87,17 @@ class MerchantDisputeCase {
     DateTime? parseDt(dynamic v) =>
         v == null ? null : DateTime.tryParse(v.toString())?.toLocal();
 
+    final parsedId = (j['id'] ?? '').toString();
+    final parsedCreated = parseDt(j['created_at']) ?? DateTime.now();
+    final rawCaseNo = (j['case_number'] ?? '').toString().trim();
+    final formattedCaseNo =
+        (rawCaseNo.isNotEmpty && !rawCaseNo.contains('-'))
+            ? rawCaseNo.toUpperCase()
+            : NgamRef.dispute(parsedId, createdAt: parsedCreated);
+
     return MerchantDisputeCase(
-      id: (j['id'] ?? '').toString(),
-      caseNumber: (j['case_number'] ?? '').toString(),
+      id: parsedId,
+      caseNumber: formattedCaseNo,
       targetType: (j['target_type'] ?? 'order').toString(),
       orderId: j['order_id']?.toString(),
       bookingId: j['booking_id']?.toString(),

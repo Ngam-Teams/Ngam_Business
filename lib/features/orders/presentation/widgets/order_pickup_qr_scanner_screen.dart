@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/services/sound_service.dart';
+import '../../../../core/utils/ngam_ref.dart';
 import '../../../../widgets/glass_nav_button.dart';
 import '../../../../widgets/glass_toast.dart';
 import '../../../settings/data/business_service.dart';
@@ -156,9 +157,7 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
       // 1. Search in local memory orders first (instant)
       OrderModel? matched;
       for (final o in widget.allOrders) {
-        final idLower = o.id.toLowerCase();
-        if (idLower == cleaned ||
-            (cleaned.length >= 6 && (idLower.startsWith(cleaned) || idLower.endsWith(cleaned)))) {
+        if (NgamRef.matches(cleaned, o.id, prefix: o.source == 'pos' ? 'NP' : 'NO', createdAt: o.createdAt)) {
           matched = o;
           break;
         }
@@ -188,8 +187,10 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
                 .order('created_at', ascending: false)
                 .limit(100);
             for (final row in (res as List)) {
-              final idLower = (row['id']?.toString() ?? '').toLowerCase();
-              if (idLower == cleaned || idLower.startsWith(cleaned) || idLower.endsWith(cleaned)) {
+              final rowId = (row['id']?.toString() ?? '');
+              final rowCreated = DateTime.tryParse((row['created_at'] ?? '').toString());
+              final rowSource = (row['source'] ?? '').toString();
+              if (NgamRef.matches(cleaned, rowId, prefix: rowSource == 'pos' ? 'NP' : 'NO', createdAt: rowCreated)) {
                 matched = OrderModel.fromJson(row as Map<String, dynamic>);
                 break;
               }
@@ -342,8 +343,8 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
               const SizedBox(height: 10),
               Text(
                 _isBookingMode
-                    ? 'Taipkan ID Tempahan (cth: ID:RZRV-... atau RZRV-261101-ABCDE), atau gunakan pengimbas USB Barcode:'
-                    : 'Taipkan Kod Pesanan (cth: NGAM-ORDER:... atau 6 aksara ID seperti #A1B2C3), atau gunakan pengimbas USB Barcode:',
+                    ? 'Taipkan ID Tempahan (cth: NB261123H4W8X3), atau gunakan pengimbas USB Barcode:'
+                    : 'Taipkan Kod Pesanan (cth: NO261123K7M9P2 atau 6 aksara kod seperti K7M9P2), atau gunakan pengimbas USB Barcode:',
                 style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
               ),
               const SizedBox(height: 16),
@@ -358,8 +359,8 @@ class _OrderPickupQrScannerScreenState extends State<OrderPickupQrScannerScreen>
                 ),
                 decoration: InputDecoration(
                   hintText: _isBookingMode
-                      ? 'Cth: RZRV-261101-ABCDE'
-                      : 'Cth: NGAM-ORDER:abc12345 atau #ABC123',
+                      ? 'Cth: NB261123H4W8X3'
+                      : 'Cth: NO261123K7M9P2 atau #K7M9P2',
                   hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
                   prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00E5FF), size: 20),
                   filled: true,

@@ -132,7 +132,7 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   Future<void> _handlePickupQrVerification(OrderModel order) async {
-    final shortId = order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase();
+    final shortId = order.refCode;
     final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
 
     // 1. JIKA PESANAN SUDAH BERSTATUS 'READY' (Alur Sah Pengesahan Pengambilan di Kaunter):
@@ -478,7 +478,7 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   Widget _buildOrderDetailsContent(OrderModel order, BuildContext modalCtx, {required bool isDialog}) {
-    final shortId = order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase();
+    final shortId = order.refCode;
     final fmt = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
 
     Color statusColor;
@@ -1272,7 +1272,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                   _updateStatus(order, 'completed', paymentStatus: 'paid');
                                   return;
                                 }
-                                final shortId = order.id.substring(0, 6).toUpperCase();
+                                final shortId = order.refCode;
                                 final confirmed = await showDialog<bool>(
                                   context: modalCtx,
                                   builder: (dlgCtx) => AlertDialog(
@@ -1607,7 +1607,7 @@ class _OrdersPageState extends State<OrdersPage> {
       phone = '60$phone';
     }
 
-    final shortId = order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase();
+    final shortId = order.refCode;
     final message = Uri.encodeComponent(
       'Hai ${order.customerName ?? 'Pelanggan'}, pesanan anda (#$shortId) bernilai RM ${order.total.toStringAsFixed(2)} di kedai kami sedang disiapkan/diproses. Terima kasih!'
     );
@@ -2596,7 +2596,7 @@ class _OrdersPageState extends State<OrdersPage> {
                             _updateStatus(order, 'completed', paymentStatus: 'paid');
                             return;
                           }
-                          final shortId = order.id.substring(0, 6).toUpperCase();
+                          final shortId = order.refCode;
                           final totalFormatted = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ').format(order.total);
                           final confirmed = await showDialog<bool>(
                             context: context,

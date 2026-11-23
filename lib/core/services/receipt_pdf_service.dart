@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:intl/intl.dart';
 import '../utils/file_saver/file_saver.dart';
+import '../utils/ngam_ref.dart';
 
 /// Pure Dart PDF Receipt Generator Service for Ngam Business.
 /// Produces 100% compliant, standard PDF 1.4 documents without any external native dependencies.
@@ -71,7 +72,9 @@ class ReceiptPdfService {
     final currency = NumberFormat.currency(locale: 'ms_MY', symbol: 'RM ');
     final dateFormat = DateFormat('dd/MM/yyyy hh:mm a');
 
-    final displayRef = orderId.length > 8 ? orderId.substring(0, 8).toUpperCase() : orderId.toUpperCase();
+    final displayRef = NgamRef.isBookingReference(orderId)
+        ? NgamRef.booking(orderId, orderCreatedAt)
+        : NgamRef.order(orderId, createdAt: orderCreatedAt);
     final createdStr = orderCreatedAt != null ? dateFormat.format(orderCreatedAt) : dateFormat.format(DateTime.now());
     final isPaid = (paymentStatus?.toLowerCase() ?? 'paid') == 'paid';
     final payMethodStr = (paymentMethod == null || paymentMethod.isEmpty) ? 'DuitNow QR / FPX' : paymentMethod.toUpperCase();
@@ -289,8 +292,9 @@ class ReceiptPdfService {
       totalAmount: totalAmount,
     );
 
-    final cleanId = orderId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '');
-    final shortId = cleanId.length > 8 ? cleanId.substring(0, 8).toUpperCase() : cleanId.toUpperCase();
+    final shortId = NgamRef.isBookingReference(orderId)
+        ? NgamRef.booking(orderId, orderCreatedAt)
+        : NgamRef.order(orderId, createdAt: orderCreatedAt);
     final fileName = 'Resit_Ngam_$shortId.pdf';
 
     return await saveAndDownloadFile(

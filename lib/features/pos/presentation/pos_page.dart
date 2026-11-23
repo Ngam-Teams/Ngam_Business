@@ -17,6 +17,7 @@ import 'widgets/pos_enterprise_modals.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/modal_sheet.dart';
 import '../../../../core/services/sound_service.dart';
+import '../../../../core/utils/ngam_ref.dart';
 
 class PosPage extends StatefulWidget {
   const PosPage({super.key});
@@ -430,7 +431,7 @@ class _PosPageState extends State<PosPage> {
                   .toList()
               : ['1x Jualan POS | RM ${((orderData['total'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2)}'];
           PosQuickThermalReceiptModal.show(context, {
-            'ref': '#${orderData['id'].toString().substring(0, 6).toUpperCase()}',
+            'ref': '#${NgamRef.pos(orderData['id']?.toString())}',
             'mode': 'CETAK SEMULA',
             'customer': orderData['customer_name']?.toString() ?? 'Pelanggan Kaunter',
             'items': lines,
@@ -603,7 +604,7 @@ class _PosPageState extends State<PosPage> {
     if (_cart.isEmpty) return;
     final grandTotal = _grandTotal;
     final customer = _customerController.text.trim();
-    final orderRef = 'POS-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+    final orderRef = NgamRef.pos();
 
     final result = await PaymentTerminalModal.show(
       context: context,

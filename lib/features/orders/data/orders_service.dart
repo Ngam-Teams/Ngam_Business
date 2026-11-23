@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/cache_service.dart';
+import '../../../core/utils/ngam_ref.dart';
 
 import '../../settings/data/business_service.dart';
 
@@ -35,6 +36,11 @@ class OrderModel {
     this.notes,
     required this.createdAt,
   });
+
+  /// 14-char official Ngam reference (`NP...` for POS orders, `NO...` for online/store orders)
+  String get refCode => source == 'pos'
+      ? NgamRef.pos(id, createdAt)
+      : NgamRef.order(id, createdAt: createdAt);
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     String? phone = json['customer_phone'] as String?;

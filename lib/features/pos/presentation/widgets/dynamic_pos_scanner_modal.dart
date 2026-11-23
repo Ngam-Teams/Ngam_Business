@@ -5,6 +5,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../core/services/sound_service.dart';
+import '../../../../core/utils/ngam_ref.dart';
 import '../../../customers/data/membership_service.dart';
 import '../../../promotions/data/voucher_service.dart';
 import '../../../promotions/models/voucher_model.dart';
@@ -278,21 +279,24 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
           if (mounted) {
             setState(() {
               _isResolving = false;
-              _statusError = '✅ Pesanan #${orderId.length > 6 ? orderId.substring(0, 6).toUpperCase() : orderId} disahkan selesai diambil!';
+              _statusError = '✅ Pesanan #${NgamRef.order(orderId)} disahkan selesai diambil!';
             });
           }
           return;
         }
       }
 
-      // 0B. Semak jika ia adalah QR Tiket Tempahan (ID:...|SHOP:... atau RZRV-...)
-      if (upperQuery.startsWith('ID:') || upperQuery.contains('|SHOP:') || upperQuery.contains('RZRV-')) {
+      // 0B. Semak jika ia adalah QR Tiket Tempahan (ID:...|SHOP:... atau NB... / RZRV-...)
+      if (upperQuery.startsWith('ID:') ||
+          upperQuery.contains('|SHOP:') ||
+          upperQuery.contains('RZRV-') ||
+          NgamRef.isBookingReference(upperQuery)) {
         String bookingId = query;
         final idMatch = RegExp(r'ID:([^|]+)', caseSensitive: false).firstMatch(query);
         if (idMatch != null) {
           bookingId = idMatch.group(1)!.trim();
         } else {
-          final m = RegExp(r'(RZRV-[A-Z0-9-]+)', caseSensitive: false).firstMatch(query);
+          final m = RegExp(r'(NB\d{6}[A-Z0-9]{6}|RZRV-[A-Z0-9-]+)', caseSensitive: false).firstMatch(query);
           if (m != null) bookingId = m.group(1)!;
         }
         final handled = await _verifyAndCompleteBooking(bookingId);

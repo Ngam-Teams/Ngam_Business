@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
+import '../../../core/utils/ngam_ref.dart';
 import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/glass_nav_button.dart';
@@ -414,17 +415,18 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
                           }
 
                           final targetBank = _bankAccounts.firstWhere((b) => b['id'] == selectedBankId);
+                          final nwRef = NgamRef.withdrawal(null);
                           setState(() {
                             _availableBalance -= amt;
                             _settlementHistory.insert(0, {
-                              'id': 'SET-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+                              'id': nwRef,
                               'date': 'Just now',
                               'bankName': targetBank['bankName'],
                               'accountNumber': targetBank['accountNumber'],
                               'amount': amt,
                               'fee': 0.00,
                               'status': PayoutStatus.processing,
-                              'reference': 'DNT${DateTime.now().millisecondsSinceEpoch}',
+                              'reference': nwRef,
                             });
                           });
 
