@@ -1,0 +1,157 @@
+#!/usr/bin/env sh
+# Auto-bump Flutter app version on every commit:
+# - pubspec.yaml (patch + 1, build_number + 1)
+# - web/version.json (version, build_number, released_at)
+# - lib/services/app_update_service.dart or lib/core/services/app_update_service.dart (fallbackVersion)
+#
+# Set SKIP_VERSION_BUMP=1 to bypass for a specific commit.
+
+set -e
+
+if [ "${SKIP_VERSION_BUMP:-0}" = "1" ]; then
+  exit 0
+fi
+
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null || true)"
+if [ -z "$GIT_DIR" ]; then
+  exit 0
+fi
+
+# Skip during merge, rebase, or cherry-pick
+if [ -f "$GIT_DIR/MERGE_HEAD" ] || [ -f "$GIT_DIR/REBASE_HEAD" ] || [ -f "$GIT_DIR/CHERRY_PICK_HEAD" ] || [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
+  exit 0
+fi
+
+# Skip if nothing is staged
+if git diff --cached --quiet; then
+  exit 0
+fi
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+if [ ! -f "pubspec.yaml" ]; then
+  exit 0
+fi
+
+PYTHON_BIN=""
+if command -v python3 >/dev/null 2>&1; then
+  PYTHON_BIN="python3"
+elif command -v python >/dev/null 2>&1; then
+  PYTHON_BIN="python"
+else
+  echo "[pre-commit] Warning: python3/python not found; skipping auto version bump." >&2
+  exit 0
+fi
+
+"$PYTHON_BIN" - <<'PYEOF'
+import datetime
+import json
+import os
+import re
+import subprocess
+import sys
+
+def get_head_pubspec_version():
+    try:
+        out = subprocess.check_output(
+            ["git", "show", "HEAD:pubspec.yaml"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+    except Exception:
+        return None
+    m = re.search(r"^version:\s*([0-9]+\.[0-9]+\.[0-9]+\+[0-9]+)", out, re.MULTILINE)
+    return m.group(1) if m else None
+
+with open("pubspec.yaml", "rb") as f:
+    raw_bytes = f.read()
+
+newline = "\r\n" if b"\r\n" in raw_bytes else "\n"
+text = raw_bytes.decode("utf-8")
+
+m = re.search(r"^(version:\s*)([0-9]+)\.([0-9]+)\.([0-9]+)\+([0-9]+)", text, re.MULTILINE)
+if not m:
+    sys.exit(0)
+
+major, minor, patch, build = int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5))
+current_full = f"{major}.{minor}.{patch}+{build}"
+head_full = get_head_pubspec_version()
+
+# If author already bumped pubspec.yaml manually compared to HEAD, keep it and only sync other files
+if head_full is not None and current_full != head_full:
+    new_ver = f"{major}.{minor}.{patch}"
+    new_build = build
+    new_full = current_full
+    bumped = False
+else:
+    patch += 1
+    build += 1
+    new_ver = f"{major}.{minor}.{patch}"
+    new_build = build
+    new_full = f"{new_ver}+{new_build}"
+    bumped = True
+
+touched_files = []
+
+if bumped:
+    new_text = re.sub(
+        r"^(version:\s*)[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+",
+        rf"\g<1>{new_full}",
+        text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if new_text != text:
+        with open("pubspec.yaml", "wb") as f:
+            f.write(new_text.replace("\r\n", "\n").replace("\n", newline).encode("utf-8"))
+        touched_files.append("pubspec.yaml")
+
+# Sync web/version.json
+version_json_path = os.path.join("web", "version.json")
+if os.path.isfile(version_json_path):
+    try:
+        with open(version_json_path, "r", encoding="utf-8") as f:
+            vdata = json.load(f)
+        changed = False
+        if vdata.get("version") != new_ver:
+            vdata["version"] = new_ver
+            changed = True
+        if vdata.get("build_number") != new_build:
+            vdata["build_number"] = new_build
+            changed = True
+        if changed or bumped:
+            vdata["released_at"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            with open(version_json_path, "w", encoding="utf-8") as f:
+                json.dump(vdata, f, indent=2, ensure_ascii=False)
+                f.write("\n")
+            touched_files.append(version_json_path)
+    except Exception as e:
+        print(f"[pre-commit] Warning: failed to update {version_json_path}: {e}", file=sys.stderr)
+
+# Sync app_update_service.dart fallbackVersion
+for rel_path in (
+    os.path.join("lib", "services", "app_update_service.dart"),
+    os.path.join("lib", "core", "services", "app_update_service.dart"),
+):
+    if os.path.isfile(rel_path):
+        with open(rel_path, "rb") as f:
+            svc_bytes = f.read()
+        svc_nl = "\r\n" if b"\r\n" in svc_bytes else "\n"
+        svc_text = svc_bytes.decode("utf-8")
+        new_svc_text = re.sub(
+            r"(static\s+const\s+String\s+fallbackVersion\s*=\s*['\"])[^'\"]+(['\"];)",
+            rf"\g<1>{new_ver}\g<2>",
+            svc_text,
+            count=1,
+        )
+        if new_svc_text != svc_text:
+            with open(rel_path, "wb") as f:
+                f.write(new_svc_text.replace("\r\n", "\n").replace("\n", svc_nl).encode("utf-8"))
+            touched_files.append(rel_path)
+
+if touched_files:
+    subprocess.check_call(["git", "add", "--"] + touched_files)
+    action = "Auto-bumped" if bumped else "Synced"
+    print(f"[pre-commit] {action} version -> v{new_full} ({', '.join(touched_files)})")
+PYEOF

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.70",
-  "build_number": 50,
-  "released_at": "2026-11-21T00:42:00Z",
-  "changelog": "Seragamkan ikon pelancar, tetapan splash screen natif serta skrin percikan PWA Ngam Business mengikut rekaan rasmi Ngam."
+  "version": "1.0.71",
+  "build_number": 51,
+  "released_at": "2026-11-23T07:05:09Z",
+  "changelog": "Pendekkan URL kod QR e-Resit pada pratonton tetapan resit & terminal POS supaya bintik QR lebih besar dan mudah diimbas, serta tambah git hook auto-naik versi setiap commit."
 }

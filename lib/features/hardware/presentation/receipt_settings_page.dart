@@ -2395,27 +2395,11 @@ class _ReceiptSettingsPageState extends State<ReceiptSettingsPage> {
 
     switch (type) {
       case BottomCodeType.qrReceipt:
-        final receiptTotal = _showServiceCharge ? '33.25' : '30.40';
-        final storeDisplayName = _storeNameCtrl.text.trim().isNotEmpty
-            ? _storeNameCtrl.text.trim()
-            : 'Warung Ngam';
-        final receiptParams = <String, String>{
-          'ref': 'NG-4029-2026',
-          if (cleanStore.isNotEmpty) 'store': cleanStore,
-          if (_businessId.isNotEmpty) 'bid': _businessId,
-          'name': storeDisplayName,
-          'total': receiptTotal,
-          'subtotal': '28.70',
-          if (_showSstTax) 'tax': '1.72',
-          if (_showServiceCharge) 'svc': '2.87',
-          if (_showRounding) 'round': '-0.02',
-          'method': 'DuitNow QR',
-          'date': '2026-09-30T12:45:00',
-          'items':
-              '1x Nasi Lemak Rendang Daging|16.90;;1x + Sambal Sotong Extra|3.50;;1x Teh Tarik Kaw Ais|3.80;;1x Roti Bakar Kaya Butter|4.50',
-        };
-        final receiptUrl =
-            Uri.https('ngam.dev', '/receipt/view', receiptParams).toString();
+        final receiptUrl = Uri.https(
+          'ngam.dev',
+          '/receipt/NG-4029-2026',
+          cleanStore.isNotEmpty ? {'store': cleanStore} : null,
+        ).toString();
 
         return Center(
           child: Column(

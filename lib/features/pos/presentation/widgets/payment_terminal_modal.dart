@@ -1399,25 +1399,12 @@ Dijana oleh Sistem POS Ngam Business
                                   .trim()
                                   .replaceAll('@', '')
                                   .toLowerCase();
-                              final bizId = profile?['id']?.toString() ?? '';
-                              final storeName = (profile?['business_name'] ?? 'Warung Ngam')
-                                  .toString()
-                                  .trim();
                               final refCode = widget.reference?.isNotEmpty == true
                                   ? widget.reference!
                                   : widget.orderTitle.split(' ').first;
-                              final itemsEncoded = (widget.itemLines != null && widget.itemLines!.isNotEmpty)
-                                  ? widget.itemLines!.join(';;')
-                                  : '1x Jualan POS|${widget.amount.toStringAsFixed(2)}';
-                              final qrUri = Uri.https('ngam.dev', '/receipt/view', {
-                                'ref': refCode,
+                              final qrUri = Uri.https('ngam.dev', '/receipt/$refCode', {
                                 if (handle.isNotEmpty) 'store': handle,
-                                if (bizId.isNotEmpty) 'bid': bizId,
-                                'name': storeName,
                                 'total': widget.amount.toStringAsFixed(2),
-                                'method': methodLabel,
-                                'date': DateTime.now().toIso8601String(),
-                                'items': itemsEncoded,
                               }).toString();
 
                               return Column(

@@ -1,0 +1,68 @@
+#!/usr/bin/env sh
+# Append (vX.Y.Z+B) to commit subject if not already present.
+# Set SKIP_VERSION_BUMP=1 to bypass.
+
+set -e
+
+if [ "${SKIP_VERSION_BUMP:-0}" = "1" ]; then
+  exit 0
+fi
+
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="${2:-}"
+
+# Skip merge, squash, or amend commits
+case "$COMMIT_SOURCE" in
+  merge|squash|commit)
+    exit 0
+    ;;
+esac
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "$REPO_ROOT" ] || [ ! -f "$REPO_ROOT/pubspec.yaml" ]; then
+  exit 0
+fi
+
+PYTHON_BIN=""
+if command -v python3 >/dev/null 2>&1; then
+  PYTHON_BIN="python3"
+elif command -v python >/dev/null 2>&1; then
+  PYTHON_BIN="python"
+else
+  exit 0
+fi
+
+"$PYTHON_BIN" - "$COMMIT_MSG_FILE" "$REPO_ROOT/pubspec.yaml" <<'PYEOF'
+import re
+import sys
+
+msg_file, pubspec_path = sys.argv[1], sys.argv[2]
+
+with open(pubspec_path, "r", encoding="utf-8") as f:
+    pub = f.read()
+
+m = re.search(r"^version:\s*([0-9]+\.[0-9]+\.[0-9]+\+[0-9]+)", pub, re.MULTILINE)
+if not m:
+    sys.exit(0)
+ver_tag = f"(v{m.group(1)})"
+
+with open(msg_file, "r", encoding="utf-8") as f:
+    lines = f.readlines()
+
+if not lines:
+    sys.exit(0)
+
+first = lines[0].rstrip("\r\n")
+if not first.strip() or first.lstrip().startswith("#"):
+    sys.exit(0)
+
+# Do not duplicate if commit message already includes a version tag like (v1.0.75+48)
+if re.search(r"\(v[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?\)", first):
+    sys.exit(0)
+
+ending = "\r\n" if lines[0].endswith("\r\n") else "\n"
+lines[0] = f"{first} {ver_tag}{ending}"
+
+with open(msg_file, "w", encoding="utf-8") as f:
+    f.writelines(lines)
+PYEOF
