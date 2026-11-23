@@ -558,18 +558,43 @@ class _CustomerInsightsPageState extends State<CustomerInsightsPage> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: TextField(
-                controller: _searchCtrl,
-                onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'customers.search_hint'.tr(),
-                  hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search_rounded, color: Colors.white38, size: 20),
-                  filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.05),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                  contentPadding: EdgeInsets.zero,
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    width: 1.0,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search_rounded, color: Colors.white54, size: 19),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchCtrl,
+                        onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                        style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                        decoration: InputDecoration(
+                          hintText: 'customers.search_hint'.tr(),
+                          hintStyle: const TextStyle(color: Colors.white38, fontSize: 13.5),
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

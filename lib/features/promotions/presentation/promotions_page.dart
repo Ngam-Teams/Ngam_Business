@@ -248,27 +248,43 @@ class _PromotionsPageState extends State<PromotionsPage> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
                   child: Container(
+                    height: 48,
+                    padding: const EdgeInsets.only(left: 16, right: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      color: Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
                     ),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                      decoration: InputDecoration(
-                        hintText: 'Cari mengikut kod atau tajuk baucar...',
-                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13),
-                        prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 20),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
-                                onPressed: () => _searchCtrl.clear(),
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search_rounded, color: Colors.white54, size: 19),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchCtrl,
+                            style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                            decoration: InputDecoration(
+                              hintText: 'Cari mengikut kod atau tajuk baucar...',
+                              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13.5),
+                              filled: false,
+                              fillColor: Colors.transparent,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        if (_searchQuery.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                            onPressed: () => _searchCtrl.clear(),
+                          ),
+                      ],
                     ),
                   ),
                 ),

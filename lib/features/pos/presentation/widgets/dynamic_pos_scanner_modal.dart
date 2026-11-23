@@ -902,47 +902,61 @@ class _DynamicPosScannerModalState extends State<DynamicPosScannerModal>
         Row(
           children: [
             Expanded(
-              child: TextField(
-                controller: _inputCtrl,
-                focusNode: _inputFocus,
-                autofocus: true,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.only(left: 16, right: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
                 ),
-                textInputAction: TextInputAction.go,
-                onSubmitted: (val) => _resolveCode(val),
-                decoration: InputDecoration(
-                  hintText: 'Taip no. telefon, kod baucar, atau scan QR...',
-                  hintStyle: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.35),
-                    fontSize: 12,
-                  ),
-                  prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF00C853), size: 20),
-                  suffixIcon: _inputCtrl.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, color: Colors.white38, size: 18),
-                          onPressed: () {
-                            _inputCtrl.clear();
-                            setState(() {});
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.05),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFF00C853), width: 1.5),
-                  ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search_rounded, color: Color(0xFF00C853), size: 19),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _inputCtrl,
+                        focusNode: _inputFocus,
+                        autofocus: true,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                        textInputAction: TextInputAction.go,
+                        onSubmitted: (val) => _resolveCode(val),
+                        decoration: InputDecoration(
+                          hintText: 'Taip no. telefon, kod baucar, atau scan QR...',
+                          hintStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.35),
+                            fontSize: 13.5,
+                          ),
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    if (_inputCtrl.text.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear_rounded, color: Colors.white38, size: 18),
+                        onPressed: () {
+                          _inputCtrl.clear();
+                          setState(() {});
+                        },
+                      ),
+                  ],
                 ),
-                onChanged: (_) => setState(() {}),
               ),
             ),
             const SizedBox(width: 10),

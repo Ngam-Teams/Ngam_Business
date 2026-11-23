@@ -790,10 +790,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
                       // Search Bar Capsule (Tap to expand or type)
                       Expanded(
                         child: Container(
-                          height: 46,
+                          height: 48,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(26),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.12),
@@ -804,25 +804,32 @@ class _MapPickerScreenState extends State<MapPickerScreen> with SingleTickerProv
                           ),
                           child: Row(
                             children: [
-                              const SizedBox(width: 14),
+                              const SizedBox(width: 16),
                               const Icon(
                                 Icons.search_rounded,
                                 color: Color(0xFF00B14F),
-                                size: 20,
+                                size: 19,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: TextField(
                                   controller: _searchController,
                                   focusNode: _searchFocusNode,
                                   onChanged: _onSearchChanged,
-                                  style: const TextStyle(color: Color(0xFF1C1C1E), fontSize: 13, fontWeight: FontWeight.w500),
+                                  style: const TextStyle(color: Color(0xFF1C1C1E), fontSize: 13.5, fontWeight: FontWeight.w500),
                                   decoration: InputDecoration(
                                     hintText: 'Cari alamat, jalan, atau kawasan...',
-                                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                                    border: InputBorder.none,
+                                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13.5),
+                                    filled: false,
+                                    fillColor: Colors.transparent,
                                     isDense: true,
                                     contentPadding: EdgeInsets.zero,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
                                   ),
                                 ),
                               ),

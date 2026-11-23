@@ -312,43 +312,54 @@ class _MerchantHelpCenterPageState extends State<MerchantHelpCenterPage> {
       physics: const BouncingScrollPhysics(),
       children: [
         // Search Input
-        TextField(
-          controller: _searchCtrl,
-          onChanged: (v) => setState(() {
-            _searchQuery = v.trim().toLowerCase();
-            _expandedFaqIdx = null;
-          }),
-          style: const TextStyle(color: Colors.white, fontSize: 13.5),
-          decoration: InputDecoration(
-            hintText: 'merchant_help.search_hint'.tr(),
-            hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
-            prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF42A5F5), size: 20),
-            suffixIcon: _searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
-                    onPressed: () {
-                      _searchCtrl.clear();
-                      setState(() {
-                        _searchQuery = '';
-                        _expandedFaqIdx = null;
-                      });
-                    },
-                  )
-                : null,
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.06),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Colors.white10),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Colors.white10),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFF42A5F5), width: 1.4),
-            ),
+        Container(
+          height: 48,
+          padding: const EdgeInsets.only(left: 16, right: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.search_rounded, color: Color(0xFF42A5F5), size: 19),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  onChanged: (v) => setState(() {
+                    _searchQuery = v.trim().toLowerCase();
+                    _expandedFaqIdx = null;
+                  }),
+                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                  decoration: InputDecoration(
+                    hintText: 'merchant_help.search_hint'.tr(),
+                    hintStyle: const TextStyle(color: Colors.white38, fontSize: 13.5),
+                    filled: false,
+                    fillColor: Colors.transparent,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                  ),
+                ),
+              ),
+              if (_searchQuery.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    setState(() {
+                      _searchQuery = '';
+                      _expandedFaqIdx = null;
+                    });
+                  },
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 12),

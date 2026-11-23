@@ -1,6 +1,6 @@
 {
-  "version": "1.0.73",
-  "build_number": 53,
-  "released_at": "2026-11-23T12:17:46Z",
-  "changelog": "Guna istilah & ikon pesanan universal merentas semua jenis perniagaan (Sediakan & ikon pakej menggantikan Masak & ikon garpu/pisau, Papan Pesanan Langsung, serta normalisasi nota Ambil Sendiri)."
+  "version": "1.0.74",
+  "build_number": 54,
+  "released_at": "2026-11-23T14:57:00Z",
+  "changelog": "Seragamkan semua bar carian merentasi Ngam Business kepada ketinggian 48px lutsinar tanpa latar isi atau garisan fokus dalaman."
 }

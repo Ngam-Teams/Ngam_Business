@@ -1324,38 +1324,48 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: TextField(
-            controller: _searchController,
-            onChanged: (v) => setState(() => _searchQuery = v),
-            style: const TextStyle(color: Colors.white, fontSize: 13.5),
-            decoration: InputDecoration(
-              hintText: 'inbox.search_chats'.tr(),
-              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13),
-              prefixIcon: Icon(Icons.search_rounded, color: Colors.white.withValues(alpha: 0.45), size: 19),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.close_rounded, color: Colors.white.withValues(alpha: 0.45), size: 18),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              filled: false,
-              fillColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFF42A5F5), width: 1.2),
-              ),
+          child: Container(
+            height: 48,
+            padding: const EdgeInsets.only(left: 16, right: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.search_rounded, color: Colors.white.withValues(alpha: 0.54), size: 19),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                    style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                    decoration: InputDecoration(
+                      hintText: 'inbox.search_chats'.tr(),
+                      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13.5),
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                    ),
+                  ),
+                ),
+                if (_searchQuery.isNotEmpty)
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: Colors.white.withValues(alpha: 0.45), size: 18),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  ),
+              ],
             ),
           ),
         ),
@@ -2045,27 +2055,44 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
                       child: BackdropFilter(
                         filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                          height: 48,
+                          padding: const EdgeInsets.only(left: 16, right: 6),
                           decoration: BoxDecoration(
                             color: const Color(0xFF141826).withValues(alpha: 0.85),
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius: BorderRadius.circular(26),
                             border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
                           ),
-                          child: TextField(
-                            controller: _threadSearchController,
-                            autofocus: true,
-                            onChanged: (v) => setState(() => _threadSearchQuery = v),
-                            style: const TextStyle(color: Colors.white, fontSize: 13),
-                            decoration: InputDecoration(
-                              hintText: 'inbox.search_in_chat'.tr(),
-                              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12.5),
-                              prefixIcon: const HugeIcon(
+                          child: Row(
+                            children: [
+                              const HugeIcon(
                                 icon: HugeIcons.strokeRoundedSearch01,
                                 color: Color(0xFF42A5F5),
-                                size: 17,
+                                size: 19,
                               ),
-                              prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                              suffixIcon: IconButton(
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: _threadSearchController,
+                                  autofocus: true,
+                                  onChanged: (v) => setState(() => _threadSearchQuery = v),
+                                  style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                                  decoration: InputDecoration(
+                                    hintText: 'inbox.search_in_chat'.tr(),
+                                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13.5),
+                                    filled: false,
+                                    fillColor: Colors.transparent,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                    border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
+                                    errorBorder: InputBorder.none,
+                                    disabledBorder: InputBorder.none,
+                                    focusedErrorBorder: InputBorder.none,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
                                 icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
                                 onPressed: () => setState(() {
                                   _showThreadSearch = false;
@@ -2073,9 +2100,7 @@ class _MerchantInboxPageState extends State<MerchantInboxPage> {
                                   _threadSearchController.clear();
                                 }),
                               ),
-                              border: InputBorder.none,
-                              isDense: true,
-                            ),
+                            ],
                           ),
                         ),
                       ),

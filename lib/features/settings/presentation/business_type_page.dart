@@ -186,41 +186,63 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Container(
+                height: 48,
+                padding: const EdgeInsets.only(left: 16, right: 6),
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor),
-                ),
-                child: TextField(
-                  controller: _searchCtrl,
-                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.white.withValues(alpha: 0.78),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.14)
+                        : borderColor,
                   ),
-                  decoration: InputDecoration(
-                    hintText: 'business_type.search_hint'.tr(),
-                    hintStyle: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      size: 20,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.search_rounded,
+                      size: 19,
                       color: isDark ? Colors.white54 : const Color(0xFF64748B),
                     ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchCtrl.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchCtrl,
+                        onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'business_type.search_hint'.tr(),
+                          hintStyle: TextStyle(
+                            fontSize: 13.5,
+                            color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                          ),
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                    if (_searchQuery.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      ),
+                  ],
                 ),
               ),
             ),

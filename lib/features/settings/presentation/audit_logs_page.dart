@@ -112,38 +112,48 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   children: [
-                    TextField(
-                      controller: _searchController,
-                      onChanged: (_) => _fetchLogs(),
-                      style: const TextStyle(color: Colors.white, fontSize: 13.5),
-                      decoration: InputDecoration(
-                        hintText: 'audit_logs.search_hint'.tr(),
-                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
-                        prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 20),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _fetchLogs();
-                                },
-                              )
-                            : null,
-                        filled: true,
-                        fillColor: Colors.white.withValues(alpha: 0.05),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFF42A5F5), width: 1.2),
-                        ),
+                    Container(
+                      height: 48,
+                      padding: const EdgeInsets.only(left: 16, right: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(26),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.search_rounded, color: Colors.white54, size: 19),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              onChanged: (_) => _fetchLogs(),
+                              style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                              decoration: InputDecoration(
+                                hintText: 'audit_logs.search_hint'.tr(),
+                                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 13.5),
+                                filled: false,
+                                fillColor: Colors.transparent,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                errorBorder: InputBorder.none,
+                                disabledBorder: InputBorder.none,
+                                focusedErrorBorder: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                          if (_searchController.text.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                _fetchLogs();
+                              },
+                            ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 12),
