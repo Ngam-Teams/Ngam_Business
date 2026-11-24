@@ -1315,16 +1315,22 @@
     "save_error": "Gagal mengemas kini jenis perniagaan. Sila cuba lagi.",
     "categories": {
       "all": "Semua",
-      "pets": "Haiwan Peliharaan",
       "fnb": "Makanan & Minuman",
+      "retail": "Runcit & Barangan",
       "beauty": "Kecantikan & Dandanan",
+      "stay": "Penginapan",
       "automotive": "Automotif & Kenderaan",
       "home_services": "Servis Rumah & Penjagaan",
-      "sports": "Sukan & Rekreasi",
       "health": "Kesihatan & Terapi",
+      "sports": "Sukan & Rekreasi",
+      "pets": "Haiwan Peliharaan",
       "education": "Pendidikan & Pembelajaran",
-      "retail": "Runcit & Barangan",
       "professional": "Profesional & Kreatif"
+    },
+    "booking_modes": {
+      "none": "Pesanan & POS",
+      "time_slot": "Tempahan Slot Masa",
+      "overnight": "Penginapan Bermalam"
     },
     "items": {
       "pet_hotel": {
@@ -1351,6 +1357,10 @@
         "name": "Restoran & Masakan Panas",
         "desc": "Hidangan meja, masakan panas terus dari dapur, dan santapan keluarga"
       },
+      "kedai_makan": {
+        "name": "Kedai Makan & Masakan Kampung",
+        "desc": "Nasi campur, lauk kampung, tomyam, goreng-goreng dan makanan harian"
+      },
       "cafe_bakery": {
         "name": "Kafe & Bakeri Pastri",
         "desc": "Kopi segar, roti ban panas, kek hari jadi, pastri rangup, dan pencuci mulut"
@@ -1370,6 +1380,30 @@
       "dessert_drinks": {
         "name": "Minuman Boba & Pencuci Mulut",
         "desc": "Minuman teh boba, jus buah segar, ais kepal, wafel rangup, dan aiskrim"
+      },
+      "hotel": {
+        "name": "Hotel & Boutique Hotel",
+        "desc": "Bilik penginapan, suite keluarga, daftar masuk/keluar dan layanan harian"
+      },
+      "homestay": {
+        "name": "Homestay & Rumah Tamu",
+        "desc": "Penginapan sebuah rumah, percutian keluarga, rumah tamu dan suasana kampung"
+      },
+      "chalet": {
+        "name": "Chalet & Kabin Percutian",
+        "desc": "Chalet tepi pantai, kabin tepi sungai, inapan alam semula jadi dan santai"
+      },
+      "roomstay": {
+        "name": "Roomstay & Bilik Sewa Harian",
+        "desc": "Bilik penginapan harian selesa, bajet mesra dan inapan singkat"
+      },
+      "resort": {
+        "name": "Resort & Vila Percutian",
+        "desc": "Vila kolam renang peribadi, resort percutian penuh dan kemudahan rekreasi"
+      },
+      "glamping": {
+        "name": "Glamping & Tapak Perkhemahan",
+        "desc": "Khemah glamping selesa, kubah alam semula jadi dan tapak perkhemahan"
       },
       "barbershop": {
         "name": "Kedai Gunting Rambut Lelaki",

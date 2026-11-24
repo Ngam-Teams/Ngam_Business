@@ -497,7 +497,6 @@ class BusinessService {
     if (sanitized.containsKey('business_industry') && sanitized['business_industry'] != null) {
       sanitized['business_industry'] = BusinessTypeCatalog.toDbIndustry(sanitized['business_industry'].toString());
     }
-
     Map<String, dynamic>? before;
     try {
       final raw = await _client.from('businesses').select().eq('id', businessId).maybeSingle();
@@ -508,7 +507,26 @@ class BusinessService {
       }
     }
 
-    await _client.from('businesses').update(sanitized).eq('id', businessId);
+    try {
+      await _client.from('businesses').update(sanitized).eq('id', businessId);
+    } on PostgrestException catch (e) {
+      // Zero-downtime fallback if 3-layer taxonomy columns haven't been migrated in DB yet
+      final msg = '${e.code ?? ''} ${e.message}';
+      final hasTaxonomyCols = sanitized.containsKey('category_group') ||
+          sanitized.containsKey('business_type') ||
+          sanitized.containsKey('booking_mode');
+      if (hasTaxonomyCols && (msg.contains('PGRST204') || msg.contains('42703') || msg.contains('column'))) {
+        final fallback = Map<String, dynamic>.from(sanitized)
+          ..remove('category_group')
+          ..remove('business_type')
+          ..remove('booking_mode');
+        if (fallback.isNotEmpty) {
+          await _client.from('businesses').update(fallback).eq('id', businessId);
+        }
+      } else {
+        rethrow;
+      }
+    }
     if (_cachedProfile != null && _cachedProfile!['id'] == businessId) {
       final updated = Map<String, dynamic>.from(_cachedProfile!)..addAll(sanitized);
       await _saveProfileToCache(updated);

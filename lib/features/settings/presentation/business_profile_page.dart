@@ -140,13 +140,15 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       _isHandleCustomized = false;
     }
 
-    // Load granular business_type if preserved in operating_hours, else fall back to business_industry
-    String? granularType;
-    if (data['settings'] != null && data['settings'] is Map) {
-      final s = data['settings'] as Map<String, dynamic>;
-      final op = s['operating_hours'];
-      if (op is Map && op['business_type'] != null) {
-        granularType = op['business_type']?.toString();
+    // Load granular business_type from businesses.business_type first, then operating_hours, else business_industry
+    String? granularType = data['business_type']?.toString().trim();
+    if (granularType == null || granularType.isEmpty) {
+      if (data['settings'] != null && data['settings'] is Map) {
+        final s = data['settings'] as Map<String, dynamic>;
+        final op = s['operating_hours'];
+        if (op is Map && op['business_type'] != null) {
+          granularType = op['business_type']?.toString();
+        }
       }
     }
 
@@ -298,10 +300,17 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     }
 
     final dbIndustry = BusinessTypeCatalog.toDbIndustry(_selectedIndustry);
+    final selectedTypeItem = BusinessTypeCatalog.findById(_selectedIndustry);
+    final categoryGroup = selectedTypeItem?.categoryGroup ?? 'home_services';
+    final bookingMode = selectedTypeItem?.bookingMode ?? 'none';
+
     final businessData = {
       'business_name': _nameController.text.trim(),
       'business_handle': cleanHandle,
       'business_industry': dbIndustry,
+      'category_group': categoryGroup,
+      'business_type': _selectedIndustry,
+      'booking_mode': bookingMode,
       'business_registration_number': _regNoController.text.trim().isNotEmpty
           ? _regNoController.text.trim()
           : 'PENDING-REG',
@@ -335,6 +344,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     final mergedOperatingHours = <String, dynamic>{
       ..._existingOperatingHours,
       'business_type': _selectedIndustry,
+      'category_group': categoryGroup,
+      'booking_mode': bookingMode,
       'open_time': _formatTimeOfDay(_openTime),
       'close_time': _formatTimeOfDay(_closeTime),
       'days': _existingOperatingHours['days'] ??
@@ -1250,7 +1261,21 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
   Widget _buildIndustrySelector() {
     final active = BusinessTypeCatalog.findById(_selectedIndustry) ?? BusinessTypeCatalog.allTypes.first;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const brandGreen = Color(0xFF44CF6C);
+    final modeColor = active.bookingMode == 'overnight'
+        ? const Color(0xFFA855F7)
+        : (active.bookingMode == 'time_slot'
+            ? const Color(0xFF38BDF8)
+            : const Color(0xFFF59E0B));
+
+    final labelColor = isDark ? Colors.white70 : const Color(0xFF475569);
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white;
+    final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
+    final descColor = isDark ? Colors.white.withValues(alpha: 0.65) : const Color(0xFF64748B);
+    final dividerColor = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : const Color(0xFFE2E8F0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1259,8 +1284,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             'business_type.title'.tr(),
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: labelColor,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -1279,104 +1304,141 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
+              color: cardBg,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: brandGreen.withValues(alpha: 0.35),
+                color: brandGreen.withValues(alpha: isDark ? 0.35 : 0.45),
                 width: 1.2,
               ),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: brandGreen.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: HugeIcon(
-                      icon: active.icon,
-                      color: brandGreen,
-                      size: 22,
+                // Top Row: Icon + Full-Width Title & Description (never crushed!)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: brandGreen.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: HugeIcon(
+                          icon: active.icon,
+                          color: brandGreen,
+                          size: 22,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Text(
-                              active.nameKey.tr(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            active.nameKey.tr(),
+                            style: TextStyle(
+                              color: titleColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14.5,
+                              height: 1.25,
                             ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(height: 3),
+                          Text(
+                            active.descKey.tr(),
+                            style: TextStyle(
+                              color: descColor,
+                              fontSize: 11.5,
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Divider(height: 1, color: dividerColor),
+                const SizedBox(height: 10),
+                // Bottom Row: Responsive Wrap of Category + Booking Mode + Action Button
+                SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
                             decoration: BoxDecoration(
-                              color: brandGreen.withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.circular(6),
+                              color: brandGreen.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(7),
                             ),
                             child: Text(
                               'business_type.categories.${active.categoryGroup}'.tr(),
                               style: const TextStyle(
-                                fontSize: 10,
+                                fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
                                 color: brandGreen,
                               ),
                             ),
                           ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                            decoration: BoxDecoration(
+                              color: modeColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                            child: Text(
+                              'business_type.booking_modes.${active.bookingMode}'.tr(),
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: modeColor,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        active.descKey.tr(),
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
-                          fontSize: 11.5,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: brandGreen.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: brandGreen.withValues(alpha: 0.3)),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: brandGreen.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: brandGreen.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'business_type.change_type'.tr(),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: brandGreen,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'business_type.change_type'.tr(),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: brandGreen,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 11,
+                              color: brandGreen,
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 11,
-                        color: brandGreen,
                       ),
                     ],
                   ),

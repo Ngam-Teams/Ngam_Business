@@ -1315,16 +1315,22 @@
     "save_error": "Failed to update business type. Please try again.",
     "categories": {
       "all": "All",
-      "pets": "Pets & Animals",
       "fnb": "Food & Beverage",
+      "retail": "Retail & Groceries",
       "beauty": "Beauty & Wellness",
+      "stay": "Accommodation & Stays",
       "automotive": "Automotive & Transport",
       "home_services": "Home Services & Care",
-      "sports": "Sports & Recreation",
       "health": "Healthcare & Therapy",
+      "sports": "Sports & Recreation",
+      "pets": "Pets & Animals",
       "education": "Education & Learning",
-      "retail": "Retail & Groceries",
       "professional": "Professional & Creative"
+    },
+    "booking_modes": {
+      "none": "Orders & POS",
+      "time_slot": "Time Slot Booking",
+      "overnight": "Overnight Stay"
     },
     "items": {
       "pet_hotel": {
@@ -1351,6 +1357,10 @@
         "name": "Dine In Restaurant",
         "desc": "Cooked food, family dining, and full table ordering service"
       },
+      "kedai_makan": {
+        "name": "Eatery & Local Dining",
+        "desc": "Mixed rice, kampung dishes, tom yam, and everyday local meals"
+      },
       "cafe_bakery": {
         "name": "Cafe & Artisan Bakery",
         "desc": "Brewed coffee, specialty drinks, sourdough bread, cakes, and pastries"
@@ -1370,6 +1380,30 @@
       "dessert_drinks": {
         "name": "Desserts & Specialty Drinks",
         "desc": "Boba tea, fruit juices, shaved ice, waffles, and ice cream"
+      },
+      "hotel": {
+        "name": "Hotel & Boutique Hotel",
+        "desc": "Standard rooms, family suites, check-in/check-out, and daily housekeeping"
+      },
+      "homestay": {
+        "name": "Homestay & Guest House",
+        "desc": "Entire house stays, family vacations, holiday homes, and kampung retreats"
+      },
+      "chalet": {
+        "name": "Chalet & Vacation Cabin",
+        "desc": "Beachfront chalets, riverside cabins, eco-lodges, and nature getaways"
+      },
+      "roomstay": {
+        "name": "Roomstay & Daily Rooms",
+        "desc": "Affordable private daily rooms, budget inns, and short-term stays"
+      },
+      "resort": {
+        "name": "Resort & Holiday Villa",
+        "desc": "Private pool villas, full-board resorts, retreats, and leisure facilities"
+      },
+      "glamping": {
+        "name": "Glamping & Campsite",
+        "desc": "Luxury glamping tents, star-gazing domes, and outdoor camping grounds"
       },
       "barbershop": {
         "name": "Barbershop",

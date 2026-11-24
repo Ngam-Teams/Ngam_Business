@@ -1,6 +1,6 @@
 {
-  "version": "1.0.80",
-  "build_number": 60,
-  "released_at": "2026-11-24T04:55:17Z",
-  "changelog": "Baiki ralat binaan Jejak Audit (Before → After diff) serta seragamkan sepenuhnya no. rujukan baharu 14-aksara tanpa sempang (NO/NB/NP) pada resit PDF, tempahan walk-in, pesanan, POS, notifikasi, analitik, sembang peniaga & butang salin."
+  "version": "1.0.81",
+  "build_number": 61,
+  "released_at": "2026-11-24T05:17:31Z",
+  "changelog": "Seni bina 3-Lapisan Perniagaan (Kategori Penginapan: Hotel, Homestay, Chalet, Roomstay, Resort, Glamping + Kedai Makan), susunan kategori ikut populariti (Haiwan Peliharaan ke belakang), carian fleksibel bertaraf ikut padanan kata terbanyak, serta pembaikan tema Dark/Light & elak teks terpotong/overflow pada Profil & Jenis Perniagaan."
 }
