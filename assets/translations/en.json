@@ -1051,8 +1051,12 @@
     "refresh_tooltip": "Refresh logs",
     "missing_table_title": "Audit Logs Table Not Active Yet",
     "missing_table_desc": "Please run supabase/migrations/20261123_audit_logs_and_triggers.sql in Supabase SQL Editor to activate tamper-resistant audit logging.",
-    "data_label": "Metadata",
-    "reference_badge": "Ref: {}"
+    "data_label": "Details",
+    "reference_badge": "Ref: {}",
+    "changes_header": "Changes Detected ({})",
+    "before_label": "Before",
+    "after_label": "After",
+    "details_header": "Record Details"
   },
   "mfa": {
     "title": "Two-Factor Authentication TOTP",

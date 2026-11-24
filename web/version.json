@@ -1,6 +1,6 @@
 {
-  "version": "1.0.77",
-  "build_number": 57,
-  "released_at": "2026-11-23T17:19:00Z",
-  "changelog": "Aktifkan Jejak Audit penuh (Pesanan, POS/Void, Produk & Harga, Tempahan, Tetapan Kedai & Pematuhan), butang Eksport CSV, serta pengesanan automatik jadual audit_logs."
+  "version": "1.0.78",
+  "build_number": 58,
+  "released_at": "2026-11-24T00:40:06Z",
+  "changelog": "Naik taraf Jejak Audit menyeluruh: enjin perbandingan Sebelum → Selepas yang tepat (hapus amaran palsu harga/medan tidak berubah), paparan visual diff berwarna, sokongan semua modul (Produk, Pesanan, POS, Tempahan, Baucar, Feed, Staf, Cuti, Tunai, 2FA & Tetapan), serta lajur perubahan dalam eksport CSV."
 }

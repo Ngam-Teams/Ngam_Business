@@ -104,7 +104,17 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
         severity: 'critical',
         targetType: 'auth',
         targetId: _factorId,
-        description: 'Pemilik akaun mengaktifkan Two-Factor Authentication TOTP',
+        description: 'Pemilik akaun mengaktifkan Two-Factor Authentication (TOTP).',
+        metadata: {
+          'target_label': '2FA (TOTP)',
+          'changes': [
+            AuditService.singleChange(
+              field: 'mfa_status',
+              from: 'Tidak Aktif',
+              to: 'Aktif',
+            ),
+          ],
+        },
       );
 
       if (mounted) {
@@ -167,7 +177,17 @@ class _MfaSetupPageState extends State<MfaSetupPage> {
         severity: 'warning',
         targetType: 'auth',
         targetId: _factorId,
-        description: 'Pemilik akaun mematikan Two-Factor Authentication TOTP',
+        description: 'Pemilik akaun mematikan Two-Factor Authentication (TOTP).',
+        metadata: {
+          'target_label': '2FA (TOTP)',
+          'changes': [
+            AuditService.singleChange(
+              field: 'mfa_status',
+              from: 'Aktif',
+              to: 'Tidak Aktif',
+            ),
+          ],
+        },
       );
 
       if (mounted) {

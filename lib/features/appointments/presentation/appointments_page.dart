@@ -269,34 +269,36 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     }
   }
 
+  String _appointmentStatusToDb(AppointmentStatus? status) {
+    switch (status) {
+      case AppointmentStatus.confirmed:
+        return 'confirmed';
+      case AppointmentStatus.inProgress:
+        return 'in_progress';
+      case AppointmentStatus.completed:
+        return 'completed';
+      case AppointmentStatus.cancelled:
+        return 'cancelled';
+      case AppointmentStatus.disputed:
+        return 'disputed';
+      case AppointmentStatus.pending:
+      default:
+        return 'pending';
+    }
+  }
+
   void _updateStatus(Map<String, dynamic> appt, AppointmentStatus newStatus) {
+    final oldStatus = appt['status'] as AppointmentStatus?;
+    final oldStatusStr = _appointmentStatusToDb(oldStatus);
+    final statusStr = _appointmentStatusToDb(newStatus);
+    final bookingRef = (appt['id'] ?? '').toString();
+
     setState(() {
       appt['status'] = newStatus;
     });
 
     final dbId = appt['db_id'];
     if (dbId != null) {
-      String statusStr;
-      switch (newStatus) {
-        case AppointmentStatus.confirmed:
-          statusStr = 'confirmed';
-          break;
-        case AppointmentStatus.inProgress:
-          statusStr = 'in_progress';
-          break;
-        case AppointmentStatus.completed:
-          statusStr = 'completed';
-          break;
-        case AppointmentStatus.cancelled:
-          statusStr = 'cancelled';
-          break;
-        case AppointmentStatus.disputed:
-          statusStr = 'disputed';
-          break;
-        case AppointmentStatus.pending:
-          statusStr = 'pending';
-          break;
-      }
       var query = Supabase.instance.client
           .from('bookings')
           .update({'status': statusStr})
@@ -304,7 +306,36 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
       if (_businessId != null && _businessId!.isNotEmpty) {
         query = query.eq('business_id', _businessId!);
       }
-      query.catchError((e) {
+      query.then((_) {
+        if (oldStatusStr != statusStr) {
+          final changes = [
+            AuditService.singleChange(
+              field: 'status',
+              from: oldStatusStr,
+              to: statusStr,
+            ),
+          ];
+          unawaited(AuditService.log(
+            action: newStatus == AppointmentStatus.cancelled
+                ? 'BOOKING_CANCELLED'
+                : (newStatus == AppointmentStatus.disputed
+                    ? 'BOOKING_DISPUTED'
+                    : 'BOOKING_STATUS_UPDATED'),
+            severity: (newStatus == AppointmentStatus.cancelled ||
+                    newStatus == AppointmentStatus.disputed)
+                ? 'warning'
+                : 'info',
+            targetType: 'booking',
+            targetId: dbId.toString(),
+            description: 'Tempahan #$bookingRef: ${AuditService.summarizeChanges(changes)}.',
+            metadata: {
+              'target_label': bookingRef,
+              'booking_ref': bookingRef,
+              'changes': changes,
+            },
+          ));
+        }
+      }).catchError((e) {
         debugPrint('Error updating booking status: $e');
       });
     }
@@ -342,18 +373,24 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     if (result == null || !result.isSuccess || !mounted) return;
 
     try {
+      final oldStatusStr = _appointmentStatusToDb(appt['status'] as AppointmentStatus?);
+      final oldPaymentStatus = (appt['payment_status'] ?? 'unpaid').toString();
+      final oldPaymentMethod = appt['payment_method']?.toString();
+      final newPaymentMethod = 'POS (${result.paymentMethod.toUpperCase()})';
+      final bookingRef = (appt['id'] ?? '').toString();
+
       final rawMeta = (appt['raw_meta'] is Map)
           ? Map<String, dynamic>.from(appt['raw_meta'] as Map)
           : <String, dynamic>{};
       final updatedMeta = <String, dynamic>{
         ...rawMeta,
         'payment_status': 'paid',
-        'payment_method': 'POS (${result.paymentMethod.toUpperCase()})',
+        'payment_method': newPaymentMethod,
       };
 
       setState(() {
         appt['payment_status'] = 'paid';
-        appt['payment_method'] = 'POS (${result.paymentMethod.toUpperCase()})';
+        appt['payment_method'] = newPaymentMethod;
         appt['deposit'] = price;
         appt['raw_meta'] = updatedMeta;
         appt['status'] = AppointmentStatus.completed;
@@ -370,16 +407,33 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
             query = query.eq('business_id', _businessId!);
           }
           await query;
+
+          final changes = AuditService.computeDiff(
+            {
+              'status': oldStatusStr,
+              'payment_status': oldPaymentStatus,
+              'payment_method': oldPaymentMethod,
+            },
+            {
+              'status': 'completed',
+              'payment_status': 'paid',
+              'payment_method': newPaymentMethod,
+            },
+          );
           unawaited(AuditService.log(
             action: 'BOOKING_COMPLETED',
             severity: 'info',
             targetType: 'booking',
             targetId: dbId.toString(),
-            description: 'Tempahan #${appt['id']} selesai dibayar (RM ${amount.toStringAsFixed(2)}, ${result.paymentMethod.toUpperCase()}).',
+            description: 'Tempahan #$bookingRef selesai dibayar (RM ${amount.toStringAsFixed(2)}): ${AuditService.summarizeChanges(changes)}.',
             metadata: {
-              'booking_ref': appt['id']?.toString(),
-              'amount': amount,
-              'payment_method': result.paymentMethod,
+              'target_label': bookingRef,
+              'booking_ref': bookingRef,
+              'changes': changes,
+              'details': {
+                'amount': amount,
+                if (appt['customerName'] != null) 'customer_name': appt['customerName'],
+              },
             },
           ));
         } catch (_) {}
@@ -513,12 +567,14 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
       );
 
       if (selected == null || !mounted) return;
-      final newStaffName = selected['name'] ?? 'Krew';
+      final newStaffName = (selected['name'] ?? 'Krew').toString();
       final assignedUserId = selected['user_id']?.toString();
+      final bookingRef = (appt['id'] ?? '').toString();
 
       final rawMeta = (appt['raw_meta'] is Map)
           ? Map<String, dynamic>.from(appt['raw_meta'] as Map)
           : <String, dynamic>{};
+      final oldStaffName = (rawMeta['provider_name'] ?? appt['staff'] ?? 'Belum Ditugaskan').toString();
       final updatedMeta = <String, dynamic>{
         ...rawMeta,
         'provider_name': newStaffName,
@@ -535,6 +591,28 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
           query = query.eq('business_id', _businessId!);
         }
         await query;
+
+        if (oldStaffName != newStaffName) {
+          final changes = [
+            AuditService.singleChange(
+              field: 'provider_name',
+              from: oldStaffName,
+              to: newStaffName,
+            ),
+          ];
+          unawaited(AuditService.log(
+            action: 'BOOKING_STAFF_ASSIGNED',
+            severity: 'info',
+            targetType: 'booking',
+            targetId: dbId.toString(),
+            description: 'Tempahan #$bookingRef: ${AuditService.summarizeChanges(changes)}.',
+            metadata: {
+              'target_label': bookingRef,
+              'booking_ref': bookingRef,
+              'changes': changes,
+            },
+          ));
+        }
 
         if (assignedUserId != null && assignedUserId.isNotEmpty) {
           try {
@@ -625,6 +703,10 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
 
     if (confirmed != true) return;
 
+    final oldStatusStr = _appointmentStatusToDb(appt['status'] as AppointmentStatus?);
+    final oldPaymentStatus = (appt['payment_status'] ?? 'unpaid').toString();
+    final bookingRef = (appt['id'] ?? '').toString();
+
     setState(() {
       appt['status'] = AppointmentStatus.cancelled;
     });
@@ -634,7 +716,7 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
       final rawMeta = (appt['raw_meta'] is Map)
           ? Map<String, dynamic>.from(appt['raw_meta'] as Map)
           : <String, dynamic>{};
-      final isPaid = appt['payment_status'] == 'paid';
+      final isPaid = oldPaymentStatus == 'paid';
       try {
         var query = Supabase.instance.client.from('bookings').update({
           'status': 'cancelled',
@@ -649,16 +731,30 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
           query = query.eq('business_id', _businessId!);
         }
         await query;
+
+        final changes = AuditService.computeDiff(
+          {
+            'status': oldStatusStr,
+            'payment_status': oldPaymentStatus,
+          },
+          {
+            'status': 'cancelled',
+            'payment_status': isPaid ? 'refund_pending' : oldPaymentStatus,
+          },
+        );
         unawaited(AuditService.log(
           action: 'BOOKING_CANCELLED',
           severity: isPaid ? 'critical' : 'warning',
           targetType: 'booking',
           targetId: dbId.toString(),
-          description: 'Tempahan #${appt['id']} dibatalkan oleh peniaga ($selectedReason).',
+          description: 'Tempahan #$bookingRef dibatalkan oleh peniaga ($selectedReason).',
           metadata: {
-            'booking_ref': appt['id']?.toString(),
-            'reason': selectedReason,
-            'is_paid': isPaid,
+            'target_label': bookingRef,
+            'booking_ref': bookingRef,
+            'changes': changes,
+            'details': {
+              'reason': selectedReason,
+            },
           },
         ));
       } catch (e) {

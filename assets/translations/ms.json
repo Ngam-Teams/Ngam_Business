@@ -1051,8 +1051,12 @@
     "refresh_tooltip": "Muat semula log",
     "missing_table_title": "Jadual Audit Logs Belum Diaktifkan",
     "missing_table_desc": "Sila jalankan fail SQL supabase/migrations/20261123_audit_logs_and_triggers.sql di Supabase SQL Editor untuk mengaktifkan rekod audit kalis ubah suai.",
-    "data_label": "Data",
-    "reference_badge": "Ruj: {}"
+    "data_label": "Butiran",
+    "reference_badge": "Ruj: {}",
+    "changes_header": "Perubahan Dikesan ({})",
+    "before_label": "Sebelum",
+    "after_label": "Selepas",
+    "details_header": "Butiran Rekod"
   },
   "mfa": {
     "title": "Pengesahan Dua Faktor TOTP",

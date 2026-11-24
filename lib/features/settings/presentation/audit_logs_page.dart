@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/services/audit_service.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
+import '../../../core/utils/ngam_ref.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/glass_nav_button.dart';
 
@@ -115,6 +116,82 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
     }
   }
 
+  String _formatTargetBadge(
+    String targetType,
+    String targetId,
+    Map<String, dynamic>? metadata,
+    DateTime? createdAt,
+  ) {
+    final explicit = (metadata?['target_label'] ??
+            metadata?['order_ref'] ??
+            metadata?['pos_ref'] ??
+            metadata?['booking_ref'] ??
+            metadata?['code'] ??
+            metadata?['product_name'])
+        ?.toString()
+        .trim();
+    if (explicit != null && explicit.isNotEmpty) {
+      return explicit;
+    }
+    if (targetId.isEmpty) return '';
+    final typeLower = targetType.toLowerCase();
+    if (typeLower == 'order') return NgamRef.order(targetId, createdAt: createdAt);
+    if (typeLower == 'pos') return NgamRef.pos(targetId, createdAt);
+    if (typeLower == 'booking') return NgamRef.booking(targetId, createdAt);
+    if (targetId.length == 36 && targetId.contains('-')) {
+      return targetId.substring(0, 8).toUpperCase();
+    }
+    return targetId.length > 22 ? '${targetId.substring(0, 20)}...' : targetId;
+  }
+
+  /// Extracts clean, human-readable key-value detail entries.
+  /// When [explicitOnly] is true, only renders an explicit `metadata['details']` map
+  /// so supplemental context (like void/cancellation reason) appears cleanly beneath a diff box.
+  List<MapEntry<String, String>> _extractCleanDetails(
+    Map<String, dynamic>? metadata, {
+    bool explicitOnly = false,
+  }) {
+    if (metadata == null || metadata.isEmpty) return const [];
+    const hiddenKeys = {
+      'changes',
+      'fields',
+      'details',
+      'target_label',
+      'order_ref',
+      'pos_ref',
+      'booking_ref',
+    };
+    final out = <MapEntry<String, String>>[];
+
+    final detailsMap = metadata['details'];
+    if (detailsMap is Map) {
+      for (final e in detailsMap.entries) {
+        final k = e.key.toString();
+        final v = e.value;
+        if (v == null || v.toString().trim().isEmpty) continue;
+        final formatted = AuditService.formatFieldValue(k, v);
+        if (formatted == 'Kosong') continue;
+        out.add(MapEntry(AuditService.labelForField(k), formatted));
+      }
+      return out;
+    }
+
+    if (explicitOnly) return const [];
+
+    for (final e in metadata.entries) {
+      final k = e.key.toString();
+      if (hiddenKeys.contains(k)) continue;
+      final v = e.value;
+      if (v == null) continue;
+      if (v is List && v.isEmpty) continue;
+      if (v is Map && v.isEmpty) continue;
+      final formatted = AuditService.formatFieldValue(k, v);
+      if (formatted == 'Kosong') continue;
+      out.add(MapEntry(AuditService.labelForField(k), formatted));
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GlassScaffold(
@@ -123,7 +200,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
       subtitle: 'audit_logs.subtitle'.tr(),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
+          constraints: const BoxConstraints(maxWidth: 860),
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -335,27 +412,190 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
     );
   }
 
+  Widget _buildDiffComparisonBox(List<Map<String, String>> changes) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.32),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.compare_arrows_rounded, color: Color(0xFF38BDF8), size: 14),
+              const SizedBox(width: 6),
+              Text(
+                'audit_logs.changes_header'.tr(args: [changes.length.toString()]),
+                style: const TextStyle(
+                  color: Color(0xFF38BDF8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...changes.asMap().entries.map((entry) {
+            final idx = entry.key;
+            final c = entry.value;
+            final label = c['label'] ?? '';
+            final from = c['from'] ?? '';
+            final to = c['to'] ?? '';
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: idx == changes.length - 1 ? 0 : 7),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.72),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      // BEFORE pill (soft red)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEF4444).withValues(alpha: 0.13),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: const Color(0xFFEF4444).withValues(alpha: 0.28),
+                          ),
+                        ),
+                        child: Text(
+                          from,
+                          style: const TextStyle(
+                            color: Color(0xFFFCA5A5),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.lineThrough,
+                            decorationColor: Color(0xFFFCA5A5),
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 13,
+                        color: Colors.white54,
+                      ),
+                      // AFTER pill (soft emerald)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.34),
+                          ),
+                        ),
+                        child: Text(
+                          to,
+                          style: const TextStyle(
+                            color: Color(0xFF6EE7B7),
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsChipsBox(List<MapEntry<String, String>> details) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: details.map((e) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: '${e.key}: ',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.52),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  TextSpan(
+                    text: e.value,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildLogCard(Map<String, dynamic> log) {
     final severity = log['severity'] as String? ?? 'info';
     final severityColor = _getSeverityColor(severity);
     final icon = _getSeverityIcon(severity);
     final actorName = (log['actor_name'] ?? 'System').toString();
     final actorRole = (log['actor_role'] ?? 'staff').toString();
-    final action = (log['action'] ?? 'ACTION').toString();
+    final action = (log['action'] ?? 'ACTION').toString().toUpperCase();
     final description = (log['description'] ?? '').toString();
+    final targetType = (log['target_type'] ?? '').toString();
     final targetId = (log['target_id'] ?? '').toString().trim();
     final createdAtStr = log['created_at'] as String?;
     final metadata = log['metadata'] is Map ? Map<String, dynamic>.from(log['metadata'] as Map) : null;
 
+    DateTime? parsedCreatedAt;
     String formattedDate = '';
     if (createdAtStr != null) {
       try {
-        final dt = DateTime.parse(createdAtStr).toLocal();
-        formattedDate = DateFormat('dd MMM yyyy, hh:mm a').format(dt);
+        parsedCreatedAt = DateTime.parse(createdAtStr).toLocal();
+        formattedDate = DateFormat('dd MMM yyyy, hh:mm a').format(parsedCreatedAt);
       } catch (_) {
         formattedDate = createdAtStr;
       }
     }
+
+    final changes = AuditService.extractChanges(metadata);
+    final cleanDetails = _extractCleanDetails(metadata, explicitOnly: changes.isNotEmpty);
+    final targetBadge = _formatTargetBadge(targetType, targetId, metadata, parsedCreatedAt);
 
     return Container(
       decoration: BoxDecoration(
@@ -415,6 +655,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
               color: Colors.white,
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
+              height: 1.35,
             ),
           ),
           const SizedBox(height: 8),
@@ -445,7 +686,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                   style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 9.5, fontWeight: FontWeight.bold),
                 ),
               ),
-              if (targetId.isNotEmpty)
+              if (targetBadge.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                   decoration: BoxDecoration(
@@ -453,9 +694,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    'audit_logs.reference_badge'.tr(args: [
-                      targetId.length > 16 ? targetId.substring(0, 14) : targetId,
-                    ]),
+                    'audit_logs.reference_badge'.tr(args: [targetBadge]),
                     style: const TextStyle(
                       color: Color(0xFF38BDF8),
                       fontSize: 9.5,
@@ -465,24 +704,13 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                 ),
             ],
           ),
-          if (metadata != null && metadata.isNotEmpty) ...[
+          if (changes.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _buildDiffComparisonBox(changes),
+          ],
+          if (cleanDetails.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                '${'audit_logs.data_label'.tr()}: ${metadata.toString()}',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  fontFamily: 'monospace',
-                  fontSize: 11,
-                ),
-              ),
-            ),
+            _buildDetailsChipsBox(cleanDetails),
           ],
         ],
       ),

@@ -282,7 +282,19 @@ class ProductService {
           targetType: 'product',
           targetId: created.id,
           description: 'Item baharu "${created.name}" ditambah ke katalog (RM ${created.price.toStringAsFixed(2)}).',
-          metadata: {'product_name': created.name, 'price': created.price, 'item_type': created.itemType},
+          metadata: {
+            'target_label': created.name,
+            'details': {
+              'item_type': created.itemType,
+              'price': created.price,
+              'category': created.category,
+              if (created.isProduct) 'stock': created.stock,
+              if (created.variants.isNotEmpty) 'variants': created.variants,
+              if (created.modifiers.isNotEmpty) 'modifiers': created.modifiers,
+              if (resolvedGallery.isNotEmpty) 'image_urls': resolvedGallery,
+              if (uploadedVideoUrl != null) 'video_url': uploadedVideoUrl,
+            },
+          },
         ));
         return created;
       } catch (insertErr) {
@@ -303,7 +315,15 @@ class ProductService {
             targetType: 'product',
             targetId: created.id,
             description: 'Item baharu "${created.name}" ditambah ke katalog (RM ${created.price.toStringAsFixed(2)}).',
-            metadata: {'product_name': created.name, 'price': created.price, 'item_type': created.itemType},
+            metadata: {
+              'target_label': created.name,
+              'details': {
+                'item_type': created.itemType,
+                'price': created.price,
+                'category': created.category,
+                if (created.isProduct) 'stock': created.stock,
+              },
+            },
           ));
           return created;
         }
@@ -329,6 +349,19 @@ class ProductService {
   }) async {
     lastError = null;
     try {
+      // Capture BEFORE snapshot so audit trail records ONLY truly changed fields
+      Map<String, dynamic>? beforeSnapshot;
+      try {
+        final raw = await _client
+            .from('business_products')
+            .select()
+            .eq('id', productId)
+            .maybeSingle();
+        if (raw is Map) {
+          beforeSnapshot = Map<String, dynamic>.from(raw);
+        }
+      } catch (_) {}
+
       if (updateMedia && galleryItems != null) {
         final resolvedGallery = await _resolveGalleryUrls(galleryItems);
         updates['image_url'] = resolvedGallery.isNotEmpty ? resolvedGallery.first : null;
@@ -357,27 +390,34 @@ class ProductService {
         updates['is_active'] = updates.remove('is_available');
       }
 
-      void logProductUpdate() {
-        final prodName = (updates['name'] ?? productId).toString();
-        final hasPriceUpdate = updates.containsKey('price');
+      void logProductUpdate(Map<String, dynamic> appliedUpdates) {
+        final changes = AuditService.computeDiff(beforeSnapshot, appliedUpdates);
+        // Skip noisy false-positive audit entry if nothing actually changed
+        if (changes.isEmpty) return;
+
+        final prodName = (appliedUpdates['name'] ?? beforeSnapshot?['name'] ?? 'Item').toString();
+        final changedFields = changes.map((c) => c['field']).toSet();
+        final bool priceActuallyChanged = changedFields.contains('price') ||
+            changedFields.contains('compare_at_price') ||
+            changedFields.contains('cost_price');
+        final summary = AuditService.summarizeChanges(changes);
+
         unawaited(AuditService.log(
-          action: hasPriceUpdate ? 'PRODUCT_PRICE_CHANGED' : 'PRODUCT_UPDATED',
-          severity: hasPriceUpdate ? 'warning' : 'info',
+          action: priceActuallyChanged ? 'PRODUCT_PRICE_CHANGED' : 'PRODUCT_UPDATED',
+          severity: priceActuallyChanged ? 'warning' : 'info',
           targetType: 'product',
           targetId: productId,
-          description: hasPriceUpdate
-              ? 'Butiran & harga item "$prodName" dikemas kini (RM ${((updates['price'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2)}).'
-              : 'Butiran item "$prodName" dikemas kini.',
+          description: 'Mengemas kini item "$prodName": $summary.',
           metadata: {
-            'fields': updates.keys.toList(),
-            if (hasPriceUpdate) 'new_price': updates['price'],
+            'target_label': prodName,
+            'changes': changes,
           },
         ));
       }
 
       try {
         await _client.from('business_products').update(updates).eq('id', productId);
-        logProductUpdate();
+        logProductUpdate(updates);
         return true;
       } catch (updateErr) {
         if (_isMissingMediaColumnError(updateErr)) {
@@ -385,7 +425,7 @@ class ProductService {
             ..remove('image_urls')
             ..remove('video_url');
           await _client.from('business_products').update(fallbackUpdates).eq('id', productId);
-          logProductUpdate();
+          logProductUpdate(fallbackUpdates);
           return true;
         }
         rethrow;
@@ -400,17 +440,35 @@ class ProductService {
   Future<bool> updateStock(String productId, int newStock) async {
     try {
       final safeStock = newStock < 0 ? 0 : newStock;
+      Map<String, dynamic>? before;
+      try {
+        final raw = await _client
+            .from('business_products')
+            .select('name, stock')
+            .eq('id', productId)
+            .maybeSingle();
+        if (raw is Map) before = Map<String, dynamic>.from(raw);
+      } catch (_) {}
+
       await _client.from('business_products').update({
         'stock': safeStock,
       }).eq('id', productId);
-      unawaited(AuditService.log(
-        action: 'PRODUCT_STOCK_UPDATED',
-        severity: 'info',
-        targetType: 'product',
-        targetId: productId,
-        description: 'Stok inventori item dikemas kini kepada $safeStock unit.',
-        metadata: {'new_stock': safeStock},
-      ));
+
+      final changes = AuditService.computeDiff(before, {'stock': safeStock});
+      if (changes.isNotEmpty) {
+        final prodName = (before?['name'] ?? 'Item').toString();
+        unawaited(AuditService.log(
+          action: 'PRODUCT_STOCK_UPDATED',
+          severity: 'info',
+          targetType: 'product',
+          targetId: productId,
+          description: 'Stok "$prodName" dikemas kini: ${AuditService.summarizeChanges(changes)}.',
+          metadata: {
+            'target_label': prodName,
+            'changes': changes,
+          },
+        ));
+      }
       return true;
     } catch (e) {
       return false;
@@ -442,13 +500,37 @@ class ProductService {
   /// Deletes a product
   Future<bool> deleteProduct(String productId) async {
     try {
+      Map<String, dynamic>? before;
+      try {
+        final raw = await _client
+            .from('business_products')
+            .select('name, price, category, stock')
+            .eq('id', productId)
+            .maybeSingle();
+        if (raw is Map) before = Map<String, dynamic>.from(raw);
+      } catch (_) {}
+
       await _client.from('business_products').delete().eq('id', productId);
+
+      final prodName = (before?['name'] ?? 'Item').toString();
+      final priceNum = (before?['price'] as num?)?.toDouble();
       unawaited(AuditService.log(
         action: 'PRODUCT_DELETED',
         severity: 'critical',
         targetType: 'product',
         targetId: productId,
-        description: 'Item katalog ($productId) telah dipadam.',
+        description: priceNum != null
+            ? 'Item "$prodName" (RM ${priceNum.toStringAsFixed(2)}) telah dipadam daripada katalog.'
+            : 'Item "$prodName" telah dipadam daripada katalog.',
+        metadata: {
+          'target_label': prodName,
+          if (before != null)
+            'details': {
+              if (priceNum != null) 'price': priceNum,
+              if (before['category'] != null) 'category': before['category'],
+              if (before['stock'] != null) 'stock': before['stock'],
+            },
+        },
       ));
       return true;
     } catch (e) {

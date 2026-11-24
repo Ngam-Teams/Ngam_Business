@@ -231,12 +231,22 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
 
       await _client.from('team_members').insert(payload);
 
+      final addedName = (staffData['name'] ?? email).toString();
       AuditService.log(
         action: 'STAFF_ADDED',
         severity: 'warning',
         targetType: 'staff',
-        description: 'Staf baharu ditambah: ${staffData['name']} (${staffData['role']})',
-        metadata: {'email': email, 'role': staffData['role'], 'department': staffData['department']},
+        description: 'Staf baharu ditambah: "$addedName" (${staffData['role'] ?? 'staff'}).',
+        metadata: {
+          'target_label': addedName,
+          'details': {
+            'name': addedName,
+            'email': email,
+            'role': staffData['role'] ?? 'staff',
+            'department': staffData['department'] ?? 'General',
+            'designation': staffData['designation'] ?? 'Staff',
+          },
+        },
       );
 
       if (mounted) {
@@ -255,16 +265,32 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
 
   Future<void> _updateStaff(String staffId, Map<String, dynamic> updates) async {
     try {
+      Map<String, dynamic>? before;
+      try {
+        final row = await _client.from('team_members').select().eq('id', staffId).maybeSingle();
+        if (row != null) before = Map<String, dynamic>.from(row);
+      } catch (_) {}
+
       await _client.from('team_members').update(updates).eq('id', staffId);
 
-      AuditService.log(
-        action: 'STAFF_UPDATED',
-        severity: 'warning',
-        targetType: 'staff',
-        targetId: staffId,
-        description: 'Maklumat staf ID $staffId telah dikemas kini',
-        metadata: updates,
-      );
+      final changes = AuditService.computeDiff(before, updates);
+      if (changes.isNotEmpty) {
+        final staffName = (updates['name'] ?? before?['name'] ?? 'Staf').toString();
+        final isSensitive = changes.any(
+          (c) => c['field'] == 'role' || c['field'] == 'status' || c['field'] == 'salary',
+        );
+        AuditService.log(
+          action: 'STAFF_UPDATED',
+          severity: isSensitive ? 'warning' : 'info',
+          targetType: 'staff',
+          targetId: staffId,
+          description: 'Maklumat staf "$staffName" dikemas kini: ${AuditService.summarizeChanges(changes)}.',
+          metadata: {
+            'target_label': staffName,
+            'changes': changes,
+          },
+        );
+      }
 
       if (mounted) {
         showGlassToast(context, 'staff.staff_saved'.tr());
@@ -325,7 +351,14 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
         severity: 'critical',
         targetType: 'staff',
         targetId: staffId,
-        description: 'Staf "$staffName" telah dikeluarkan daripada perniagaan',
+        description: 'Staf "$staffName" telah dikeluarkan daripada perniagaan.',
+        metadata: {
+          'target_label': staffName,
+          'details': {
+            'name': staffName,
+            if (staffRole != null && staffRole.isNotEmpty) 'role': staffRole,
+          },
+        },
       );
 
       if (mounted) {
@@ -342,6 +375,13 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
       final normalizedStatus = status.toLowerCase() == 'approved'
           ? 'Approved'
           : (status.toLowerCase() == 'rejected' ? 'Rejected' : 'Pending');
+
+      Map<String, dynamic>? before;
+      try {
+        final row = await _client.from('staff_leaves').select().eq('id', leaveId).maybeSingle();
+        if (row != null) before = Map<String, dynamic>.from(row);
+      } catch (_) {}
+
       await _client
           .from('staff_leaves')
           .update({
@@ -349,6 +389,34 @@ class _StaffManagementPageState extends State<StaffManagementPage> with SingleTi
             'approved_by': _client.auth.currentUser?.id,
           })
           .eq('id', leaveId);
+
+      final oldStatus = (before?['status'] ?? 'Pending').toString();
+      if (oldStatus.toLowerCase() != normalizedStatus.toLowerCase()) {
+        final staffName = (before?['staff_name'] ?? 'Staf').toString();
+        final changes = [
+          AuditService.singleChange(
+            field: 'leave_status',
+            from: oldStatus,
+            to: normalizedStatus,
+          ),
+        ];
+        AuditService.log(
+          action: 'STAFF_LEAVE_UPDATED',
+          severity: 'info',
+          targetType: 'staff',
+          targetId: leaveId,
+          description: 'Permohonan cuti "$staffName": ${AuditService.summarizeChanges(changes)}.',
+          metadata: {
+            'target_label': staffName,
+            'changes': changes,
+            if (before?['leave_type'] != null)
+              'details': {
+                'leave_type': before!['leave_type'],
+              },
+          },
+        );
+      }
+
       if (mounted) {
         showGlassToast(context, 'staff.leave_status_updated'.tr());
         _loadLeaves();

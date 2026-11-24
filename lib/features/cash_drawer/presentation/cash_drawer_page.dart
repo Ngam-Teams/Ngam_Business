@@ -333,8 +333,15 @@ class _CashDrawerPageState extends State<CashDrawerPage> {
                             action: type == 'in' ? 'CASH_DRAWER_IN' : 'CASH_DRAWER_OUT',
                             severity: amt >= 100 ? 'warning' : 'info',
                             targetType: 'cash_drawer',
-                            description: 'Pergerakan tunai RM ${amt.toStringAsFixed(2)} (${type == 'in' ? 'Masuk' : 'Keluar'}): ${reasonCtrl.text.trim()}',
-                            metadata: {'amount': amt, 'type': type, 'cashier': _cashierName},
+                            description: 'Pergerakan tunai RM ${amt.toStringAsFixed(2)} (${type == 'in' ? 'Masuk' : 'Keluar'}): ${reasonCtrl.text.trim()}.',
+                            metadata: {
+                              'target_label': type == 'in' ? 'Masuk Tunai' : 'Keluar Tunai',
+                              'details': {
+                                'amount': amt,
+                                'reason': reasonCtrl.text.trim(),
+                                'cashier': _cashierName,
+                              },
+                            },
                           );
 
                           Navigator.pop(ctx);

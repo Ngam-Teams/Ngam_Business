@@ -341,10 +341,14 @@ class PosService {
       targetId: createdId.isNotEmpty ? createdId : posRef,
       description: 'Jualan kaunter POS #$posRef selesai (RM ${total.toStringAsFixed(2)}, ${items.length} item, ${paymentMethodName.toUpperCase()}).',
       metadata: {
+        'target_label': posRef,
         'pos_ref': posRef,
-        'total': total,
-        'items_count': items.length,
-        'payment_method': paymentMethodName,
+        'details': {
+          'total': total,
+          'payment_method': paymentMethodName,
+          if (customerName != null && customerName.trim().isNotEmpty)
+            'customer_name': customerName.trim(),
+        },
       },
     ));
   }
@@ -390,6 +394,16 @@ class PosService {
     String? existingNotes,
   }) async {
     final businessId = await _getShopId();
+    Map<String, dynamic>? before;
+    try {
+      final raw = await _client
+          .from('orders')
+          .select('status, payment_status, total, created_at')
+          .eq('id', orderId)
+          .maybeSingle();
+      if (raw is Map) before = Map<String, dynamic>.from(raw);
+    } catch (_) {}
+
     final voidTag = '[BATAL/REFUND: $reason pada ${DateTime.now().toIso8601String().substring(0, 16)}]';
     final updatedNotes = (existingNotes == null || existingNotes.trim().isEmpty)
         ? voidTag
@@ -446,16 +460,27 @@ class PosService {
       }
     } catch (_) {}
 
-    final posRef = NgamRef.pos(orderId);
+    final createdAt = DateTime.tryParse((before?['created_at'] ?? '').toString());
+    final posRef = NgamRef.pos(orderId, createdAt);
+    final totalNum = (before?['total'] as num?)?.toDouble();
+    final changes = AuditService.computeDiff(before, {
+      'status': 'cancelled',
+      'payment_status': 'refunded',
+    });
     unawaited(AuditService.log(
       action: 'POS_ORDER_VOIDED',
       severity: 'critical',
       targetType: 'pos',
       targetId: orderId,
-      description: 'Transaksi POS #$posRef dibatalkan/refund. Sebab: $reason',
+      description: 'Transaksi POS #$posRef${totalNum != null ? " (RM ${totalNum.toStringAsFixed(2)})" : ""} dibatalkan/refund: $reason.',
       metadata: {
+        'target_label': posRef,
         'pos_ref': posRef,
-        'reason': reason,
+        'changes': changes,
+        'details': {
+          if (reason.trim().isNotEmpty) 'reason': reason.trim(),
+          if (totalNum != null) 'total': totalNum,
+        },
       },
     ));
   }

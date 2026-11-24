@@ -497,19 +497,38 @@ class BusinessService {
     if (sanitized.containsKey('business_industry') && sanitized['business_industry'] != null) {
       sanitized['business_industry'] = BusinessTypeCatalog.toDbIndustry(sanitized['business_industry'].toString());
     }
+
+    Map<String, dynamic>? before;
+    try {
+      final raw = await _client.from('businesses').select().eq('id', businessId).maybeSingle();
+      if (raw is Map) before = Map<String, dynamic>.from(raw);
+    } catch (_) {
+      if (_cachedProfile != null && _cachedProfile!['id'] == businessId) {
+        before = Map<String, dynamic>.from(_cachedProfile!);
+      }
+    }
+
     await _client.from('businesses').update(sanitized).eq('id', businessId);
     if (_cachedProfile != null && _cachedProfile!['id'] == businessId) {
       final updated = Map<String, dynamic>.from(_cachedProfile!)..addAll(sanitized);
       await _saveProfileToCache(updated);
     }
-    unawaited(AuditService.log(
-      action: 'BUSINESS_PROFILE_UPDATED',
-      severity: 'info',
-      targetType: 'business',
-      targetId: businessId,
-      description: 'Profil perniagaan dikemas kini (${sanitized.keys.join(", ")}).',
-      metadata: {'fields': sanitized.keys.toList()},
-    ));
+
+    final changes = AuditService.computeDiff(before, sanitized);
+    if (changes.isNotEmpty) {
+      final bizName = (sanitized['business_name'] ?? before?['business_name'] ?? 'Kedai').toString();
+      unawaited(AuditService.log(
+        action: 'BUSINESS_PROFILE_UPDATED',
+        severity: 'info',
+        targetType: 'business',
+        targetId: businessId,
+        description: 'Profil perniagaan "$bizName" dikemas kini: ${AuditService.summarizeChanges(changes)}.',
+        metadata: {
+          'target_label': bizName,
+          'changes': changes,
+        },
+      ));
+    }
   }
 
   /// Initialize default settings row for a business
@@ -533,6 +552,16 @@ class BusinessService {
 
   /// Save or alter business settings (operating hours, halal, slot duration, chairs)
   Future<void> saveBusinessSettings(String businessId, Map<String, dynamic> settings) async {
+    Map<String, dynamic>? before;
+    try {
+      final raw = await _client
+          .from('business_settings')
+          .select()
+          .eq('business_id', businessId)
+          .maybeSingle();
+      if (raw is Map) before = Map<String, dynamic>.from(raw);
+    } catch (_) {}
+
     try {
       final payload = {
         'business_id': businessId,
@@ -560,18 +589,35 @@ class BusinessService {
         debugPrint('Fallback business_settings failed: $err');
       }
     }
-    unawaited(AuditService.log(
-      action: 'BUSINESS_SETTINGS_UPDATED',
-      severity: 'info',
-      targetType: 'business_settings',
-      targetId: businessId,
-      description: 'Tetapan operasi perniagaan dikemas kini.',
-      metadata: {'fields': settings.keys.toList()},
-    ));
+
+    final changes = AuditService.computeDiff(before, settings);
+    if (changes.isNotEmpty) {
+      unawaited(AuditService.log(
+        action: 'BUSINESS_SETTINGS_UPDATED',
+        severity: 'info',
+        targetType: 'business_settings',
+        targetId: businessId,
+        description: 'Tetapan operasi dikemas kini: ${AuditService.summarizeChanges(changes)}.',
+        metadata: {
+          'target_label': 'Tetapan Operasi',
+          'changes': changes,
+        },
+      ));
+    }
   }
 
   /// Save or alter business compliance & banking info
   Future<void> saveBusinessCompliance(String businessId, Map<String, dynamic> compliance) async {
+    Map<String, dynamic>? before;
+    try {
+      final raw = await _client
+          .from('business_compliance')
+          .select()
+          .eq('business_id', businessId)
+          .maybeSingle();
+      if (raw is Map) before = Map<String, dynamic>.from(raw);
+    } catch (_) {}
+
     try {
       final payload = {
         'business_id': businessId,
@@ -599,14 +645,21 @@ class BusinessService {
         debugPrint('Fallback business_compliance failed: $err');
       }
     }
-    unawaited(AuditService.log(
-      action: 'BUSINESS_COMPLIANCE_UPDATED',
-      severity: 'warning',
-      targetType: 'business_compliance',
-      targetId: businessId,
-      description: 'Maklumat pematuhan SSM / akaun bank perniagaan dikemas kini.',
-      metadata: {'fields': compliance.keys.toList()},
-    ));
+
+    final changes = AuditService.computeDiff(before, compliance);
+    if (changes.isNotEmpty) {
+      unawaited(AuditService.log(
+        action: 'BUSINESS_COMPLIANCE_UPDATED',
+        severity: 'warning',
+        targetType: 'business_compliance',
+        targetId: businessId,
+        description: 'Maklumat SSM / perbankan dikemas kini: ${AuditService.summarizeChanges(changes)}.',
+        metadata: {
+          'target_label': 'Pematuhan & Bank',
+          'changes': changes,
+        },
+      ));
+    }
   }
 
   /// Save or alter all business details in a unified transaction/flow

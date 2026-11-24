@@ -119,8 +119,16 @@ class FeedService {
       severity: 'info',
       targetType: 'feed_post',
       targetId: newPost.id,
-      description: 'Post baharu diterbitkan di Ngam Feed: "$title"',
-      metadata: {'status': status, 'cta': ctaText, 'serviceTag': serviceTag},
+      description: 'Post baharu diterbitkan di Ngam Feed: "$title".',
+      metadata: {
+        'target_label': title,
+        'details': {
+          'status': status,
+          'media_type': effectiveMediaType,
+          if (ctaText.isNotEmpty) 'cta_text': ctaText,
+          if (serviceTag != null && serviceTag.trim().isNotEmpty) 'service_tag': serviceTag,
+        },
+      },
     );
 
     return newPost;
@@ -162,6 +170,12 @@ class FeedService {
       payload['is_pinned'] = isPinned;
     }
 
+    Map<String, dynamic>? before;
+    try {
+      final row = await _client.from('feed_posts').select().eq('id', postId).maybeSingle();
+      if (row != null) before = Map<String, dynamic>.from(row);
+    } catch (_) {}
+
     final res = await _client
         .from('feed_posts')
         .update(payload)
@@ -171,13 +185,20 @@ class FeedService {
 
     final updated = FeedPostModel.fromJson(Map<String, dynamic>.from(res));
 
-    await AuditService.log(
-      action: 'FEED_POST_UPDATED',
-      severity: 'info',
-      targetType: 'feed_post',
-      targetId: postId,
-      description: 'Post Feed ID $postId telah dikemas kini: "$title"',
-    );
+    final changes = AuditService.computeDiff(before, payload);
+    if (changes.isNotEmpty) {
+      await AuditService.log(
+        action: 'FEED_POST_UPDATED',
+        severity: 'info',
+        targetType: 'feed_post',
+        targetId: postId,
+        description: 'Post Feed "$title" dikemas kini: ${AuditService.summarizeChanges(changes)}.',
+        metadata: {
+          'target_label': title,
+          'changes': changes,
+        },
+      );
+    }
 
     return updated;
   }
@@ -191,7 +212,10 @@ class FeedService {
       severity: 'warning',
       targetType: 'feed_post',
       targetId: postId,
-      description: 'Post dipadam daripada Ngam Feed: "$title"',
+      description: 'Post dipadam daripada Ngam Feed: "$title".',
+      metadata: {
+        'target_label': title,
+      },
     );
   }
 
@@ -202,14 +226,26 @@ class FeedService {
       'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', postId);
 
+    final changes = [
+      AuditService.singleChange(
+        field: 'is_pinned',
+        from: !isPinned,
+        to: isPinned,
+      ),
+    ];
+
     await AuditService.log(
       action: isPinned ? 'FEED_POST_PINNED' : 'FEED_POST_UNPINNED',
       severity: 'info',
       targetType: 'feed_post',
       targetId: postId,
       description: isPinned
-          ? 'Post "$title" disematkan ke bahagian atas feed'
-          : 'Sematkan post "$title" ditanggalkan',
+          ? 'Post "$title" disematkan ke bahagian atas feed.'
+          : 'Sematan post "$title" ditanggalkan.',
+      metadata: {
+        'target_label': title,
+        'changes': changes,
+      },
     );
   }
 

@@ -191,16 +191,20 @@ class VoucherService {
 
     // Tamper-proof audit logging
     await AuditService.log(
-      action: 'voucher_created',
-      description: 'Mencipta baucar promosi baru: $cleanCode (${newVoucher.formattedDiscount})',
+      action: 'VOUCHER_CREATED',
+      description: 'Baucar promosi baharu dicipta: $cleanCode (${newVoucher.formattedDiscount})',
       severity: 'info',
       targetType: 'voucher',
       targetId: newVoucher.id,
       metadata: {
-        'code': cleanCode,
-        'discount_type': discountType,
-        'discount_value': discountValue,
-        'min_spend': minSpend,
+        'target_label': cleanCode,
+        'details': {
+          'code': cleanCode,
+          'title': title.trim(),
+          'discount_value': newVoucher.formattedDiscount,
+          'min_spend': minSpend,
+          if (totalUsageLimit != null) 'total_usage_limit': totalUsageLimit,
+        },
       },
     );
 
@@ -211,19 +215,37 @@ class VoucherService {
     final businessId = await _getBusinessId();
     if (businessId == null) throw Exception('Profil perniagaan tidak dijumpai.');
 
+    Map<String, dynamic>? before;
+    try {
+      final row = await _client
+          .from('vouchers')
+          .select()
+          .eq('id', id)
+          .eq('business_id', businessId)
+          .maybeSingle();
+      if (row != null) before = Map<String, dynamic>.from(row);
+    } catch (_) {}
+
     await _client.from('vouchers').update({
       ...updates,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', id).eq('business_id', businessId);
 
-    await AuditService.log(
-      action: 'voucher_updated',
-      description: 'Mengemaskini tetapan baucar: ${updates['code'] ?? id}',
-      severity: 'info',
-      targetType: 'voucher',
-      targetId: id,
-      metadata: updates,
-    );
+    final changes = AuditService.computeDiff(before, updates);
+    if (changes.isNotEmpty) {
+      final code = (updates['code'] ?? before?['code'] ?? id).toString();
+      await AuditService.log(
+        action: 'VOUCHER_UPDATED',
+        description: 'Baucar "$code" dikemas kini: ${AuditService.summarizeChanges(changes)}.',
+        severity: 'info',
+        targetType: 'voucher',
+        targetId: id,
+        metadata: {
+          'target_label': code,
+          'changes': changes,
+        },
+      );
+    }
   }
 
   Future<void> toggleVoucherStatus(String id, bool isActive, String code) async {
@@ -235,13 +257,26 @@ class VoucherService {
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }).eq('id', id).eq('business_id', businessId);
 
+    final changes = [
+      AuditService.singleChange(
+        field: 'is_active',
+        from: !isActive,
+        to: isActive,
+      ),
+    ];
+
     await AuditService.log(
-      action: isActive ? 'voucher_activated' : 'voucher_deactivated',
-      description: isActive ? 'Mengaktifkan baucar promosi $code' : 'Menyahaktifkan / menjeda baucar promosi $code',
+      action: isActive ? 'VOUCHER_ACTIVATED' : 'VOUCHER_DEACTIVATED',
+      description: isActive
+          ? 'Baucar promosi "$code" diaktifkan.'
+          : 'Baucar promosi "$code" dijeda / dinyahaktifkan.',
       severity: 'info',
       targetType: 'voucher',
       targetId: id,
-      metadata: {'code': code, 'is_active': isActive},
+      metadata: {
+        'target_label': code,
+        'changes': changes,
+      },
     );
   }
 
@@ -249,15 +284,33 @@ class VoucherService {
     final businessId = await _getBusinessId();
     if (businessId == null) throw Exception('Profil perniagaan tidak dijumpai.');
 
+    Map<String, dynamic>? before;
+    try {
+      final row = await _client
+          .from('vouchers')
+          .select('title, discount_type, discount_value, min_spend')
+          .eq('id', id)
+          .eq('business_id', businessId)
+          .maybeSingle();
+      if (row != null) before = Map<String, dynamic>.from(row);
+    } catch (_) {}
+
     await _client.from('vouchers').delete().eq('id', id).eq('business_id', businessId);
 
     await AuditService.log(
-      action: 'voucher_deleted',
-      description: 'Memadam baucar promosi $code secara kekal',
+      action: 'VOUCHER_DELETED',
+      description: 'Baucar promosi "$code" telah dipadam secara kekal.',
       severity: 'warning',
       targetType: 'voucher',
       targetId: id,
-      metadata: {'code': code},
+      metadata: {
+        'target_label': code,
+        'details': {
+          'code': code,
+          if (before?['title'] != null) 'title': before!['title'],
+          if (before?['min_spend'] != null) 'min_spend': before!['min_spend'],
+        },
+      },
     );
   }
 

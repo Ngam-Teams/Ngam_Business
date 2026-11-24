@@ -274,15 +274,21 @@ class OrdersService {
   /// Update the status of an order
   Future<bool> updateOrderStatus(String orderId, String newStatus, {String? paymentStatus}) async {
     String? effectivePaymentStatus = paymentStatus;
+    Map<String, dynamic>? existingOrder;
+    try {
+      final raw = await _client
+          .from('orders')
+          .select('status, source, payment_method, payment_status, total, customer_name, created_at')
+          .eq('id', orderId)
+          .maybeSingle();
+      if (raw is Map) {
+        existingOrder = Map<String, dynamic>.from(raw);
+      }
+    } catch (_) {}
+
     // Jika pesanan dibatalkan, pulihkan semula stok inventori bagi produk fizikal
     if (newStatus.toLowerCase() == 'cancelled') {
       try {
-        final existingOrder = await _client
-            .from('orders')
-            .select('status, source, payment_method, payment_status')
-            .eq('id', orderId)
-            .maybeSingle();
-
         if (existingOrder != null) {
           final existingStatus = (existingOrder['status'] ?? '').toString().toLowerCase();
           if (existingStatus == 'cancelled') {
@@ -334,27 +340,35 @@ class OrdersService {
       };
       await _client.from('orders').update(payload).eq('id', orderId);
 
-      final orderRef = NgamRef.order(orderId);
-      final lowerStatus = newStatus.toLowerCase();
-      final lowerPay = (effectivePaymentStatus ?? '').toLowerCase();
-      final bool isRefund = lowerPay == 'refunded' || lowerPay == 'refund_pending';
-      final bool isCancel = lowerStatus == 'cancelled';
-      unawaited(AuditService.log(
-        action: isRefund
-            ? 'ORDER_REFUNDED'
-            : (isCancel ? 'ORDER_CANCELLED' : 'ORDER_STATUS_UPDATED'),
-        severity: isRefund ? 'critical' : (isCancel ? 'warning' : 'info'),
-        targetType: 'order',
-        targetId: orderId,
-        description: isCancel
-            ? 'Pesanan #$orderRef dibatalkan${isRefund ? " (status bayaran: ${lowerPay.toUpperCase()})" : ""}.'
-            : 'Status pesanan #$orderRef dikemas kini kepada ${newStatus.toUpperCase()}${lowerPay.isNotEmpty ? " (bayaran: ${lowerPay.toUpperCase()})" : ""}.',
-        metadata: {
-          'order_ref': orderRef,
-          'new_status': newStatus,
-          if (effectivePaymentStatus != null) 'payment_status': effectivePaymentStatus,
-        },
-      ));
+      final createdAt = DateTime.tryParse((existingOrder?['created_at'] ?? '').toString());
+      final isPos = (existingOrder?['source'] ?? '').toString().toLowerCase() == 'pos';
+      final orderRef = isPos
+          ? NgamRef.pos(orderId, createdAt)
+          : NgamRef.order(orderId, createdAt: createdAt);
+      final changes = AuditService.computeDiff(existingOrder, payload);
+      if (changes.isNotEmpty) {
+        final lowerStatus = newStatus.toLowerCase();
+        final lowerPay = (effectivePaymentStatus ?? '').toLowerCase();
+        final bool isRefund = lowerPay == 'refunded' || lowerPay == 'refund_pending';
+        final bool isCancel = lowerStatus == 'cancelled';
+        final totalNum = (existingOrder?['total'] as num?)?.toDouble();
+        final totalNote = totalNum != null ? ' (RM ${totalNum.toStringAsFixed(2)})' : '';
+
+        unawaited(AuditService.log(
+          action: isRefund
+              ? 'ORDER_REFUNDED'
+              : (isCancel ? 'ORDER_CANCELLED' : 'ORDER_STATUS_UPDATED'),
+          severity: isRefund ? 'critical' : (isCancel ? 'warning' : 'info'),
+          targetType: isPos ? 'pos' : 'order',
+          targetId: orderId,
+          description: 'Pesanan #$orderRef$totalNote: ${AuditService.summarizeChanges(changes)}.',
+          metadata: {
+            'target_label': orderRef,
+            'order_ref': orderRef,
+            'changes': changes,
+          },
+        ));
+      }
       return true;
     } catch (e) {
       debugPrint('[OrdersService] updateOrderStatus error ($orderId -> $newStatus): $e');
