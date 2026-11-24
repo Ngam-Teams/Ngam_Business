@@ -16,8 +16,10 @@ import 'widgets/dynamic_pos_scanner_modal.dart';
 import 'widgets/pos_enterprise_modals.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/modal_sheet.dart';
-import '../../../../core/services/sound_service.dart';
-import '../../../../core/utils/ngam_ref.dart';
+import '../../../core/services/sound_service.dart';
+import '../../../core/utils/business_industry_helper.dart';
+import '../../../core/utils/ngam_ref.dart';
+import '../../settings/data/business_service.dart';
 
 class PosPage extends StatefulWidget {
   const PosPage({super.key});
@@ -37,10 +39,11 @@ class _PosPageState extends State<PosPage> {
   bool _loading = true;
   String _selectedCategory = 'All';
 
-  // Enterprise POS State (Square, Toast & StoreHub Standard)
-  String _orderType = 'dine_in'; // 'dine_in', 'takeaway', 'delivery'
+  // Industry-adaptive POS State
+  BusinessVertical _vertical = BusinessIndustryHelper.fromProfile();
+  String _orderType = 'dine_in'; // 'dine_in' (In-Store), 'takeaway' (Pickup), 'delivery'
   String _tableNumber = '01';
-  int _orderSequence = 4032;
+  String _activeTicketRef = NgamRef.pos();
 
   // Voucher & Loyalty State
   String? _appliedVoucherCode;
@@ -59,6 +62,8 @@ class _PosPageState extends State<PosPage> {
   final ValueNotifier<int> _cartUiRevision = ValueNotifier<int>(0);
   BuildContext? _cartSheetContext;
 
+  bool get _isFnb => _vertical == BusinessVertical.fnb;
+
   void _updatePosState(VoidCallback fn) {
     if (!mounted) return;
     setState(fn);
@@ -68,12 +73,73 @@ class _PosPageState extends State<PosPage> {
   String _orderTypeLabel(String type) {
     switch (type) {
       case 'takeaway':
-        return 'pos.type_takeaway'.tr();
+        return _isFnb ? 'pos.type_takeaway'.tr() : 'pos.type_pickup'.tr();
       case 'delivery':
         return 'pos.type_delivery'.tr();
       case 'dine_in':
       default:
-        return 'pos.type_dine_in'.tr();
+        if (_isFnb) return 'pos.type_dine_in'.tr();
+        if (_vertical == BusinessVertical.retail) return 'pos.type_counter'.tr();
+        return 'pos.type_in_store'.tr();
+    }
+  }
+
+  IconData _orderTypeIcon(String type) {
+    switch (type) {
+      case 'takeaway':
+        return _isFnb ? Icons.takeout_dining_rounded : Icons.shopping_bag_rounded;
+      case 'delivery':
+        return _isFnb ? Icons.delivery_dining_rounded : Icons.local_shipping_rounded;
+      case 'dine_in':
+      default:
+        if (_isFnb) return Icons.restaurant_rounded;
+        if (_vertical == BusinessVertical.beauty) return Icons.chair_alt_rounded;
+        return Icons.storefront_rounded;
+    }
+  }
+
+  String _stationChipLabel(String val) {
+    switch (_vertical) {
+      case BusinessVertical.fnb:
+        return 'pos.table_chip'.tr(args: [val]);
+      case BusinessVertical.beauty:
+        return 'pos.chair_chip'.tr(args: [val]);
+      case BusinessVertical.retail:
+        return 'pos.counter_chip'.tr(args: [val]);
+      case BusinessVertical.services:
+        return 'pos.station_chip'.tr(args: [val]);
+    }
+  }
+
+  IconData get _stationIcon {
+    switch (_vertical) {
+      case BusinessVertical.fnb:
+        return Icons.table_restaurant_rounded;
+      case BusinessVertical.beauty:
+        return Icons.chair_alt_rounded;
+      case BusinessVertical.retail:
+        return Icons.point_of_sale_rounded;
+      case BusinessVertical.services:
+        return Icons.work_outline_rounded;
+    }
+  }
+
+  String _modeNoteTag() {
+    if (_orderType != 'dine_in') {
+      final modeCode = (!_isFnb && _orderType == 'takeaway')
+          ? 'PICKUP'
+          : _orderType.toUpperCase();
+      return '[Mod: $modeCode]';
+    }
+    switch (_vertical) {
+      case BusinessVertical.fnb:
+        return '[Mod: DINE_IN | Meja: $_tableNumber]';
+      case BusinessVertical.beauty:
+        return '[Mod: IN_STORE | Kerusi: $_tableNumber]';
+      case BusinessVertical.retail:
+        return '[Mod: IN_STORE | Kaunter: $_tableNumber]';
+      case BusinessVertical.services:
+        return '[Mod: IN_STORE | Stesen: $_tableNumber]';
     }
   }
 
@@ -144,7 +210,26 @@ class _PosPageState extends State<PosPage> {
     super.initState();
     _initProductStream();
     _loadEnterprisePosState();
+    _loadBusinessVertical();
+    BusinessService.profileNotifier.addListener(_onProfileChanged);
     _searchController.addListener(_applyFilter);
+  }
+
+  void _onProfileChanged() {
+    final next = BusinessIndustryHelper.fromProfile();
+    if (mounted && next != _vertical) {
+      _updatePosState(() => _vertical = next);
+    }
+  }
+
+  Future<void> _loadBusinessVertical() async {
+    try {
+      final profile = await BusinessService().getBusinessProfile();
+      final next = BusinessIndustryHelper.fromProfile(profile);
+      if (mounted && next != _vertical) {
+        _updatePosState(() => _vertical = next);
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadEnterprisePosState() async {
@@ -181,6 +266,7 @@ class _PosPageState extends State<PosPage> {
 
   @override
   void dispose() {
+    BusinessService.profileNotifier.removeListener(_onProfileChanged);
     _productSubscription?.cancel();
     _searchController.dispose();
     _customerController.dispose();
@@ -322,7 +408,7 @@ class _PosPageState extends State<PosPage> {
     if (_cart.isEmpty) return;
     final held = HeldOrderModel(
       id: 'HOLD-${DateTime.now().millisecondsSinceEpoch}',
-      ticketNumber: '#NG-$_orderSequence',
+      ticketNumber: '#$_activeTicketRef',
       orderType: _orderType,
       tableNumber: _tableNumber,
       customerName: _customerController.text.trim().isNotEmpty
@@ -334,7 +420,7 @@ class _PosPageState extends State<PosPage> {
       manualDiscountLabel: _manualDiscountLabel,
     );
     final modeSummary = _orderType == 'dine_in'
-        ? 'pos.table_chip'.tr(args: [_tableNumber])
+        ? _stationChipLabel(_tableNumber)
         : _orderTypeLabel(_orderType);
 
     _updatePosState(() {
@@ -347,7 +433,7 @@ class _PosPageState extends State<PosPage> {
       _voucherId = null;
       _manualDiscount = 0.0;
       _manualDiscountLabel = null;
-      _orderSequence++;
+      _activeTicketRef = NgamRef.pos();
     });
 
     await _service.saveHeldOrders(_heldOrders);
@@ -451,11 +537,11 @@ class _PosPageState extends State<PosPage> {
     String? customerName,
   }) async {
     final modeDisplay = _orderType == 'dine_in'
-        ? '${_orderTypeLabel(_orderType)} (${'pos.table_chip'.tr(args: [_tableNumber])})'
+        ? '${_orderTypeLabel(_orderType)} (${_stationChipLabel(_tableNumber)})'
         : _orderTypeLabel(_orderType);
 
     final receiptPayload = {
-      'ref': '#NG-$_orderSequence',
+      'ref': '#$_activeTicketRef',
       'mode': modeDisplay,
       'customer': (customerName != null && customerName.isNotEmpty) ? customerName : 'Pelanggan Kaunter',
       'items': itemsSnapshot
@@ -479,7 +565,7 @@ class _PosPageState extends State<PosPage> {
       _voucherId = null;
       _manualDiscount = 0.0;
       _manualDiscountLabel = null;
-      _orderSequence++;
+      _activeTicketRef = NgamRef.pos();
     });
 
     if (_cartSheetContext != null && _cartSheetContext!.mounted) {
@@ -531,9 +617,7 @@ class _PosPageState extends State<PosPage> {
 
     try {
       String? combinedNotes = result.notes;
-      final modInfo = _orderType == 'dine_in'
-          ? '[Mod: DINE_IN | Meja: $_tableNumber]'
-          : '[Mod: ${_orderType.toUpperCase()}]';
+      final modInfo = _modeNoteTag();
       combinedNotes = (combinedNotes == null || combinedNotes.trim().isEmpty)
           ? modInfo
           : '$modInfo | $combinedNotes';
@@ -604,7 +688,7 @@ class _PosPageState extends State<PosPage> {
     if (_cart.isEmpty) return;
     final grandTotal = _grandTotal;
     final customer = _customerController.text.trim();
-    final orderRef = NgamRef.pos();
+    final orderRef = _activeTicketRef;
 
     final result = await PaymentTerminalModal.show(
       context: context,
@@ -620,9 +704,7 @@ class _PosPageState extends State<PosPage> {
     if (result == null || !result.isSuccess || !mounted) return;
 
     try {
-      final modInfo = _orderType == 'dine_in'
-          ? '[Mod: DINE_IN | Meja: $_tableNumber]'
-          : '[Mod: ${_orderType.toUpperCase()}]';
+      final modInfo = _modeNoteTag();
       String notes = '$modInfo [Terminal: ${result.paymentMethod.toUpperCase()}]';
       if (_appliedVoucherCode != null && _voucherDiscount > 0) {
         notes += ' [Baucar: $_appliedVoucherCode (-RM ${_voucherDiscount.toStringAsFixed(2)})]';
@@ -794,9 +876,7 @@ class _PosPageState extends State<PosPage> {
     if (confirmed != true || !mounted) return;
 
     try {
-      final modInfo = _orderType == 'dine_in'
-          ? '[Mod: DINE_IN | Meja: $_tableNumber]'
-          : '[Mod: ${_orderType.toUpperCase()}]';
+      final modInfo = _modeNoteTag();
       String notes = '$modInfo [Terminal: TUNAI PANTAS] (Diterima: RM ${cashTendered.toStringAsFixed(2)}, Baki: RM ${change.toStringAsFixed(2)})';
       if (_appliedVoucherCode != null && _voucherDiscount > 0) {
         notes += ' [Baucar: $_appliedVoucherCode (-RM ${_voucherDiscount.toStringAsFixed(2)})]';
@@ -943,6 +1023,38 @@ class _PosPageState extends State<PosPage> {
 
   void _showTableNumberDialog() {
     final tableCtrl = TextEditingController(text: _tableNumber);
+    final String titleText;
+    final String hintSubtitle;
+    final String fieldHint;
+    final List<String> presets;
+
+    switch (_vertical) {
+      case BusinessVertical.fnb:
+        titleText = 'pos.select_table'.tr();
+        hintSubtitle = 'Pilih meja pantas atau taip nombor meja/token:';
+        fieldHint = 'Cth: Meja 12 / Token 99';
+        presets = const ['01', '02', '03', '04', '05', '06', '07', '08', 'VIP 1', 'Luar'];
+        break;
+      case BusinessVertical.beauty:
+        titleText = 'pos.select_chair'.tr();
+        hintSubtitle = 'pos.chair_hint'.tr();
+        fieldHint = 'Cth: Kerusi 3 / Bilik VIP';
+        presets = const ['01', '02', '03', '04', '05', 'VIP', 'Bilik 1', 'Bilik 2'];
+        break;
+      case BusinessVertical.retail:
+        titleText = 'pos.select_counter'.tr();
+        hintSubtitle = 'pos.counter_hint'.tr();
+        fieldHint = 'Cth: Kaunter 2 / Giliran 15';
+        presets = const ['01', '02', '03', '04', 'VIP', 'Ekspres', 'Bilik 1'];
+        break;
+      case BusinessVertical.services:
+        titleText = 'pos.select_station'.tr();
+        hintSubtitle = 'pos.station_hint'.tr();
+        fieldHint = 'Cth: Stesen 2 / Giliran 15';
+        presets = const ['01', '02', '03', '04', 'VIP', 'Stesen A', 'Bilik 1'];
+        break;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -959,12 +1071,14 @@ class _PosPageState extends State<PosPage> {
                 color: const Color(0xFF42A5F5).withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.table_restaurant_rounded, color: Color(0xFF42A5F5), size: 22),
+              child: Icon(_stationIcon, color: const Color(0xFF42A5F5), size: 22),
             ),
             const SizedBox(width: 12),
-            const Text(
-              'Pilih No. Meja / Token',
-              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            Expanded(
+              child: Text(
+                titleText,
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -972,15 +1086,15 @@ class _PosPageState extends State<PosPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Pilih meja pantas atau taip nombor meja/token:',
-              style: TextStyle(color: Colors.white60, fontSize: 12),
+            Text(
+              hintSubtitle,
+              style: const TextStyle(color: Colors.white60, fontSize: 12),
             ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: ['01', '02', '03', '04', '05', '06', '07', '08', 'VIP 1', 'Luar'].map((t) {
+              children: presets.map((t) {
                 final isSel = _tableNumber == t;
                 return ChoiceChip(
                   label: Text(t),
@@ -1006,9 +1120,9 @@ class _PosPageState extends State<PosPage> {
               controller: tableCtrl,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
-                labelText: 'pos.custom_table_label'.tr(),
+                labelText: _isFnb ? 'pos.custom_table_label'.tr() : 'pos.custom_station_label'.tr(),
                 labelStyle: const TextStyle(color: Colors.white60, fontSize: 12),
-                hintText: 'Cth: Meja 12 / Token 99',
+                hintText: fieldHint,
                 hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
                 filled: true,
                 fillColor: Colors.white.withValues(alpha: 0.05),
@@ -2170,9 +2284,9 @@ class _PosPageState extends State<PosPage> {
                   ),
                   child: Row(
                     children: [
-                      _orderTypeChip('dine_in', 'pos.type_dine_in'.tr(), Icons.restaurant_rounded),
-                      _orderTypeChip('takeaway', 'pos.type_takeaway'.tr(), Icons.takeout_dining_rounded),
-                      _orderTypeChip('delivery', 'pos.type_delivery'.tr(), Icons.delivery_dining_rounded),
+                      _orderTypeChip('dine_in', _orderTypeLabel('dine_in'), _orderTypeIcon('dine_in')),
+                      _orderTypeChip('takeaway', _orderTypeLabel('takeaway'), _orderTypeIcon('takeaway')),
+                      _orderTypeChip('delivery', _orderTypeLabel('delivery'), _orderTypeIcon('delivery')),
                     ],
                   ),
                 ),
@@ -2207,10 +2321,10 @@ class _PosPageState extends State<PosPage> {
           ),
           const SizedBox(height: 10),
 
-          // Sub-bar: Ticket No, Table / Mode Pill, Clear
+          // Sub-bar: Ticket No, Table / Station / Mode Pill, Clear
           Row(
             children: [
-              // Ticket Tag
+              // Ticket Tag (Official NP reference)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -2218,10 +2332,10 @@ class _PosPageState extends State<PosPage> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '#NG-$_orderSequence',
+                  '#$_activeTicketRef',
                   style: const TextStyle(
                     color: Colors.white70,
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontFamily: 'monospace',
                     fontWeight: FontWeight.bold,
                   ),
@@ -2229,7 +2343,7 @@ class _PosPageState extends State<PosPage> {
               ),
               const SizedBox(width: 8),
 
-              // Table or Delivery Pill
+              // Table/Station or Pickup/Delivery Pill
               if (_orderType == 'dine_in')
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
@@ -2244,10 +2358,10 @@ class _PosPageState extends State<PosPage> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.table_restaurant_rounded, color: Color(0xFF42A5F5), size: 13),
+                        Icon(_stationIcon, color: const Color(0xFF42A5F5), size: 13),
                         const SizedBox(width: 4),
                         Text(
-                          'pos.table_chip'.tr(args: [_tableNumber]),
+                          _stationChipLabel(_tableNumber),
                           style: const TextStyle(
                             color: Color(0xFF42A5F5),
                             fontSize: 11,
@@ -2270,8 +2384,8 @@ class _PosPageState extends State<PosPage> {
                   ),
                   child: Text(
                     _orderType == 'takeaway'
-                        ? 'pos.type_takeaway_badge'.tr()
-                        : 'pos.type_delivery_badge'.tr(),
+                        ? (_isFnb ? 'pos.type_takeaway_badge'.tr() : 'pos.type_pickup_badge'.tr())
+                        : (_isFnb ? 'pos.type_delivery_badge'.tr() : 'pos.type_delivery_general_badge'.tr()),
                     style: const TextStyle(
                       color: Colors.amber,
                       fontSize: 11,
@@ -2581,7 +2695,7 @@ class _PosPageState extends State<PosPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            'pos.cart_empty'.tr(),
+            _isFnb ? 'pos.cart_empty'.tr() : 'pos.cart_empty_general'.tr(),
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,

@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/sound_service.dart';
+import '../../../core/utils/business_industry_helper.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../orders/data/orders_service.dart';
 import '../../settings/data/business_service.dart';
@@ -279,12 +281,15 @@ class _KdsPageState extends State<KdsPage> {
             }).toList();
 
       final String notesStr = (r['notes'] ?? '').toString();
+      final bool isFnb = BusinessIndustryHelper.isFnbFromProfile();
       String tableLabel = 'Kaunter';
       String typeLabel = 'Dine In';
 
       final bool isTakeaway = source == 'takeaway' ||
           notesStr.toUpperCase().contains('TAKEAWAY') ||
+          notesStr.toUpperCase().contains('PICKUP') ||
           notesStr.toUpperCase().contains('BUNGKUS') ||
+          notesStr.toUpperCase().contains('AMBIL SENDIRI') ||
           notesStr.toUpperCase().contains('BAWA PULANG');
       final bool isDelivery = source == 'delivery' ||
           notesStr.toUpperCase().contains('DELIVERY') ||
@@ -296,19 +301,25 @@ class _KdsPageState extends State<KdsPage> {
         tableLabel = 'Hantar';
       } else if (isTakeaway) {
         typeLabel = 'Takeaway';
-        tableLabel = 'Bungkus';
+        tableLabel = isFnb ? 'Bungkus' : 'Ambil Sendiri';
       } else if (source == 'table' ||
           notesStr.toUpperCase().contains('DINE_IN') ||
+          notesStr.toUpperCase().contains('IN_STORE') ||
           notesStr.toUpperCase().contains('DINE IN') ||
           notesStr.toUpperCase().contains('DINE-IN') ||
-          notesStr.toUpperCase().contains('MAKAN SINI')) {
+          notesStr.toUpperCase().contains('MAKAN SINI') ||
+          notesStr.toUpperCase().contains('DI PREMIS')) {
         typeLabel = 'Dine In';
-        final tableMatch = RegExp(r'Meja:\s*([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(notesStr) ??
+        final tableMatch = RegExp(
+              r'(?:Meja|Kerusi|Kaunter|Stesen):\s*([A-Za-z0-9_-]+)',
+              caseSensitive: false,
+            ).firstMatch(notesStr) ??
             RegExp(r'Meja\s*#?([A-Za-z0-9_-]+)', caseSensitive: false).firstMatch(notesStr);
+        final prefixWord = isFnb ? 'Meja' : 'Stesen';
         if (tableMatch != null && tableMatch.group(1) != '0') {
-          tableLabel = 'Meja ${tableMatch.group(1)}';
+          tableLabel = '$prefixWord ${tableMatch.group(1)}';
         } else {
-          tableLabel = 'Makan Sini';
+          tableLabel = isFnb ? 'Makan Sini' : 'Di Premis';
         }
       } else if (r['customer_name'] != null && r['customer_name'].toString().trim().isNotEmpty) {
         tableLabel = r['customer_name'].toString().trim();
@@ -320,7 +331,7 @@ class _KdsPageState extends State<KdsPage> {
       } else if (source == 'online') {
         serverLabel = 'Ngam App';
       } else if (source == 'table') {
-        serverLabel = 'Imbas Meja (App)';
+        serverLabel = isFnb ? 'Imbas Meja (App)' : 'Imbas QR Premis';
       } else if (source == 'pre_order') {
         serverLabel = 'Pre-Order (App)';
       } else {
@@ -402,6 +413,22 @@ class _KdsPageState extends State<KdsPage> {
     }
   }
 
+  String _filterDisplayLabel(String type) {
+    final v = BusinessIndustryHelper.fromProfile();
+    switch (type) {
+      case 'Dine In':
+        if (v == BusinessVertical.fnb) return 'pos.type_dine_in'.tr();
+        if (v == BusinessVertical.retail) return 'pos.type_counter'.tr();
+        return 'pos.type_in_store'.tr();
+      case 'Takeaway':
+        return v == BusinessVertical.fnb ? 'pos.type_takeaway'.tr() : 'pos.type_pickup'.tr();
+      case 'Delivery':
+        return 'pos.type_delivery'.tr();
+      default:
+        return 'Semua';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeSource = _useDemoData ? _demoTickets : _liveTickets;
@@ -422,12 +449,12 @@ class _KdsPageState extends State<KdsPage> {
       actionItems: [
         GlassNavPillItem(
           icon: Icons.filter_list_rounded,
-          tooltip: 'Tapis: $_filterType',
+          tooltip: 'Tapis: ${_filterDisplayLabel(_filterType)}',
           onTap: () {
             const filters = ['All', 'Dine In', 'Takeaway', 'Delivery'];
             final next = filters[(filters.indexOf(_filterType) + 1) % filters.length];
             setState(() => _filterType = next);
-            showGlassToast(context, 'Tapis pesanan: $next');
+            showGlassToast(context, 'Tapis pesanan: ${_filterDisplayLabel(next)}');
           },
         ),
         GlassNavPillItem(

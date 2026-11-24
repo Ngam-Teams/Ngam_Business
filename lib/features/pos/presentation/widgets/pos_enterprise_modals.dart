@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../../core/utils/business_industry_helper.dart';
 import '../../../../core/utils/file_saver/file_saver.dart';
 import '../../../../core/utils/ngam_ref.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -80,6 +81,9 @@ class _PosItemModifierModalState extends State<PosItemModifierModal> {
         {'name': 'Express', 'price_delta': 10.0},
       ];
     }
+    if (!BusinessIndustryHelper.isFnbFromProfile()) {
+      return const [];
+    }
     return [
       {'name': 'Biasa (Regular)', 'price_delta': 0.0},
       {'name': 'Besar (Large)', 'price_delta': 2.00},
@@ -93,21 +97,24 @@ class _PosItemModifierModalState extends State<PosItemModifierModal> {
     final base = <Map<String, dynamic>>[
       ...widget.product.modifiers,
     ];
-    final presets = widget.product.isService
+    final bool isFnb = BusinessIndustryHelper.isFnbFromProfile();
+    final List<Map<String, dynamic>> presets = widget.product.isService
         ? [
             {'name': 'Servis Keutamaan', 'price': 5.00},
             {'name': 'Produk Rawatan Tambahan', 'price': 10.00},
           ]
-        : [
-            {'name': 'Kurang Manis', 'price': 0.0},
-            {'name': 'Kurang Ais', 'price': 0.0},
-            {'name': 'Tak Nak Sayur / Bawang', 'price': 0.0},
-            {'name': 'Kuah / Sambal Asing', 'price': 0.0},
-            {'name': 'Tambah Telur Mata', 'price': 1.50},
-            {'name': 'Tambah Cheese', 'price': 2.00},
-            {'name': 'Tambah Nasi / Mee', 'price': 2.00},
-            {'name': 'Bungkus Kotak', 'price': 1.00},
-          ];
+        : (isFnb
+            ? [
+                {'name': 'Kurang Manis', 'price': 0.0},
+                {'name': 'Kurang Ais', 'price': 0.0},
+                {'name': 'Tak Nak Sayur / Bawang', 'price': 0.0},
+                {'name': 'Kuah / Sambal Asing', 'price': 0.0},
+                {'name': 'Tambah Telur Mata', 'price': 1.50},
+                {'name': 'Tambah Cheese', 'price': 2.00},
+                {'name': 'Tambah Nasi / Mee', 'price': 2.00},
+                {'name': 'Bungkus Kotak', 'price': 1.00},
+              ]
+            : const []);
 
     for (final p in presets) {
       if (!base.any((b) => b['name']?.toString().toLowerCase() == p['name'].toString().toLowerCase())) {
@@ -442,7 +449,9 @@ class _PosItemModifierModalState extends State<PosItemModifierModal> {
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                       maxLines: 2,
                       decoration: InputDecoration(
-                        hintText: 'Cth: Meja luar, jangan letak kacang, potong 2...',
+                        hintText: BusinessIndustryHelper.isFnbFromProfile()
+                            ? 'Cth: Meja luar, jangan letak kacang, potong 2...'
+                            : 'Cth: Gaya potongan, saiz, pembungkusan khas...',
                         hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12),
                         filled: true,
                         fillColor: Colors.white.withValues(alpha: 0.05),
@@ -654,15 +663,43 @@ class PosHeldOrdersModal extends StatelessWidget {
                                   color: Colors.amber.withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Text(
-                                  h.orderType == 'dine_in'
-                                      ? 'pos.table_chip'.tr(args: [h.tableNumber])
-                                      : (h.orderType == 'takeaway'
+                                child: Builder(
+                                  builder: (context) {
+                                    final v = BusinessIndustryHelper.fromProfile();
+                                    String label;
+                                    if (h.orderType == 'dine_in') {
+                                      switch (v) {
+                                        case BusinessVertical.fnb:
+                                          label = 'pos.table_chip'.tr(args: [h.tableNumber]);
+                                          break;
+                                        case BusinessVertical.beauty:
+                                          label = 'pos.chair_chip'.tr(args: [h.tableNumber]);
+                                          break;
+                                        case BusinessVertical.retail:
+                                          label = 'pos.counter_chip'.tr(args: [h.tableNumber]);
+                                          break;
+                                        case BusinessVertical.services:
+                                          label = 'pos.station_chip'.tr(args: [h.tableNumber]);
+                                          break;
+                                      }
+                                    } else if (h.orderType == 'takeaway') {
+                                      label = v == BusinessVertical.fnb
                                           ? 'pos.type_takeaway'.tr()
-                                          : (h.orderType == 'delivery'
-                                              ? 'pos.type_delivery'.tr()
-                                              : h.orderType)),
-                                  style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 11.5),
+                                          : 'pos.type_pickup'.tr();
+                                    } else if (h.orderType == 'delivery') {
+                                      label = 'pos.type_delivery'.tr();
+                                    } else {
+                                      label = h.orderType;
+                                    }
+                                    return Text(
+                                      label,
+                                      style: const TextStyle(
+                                        color: Colors.amber,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11.5,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -1370,7 +1407,10 @@ class PosQuickThermalReceiptModal extends StatelessWidget {
     final method = receipt['method']?.toString() ?? 'TUNAI';
     final ref = _resolvePosRef();
     final customer = receipt['customer']?.toString() ?? 'Pelanggan Kaunter';
-    final mode = receipt['mode']?.toString() ?? 'pos.type_dine_in'.tr();
+    final defaultMode = BusinessIndustryHelper.isFnbFromProfile()
+        ? 'pos.type_dine_in'.tr()
+        : 'pos.type_in_store'.tr();
+    final mode = receipt['mode']?.toString() ?? defaultMode;
 
     return '''
 ================================
@@ -1400,7 +1440,10 @@ Terima kasih! Sila datang lagi.
     final method = receipt['method']?.toString() ?? 'TUNAI';
     final ref = _resolvePosRef();
     final customer = receipt['customer']?.toString() ?? 'Pelanggan Kaunter';
-    final mode = receipt['mode']?.toString() ?? 'pos.type_dine_in'.tr();
+    final defaultMode = BusinessIndustryHelper.isFnbFromProfile()
+        ? 'pos.type_dine_in'.tr()
+        : 'pos.type_in_store'.tr();
+    final mode = receipt['mode']?.toString() ?? defaultMode;
 
     return Dialog(
       backgroundColor: Colors.transparent,

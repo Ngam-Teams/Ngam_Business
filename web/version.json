@@ -1,6 +1,6 @@
 {
-  "version": "1.0.81",
-  "build_number": 61,
-  "released_at": "2026-11-24T05:17:31Z",
-  "changelog": "Seni bina 3-Lapisan Perniagaan (Kategori Penginapan: Hotel, Homestay, Chalet, Roomstay, Resort, Glamping + Kedai Makan), susunan kategori ikut populariti (Haiwan Peliharaan ke belakang), carian fleksibel bertaraf ikut padanan kata terbanyak, serta pembaikan tema Dark/Light & elak teks terpotong/overflow pada Profil & Jenis Perniagaan."
+  "version": "1.0.82",
+  "build_number": 62,
+  "released_at": "2026-11-24T05:28:03Z",
+  "changelog": "Sesuaikan terminologi & ikon POS Kaunter, Modal Pesanan, Orders, Live Order Board (KDS) dan Penjana QR Standee mengikut jenis industri peniaga (Barbershop/Kecantikan guna Kerusi & Ambil Sendiri, Runcit guna Kaunter, Servis guna Stesen, F&B kekal Makan Sini/Bungkus/Meja) serta seragamkan no. rujukan NP pada tiket POS."
 }

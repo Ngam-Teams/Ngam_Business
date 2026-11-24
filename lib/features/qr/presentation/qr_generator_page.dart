@@ -7,13 +7,14 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../../core/utils/business_industry_helper.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../settings/data/business_service.dart';
 import '../../../widgets/glass_nav_button.dart';
 
 // ============================================================
-// QrGeneratorPage — Modern Storefront, Table, WiFi & Promo QR Standee Generator
+// QrGeneratorPage — Modern Storefront, Table/Station, WiFi & Promo QR Standee Generator
 // Redesigned with Ngam Signature Modern Aesthetic & Cross-Platform Download Support
 // ============================================================
 
@@ -28,6 +29,9 @@ class QrGeneratorPage extends StatefulWidget {
 
 class _QrGeneratorPageState extends State<QrGeneratorPage> {
   QrMode _selectedMode = QrMode.storefront;
+
+  BusinessVertical get _vertical => BusinessIndustryHelper.fromProfile();
+  bool get _isFnb => _vertical == BusinessVertical.fnb;
 
   // Store Information (Pre-filled instantly from cached Business Profile)
   String _storeName = (BusinessService.cachedProfile?['business_name'] ??
@@ -251,7 +255,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         return 'Standee Menu & Katalog Kedai';
       case QrMode.table:
         final t = _tableCtrl.text.trim().isEmpty ? '1' : _tableCtrl.text.trim();
-        return 'Standee Meja #$t (Dine In)';
+        if (_isFnb) return 'Standee Meja #$t (Dine In)';
+        if (_vertical == BusinessVertical.beauty) return 'Standee Kerusi #$t (Di Premis)';
+        return 'Standee Stesen #$t (Di Premis)';
       case QrMode.promo:
         return 'Standee Baucar & Diskaun Khas';
       case QrMode.wifi:
@@ -1242,7 +1248,13 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
             children: [
               _buildModeChip(QrMode.storefront, 'Storefront', HugeIcons.strokeRoundedStore01),
               const SizedBox(width: 8),
-              _buildModeChip(QrMode.table, 'Meja Dine In', HugeIcons.strokeRoundedRestaurant01),
+              _buildModeChip(
+                QrMode.table,
+                _isFnb
+                    ? 'Meja Dine In'
+                    : (_vertical == BusinessVertical.beauty ? 'Kerusi / Bilik' : 'Kaunter / Stesen'),
+                _isFnb ? HugeIcons.strokeRoundedRestaurant01 : HugeIcons.strokeRoundedQrCode,
+              ),
               const SizedBox(width: 8),
               _buildModeChip(QrMode.promo, 'Kod Promo', HugeIcons.strokeRoundedCoupon02),
               const SizedBox(width: 8),
@@ -1451,7 +1463,11 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                   color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.table_restaurant_rounded, color: Color(0xFF42A5F5), size: 20),
+                child: Icon(
+                  _isFnb ? Icons.table_restaurant_rounded : Icons.pin_drop_rounded,
+                  color: const Color(0xFF42A5F5),
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1459,12 +1475,18 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Nombor & Nama Meja',
+                      _isFnb
+                          ? 'Nombor & Nama Meja'
+                          : (_vertical == BusinessVertical.beauty
+                              ? 'Nombor & Nama Kerusi / Bilik'
+                              : 'Nombor & Nama Kaunter / Stesen'),
                       style: GoogleFonts.outfit(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Taip sebarang nombor atau nama meja (cth: 1, 12, A-04, VIP 1).',
+                      _isFnb
+                          ? 'Taip sebarang nombor atau nama meja (cth: 1, 12, A-04, VIP 1).'
+                          : 'Taip nombor kerusi, bilik atau stesen (cth: 1, Kerusi 2, VIP, Bilik A).',
                       style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
                     ),
                   ],
@@ -1475,10 +1497,12 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
           const SizedBox(height: 16),
 
           _buildInputField(
-            label: 'Nombor / Nama Meja',
+            label: _isFnb
+                ? 'Nombor / Nama Meja'
+                : (_vertical == BusinessVertical.beauty ? 'Nombor / Nama Kerusi' : 'Nombor / Nama Stesen'),
             controller: _tableCtrl,
             icon: Icons.tag_rounded,
-            hint: 'Contoh: 1, 14, A-02, VIP',
+            hint: _isFnb ? 'Contoh: 1, 14, A-02, VIP' : 'Contoh: 1, 2, VIP, Bilik A',
           ),
           const SizedBox(height: 14),
 
@@ -1539,7 +1563,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         case QrMode.storefront:
           return 'Scan To Browse & Order';
         case QrMode.table:
-          return 'Dine In Table Order';
+          return _isFnb ? 'Dine In Table Order' : 'In-Store Self Order';
         case QrMode.promo:
           return 'Special Promo Voucher';
         case QrMode.wifi:
@@ -1552,7 +1576,7 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         case QrMode.storefront:
           return 'Imbas Untuk Pesan & Katalog';
         case QrMode.table:
-          return 'Pesanan Meja Dine In';
+          return _isFnb ? 'Pesanan Meja Dine In' : 'Pesanan Di Premis';
         case QrMode.promo:
           return 'Baucar Promosi Khas';
         case QrMode.wifi:
@@ -1573,7 +1597,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         case QrMode.queue:
           return 'Scan with camera to join walk-in queue';
         case QrMode.table:
-          return 'Scan with camera to order directly to table';
+          return _isFnb
+              ? 'Scan with camera to order directly to table'
+              : 'Scan with camera to order or request service';
         case QrMode.storefront:
           return 'Point phone camera to order';
       }
@@ -1586,7 +1612,9 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
         case QrMode.queue:
           return 'Imbas kamera untuk ambil giliran walk-in';
         case QrMode.table:
-          return 'Imbas kamera untuk pesan terus ke meja';
+          return _isFnb
+              ? 'Imbas kamera untuk pesan terus ke meja'
+              : 'Imbas kamera untuk buat pesanan atau servis';
         case QrMode.storefront:
           return 'Halakan kamera telefon anda untuk memesan';
       }
@@ -1595,9 +1623,28 @@ class _QrGeneratorPageState extends State<QrGeneratorPage> {
 
   String _getTableBadgeText() {
     final raw = _tableCtrl.text.trim();
-    final clean = raw.toUpperCase().replaceAll('TABLE', '').replaceAll('MEJA', '').trim();
+    final clean = raw
+        .toUpperCase()
+        .replaceAll('TABLE', '')
+        .replaceAll('MEJA', '')
+        .replaceAll('KERUSI', '')
+        .replaceAll('CHAIR', '')
+        .replaceAll('KAUNTER', '')
+        .replaceAll('COUNTER', '')
+        .replaceAll('STESEN', '')
+        .replaceAll('STATION', '')
+        .trim();
     final tableNum = clean.isEmpty ? '1' : clean;
-    return _standeeLanguage == 'en' ? 'TABLE $tableNum' : 'MEJA $tableNum';
+    if (_isFnb) {
+      return _standeeLanguage == 'en' ? 'TABLE $tableNum' : 'MEJA $tableNum';
+    }
+    if (_vertical == BusinessVertical.beauty) {
+      return _standeeLanguage == 'en' ? 'CHAIR $tableNum' : 'KERUSI $tableNum';
+    }
+    if (_vertical == BusinessVertical.retail) {
+      return _standeeLanguage == 'en' ? 'COUNTER $tableNum' : 'KAUNTER $tableNum';
+    }
+    return _standeeLanguage == 'en' ? 'STATION $tableNum' : 'STESEN $tableNum';
   }
 
   String _getPromoBadgeText() {

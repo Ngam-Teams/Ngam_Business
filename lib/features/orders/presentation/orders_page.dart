@@ -14,6 +14,7 @@ import '../../appointments/presentation/appointments_page.dart';
 
 import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../core/services/receipt_pdf_service.dart';
+import '../../../core/utils/business_industry_helper.dart';
 
 import '../../settings/data/business_service.dart';
 
@@ -2430,7 +2431,9 @@ class _OrdersPageState extends State<OrdersPage> {
                       order.source == 'online'
                           ? 'Ngam App'
                           : (order.source == 'table'
-                              ? 'Ngam App (Meja)'
+                              ? (BusinessIndustryHelper.isFnbFromProfile()
+                                  ? 'Ngam App (Meja)'
+                                  : 'Ngam App (Di Premis)')
                               : (order.source == 'pre_order'
                                   ? 'Pre-Order'
                                   : 'Kaunter POS')),
@@ -2743,10 +2746,16 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   String _normalizeOrderNotes(String raw) {
-    return raw
+    var normalized = raw
         .replaceAll('[Bungkus (Ambil Pantas)]', '[Ambil Sendiri (Segera)]')
         .replaceAll('[Bungkus:', '[Ambil Sendiri:')
         .replaceAll('[Take Away (Quick Pickup)]', '[Self-Pickup (Immediate)]')
         .replaceAll('[Take Away:', '[Self-Pickup:');
+    if (!BusinessIndustryHelper.isFnbFromProfile()) {
+      normalized = normalized
+          .replaceAll('[Mod: DINE_IN | Meja:', '[Mod: IN_STORE | Stesen:')
+          .replaceAll('[Mod: DINE_IN]', '[Mod: IN_STORE]');
+    }
+    return normalized;
   }
 }
