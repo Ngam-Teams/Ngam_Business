@@ -1,6 +1,6 @@
 {
-  "version": "1.0.84",
-  "build_number": 64,
-  "released_at": "2026-11-24T15:03:32Z",
-  "changelog": "Baiki isu butang Back pada Web/PWA & mudah alih: kini menekan Back semasa Bottom Sheet atau Dialog terbuka akan menutup Bottom Sheet/Dialog terlebih dahulu sebelum kembali ke halaman sebelumnya."
+  "version": "1.0.85",
+  "build_number": 65,
+  "released_at": "2026-11-24T17:11:36Z",
+  "changelog": "Normalisasikan label kaedah bayaran pada butiran pesanan, resit PDF dan eksport CSV (DuitNow QR, DuitNow Online Banking, Kad Kredit / Debit, e-Dompet) supaya kod mentah 'RAZER' atau 'CHIP' tidak lagi dipaparkan."
 }

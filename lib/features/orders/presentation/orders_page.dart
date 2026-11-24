@@ -15,6 +15,7 @@ import '../../appointments/presentation/appointments_page.dart';
 import '../../../core/utils/file_saver/file_saver.dart';
 import '../../../core/services/receipt_pdf_service.dart';
 import '../../../core/utils/business_industry_helper.dart';
+import '../../../core/utils/payment_method_formatter.dart';
 
 import '../../settings/data/business_service.dart';
 
@@ -342,7 +343,7 @@ class _OrdersPageState extends State<OrdersPage> {
         final date = o.createdAt.toIso8601String();
         final cust = (o.customerName ?? 'Pelanggan').replaceAll(',', ' ');
         final phone = (o.customerPhone ?? '-').replaceAll(',', ' ');
-        final method = o.paymentMethod.replaceAll(',', ' ');
+        final method = PaymentMethodFormatter.format(o.paymentMethod).replaceAll(',', ' ');
         final status = o.status;
         final payStatus = o.paymentStatus;
         final tot = o.total;
@@ -393,7 +394,7 @@ class _OrdersPageState extends State<OrdersPage> {
         customerPhone: order.customerPhone,
         orderCreatedAt: order.createdAt,
         paymentTime: order.createdAt,
-        paymentMethod: order.paymentMethod,
+        paymentMethod: PaymentMethodFormatter.format(order.paymentMethod),
         paymentStatus: order.paymentStatus,
         notes: order.notes,
         items: orderItems,
@@ -843,7 +844,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                 Row(
                                   children: [
                                     Text(
-                                      order.paymentMethod.toUpperCase(),
+                                      PaymentMethodFormatter.format(order.paymentMethod),
                                       style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
                                     ),
                                     const SizedBox(width: 6),
