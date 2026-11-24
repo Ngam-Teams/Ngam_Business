@@ -1,6 +1,6 @@
 {
-  "version": "1.0.83",
-  "build_number": 63,
-  "released_at": "2026-11-24T11:22:46Z",
-  "changelog": "Baiki susun atur kad Pesanan: pisahkan baris Nama Pelanggan & Harga RM daripada baris butang tindakan (Chat, WhatsApp & Ya, Sudah Terima Bayaran / Sedia) supaya harga dan nama tidak lagi terhimpit atau membalut menegak pada skrin telefon."
+  "version": "1.0.84",
+  "build_number": 64,
+  "released_at": "2026-11-24T15:03:32Z",
+  "changelog": "Baiki isu butang Back pada Web/PWA & mudah alih: kini menekan Back semasa Bottom Sheet atau Dialog terbuka akan menutup Bottom Sheet/Dialog terlebih dahulu sebelum kembali ke halaman sebelumnya."
 }

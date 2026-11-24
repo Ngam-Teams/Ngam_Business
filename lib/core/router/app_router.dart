@@ -46,6 +46,7 @@ import '../../widgets/glass_toast.dart';
 import '../services/merchant_notification_service.dart';
 import '../../features/settings/data/business_service.dart';
 import 'package:flutter/services.dart';
+import 'modal_back_observer.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -274,6 +275,11 @@ class _AppShellState extends State<_AppShell> {
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
 
+        // 0. Dismiss any open BottomSheet or Dialog before switching tabs/pages
+        if (ModalBackNavigatorObserver.instance.dismissTopModal()) {
+          return;
+        }
+
         // 1. Pop back through previously visited tabs in history
         while (_tabHistory.isNotEmpty) {
           final previousTab = _tabHistory.removeLast();
@@ -351,6 +357,7 @@ class GoRouterRefreshStream extends ChangeNotifier {
 // ---------------------------------------------------------------------------
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
+  observers: [ModalBackNavigatorObserver.instance],
   initialLocation: '/',
   refreshListenable: GoRouterRefreshStream(Supabase.instance.client.auth.onAuthStateChange),
   redirect: (context, state) {

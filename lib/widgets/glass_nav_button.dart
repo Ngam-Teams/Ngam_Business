@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:easy_localization/easy_localization.dart';
+import '../core/router/modal_back_observer.dart';
 
 // =============================================================================
 // NGAM BUSINESS — DESIGN SYSTEM: FLOATING GLASS NAVIGATION & TOP BAR
@@ -781,6 +782,9 @@ class GlassScaffold extends StatelessWidget {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+        if (ModalBackNavigatorObserver.instance.dismissTopModal()) {
+          return;
+        }
         GlassNavButton.safeNavBack(
           context,
           onBack: onBack,
