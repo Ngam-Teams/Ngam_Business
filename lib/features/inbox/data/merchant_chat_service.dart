@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/r2_storage_service.dart';
+import '../../../core/utils/ngam_ref.dart';
 
 class MerchantConversation {
   final String id;
@@ -355,16 +356,18 @@ class MerchantChatService {
       if (contextType == 'order') {
         final res = await _supabase
             .from('orders')
-            .select('id, status, total')
+            .select('id, status, total, source, created_at')
             .eq('id', contextId)
             .maybeSingle();
         if (res != null) {
-          final shortId = contextId.length > 6
-              ? contextId.substring(0, 6).toUpperCase()
-              : contextId.toUpperCase();
+          final createdDt = DateTime.tryParse((res['created_at'] ?? '').toString());
+          final isPos = (res['source'] ?? '').toString().toLowerCase() == 'pos';
+          final orderRef = isPos
+              ? NgamRef.pos(contextId, createdDt)
+              : NgamRef.order(contextId, createdAt: createdDt);
           final totalStr = ((res['total'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
           final data = {
-            'ref': 'ORD-$shortId • RM $totalStr',
+            'ref': '#$orderRef • RM $totalStr',
             'status': (res['status'] ?? 'pending').toString().toLowerCase(),
           };
           _contextCache[key] = data;
@@ -373,21 +376,22 @@ class MerchantChatService {
       } else if (contextType == 'booking') {
         final res = await _supabase
             .from('bookings')
-            .select('id, status, service_name, booking_date, booking_metadata')
+            .select('id, status, service_name, booking_date, created_at, booking_metadata')
             .eq('id', contextId)
             .maybeSingle();
         if (res != null) {
           final meta = res['booking_metadata'] is Map
               ? Map<String, dynamic>.from(res['booking_metadata'] as Map)
               : <String, dynamic>{};
-          final fallbackCode = contextId.length >= 5
-              ? contextId.substring(0, 5).toUpperCase()
-              : contextId.toUpperCase();
-          final ref = (meta['booking_id'] ?? meta['short_ref'] ?? 'BK-$fallbackCode').toString();
+          final rawMetaRef = (meta['booking_id'] ?? meta['short_ref'])?.toString().trim();
+          final createdDt = DateTime.tryParse((res['created_at'] ?? '').toString());
+          final ref = (rawMetaRef != null && NgamRef.isValid(rawMetaRef))
+              ? rawMetaRef.toUpperCase()
+              : NgamRef.booking(contextId, createdDt);
           final svc = (res['service_name'] ?? '').toString().trim();
           final dateStr = (res['booking_date'] ?? '').toString();
           final data = {
-            'ref': '$ref${svc.isNotEmpty ? ' • $svc' : ''}${dateStr.isNotEmpty ? ' ($dateStr)' : ''}',
+            'ref': '#$ref${svc.isNotEmpty ? ' • $svc' : ''}${dateStr.isNotEmpty ? ' ($dateStr)' : ''}',
             'status': (res['status'] ?? 'pending').toString().toLowerCase(),
           };
           _contextCache[key] = data;

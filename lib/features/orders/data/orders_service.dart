@@ -281,7 +281,7 @@ class OrdersService {
           .select('status, source, payment_method, payment_status, total, customer_name, created_at')
           .eq('id', orderId)
           .maybeSingle();
-      if (raw is Map) {
+      if (raw != null) {
         existingOrder = Map<String, dynamic>.from(raw);
       }
     } catch (_) {}

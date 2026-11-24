@@ -501,7 +501,7 @@ class BusinessService {
     Map<String, dynamic>? before;
     try {
       final raw = await _client.from('businesses').select().eq('id', businessId).maybeSingle();
-      if (raw is Map) before = Map<String, dynamic>.from(raw);
+      if (raw != null) before = Map<String, dynamic>.from(raw);
     } catch (_) {
       if (_cachedProfile != null && _cachedProfile!['id'] == businessId) {
         before = Map<String, dynamic>.from(_cachedProfile!);
@@ -559,7 +559,7 @@ class BusinessService {
           .select()
           .eq('business_id', businessId)
           .maybeSingle();
-      if (raw is Map) before = Map<String, dynamic>.from(raw);
+      if (raw != null) before = Map<String, dynamic>.from(raw);
     } catch (_) {}
 
     try {
@@ -615,7 +615,7 @@ class BusinessService {
           .select()
           .eq('business_id', businessId)
           .maybeSingle();
-      if (raw is Map) before = Map<String, dynamic>.from(raw);
+      if (raw != null) before = Map<String, dynamic>.from(raw);
     } catch (_) {}
 
     try {

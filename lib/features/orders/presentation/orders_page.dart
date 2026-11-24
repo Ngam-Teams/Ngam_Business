@@ -384,7 +384,7 @@ class _OrdersPageState extends State<OrdersPage> {
       final orderItems = items ?? _orderItemsCache[order.id] ?? [];
 
       await ReceiptPdfService.downloadReceiptPdf(
-        orderId: order.id,
+        orderId: order.refCode,
         shopName: bizName,
         shopPhone: bizPhone,
         shopAddress: bizAddress,
@@ -581,7 +581,7 @@ class _OrdersPageState extends State<OrdersPage> {
                               const SizedBox(height: 4),
                               GestureDetector(
                                 onTap: () {
-                                  Clipboard.setData(ClipboardData(text: '#$shortId'));
+                                  Clipboard.setData(ClipboardData(text: shortId));
                                   showGlassToast(context, 'orders.order_id_copied'.tr());
                                 },
                                 child: Row(
@@ -2725,7 +2725,7 @@ class _OrdersPageState extends State<OrdersPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pesanan #${order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase()}',
+                    'Pesanan #${order.refCode}',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 2),

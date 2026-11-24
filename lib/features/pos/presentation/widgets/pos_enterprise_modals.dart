@@ -1,5 +1,6 @@
 import 'dart:async';
 import '../../../../core/utils/file_saver/file_saver.dart';
+import '../../../../core/utils/ngam_ref.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1244,7 +1245,7 @@ class _PosRecentOrdersVoidModalState extends State<PosRecentOrdersVoidModal> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        '#${o['id'].toString().substring(0, 6).toUpperCase()}',
+                                        '#${NgamRef.pos(o['id']?.toString(), DateTime.tryParse((o['created_at'] ?? '').toString()))}',
                                         style: const TextStyle(color: Colors.white70, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 12),
                                       ),
                                       const SizedBox(width: 8),
@@ -1355,11 +1356,19 @@ class PosQuickThermalReceiptModal extends StatelessWidget {
     );
   }
 
+  String _resolvePosRef() {
+    final raw = (receipt['ref'] ?? '').toString().trim().replaceAll('#', '');
+    if (NgamRef.isValid(raw)) return '#${raw.toUpperCase()}';
+    final rawId = (receipt['order_id'] ?? receipt['id'] ?? '').toString().trim();
+    if (rawId.isNotEmpty) return '#${NgamRef.pos(rawId)}';
+    return '#${NgamRef.pos(raw.isNotEmpty && raw.toUpperCase() != 'POS' ? raw : null)}';
+  }
+
   String _buildPlainTextReceipt() {
     final lines = (receipt['items'] as List?)?.cast<String>() ?? [];
     final total = (receipt['total'] as num?)?.toDouble() ?? 0.0;
     final method = receipt['method']?.toString() ?? 'TUNAI';
-    final ref = receipt['ref']?.toString() ?? '#POS';
+    final ref = _resolvePosRef();
     final customer = receipt['customer']?.toString() ?? 'Pelanggan Kaunter';
     final mode = receipt['mode']?.toString() ?? 'pos.type_dine_in'.tr();
 
@@ -1389,7 +1398,7 @@ Terima kasih! Sila datang lagi.
     final lines = (receipt['items'] as List?)?.cast<String>() ?? [];
     final total = (receipt['total'] as num?)?.toDouble() ?? 0.0;
     final method = receipt['method']?.toString() ?? 'TUNAI';
-    final ref = receipt['ref']?.toString() ?? '#POS';
+    final ref = _resolvePosRef();
     final customer = receipt['customer']?.toString() ?? 'Pelanggan Kaunter';
     final mode = receipt['mode']?.toString() ?? 'pos.type_dine_in'.tr();
 

@@ -126,6 +126,12 @@ class NgamRef {
   static String topup(String? id, {DateTime? createdAt}) =>
       format('NT', id, createdAt: createdAt);
 
+  /// Semak sama ada kod rujukan sudah mengikut format rasmi 14 aksara (`N[OBPSDRWT]YYMMDDXXXXXX`).
+  static bool isValid(String? ref) {
+    final clean = (ref ?? '').trim().replaceAll('#', '');
+    return _ngamRefRegex.hasMatch(clean);
+  }
+
   /// Semak sama ada kod rujukan ialah rujukan Tempahan (`NB...` atau `RZRV-...`).
   static bool isBookingReference(String? ref) {
     final clean = (ref ?? '').trim().replaceAll('#', '').toUpperCase();

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/utils/ngam_ref.dart';
 import '../../settings/data/business_service.dart';
 
 class AnalyticsService {
@@ -126,7 +127,11 @@ class AnalyticsService {
       final List<Map<String, dynamic>> recentActivities = [];
       for (final ro in recentOrders) {
         final rawId = (ro['id'] ?? '').toString();
-        final shortId = rawId.length > 6 ? rawId.substring(0, 6).toUpperCase() : rawId.toUpperCase();
+        final createdDt = DateTime.tryParse((ro['created_at'] ?? '').toString());
+        final isPos = (ro['source'] ?? '').toString().toLowerCase() == 'pos';
+        final shortId = isPos
+            ? NgamRef.pos(rawId, createdDt)
+            : NgamRef.order(rawId, createdAt: createdDt);
         final amt = ((ro['total'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
         final st = (ro['status'] ?? 'pending').toString().toLowerCase();
         final stLabel = st == 'completed'

@@ -357,7 +357,7 @@ class ProductService {
             .select()
             .eq('id', productId)
             .maybeSingle();
-        if (raw is Map) {
+        if (raw != null) {
           beforeSnapshot = Map<String, dynamic>.from(raw);
         }
       } catch (_) {}
@@ -447,7 +447,7 @@ class ProductService {
             .select('name, stock')
             .eq('id', productId)
             .maybeSingle();
-        if (raw is Map) before = Map<String, dynamic>.from(raw);
+        if (raw != null) before = Map<String, dynamic>.from(raw);
       } catch (_) {}
 
       await _client.from('business_products').update({
@@ -507,7 +507,7 @@ class ProductService {
             .select('name, price, category, stock')
             .eq('id', productId)
             .maybeSingle();
-        if (raw is Map) before = Map<String, dynamic>.from(raw);
+        if (raw != null) before = Map<String, dynamic>.from(raw);
       } catch (_) {}
 
       await _client.from('business_products').delete().eq('id', productId);

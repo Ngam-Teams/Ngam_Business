@@ -401,7 +401,7 @@ class PosService {
           .select('status, payment_status, total, created_at')
           .eq('id', orderId)
           .maybeSingle();
-      if (raw is Map) before = Map<String, dynamic>.from(raw);
+      if (raw != null) before = Map<String, dynamic>.from(raw);
     } catch (_) {}
 
     final voidTag = '[BATAL/REFUND: $reason pada ${DateTime.now().toIso8601String().substring(0, 16)}]';

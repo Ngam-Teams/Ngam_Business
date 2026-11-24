@@ -1,6 +1,6 @@
 {
-  "version": "1.0.79",
-  "build_number": 59,
-  "released_at": "2026-11-24T04:46:00Z",
-  "changelog": "Jadikan pertukaran tab navbar/sidebar Ngam Business serta-merta tanpa animasi pop-zoom atau bina semula skrin."
+  "version": "1.0.80",
+  "build_number": 60,
+  "released_at": "2026-11-24T04:55:17Z",
+  "changelog": "Baiki ralat binaan Jejak Audit (Before → After diff) serta seragamkan sepenuhnya no. rujukan baharu 14-aksara tanpa sempang (NO/NB/NP) pada resit PDF, tempahan walk-in, pesanan, POS, notifikasi, analitik, sembang peniaga & butang salin."
 }

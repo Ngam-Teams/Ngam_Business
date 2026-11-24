@@ -173,9 +173,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           buffer.writeln('$id,$date,$cust,$method,$status,$payStatus,${tot.toStringAsFixed(2)}');
         }
       } else {
-        buffer.writeln('ORD-2041,${DateTime.now().toIso8601String()},Ali Imran,DuitNow QR,completed,paid,32.00');
-        buffer.writeln('ORD-2040,${DateTime.now().subtract(const Duration(hours: 1)).toIso8601String()},Siti Sarah,Tunai,completed,paid,18.50');
-        buffer.writeln('ORD-2039,${DateTime.now().subtract(const Duration(hours: 3)).toIso8601String()},Zulhazmi,Kad Kredit,completed,paid,24.00');
+        buffer.writeln('NO261123K7M9P2,${DateTime.now().toIso8601String()},Ali Imran,DuitNow QR,completed,paid,32.00');
+        buffer.writeln('NO261123H4W8X3,${DateTime.now().subtract(const Duration(hours: 1)).toIso8601String()},Siti Sarah,Tunai,completed,paid,18.50');
+        buffer.writeln('NO261123R5T2V9,${DateTime.now().subtract(const Duration(hours: 3)).toIso8601String()},Zulhazmi,Kad Kredit,completed,paid,24.00');
         totalSum = 74.50;
       }
 

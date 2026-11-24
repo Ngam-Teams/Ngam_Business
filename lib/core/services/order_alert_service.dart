@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/app_router.dart';
+import '../utils/ngam_ref.dart';
 import 'sound_service.dart';
 import 'notification_bridge.dart';
 
@@ -154,7 +155,11 @@ class OrderAlertService {
     if (!isFromCustomerApp) return;
 
     // Dispatch Native Browser / OS Push Notification
-    final orderNum = order['order_number']?.toString() ?? (id.length > 6 ? id.substring(0, 6) : id);
+    final rawNum = order['order_number']?.toString();
+    final createdDt = DateTime.tryParse((order['created_at'] ?? '').toString());
+    final orderNum = (rawNum != null && NgamRef.isValid(rawNum))
+        ? rawNum.toUpperCase()
+        : NgamRef.order(id, createdAt: createdDt);
     final total = (order['total'] as num?)?.toDouble() ?? 0.0;
     final customer = order['customer_name']?.toString() ?? 'Pelanggan';
     showWebNotification(

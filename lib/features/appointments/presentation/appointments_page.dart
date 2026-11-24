@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import '../../../core/services/audit_service.dart';
+import '../../../core/utils/ngam_ref.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/glass_nav_button.dart';
 import '../../settings/data/business_service.dart';
@@ -130,10 +131,16 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
               final String payStatus = (meta['payment_status']?.toString() ?? 'unpaid').toLowerCase();
               final bool isPaidOnline = payStatus == 'paid';
 
+              final rawMetaBookingRef = (meta['booking_id'] ?? meta['short_ref'])?.toString().trim();
+              final bookingCreatedDt = DateTime.tryParse((b['created_at'] ?? '').toString());
+              final formattedBookingRef = (rawMetaBookingRef != null && NgamRef.isValid(rawMetaBookingRef))
+                  ? rawMetaBookingRef.toUpperCase()
+                  : NgamRef.booking(b['id']?.toString(), bookingCreatedDt);
+
               return {
                 'db_id': b['id'],
                 'customer_id': (b['customer_id'] ?? b['user_id'] ?? meta['customer_id'] ?? meta['user_id'] ?? '').toString(),
-                'id': meta['booking_id'] ?? meta['short_ref'] ?? 'BK-${b['id'].toString().substring(0, b['id'].toString().length > 6 ? 6 : b['id'].toString().length)}',
+                'id': formattedBookingRef,
                 'customerName': b['customer_name'] ?? meta['customer_name'] ?? 'Pelanggan Ngam',
                 'phone': (meta['phone'] != null && meta['phone'].toString().trim().isNotEmpty)
                     ? meta['phone'].toString().trim()
@@ -1537,13 +1544,14 @@ Sila maklumkan sekiranya terdapat sebarang perubahan masa. Terima kasih!
                           return;
                         }
 
-                        final bookingId = 'BK-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+                        final bookingId = NgamRef.booking();
                         final dateTimeStr = '$selectedDateText, $selectedTimeText';
                         final int addDays = selectedDateText == 'Hari Ini' ? 0 : (selectedDateText == 'Esok' ? 1 : 2);
                         final String bookingDateIso = DateFormat('yyyy-MM-dd').format(DateTime.now().add(Duration(days: addDays)));
 
                         final rawMeta = <String, dynamic>{
                           'booking_id': bookingId,
+                          'short_ref': bookingId,
                           'phone': phone,
                           'provider_name': staff,
                           'total_price': priceVal,
