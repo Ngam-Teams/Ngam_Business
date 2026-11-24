@@ -1,6 +1,6 @@
 {
-  "version": "1.0.82",
-  "build_number": 62,
-  "released_at": "2026-11-24T05:28:03Z",
-  "changelog": "Sesuaikan terminologi & ikon POS Kaunter, Modal Pesanan, Orders, Live Order Board (KDS) dan Penjana QR Standee mengikut jenis industri peniaga (Barbershop/Kecantikan guna Kerusi & Ambil Sendiri, Runcit guna Kaunter, Servis guna Stesen, F&B kekal Makan Sini/Bungkus/Meja) serta seragamkan no. rujukan NP pada tiket POS."
+  "version": "1.0.83",
+  "build_number": 63,
+  "released_at": "2026-11-24T11:22:46Z",
+  "changelog": "Baiki susun atur kad Pesanan: pisahkan baris Nama Pelanggan & Harga RM daripada baris butang tindakan (Chat, WhatsApp & Ya, Sudah Terima Bayaran / Sedia) supaya harga dan nama tidak lagi terhimpit atau membalut menegak pada skrin telefon."
 }
