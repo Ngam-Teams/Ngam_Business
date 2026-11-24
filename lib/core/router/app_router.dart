@@ -381,27 +381,45 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const _AppShell(),
+      pageBuilder: (context, state) => const NoTransitionPage(
+        key: ValueKey('app-shell'),
+        child: _AppShell(),
+      ),
     ),
     GoRoute(
       path: '/home',
-      builder: (context, state) => const _AppShell(initialTab: 0),
+      pageBuilder: (context, state) => const NoTransitionPage(
+        key: ValueKey('app-shell'),
+        child: _AppShell(initialTab: 0),
+      ),
     ),
     GoRoute(
       path: '/orders',
-      builder: (context, state) => const _AppShell(initialTab: 1),
+      pageBuilder: (context, state) => const NoTransitionPage(
+        key: ValueKey('app-shell'),
+        child: _AppShell(initialTab: 1),
+      ),
     ),
     GoRoute(
       path: '/pos',
-      builder: (context, state) => const _AppShell(initialTab: 2),
+      pageBuilder: (context, state) => const NoTransitionPage(
+        key: ValueKey('app-shell'),
+        child: _AppShell(initialTab: 2),
+      ),
     ),
     GoRoute(
       path: '/analytics',
-      builder: (context, state) => const _AppShell(initialTab: 3),
+      pageBuilder: (context, state) => const NoTransitionPage(
+        key: ValueKey('app-shell'),
+        child: _AppShell(initialTab: 3),
+      ),
     ),
     GoRoute(
       path: '/settings',
-      builder: (context, state) => const _AppShell(initialTab: 4),
+      pageBuilder: (context, state) => const NoTransitionPage(
+        key: ValueKey('app-shell'),
+        child: _AppShell(initialTab: 4),
+      ),
     ),
     GoRoute(
       path: '/login',
