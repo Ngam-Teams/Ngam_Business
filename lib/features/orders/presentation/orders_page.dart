@@ -522,26 +522,33 @@ class _OrdersPageState extends State<OrdersPage> {
       builder: (ctx, setModalState) {
         final cachedItems = _orderItemsCache[order.id];
 
-        return Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF141724),
-            borderRadius: isDialog
-                ? BorderRadius.circular(28)
-                : const BorderRadius.vertical(top: Radius.circular(28)),
-            border: isDialog
-                ? Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1.2)
-                : const Border(top: BorderSide(color: Colors.white12, width: 1.2)),
-            boxShadow: isDialog
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      blurRadius: 36,
-                      offset: const Offset(0, 16),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Column(
+        final borderRadius = isDialog
+            ? BorderRadius.circular(28)
+            : const BorderRadius.vertical(top: Radius.circular(28));
+
+        return ClipRRect(
+          borderRadius: borderRadius,
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                // Navbar-style translucent frosted glass (NOT milky active pill)
+                color: const Color(0xFF0A0A14).withValues(alpha: 0.62),
+                borderRadius: borderRadius,
+                border: isDialog
+                    ? Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0)
+                    : Border(
+                        top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
+                      ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDialog ? 0.45 : 0.25),
+                    blurRadius: isDialog ? 28 : 16,
+                    offset: Offset(0, isDialog ? 12 : -4),
+                  ),
+                ],
+              ),
+              child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // 1. FIXED HEADER (Never scrolls away)
@@ -832,8 +839,40 @@ class _OrdersPageState extends State<OrdersPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(Icons.payment_rounded, size: 15, color: Colors.white54),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'orders.payment_method'.tr(),
+                                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    PaymentMethodFormatter.format(order.paymentMethod),
+                                    textAlign: TextAlign.right,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.verified_outlined, size: 15, color: Colors.white54),
                                     const SizedBox(width: 6),
                                     Text(
                                       'orders.payment_status'.tr(),
@@ -841,37 +880,28 @@ class _OrdersPageState extends State<OrdersPage> {
                                     ),
                                   ],
                                 ),
-                                Row(
-                                  children: [
-                                    Text(
-                                      PaymentMethodFormatter.format(order.paymentMethod),
-                                      style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w600),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                                  decoration: BoxDecoration(
+                                    color: order.paymentStatus.toLowerCase() == 'paid'
+                                        ? Colors.green.withValues(alpha: 0.2)
+                                        : Colors.orangeAccent.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    order.paymentStatus.toLowerCase() == 'paid'
+                                        ? 'orders.paid'.tr()
+                                        : (order.paymentStatus.toLowerCase() == 'pending'
+                                            ? 'common.pending'.tr()
+                                            : 'orders.unpaid'.tr()),
+                                    style: TextStyle(
+                                      color: order.paymentStatus.toLowerCase() == 'paid'
+                                          ? Colors.greenAccent
+                                          : Colors.orangeAccent,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: order.paymentStatus.toLowerCase() == 'paid'
-                                            ? Colors.green.withValues(alpha: 0.2)
-                                            : Colors.orangeAccent.withValues(alpha: 0.2),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        order.paymentStatus.toLowerCase() == 'paid'
-                                            ? 'orders.paid'.tr()
-                                            : (order.paymentStatus.toLowerCase() == 'pending'
-                                                ? 'common.pending'.tr()
-                                                : 'orders.unpaid'.tr()),
-                                        style: TextStyle(
-                                          color: order.paymentStatus.toLowerCase() == 'paid'
-                                              ? Colors.greenAccent
-                                              : Colors.orangeAccent,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -1384,7 +1414,9 @@ class _OrdersPageState extends State<OrdersPage> {
               ),
             ],
           ),
-        );
+        ),
+      ),
+    );
       },
     );
   }

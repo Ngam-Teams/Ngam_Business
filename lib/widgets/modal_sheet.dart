@@ -35,7 +35,7 @@ class ModalSheet {
             shape: const LiquidRoundedSuperellipse(borderRadius: 28.0),
             settings: LiquidGlassSettings(
               thickness: 0.1,
-              blur: 18.0,
+              blur: 24.0,
               refractiveIndex: 1.0,
               glassColor: Colors.transparent,
               lightAngle: 45.0,
@@ -46,19 +46,22 @@ class ModalSheet {
             ),
             child: Container(
               decoration: BoxDecoration(
+                // Navbar-style translucent frosted glass (NOT active pill)
                 color: isDark
-                    ? const Color(0xFF0E1222).withValues(alpha: 0.94)
-                    : const Color(0xFF14192C).withValues(alpha: 0.92),
+                    ? const Color(0xFF0A0A14).withValues(alpha: 0.62)
+                    : Colors.white.withValues(alpha: 0.72),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: isDark ? 0.16 : 0.28),
-                  width: 1.0,
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.4),
+                    width: 1.0,
+                  ),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    blurRadius: 24,
-                    offset: const Offset(0, -6),
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, -4),
                   ),
                 ],
               ),

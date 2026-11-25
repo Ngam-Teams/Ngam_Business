@@ -39,10 +39,14 @@ class PaymentMethodFormatter {
 
     if (lower == 'duitnow' ||
         lower == 'duitnow_qr' ||
+        lower == 'duitnowqr' ||
+        lower == 'dnqr' ||
+        lower == 'dn_qr' ||
         lower == 'razer_maybankqr' ||
         lower == 'maybankqr' ||
         lower == 'maybank_qr' ||
         lower == 'qr' ||
+        lower.contains('dnqr') ||
         (lower.contains('duitnow') &&
             !lower.contains('obw') &&
             !lower.contains('online') &&
@@ -52,6 +56,8 @@ class PaymentMethodFormatter {
     }
 
     if (lower == 'duitnow_obw' ||
+        lower == 'dnobw' ||
+        lower == 'obw' ||
         lower == 'duitnow_transfer' ||
         lower == 'fpx' ||
         lower == 'fpx_b2b1' ||

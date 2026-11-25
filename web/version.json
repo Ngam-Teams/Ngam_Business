@@ -1,6 +1,6 @@
 {
-  "version": "1.0.85",
-  "build_number": 65,
-  "released_at": "2026-11-24T17:11:36Z",
-  "changelog": "Normalisasikan label kaedah bayaran pada butiran pesanan, resit PDF dan eksport CSV (DuitNow QR, DuitNow Online Banking, Kad Kredit / Debit, e-Dompet) supaya kod mentah 'RAZER' atau 'CHIP' tidak lagi dipaparkan."
+  "version": "1.0.86",
+  "build_number": 66,
+  "released_at": "2026-11-25T13:03:45Z",
+  "changelog": "Baiki label 'dnqr' kepada DuitNow QR, pisahkan baris Kaedah Pembayaran & Status Bayaran dalam Butiran Pesanan supaya tiada overflow, serta tukar Bottom Sheet kepada gaya glassmorphism lut sinar seiras navbar."
 }
