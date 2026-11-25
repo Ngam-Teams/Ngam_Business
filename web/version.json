@@ -1,6 +1,6 @@
 {
-  "version": "1.0.86",
-  "build_number": 66,
-  "released_at": "2026-11-25T13:03:45Z",
-  "changelog": "Baiki label 'dnqr' kepada DuitNow QR, pisahkan baris Kaedah Pembayaran & Status Bayaran dalam Butiran Pesanan supaya tiada overflow, serta tukar Bottom Sheet kepada gaya glassmorphism lut sinar seiras navbar."
+  "version": "1.0.87",
+  "build_number": 67,
+  "released_at": "2026-11-25T13:16:47Z",
+  "changelog": "Guna RPC atomik & idempoten (deduct_order_stock & restore_order_stock) pada POS Kaunter, pembatalan pesanan, dan void/refund supaya stok produk sentiasa tepat dan tidak berganda atau terlepas tolak."
 }

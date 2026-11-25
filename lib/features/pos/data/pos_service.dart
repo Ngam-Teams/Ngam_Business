@@ -306,28 +306,39 @@ class PosService {
 
     await _client.from('order_items').insert(orderItems);
 
-    // Auto-deduct inventory stock for physical products that track stock
-    for (final item in items) {
-      if (item.product.isProduct &&
-          item.product.trackInventory &&
-          uuidRegex.hasMatch(item.product.id)) {
-        try {
-          final current = await _client
-              .from('business_products')
-              .select('stock')
-              .eq('id', item.product.id)
-              .maybeSingle();
+    // Auto-deduct inventory stock atomically via SECURITY DEFINER RPC (with owner fallback)
+    final createdOrderId = order['id']?.toString() ?? '';
+    bool rpcDeducted = false;
+    if (createdOrderId.isNotEmpty && uuidRegex.hasMatch(createdOrderId)) {
+      try {
+        await _client.rpc('deduct_order_stock', params: {'p_order_id': createdOrderId});
+        rpcDeducted = true;
+      } catch (_) {}
+    }
 
-          if (current != null) {
-            final currentStock = (current['stock'] as int?) ?? item.product.stock;
-            final newStock = (currentStock - item.quantity).clamp(0, 999999);
-            await _client
+    if (!rpcDeducted) {
+      for (final item in items) {
+        if (item.product.isProduct &&
+            item.product.trackInventory &&
+            uuidRegex.hasMatch(item.product.id)) {
+          try {
+            final current = await _client
                 .from('business_products')
-                .update({'stock': newStock})
-                .eq('id', item.product.id);
+                .select('stock')
+                .eq('id', item.product.id)
+                .maybeSingle();
+
+            if (current != null) {
+              final currentStock = (current['stock'] as int?) ?? item.product.stock;
+              final newStock = (currentStock - item.quantity).clamp(0, 999999);
+              await _client
+                  .from('business_products')
+                  .update({'stock': newStock})
+                  .eq('id', item.product.id);
+            }
+          } catch (_) {
+            // Ignore individual stock deduction failures to not block order creation
           }
-        } catch (_) {
-          // Ignore individual stock deduction failures to not block order creation
         }
       }
     }
@@ -430,31 +441,39 @@ class PosService {
       await q;
     }
 
-    // Restore stock for items in the voided order
+    // Restore stock atomically via SECURITY DEFINER RPC (with owner fallback)
     try {
-      final items = await _client
-          .from('order_items')
-          .select('product_id, quantity')
-          .eq('order_id', orderId);
+      bool rpcRestored = false;
+      try {
+        await _client.rpc('restore_order_stock', params: {'p_order_id': orderId});
+        rpcRestored = true;
+      } catch (_) {}
 
-      for (final row in (items as List)) {
-        final prodId = row['product_id'] as String?;
-        final qty = (row['quantity'] as num?)?.toInt() ?? 0;
-        if (prodId != null && qty > 0) {
-          final prod = await _client
-              .from('business_products')
-              .select('stock, track_inventory, item_type')
-              .eq('id', prodId)
-              .maybeSingle();
+      if (!rpcRestored) {
+        final items = await _client
+            .from('order_items')
+            .select('product_id, quantity')
+            .eq('order_id', orderId);
 
-          if (prod != null &&
-              prod['item_type'] != 'service' &&
-              (prod['track_inventory'] as bool? ?? true)) {
-            final curStock = (prod['stock'] as int?) ?? 0;
-            await _client
+        for (final row in (items as List)) {
+          final prodId = row['product_id'] as String?;
+          final qty = (row['quantity'] as num?)?.toInt() ?? 0;
+          if (prodId != null && qty > 0) {
+            final prod = await _client
                 .from('business_products')
-                .update({'stock': curStock + qty})
-                .eq('id', prodId);
+                .select('stock, track_inventory, item_type')
+                .eq('id', prodId)
+                .maybeSingle();
+
+            if (prod != null &&
+                prod['item_type'] != 'service' &&
+                (prod['track_inventory'] as bool? ?? true)) {
+              final curStock = (prod['stock'] as int?) ?? 0;
+              await _client
+                  .from('business_products')
+                  .update({'stock': curStock + qty})
+                  .eq('id', prodId);
+            }
           }
         }
       }

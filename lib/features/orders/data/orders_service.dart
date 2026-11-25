@@ -303,7 +303,15 @@ class OrdersService {
             effectivePaymentStatus = 'refund_pending';
           }
 
-          if (!(source != 'pos' && payMethod != 'cash' && existingPayStatus == 'pending')) {
+          bool rpcRestored = false;
+          try {
+            await _client.rpc('restore_order_stock', params: {'p_order_id': orderId});
+            rpcRestored = true;
+          } catch (_) {}
+
+          if (!rpcRestored &&
+              existingOrder['stock_deducted'] != false &&
+              !(source != 'pos' && payMethod != 'cash' && existingPayStatus == 'pending')) {
             final items = await _client
                 .from('order_items')
                 .select('product_id, quantity')
