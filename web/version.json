@@ -1,6 +1,6 @@
 {
-  "version": "1.0.87",
-  "build_number": 67,
-  "released_at": "2026-11-25T13:16:47Z",
-  "changelog": "Guna RPC atomik & idempoten (deduct_order_stock & restore_order_stock) pada POS Kaunter, pembatalan pesanan, dan void/refund supaya stok produk sentiasa tepat dan tidak berganda atau terlepas tolak."
+  "version": "1.0.88",
+  "build_number": 68,
+  "released_at": "2026-11-25T23:43:09Z",
+  "changelog": "Samakan 100% kesan glassmorphism Bottom Sheet (Butiran Pesanan & ModalSheet) dengan bekas luar Navbar (blur 2.0, lut sinar tanpa warna gelap pekat, garisan tepi putih 0.15 & barrier lembut)."
 }

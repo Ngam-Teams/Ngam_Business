@@ -438,6 +438,7 @@ class _OrdersPageState extends State<OrdersPage> {
         isScrollControlled: true,
         useSafeArea: true,
         backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withValues(alpha: 0.22),
         builder: (modalCtx) => ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(modalCtx).size.height * 0.88,
@@ -529,22 +530,20 @@ class _OrdersPageState extends State<OrdersPage> {
         return ClipRRect(
           borderRadius: borderRadius,
           child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            filter: ui.ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
             child: Container(
               decoration: BoxDecoration(
-                // Navbar-style translucent frosted glass (NOT milky active pill)
-                color: const Color(0xFF0A0A14).withValues(alpha: 0.62),
+                // Exact 1:1 BottomNav outer glassmorphism (transparent fill + crisp border)
                 borderRadius: borderRadius,
-                border: isDialog
-                    ? Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0)
-                    : Border(
-                        top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
-                      ),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  width: 1.0,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDialog ? 0.45 : 0.25),
-                    blurRadius: isDialog ? 28 : 16,
-                    offset: Offset(0, isDialog ? 12 : -4),
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
