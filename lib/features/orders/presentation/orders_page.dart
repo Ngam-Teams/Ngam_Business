@@ -47,6 +47,18 @@ class _OrdersPageState extends State<OrdersPage> {
   bool _isReconnecting = false;
   bool _hasShownOfflineToast = false;
 
+  // Live Glass Tuner state (temporary for fine-tuning modal glassmorphism)
+  bool _showGlassTuner = false;
+  double _glassBlur = 2.0;
+  double _glassTintAlpha = 0.55;
+  double _glassSheenAlpha = 0.05;
+  double _glassBorderAlpha = 0.18;
+  double _glassCardAlpha = 0.28;
+  bool _glassCardDark = true;
+  double _glassCardBorderAlpha = 0.12;
+  double _glassRadius = 28.0;
+  double _glassShadowAlpha = 0.30;
+
   void _initOrdersStream() {
     setState(() {
       _ordersStream = _ordersService.streamOrders();
@@ -524,33 +536,110 @@ class _OrdersPageState extends State<OrdersPage> {
         final cachedItems = _orderItemsCache[order.id];
 
         final borderRadius = isDialog
-            ? BorderRadius.circular(28)
-            : const BorderRadius.vertical(top: Radius.circular(28));
+            ? BorderRadius.circular(_glassRadius)
+            : BorderRadius.vertical(top: Radius.circular(_glassRadius));
+        final innerCardColor = (_glassCardDark ? const Color(0xFF0E1322) : Colors.white)
+            .withValues(alpha: _glassCardAlpha);
+        final innerCardBorder = Border.all(
+          color: Colors.white.withValues(alpha: _glassCardBorderAlpha),
+        );
+
+        Widget buildSliderRow({
+          required String label,
+          required double value,
+          required double min,
+          required double max,
+          required ValueChanged<double> onChanged,
+          int decimals = 2,
+        }) {
+          return Row(
+            children: [
+              SizedBox(
+                width: 92,
+                child: Text(
+                  label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(ctx).copyWith(
+                    trackHeight: 2.5,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                    activeTrackColor: const Color(0xFF00B0FF),
+                    inactiveTrackColor: Colors.white24,
+                    thumbColor: Colors.white,
+                  ),
+                  child: Slider(
+                    value: value.clamp(min, max),
+                    min: min,
+                    max: max,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 38,
+                child: Text(
+                  value.toStringAsFixed(decimals),
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        Widget buildPresetChip(String label, VoidCallback onTap) {
+          return InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600),
+              ),
+            ),
+          );
+        }
 
         return ClipRRect(
           borderRadius: borderRadius,
           child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            filter: ui.ImageFilter.blur(sigmaX: _glassBlur, sigmaY: _glassBlur),
             child: Container(
               decoration: BoxDecoration(
-                // iOS 26 Luminous Frosted Glass (creamy blur + specular sheen, never flat black)
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withValues(alpha: 0.14),
-                    const Color(0xFF1A2238).withValues(alpha: 0.36),
-                    const Color(0xFF0E1424).withValues(alpha: 0.44),
+                    Color.alphaBlend(
+                      Colors.white.withValues(alpha: _glassSheenAlpha),
+                      const Color(0xFF0B0E1A).withValues(alpha: _glassTintAlpha),
+                    ),
+                    const Color(0xFF0B0E1A).withValues(alpha: _glassTintAlpha),
                   ],
                 ),
                 borderRadius: borderRadius,
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.24),
+                  color: Colors.white.withValues(alpha: _glassBorderAlpha),
                   width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDialog ? 0.35 : 0.28),
+                    color: Colors.black.withValues(alpha: _glassShadowAlpha),
                     blurRadius: isDialog ? 28 : 20,
                     offset: Offset(0, isDialog ? 12 : -4),
                   ),
@@ -636,7 +725,17 @@ class _OrdersPageState extends State<OrdersPage> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: Icon(
+                            Icons.tune_rounded,
+                            color: _showGlassTuner ? const Color(0xFF00B0FF) : Colors.white70,
+                            size: 20,
+                          ),
+                          onPressed: () => setModalState(() => _showGlassTuner = !_showGlassTuner),
+                          tooltip: 'orders.glass_tuner_title'.tr(),
+                          visualDensity: VisualDensity.compact,
+                        ),
                         IconButton(
                           icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 22),
                           onPressed: () => Navigator.pop(modalCtx),
@@ -651,6 +750,184 @@ class _OrdersPageState extends State<OrdersPage> {
 
               Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
 
+              if (_showGlassTuner)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF00B0FF).withValues(alpha: 0.4)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.tune_rounded, size: 14, color: Color(0xFF00B0FF)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'orders.glass_tuner_title'.tr(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              final summary =
+                                  'blur=${_glassBlur.toStringAsFixed(1)}, '
+                                  'tint=${_glassTintAlpha.toStringAsFixed(2)}, '
+                                  'sheen=${_glassSheenAlpha.toStringAsFixed(2)}, '
+                                  'border=${_glassBorderAlpha.toStringAsFixed(2)}, '
+                                  'card=${_glassCardAlpha.toStringAsFixed(2)} (${_glassCardDark ? "dark" : "white"}), '
+                                  'cardBorder=${_glassCardBorderAlpha.toStringAsFixed(2)}, '
+                                  'radius=${_glassRadius.toStringAsFixed(0)}, '
+                                  'shadow=${_glassShadowAlpha.toStringAsFixed(2)}';
+                              Clipboard.setData(ClipboardData(text: summary));
+                              showGlassToast(context, 'orders.glass_tuner_copied'.tr());
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00B0FF).withValues(alpha: 0.22),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFF00B0FF).withValues(alpha: 0.5)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.copy_rounded, size: 12, color: Color(0xFF00B0FF)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'orders.glass_tuner_copy'.tr(),
+                                    style: const TextStyle(
+                                      color: Color(0xFF00B0FF),
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          buildPresetChip('orders.glass_tuner_preset_navbar'.tr(), () {
+                            setModalState(() {
+                              _glassBlur = 2.0;
+                              _glassTintAlpha = 0.55;
+                              _glassSheenAlpha = 0.05;
+                              _glassBorderAlpha = 0.18;
+                              _glassCardAlpha = 0.28;
+                              _glassCardDark = true;
+                              _glassCardBorderAlpha = 0.12;
+                            });
+                          }),
+                          buildPresetChip('orders.glass_tuner_preset_frost'.tr(), () {
+                            setModalState(() {
+                              _glassBlur = 18.0;
+                              _glassTintAlpha = 0.42;
+                              _glassSheenAlpha = 0.10;
+                              _glassBorderAlpha = 0.22;
+                              _glassCardAlpha = 0.07;
+                              _glassCardDark = false;
+                              _glassCardBorderAlpha = 0.14;
+                            });
+                          }),
+                          buildPresetChip('orders.glass_tuner_preset_clear'.tr(), () {
+                            setModalState(() {
+                              _glassBlur = 2.0;
+                              _glassTintAlpha = 0.30;
+                              _glassSheenAlpha = 0.06;
+                              _glassBorderAlpha = 0.20;
+                              _glassCardAlpha = 0.20;
+                              _glassCardDark = true;
+                              _glassCardBorderAlpha = 0.12;
+                            });
+                          }),
+                          buildPresetChip(
+                            _glassCardDark
+                                ? 'orders.glass_tuner_card_dark'.tr()
+                                : 'orders.glass_tuner_card_white'.tr(),
+                            () => setModalState(() => _glassCardDark = !_glassCardDark),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      buildSliderRow(
+                        label: 'orders.glass_tuner_blur'.tr(),
+                        value: _glassBlur,
+                        min: 0.0,
+                        max: 35.0,
+                        decimals: 1,
+                        onChanged: (v) => setModalState(() => _glassBlur = v),
+                      ),
+                      buildSliderRow(
+                        label: 'orders.glass_tuner_tint'.tr(),
+                        value: _glassTintAlpha,
+                        min: 0.0,
+                        max: 0.95,
+                        onChanged: (v) => setModalState(() => _glassTintAlpha = v),
+                      ),
+                      buildSliderRow(
+                        label: 'orders.glass_tuner_sheen'.tr(),
+                        value: _glassSheenAlpha,
+                        min: 0.0,
+                        max: 0.35,
+                        onChanged: (v) => setModalState(() => _glassSheenAlpha = v),
+                      ),
+                      buildSliderRow(
+                        label: 'orders.glass_tuner_border'.tr(),
+                        value: _glassBorderAlpha,
+                        min: 0.0,
+                        max: 0.50,
+                        onChanged: (v) => setModalState(() => _glassBorderAlpha = v),
+                      ),
+                      buildSliderRow(
+                        label: 'orders.glass_tuner_card'.tr(),
+                        value: _glassCardAlpha,
+                        min: 0.0,
+                        max: 0.85,
+                        onChanged: (v) => setModalState(() => _glassCardAlpha = v),
+                      ),
+                      buildSliderRow(
+                        label: 'orders.glass_tuner_card_border'.tr(),
+                        value: _glassCardBorderAlpha,
+                        min: 0.0,
+                        max: 0.40,
+                        onChanged: (v) => setModalState(() => _glassCardBorderAlpha = v),
+                      ),
+                      buildSliderRow(
+                        label: 'orders.glass_tuner_radius'.tr(),
+                        value: _glassRadius,
+                        min: 12.0,
+                        max: 40.0,
+                        decimals: 0,
+                        onChanged: (v) => setModalState(() => _glassRadius = v),
+                      ),
+                      buildSliderRow(
+                        label: 'orders.glass_tuner_shadow'.tr(),
+                        value: _glassShadowAlpha,
+                        min: 0.0,
+                        max: 0.80,
+                        onChanged: (v) => setModalState(() => _glassShadowAlpha = v),
+                      ),
+                    ],
+                  ),
+                ),
+
               // 2. SCROLLABLE BODY
               Flexible(
                 child: SingleChildScrollView(
@@ -662,9 +939,9 @@ class _OrdersPageState extends State<OrdersPage> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
+                          color: innerCardColor,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                          border: innerCardBorder,
                         ),
                         child: Row(
                           children: [
@@ -772,9 +1049,9 @@ class _OrdersPageState extends State<OrdersPage> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
+                          color: innerCardColor,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                          border: innerCardBorder,
                         ),
                         child: Column(
                           children: [
@@ -940,9 +1217,9 @@ class _OrdersPageState extends State<OrdersPage> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.06),
+                          color: innerCardColor,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                          border: innerCardBorder,
                         ),
                         child: (cachedItems != null && cachedItems.isNotEmpty)
                             ? Column(
@@ -1067,9 +1344,9 @@ class _OrdersPageState extends State<OrdersPage> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.06),
+                            color: innerCardColor,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                            border: innerCardBorder,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
