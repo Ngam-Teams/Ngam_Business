@@ -672,6 +672,40 @@ class _HomeDashboardState extends State<HomeDashboard> with WidgetsBindingObserv
     return 'dashboard.time_day_ago'.tr(args: [diff.inDays.toString()]);
   }
 
+  String _formatActivityEvent(Map<String, dynamic> map) {
+    final isBooking = map['type'] == 'booking';
+    final st = (map['status'] ?? 'pending').toString().toLowerCase();
+
+    if (isBooking) {
+      final rawSvc = (map['service_name'] ?? '').toString().trim();
+      final rawCust = (map['customer_name'] ?? '').toString().trim();
+      final svc = rawSvc.isNotEmpty ? rawSvc : 'dashboard.act_default_service'.tr();
+      final cust = rawCust.isNotEmpty ? rawCust : 'dashboard.act_default_customer'.tr();
+      final stLabel = switch (st) {
+        'completed' => 'dashboard.act_status_completed'.tr(),
+        'confirmed' => 'dashboard.act_status_confirmed'.tr(),
+        'cancelled' => 'dashboard.act_status_cancelled'.tr(),
+        _ => 'dashboard.act_status_pending'.tr(),
+      };
+      return 'dashboard.act_booking_event'.tr(args: [svc, cust, stLabel]);
+    }
+
+    final refCode = (map['ref_code'] ?? '').toString().trim();
+    final amt = (map['amount'] ?? '').toString().trim();
+    if (refCode.isNotEmpty) {
+      final stLabel = switch (st) {
+        'completed' => 'dashboard.act_status_completed'.tr(),
+        'ready' => 'dashboard.act_status_ready'.tr(),
+        'preparing' || 'in_progress' => 'dashboard.act_status_preparing'.tr(),
+        'cancelled' => 'dashboard.act_status_cancelled'.tr(),
+        _ => 'dashboard.act_status_received'.tr(),
+      };
+      return 'dashboard.act_order_event'.tr(args: [refCode, stLabel, amt.isNotEmpty ? amt : '0.00']);
+    }
+
+    return (map['event'] ?? '').toString();
+  }
+
   Widget _buildRecentActivity({bool isDesktop = false, List<dynamic>? liveRaw}) {
     final List<({Color color, String event, dynamic icon, String time, VoidCallback? onTap})> displayActivities;
     if (liveRaw != null && liveRaw.isNotEmpty) {
@@ -691,7 +725,7 @@ class _HomeDashboardState extends State<HomeDashboard> with WidgetsBindingObserv
             : HugeIcons.strokeRoundedShoppingCart02;
         return (
           time: _formatRelativeTime((map['created_at'] ?? '').toString(), context),
-          event: (map['event'] ?? '').toString(),
+          event: _formatActivityEvent(map),
           icon: ic,
           color: c,
           onTap: isBooking

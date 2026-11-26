@@ -2,5 +2,5 @@
   "version": "1.0.92",
   "build_number": 72,
   "released_at": "2026-11-26T14:20:00Z",
-  "changelog": "Tambah halaman Tetapan Ngam Shipping (ON/OFF kurier, bintang Kurier Utama, mod Pickup/Drop-off & Auto/Pilihan Pelanggan), 1-Klik Atur Penghantaran & Cetak AWB, serta asingkan kos pos daripada kiraan jualan & payout."
+  "changelog": "Sembunyikan draf pesanan online yang belum dibayar daripada Aktiviti Terkini & graf jualan, serta selaraskan bahasa Aktiviti Terkini sepenuhnya mengikut pilihan EN/BM."
 }

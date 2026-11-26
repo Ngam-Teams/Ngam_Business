@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/utils/ngam_ref.dart';
+import '../../orders/data/orders_service.dart';
 import '../../settings/data/business_service.dart';
 
 class AnalyticsService {
@@ -71,7 +72,7 @@ class AnalyticsService {
 
       // Run queries concurrently with an 8-second total timeout
       final responses = await Future.wait([
-        fetchOrdersSafe('total, created_at, status, payment_status', startOfDay),
+        fetchOrdersSafe('total, created_at, status, payment_status, payment_method, source', startOfDay),
         fetchOrdersSafe('total, status, payment_status, source, payment_method, created_at', startOfMonth),
         _client
             .from('business_products')
@@ -80,16 +81,16 @@ class AnalyticsService {
             .eq('is_active', true),
         _client
             .from('orders')
-            .select('id, total, status, source, customer_name, created_at')
+            .select('id, total, status, source, payment_status, payment_method, customer_name, created_at')
             .eq('business_id', businessId)
             .order('created_at', ascending: false)
-            .limit(8),
+            .limit(20),
         _client
             .from('bookings')
             .select('id, service_name, customer_name, status, created_at, booking_metadata')
             .eq('business_id', businessId)
             .order('created_at', ascending: false)
-            .limit(5),
+            .limit(8),
       ]).timeout(const Duration(seconds: 8));
 
       final orders = (responses[0] as List?) ?? [];
@@ -102,8 +103,10 @@ class AnalyticsService {
       int pendingOrders = 0;
       int validTodayOrders = 0;
       for (final o in orders) {
-        final st = (o['status'] ?? '').toString().toLowerCase();
-        final paySt = (o['payment_status'] ?? 'paid').toString().toLowerCase();
+        final row = Map<String, dynamic>.from(o as Map);
+        if (!OrdersService.isOrderReadyForMerchant(row)) continue;
+        final st = (row['status'] ?? '').toString().toLowerCase();
+        final paySt = (row['payment_status'] ?? 'paid').toString().toLowerCase();
         if (st == 'cancelled' ||
             st == 'refunded' ||
             st == 'refund_pending' ||
@@ -112,8 +115,8 @@ class AnalyticsService {
           continue;
         }
         validTodayOrders++;
-        final orderTotal = (o['total'] as num?)?.toDouble() ?? 0.0;
-        final shipFee = (o['shipping_fee'] as num?)?.toDouble() ?? 0.0;
+        final orderTotal = (row['total'] as num?)?.toDouble() ?? 0.0;
+        final shipFee = (row['shipping_fee'] as num?)?.toDouble() ?? 0.0;
         todayRevenue += (orderTotal - shipFee).clamp(0.0, double.infinity);
         if (st == 'pending') {
           pendingOrders++;
@@ -122,8 +125,10 @@ class AnalyticsService {
 
       double monthlyRevenue = 0.0;
       for (final o in monthlyOrders) {
-        final st = (o['status'] ?? '').toString().toLowerCase();
-        final paySt = (o['payment_status'] ?? 'paid').toString().toLowerCase();
+        final row = Map<String, dynamic>.from(o as Map);
+        if (!OrdersService.isOrderReadyForMerchant(row)) continue;
+        final st = (row['status'] ?? '').toString().toLowerCase();
+        final paySt = (row['payment_status'] ?? 'paid').toString().toLowerCase();
         if (st == 'cancelled' ||
             st == 'refunded' ||
             st == 'refund_pending' ||
@@ -131,47 +136,44 @@ class AnalyticsService {
             paySt == 'refund_pending') {
           continue;
         }
-        final orderTotal = (o['total'] as num?)?.toDouble() ?? 0.0;
-        final shipFee = (o['shipping_fee'] as num?)?.toDouble() ?? 0.0;
+        final orderTotal = (row['total'] as num?)?.toDouble() ?? 0.0;
+        final shipFee = (row['shipping_fee'] as num?)?.toDouble() ?? 0.0;
         monthlyRevenue += (orderTotal - shipFee).clamp(0.0, double.infinity);
       }
 
       final List<Map<String, dynamic>> recentActivities = [];
       for (final ro in recentOrders) {
-        final rawId = (ro['id'] ?? '').toString();
-        final createdDt = DateTime.tryParse((ro['created_at'] ?? '').toString());
-        final isPos = (ro['source'] ?? '').toString().toLowerCase() == 'pos';
+        final row = Map<String, dynamic>.from(ro as Map);
+        // Hide unpaid online checkout drafts (e.g. pending DuitNow QR / FPX)
+        if (!OrdersService.isOrderReadyForMerchant(row)) continue;
+        final rawId = (row['id'] ?? '').toString();
+        final createdDt = DateTime.tryParse((row['created_at'] ?? '').toString());
+        final isPos = (row['source'] ?? '').toString().toLowerCase() == 'pos';
         final shortId = isPos
             ? NgamRef.pos(rawId, createdDt)
             : NgamRef.order(rawId, createdAt: createdDt);
-        final amt = ((ro['total'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
-        final st = (ro['status'] ?? 'pending').toString().toLowerCase();
-        final stLabel = st == 'completed'
-            ? 'selesai'
-            : st == 'ready'
-                ? 'sedia diambil'
-                : st == 'preparing' || st == 'in_progress'
-                    ? 'sedang disediakan'
-                    : st == 'cancelled'
-                        ? 'dibatalkan'
-                        : 'baharu diterima';
+        final amt = ((row['total'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(2);
+        final st = (row['status'] ?? 'pending').toString().toLowerCase();
         recentActivities.add({
           'type': 'order',
           'status': st,
-          'event': 'Pesanan #$shortId $stLabel — RM $amt',
-          'created_at': (ro['created_at'] ?? '').toString(),
+          'ref_code': shortId,
+          'amount': amt,
+          'created_at': (row['created_at'] ?? '').toString(),
         });
       }
       for (final rb in recentBookings) {
-        final st = (rb['status'] ?? 'pending').toString().toLowerCase();
+        final row = Map<String, dynamic>.from(rb as Map);
+        final st = (row['status'] ?? 'pending').toString().toLowerCase();
         if (st == 'holding') continue;
-        final svc = (rb['service_name'] ?? 'Perkhidmatan').toString();
-        final cust = (rb['customer_name'] ?? 'Pelanggan').toString();
+        final svc = (row['service_name'] ?? '').toString().trim();
+        final cust = (row['customer_name'] ?? '').toString().trim();
         recentActivities.add({
           'type': 'booking',
           'status': st,
-          'event': 'Tempahan $svc • $cust — ${st.toUpperCase()}',
-          'created_at': (rb['created_at'] ?? '').toString(),
+          'service_name': svc,
+          'customer_name': cust,
+          'created_at': (row['created_at'] ?? '').toString(),
         });
       }
       recentActivities.sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
@@ -181,8 +183,10 @@ class AnalyticsService {
       final List<double> hourlyOrdSlots = List.filled(8, 0.0);
 
       for (final o in orders) {
-        final st = (o['status'] ?? '').toString().toLowerCase();
-        final paySt = (o['payment_status'] ?? 'paid').toString().toLowerCase();
+        final row = Map<String, dynamic>.from(o as Map);
+        if (!OrdersService.isOrderReadyForMerchant(row)) continue;
+        final st = (row['status'] ?? '').toString().toLowerCase();
+        final paySt = (row['payment_status'] ?? 'paid').toString().toLowerCase();
         if (st == 'cancelled' ||
             st == 'refunded' ||
             st == 'refund_pending' ||
@@ -190,12 +194,14 @@ class AnalyticsService {
             paySt == 'refund_pending') {
           continue;
         }
-        final cStr = o['created_at']?.toString();
+        final cStr = row['created_at']?.toString();
         if (cStr != null) {
           final dt = DateTime.tryParse(cStr)?.toLocal();
           if (dt != null) {
             final int slot = ((dt.hour - 8) / 2).floor().clamp(0, 7);
-            final double amount = (o['total'] as num?)?.toDouble() ?? 0.0;
+            final double orderTotal = (row['total'] as num?)?.toDouble() ?? 0.0;
+            final double shipFee = (row['shipping_fee'] as num?)?.toDouble() ?? 0.0;
+            final double amount = (orderTotal - shipFee).clamp(0.0, double.infinity);
             hourlyRevSlots[slot] += amount;
             hourlyOrdSlots[slot] += 1.0;
           }
@@ -224,15 +230,19 @@ class AnalyticsService {
         final now = DateTime.now();
 
         for (final mo in monthlyOrders) {
-          final st = (mo['status'] ?? '').toString().toLowerCase();
-          if (st == 'cancelled' || st == 'refunded') continue;
-          final cStr = mo['created_at']?.toString();
+          final row = Map<String, dynamic>.from(mo as Map);
+          if (!OrdersService.isOrderReadyForMerchant(row)) continue;
+          final st = (row['status'] ?? '').toString().toLowerCase();
+          if (st == 'cancelled' || st == 'refunded' || st == 'refund_pending') continue;
+          final cStr = row['created_at']?.toString();
           if (cStr != null) {
             final dt = DateTime.tryParse(cStr)?.toLocal();
             if (dt != null) {
               final diff = now.difference(dt).inDays;
               if (diff >= 0 && diff < 7) {
-                last7DaysRev[6 - diff] += (mo['total'] as num?)?.toDouble() ?? 0.0;
+                final orderTotal = (row['total'] as num?)?.toDouble() ?? 0.0;
+                final shipFee = (row['shipping_fee'] as num?)?.toDouble() ?? 0.0;
+                last7DaysRev[6 - diff] += (orderTotal - shipFee).clamp(0.0, double.infinity);
                 last7DaysOrd[6 - diff] += 1.0;
               }
             }
@@ -252,13 +262,17 @@ class AnalyticsService {
         final targetDay = (1 + i * step).round().clamp(1, currentDay);
         double sum = 0.0;
         for (final mo in monthlyOrders) {
-          final st = (mo['status'] ?? '').toString().toLowerCase();
-          if (st == 'cancelled' || st == 'refunded') continue;
-          final cStr = mo['created_at']?.toString();
+          final row = Map<String, dynamic>.from(mo as Map);
+          if (!OrdersService.isOrderReadyForMerchant(row)) continue;
+          final st = (row['status'] ?? '').toString().toLowerCase();
+          if (st == 'cancelled' || st == 'refunded' || st == 'refund_pending') continue;
+          final cStr = row['created_at']?.toString();
           if (cStr != null) {
             final dt = DateTime.tryParse(cStr)?.toLocal();
             if (dt != null && dt.day <= targetDay) {
-              sum += (mo['total'] as num?)?.toDouble() ?? 0.0;
+              final orderTotal = (row['total'] as num?)?.toDouble() ?? 0.0;
+              final shipFee = (row['shipping_fee'] as num?)?.toDouble() ?? 0.0;
+              sum += (orderTotal - shipFee).clamp(0.0, double.infinity);
             }
           }
         }
