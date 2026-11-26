@@ -380,6 +380,13 @@ class EasyParcelService {
     await saveConfig(updated, businessId: bizId);
   }
 
+  Map<String, String> _authHeaders() {
+    final token = _client.auth.currentSession?.accessToken;
+    return {
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
+
   /// Verify an API key & environment via Edge Function `easyparcel-proxy`
   Future<Map<String, dynamic>> verifyConnection({
     required String apiKey,
@@ -393,6 +400,7 @@ class EasyParcelService {
 
     final res = await _client.functions.invoke(
       'easyparcel-proxy',
+      headers: _authHeaders(),
       body: {
         'action': 'verify_connection',
         'business_id': bizId,
@@ -414,6 +422,7 @@ class EasyParcelService {
 
     final res = await _client.functions.invoke(
       'easyparcel-proxy',
+      headers: _authHeaders(),
       body: {
         'action': 'check_balance',
         'business_id': bizId,
@@ -442,6 +451,7 @@ class EasyParcelService {
     try {
       final res = await _client.functions.invoke(
         'easyparcel-proxy',
+        headers: _authHeaders(),
         body: {
           'action': 'check_rates',
           'business_id': bizId,
@@ -493,6 +503,7 @@ class EasyParcelService {
 
     final res = await _client.functions.invoke(
       'easyparcel-proxy',
+      headers: _authHeaders(),
       body: {
         'action': 'book_and_pay',
         'business_id': bizId,
@@ -530,6 +541,7 @@ class EasyParcelService {
 
     final res = await _client.functions.invoke(
       'easyparcel-proxy',
+      headers: _authHeaders(),
       body: {
         'action': 'track_parcel',
         'business_id': bizId,
