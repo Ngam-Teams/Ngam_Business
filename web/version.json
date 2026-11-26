@@ -1,6 +1,6 @@
 {
-  "version": "1.0.88",
-  "build_number": 68,
-  "released_at": "2026-11-25T23:43:09Z",
-  "changelog": "Samakan 100% kesan glassmorphism Bottom Sheet (Butiran Pesanan & ModalSheet) dengan bekas luar Navbar (blur 2.0, lut sinar tanpa warna gelap pekat, garisan tepi putih 0.15 & barrier lembut)."
+  "version": "1.0.89",
+  "build_number": 69,
+  "released_at": "2026-11-26T00:53:04Z",
+  "changelog": "Guna gaya iOS 26 Balanced Frosted Glass pada Bottom Sheet (blur 18 + lapisan kaca gelap nipis 0.48 + kad dalaman 0.65) supaya teks 100% jelas dibaca sambil mengekalkan efek kaca lut sinar di latar belakang."
 }

@@ -18,7 +18,7 @@ class ModalSheet {
       isScrollControlled: true,
       useSafeArea: false,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.22),
+      barrierColor: Colors.black.withValues(alpha: 0.38),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: initialChildSize,
         minChildSize: minChildSize,
@@ -35,7 +35,7 @@ class ModalSheet {
             shape: const LiquidRoundedSuperellipse(borderRadius: 28.0),
             settings: LiquidGlassSettings(
               thickness: 0.1,
-              blur: 2.0,
+              blur: 18.0,
               refractiveIndex: 1.0,
               glassColor: Colors.transparent,
               lightAngle: 45.0,
@@ -46,17 +46,20 @@ class ModalSheet {
             ),
             child: Container(
               decoration: BoxDecoration(
-                // Exact 1:1 BottomNav outer glassmorphism (transparent fill + crisp border)
+                // iOS 26 Balanced Frosted Liquid Glass (readable + ambient glow)
+                color: isDark
+                    ? const Color(0xFF0B0E1A).withValues(alpha: 0.48)
+                    : Colors.white.withValues(alpha: 0.72),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.4),
+                  color: Colors.white.withValues(alpha: isDark ? 0.16 : 0.45),
                   width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+                    blurRadius: 18,
+                    offset: const Offset(0, -4),
                   ),
                 ],
               ),

@@ -438,7 +438,7 @@ class _OrdersPageState extends State<OrdersPage> {
         isScrollControlled: true,
         useSafeArea: true,
         backgroundColor: Colors.transparent,
-        barrierColor: Colors.black.withValues(alpha: 0.22),
+        barrierColor: Colors.black.withValues(alpha: 0.38),
         builder: (modalCtx) => ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(modalCtx).size.height * 0.88,
@@ -530,20 +530,21 @@ class _OrdersPageState extends State<OrdersPage> {
         return ClipRRect(
           borderRadius: borderRadius,
           child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
+            filter: ui.ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
             child: Container(
               decoration: BoxDecoration(
-                // Exact 1:1 BottomNav outer glassmorphism (transparent fill + crisp border)
+                // iOS 26 Balanced Frosted Liquid Glass (readable + ambient glow)
+                color: const Color(0xFF0B0E1A).withValues(alpha: 0.48),
                 borderRadius: borderRadius,
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.15),
+                  color: Colors.white.withValues(alpha: 0.16),
                   width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: isDialog ? 0.45 : 0.3),
+                    blurRadius: isDialog ? 28 : 18,
+                    offset: Offset(0, isDialog ? 12 : -4),
                   ),
                 ],
               ),
@@ -653,9 +654,9 @@ class _OrdersPageState extends State<OrdersPage> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.04),
+                          color: const Color(0xFF111626).withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
                         ),
                         child: Row(
                           children: [
@@ -763,9 +764,9 @@ class _OrdersPageState extends State<OrdersPage> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.03),
+                          color: const Color(0xFF111626).withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
                         ),
                         child: Column(
                           children: [
@@ -931,9 +932,9 @@ class _OrdersPageState extends State<OrdersPage> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.04),
+                          color: const Color(0xFF111626).withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
                         ),
                         child: (cachedItems != null && cachedItems.isNotEmpty)
                             ? Column(
@@ -1058,9 +1059,9 @@ class _OrdersPageState extends State<OrdersPage> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.03),
+                            color: const Color(0xFF111626).withValues(alpha: 0.65),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white10),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
