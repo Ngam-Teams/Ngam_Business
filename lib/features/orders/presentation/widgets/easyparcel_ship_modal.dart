@@ -219,14 +219,42 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
     );
 
     if (!mounted) return;
+    final customerChoice = _extractCustomerChosenCourier();
     setState(() {
       _checkingRates = false;
       _rates = result.rates;
       _rateError = result.error;
       if (_rates.isNotEmpty) {
-        _selectedRate = _rates.first;
+        if (customerChoice.serviceId != null) {
+          final exact = _rates.where((r) => r.serviceId == customerChoice.serviceId).toList();
+          if (exact.isNotEmpty) {
+            _selectedRate = exact.first;
+          } else if (customerChoice.courierName != null) {
+            final byName = _rates.where(
+              (r) => r.courierName.toLowerCase().contains(customerChoice.courierName!.toLowerCase()),
+            ).toList();
+            _selectedRate = byName.isNotEmpty ? byName.first : _rates.first;
+          } else {
+            _selectedRate = _rates.first;
+          }
+        } else {
+          _selectedRate = _rates.first;
+        }
       }
     });
+  }
+
+  ({String? courierName, String? serviceId, String? paidPrice}) _extractCustomerChosenCourier() {
+    final notes = widget.order.notes ?? '';
+    final m = RegExp(
+      r'\[Kurier:\s*([^|\]]+)(?:\|\s*Service:\s*([^|\]]+))?(?:\|\s*Pos:\s*RM([0-9.]+))?\]',
+      caseSensitive: false,
+    ).firstMatch(notes);
+    return (
+      courierName: m?.group(1)?.trim() ?? widget.order.courierName?.trim(),
+      serviceId: m?.group(2)?.trim(),
+      paidPrice: m?.group(3)?.trim(),
+    );
   }
 
   Future<void> _bookShipment() async {
@@ -651,9 +679,44 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
   }
 
   Widget _buildBookingForm() {
+    final customerChoice = _extractCustomerChosenCourier();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (customerChoice.courierName != null && customerChoice.courierName!.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: _epPink.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _epPink.withValues(alpha: 0.45)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.verified_rounded, color: _epPink, size: 17),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    customerChoice.paidPrice != null
+                        ? 'easyparcel.customer_selected_courier'.tr(
+                            args: [customerChoice.courierName!, customerChoice.paidPrice!],
+                          )
+                        : 'easyparcel.customer_selected_courier_only'.tr(
+                            args: [customerChoice.courierName!],
+                          ),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         if (_config.isPlatformMode) ...[
           Container(
             width: double.infinity,

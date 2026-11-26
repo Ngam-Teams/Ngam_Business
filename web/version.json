@@ -2,5 +2,5 @@
   "version": "1.0.92",
   "build_number": 72,
   "released_at": "2026-11-26T14:20:00Z",
-  "changelog": "Auto-isi alamat, poskod, bandar & negeri pelanggan daripada pesanan/profil pelanggan serta auto-semak harga kurier EasyParcel serta-merta apabila modal penghantaran dibuka."
+  "changelog": "Paparan kad Status Kurier & Tracking di dalam Butiran Pesanan peniaga, berserta auto-pilih kurier & paparan bayaran pos yang telah dipilih oleh pelanggan semasa checkout."
 }

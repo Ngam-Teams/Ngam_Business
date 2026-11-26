@@ -1935,6 +1935,11 @@
     "use_own_account_label": "Use my own EasyParcel account (Optional)",
     "activate_btn": "Activate EasyParcel",
     "err_sender_pickup_required": "Please enter your store name, phone number, and valid 5-digit postcode.",
-    "auto_pay_platform_label": "Confirm shipment & generate AWB PDF immediately"
+    "auto_pay_platform_label": "Confirm shipment & generate AWB PDF immediately",
+    "order_shipping_title": "Courier Delivery & Tracking",
+    "status_awb_ready": "AWB GENERATED",
+    "status_pending_ship": "READY TO SHIP",
+    "customer_selected_courier": "Customer selected & paid: {} (RM {})",
+    "customer_selected_courier_only": "Customer selected: {}"
   }
 }

@@ -1339,6 +1339,121 @@ class _OrdersPageState extends State<OrdersPage> {
                                   ),
                       ),
 
+                      // Courier & Shipment Status Card (EasyParcel)
+                      Builder(
+                        builder: (_) {
+                          final notes = order.notes ?? '';
+                          final kurierMatch = RegExp(
+                            r'\[Kurier:\s*([^|\]]+)(?:\|\s*Service:\s*([^|\]]+))?(?:\|\s*Pos:\s*RM([0-9.]+))?\]',
+                            caseSensitive: false,
+                          ).firstMatch(notes);
+                          final chosenCourier = (order.courierName != null && order.courierName!.trim().isNotEmpty)
+                              ? order.courierName!.trim()
+                              : kurierMatch?.group(1)?.trim();
+                          final paidPostage = kurierMatch?.group(3)?.trim();
+                          final hasTracking = order.trackingNumber != null && order.trackingNumber!.trim().isNotEmpty;
+
+                          if ((chosenCourier == null || chosenCourier.isEmpty) && !hasTracking) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 14),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEC008C).withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(0xFFEC008C).withValues(alpha: 0.38),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.local_shipping_rounded, size: 16, color: Color(0xFFEC008C)),
+                                      const SizedBox(width: 7),
+                                      Expanded(
+                                        child: Text(
+                                          'easyparcel.order_shipping_title'.tr(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: hasTracking
+                                              ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                                              : Colors.amber.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(100),
+                                        ),
+                                        child: Text(
+                                          hasTracking
+                                              ? 'easyparcel.status_awb_ready'.tr()
+                                              : 'easyparcel.status_pending_ship'.tr(),
+                                          style: TextStyle(
+                                            color: hasTracking ? const Color(0xFF34D399) : Colors.amber,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (chosenCourier != null && chosenCourier.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      paidPostage != null
+                                          ? 'easyparcel.customer_selected_courier'.tr(args: [chosenCourier, paidPostage])
+                                          : chosenCourier,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                  if (hasTracking) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            '${'easyparcel.awb_label'.tr()}: ${order.trackingNumber!}',
+                                            style: const TextStyle(
+                                              color: Color(0xFF93C5FD),
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Clipboard.setData(ClipboardData(text: order.trackingNumber!));
+                                            showGlassToast(context, 'easyparcel.awb_copied'.tr());
+                                          },
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(Icons.copy_rounded, size: 15, color: Colors.white70),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
                       if (order.notes != null && order.notes!.isNotEmpty) ...[
                         const SizedBox(height: 14),
                         Container(

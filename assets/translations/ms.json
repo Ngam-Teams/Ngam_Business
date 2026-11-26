@@ -1935,6 +1935,11 @@
     "use_own_account_label": "Guna akaun EasyParcel sendiri (Pilihan)",
     "activate_btn": "Aktifkan EasyParcel",
     "err_sender_pickup_required": "Sila masukkan nama kedai, nombor telefon dan poskod 5-digit yang sah.",
-    "auto_pay_platform_label": "Sahkan penghantaran & jana AWB PDF serta-merta"
+    "auto_pay_platform_label": "Sahkan penghantaran & jana AWB PDF serta-merta",
+    "order_shipping_title": "Penghantaran Kurier & Tracking",
+    "status_awb_ready": "AWB DIJANA",
+    "status_pending_ship": "SEDIA UNTUK POS",
+    "customer_selected_courier": "Pelanggan pilih & bayar: {} (RM {})",
+    "customer_selected_courier_only": "Pilihan pelanggan: {}"
   }
 }
