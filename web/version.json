@@ -1,6 +1,6 @@
 {
-  "version": "1.0.91",
-  "build_number": 71,
-  "released_at": "2026-11-26T01:13:44Z",
-  "changelog": "Set kaca modal asal ke blur 2.0 gelap nipis + tambah kotak Tetapan Kaca (Glass Tuner) secara langsung dalam Butiran Pesanan untuk laras blur, gelap kaca, kilau, garisan, kad, bucu & salin nilai."
+  "version": "1.0.92",
+  "build_number": 72,
+  "released_at": "2026-11-26T14:20:00Z",
+  "changelog": "Integrasi penuh EasyParcel Malaysia: sambung kunci API (mod Demo/Live), semak baki kredit, semak harga kurier (PosLaju, J&T, Ninja Van, DHL), tempah & jana AWB PDF terus daripada pesanan, serta semakan tracking langsung."
 }

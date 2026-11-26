@@ -21,6 +21,7 @@ import '../../settings/data/business_service.dart';
 
 import '../../../core/services/sound_service.dart';
 import 'widgets/order_pickup_qr_scanner_screen.dart';
+import 'widgets/easyparcel_ship_modal.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../inbox/data/merchant_dispute_service.dart';
 import '../../inbox/presentation/merchant_dispute_room_page.dart';
@@ -1460,6 +1461,57 @@ class _OrdersPageState extends State<OrdersPage> {
                         ),
                       ),
                     ),
+
+                    if (order.status != 'cancelled' && order.status != 'refunded') ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEC008C).withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFEC008C).withValues(alpha: 0.42)),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () async {
+                              await EasyParcelShipModal.show(
+                                modalCtx,
+                                order: order,
+                                onShipmentCreated: () {
+                                  if (mounted) setState(() {});
+                                },
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.local_shipping_rounded, size: 18, color: Color(0xFFEC008C)),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      (order.trackingNumber != null && order.trackingNumber!.isNotEmpty)
+                                          ? 'easyparcel.view_shipment_btn'.tr(args: [order.trackingNumber!])
+                                          : 'easyparcel.ship_order_btn'.tr(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFFF472B6),
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
 
                     const SizedBox(height: 10),
 

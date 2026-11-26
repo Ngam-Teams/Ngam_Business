@@ -20,6 +20,10 @@ class OrderModel {
   final String? customerName;
   final String? customerPhone;
   final String? notes;
+  final String? courierName;
+  final String? trackingNumber;
+  final String? trackingUrl;
+  final String? awbPdfUrl;
   final DateTime createdAt;
 
   OrderModel({
@@ -35,6 +39,10 @@ class OrderModel {
     this.customerName,
     this.customerPhone,
     this.notes,
+    this.courierName,
+    this.trackingNumber,
+    this.trackingUrl,
+    this.awbPdfUrl,
     required this.createdAt,
   });
 
@@ -61,6 +69,10 @@ class OrderModel {
       customerName: json['customer_name'] as String?,
       customerPhone: phone,
       notes: json['notes'] as String?,
+      courierName: json['courier_name'] as String?,
+      trackingNumber: json['tracking_number'] as String?,
+      trackingUrl: json['tracking_url'] as String?,
+      awbPdfUrl: json['awb_pdf_url'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -78,6 +90,10 @@ class OrderModel {
     'customer_name': customerName,
     'customer_phone': customerPhone,
     'notes': notes,
+    if (courierName != null) 'courier_name': courierName,
+    if (trackingNumber != null) 'tracking_number': trackingNumber,
+    if (trackingUrl != null) 'tracking_url': trackingUrl,
+    if (awbPdfUrl != null) 'awb_pdf_url': awbPdfUrl,
     'created_at': createdAt.toIso8601String(),
   };
 }

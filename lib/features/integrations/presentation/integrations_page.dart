@@ -7,6 +7,7 @@ import '../../../widgets/glass_nav_button.dart';
 import '../../../widgets/glass_toast.dart';
 import '../../../widgets/liquid_glass_compat.dart';
 import '../../settings/data/business_service.dart';
+import '../data/easyparcel_service.dart';
 
 // =============================================================================
 // IntegrationsPage — Ngam Business Integrations & Apps Hub
@@ -232,7 +233,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       brandColor: Color(0xFFEC008C),
       svgLogo: _svgLalamove,
       assetLogo: 'assets/images/integrations/easyparcel.jpg',
-      defaultStatus: _IntegrationStatus.comingSoon,
+      defaultStatus: _IntegrationStatus.available,
       fieldLabelKey: 'integrations.api_key_label',
       fieldHintKey: 'integrations.api_key_hint',
     ),
@@ -291,6 +292,17 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
         }
       } catch (_) {}
     }
+
+    // Also hydrate EasyParcel live config from Supabase `business_integrations`
+    try {
+      final epCfg = await EasyParcelService().getConfig(businessId: bizId);
+      parsed['easyparcel'] = {
+        'connected': epCfg.isConnected,
+        'identifier': epCfg.apiKey,
+        'environment': epCfg.environment,
+        'autoSync': epCfg.autoSync,
+      };
+    } catch (_) {}
 
     if (mounted) {
       setState(() {
@@ -373,9 +385,532 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
     );
   }
 
+  Future<void> _openEasyParcelConfigDialog(_IntegrationItem item) async {
+    final epService = EasyParcelService();
+    final cfg = await epService.getConfig(businessId: _businessId);
+    final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+    if (!mounted) return;
+
+    final bizName = profile?['name']?.toString() ?? '';
+    final bizPhone = profile?['business_phone']?.toString() ?? '';
+    final bizAddr = profile?['address']?.toString() ?? '';
+
+    final apiKeyCtrl = TextEditingController(text: cfg.apiKey);
+    final senderNameCtrl = TextEditingController(
+      text: cfg.senderName.isNotEmpty ? cfg.senderName : bizName,
+    );
+    final senderPhoneCtrl = TextEditingController(
+      text: cfg.senderPhone.isNotEmpty ? cfg.senderPhone : bizPhone,
+    );
+    final senderAddrCtrl = TextEditingController(
+      text: cfg.senderAddr1.isNotEmpty ? cfg.senderAddr1 : bizAddr,
+    );
+    final senderCityCtrl = TextEditingController(text: cfg.senderCity);
+    final senderPostcodeCtrl = TextEditingController(
+      text: cfg.senderPostcode.isNotEmpty
+          ? cfg.senderPostcode
+          : EasyParcelService.extractPostcode(bizAddr),
+    );
+
+    String environment = cfg.environment;
+    String senderState = cfg.senderState.isNotEmpty
+        ? cfg.senderState
+        : EasyParcelService.guessStateCode(bizAddr);
+    bool isTesting = false;
+    bool isSaving = false;
+    String? balanceText;
+    String? testError;
+
+    InputDecoration epInput(String hint) => InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 12.5),
+          filled: true,
+          fillColor: Colors.black.withValues(alpha: 0.25),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: item.brandColor, width: 1.3),
+          ),
+        );
+
+    final actionResult = await showDialog<String>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.62),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 460,
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+                  ),
+                  child: GlassContainer(
+                    useOwnLayer: true,
+                    quality: GlassQuality.standard,
+                    shape: const LiquidRoundedSuperellipse(borderRadius: 24.0),
+                    settings: const LiquidGlassSettings(
+                      thickness: 0.1,
+                      blur: 18.0,
+                      glassColor: Colors.transparent,
+                      lightAngle: 45.0,
+                      lightIntensity: 0.1,
+                      ambientStrength: 1.0,
+                      saturation: 1.0,
+                      chromaticAberration: 0.0,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0E1220).withValues(alpha: 0.90),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+                      ),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                _buildBrandLogo(item, size: 42),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                      Text(
+                                        'easyparcel.setup_subtitle'.tr(),
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.6),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Environment Switcher: Demo vs Live
+                            Text(
+                              'easyparcel.env_label'.tr(),
+                              style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setDialogState(() => environment = 'demo'),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 9),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: environment == 'demo'
+                                            ? Colors.amber.withValues(alpha: 0.22)
+                                            : Colors.white.withValues(alpha: 0.05),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: environment == 'demo'
+                                              ? Colors.amber
+                                              : Colors.white.withValues(alpha: 0.14),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'easyparcel.env_demo'.tr(),
+                                        style: TextStyle(
+                                          color: environment == 'demo' ? Colors.amber : Colors.white70,
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setDialogState(() => environment = 'live'),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 9),
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: environment == 'live'
+                                            ? const Color(0xFF10B981).withValues(alpha: 0.22)
+                                            : Colors.white.withValues(alpha: 0.05),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: environment == 'live'
+                                              ? const Color(0xFF10B981)
+                                              : Colors.white.withValues(alpha: 0.14),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'easyparcel.env_live'.tr(),
+                                        style: TextStyle(
+                                          color: environment == 'live'
+                                              ? const Color(0xFF34D399)
+                                              : Colors.white70,
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            // API Key
+                            Text(
+                              'integrations.api_key_label'.tr(),
+                              style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: apiKeyCtrl,
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                              decoration: epInput('easyparcel.api_key_hint'.tr()),
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Test Connection & Check Credit Balance
+                            Row(
+                              children: [
+                                OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    side: BorderSide(color: item.brandColor.withValues(alpha: 0.6)),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                  onPressed: isTesting
+                                      ? null
+                                      : () async {
+                                          final key = apiKeyCtrl.text.trim();
+                                          if (key.isEmpty) {
+                                            setDialogState(() {
+                                              testError = 'integrations.enter_id_error'.tr();
+                                              balanceText = null;
+                                            });
+                                            return;
+                                          }
+                                          setDialogState(() {
+                                            isTesting = true;
+                                            testError = null;
+                                            balanceText = null;
+                                          });
+                                          try {
+                                            final res = await epService.verifyConnection(
+                                              apiKey: key,
+                                              environment: environment,
+                                              businessId: _businessId,
+                                            );
+                                            setDialogState(() {
+                                              isTesting = false;
+                                              if (res['success'] == true) {
+                                                final bal = (res['balance'] as num?)?.toDouble() ?? 0.0;
+                                                balanceText = 'easyparcel.credit_balance'.tr(
+                                                  args: [bal.toStringAsFixed(2)],
+                                                );
+                                              } else {
+                                                testError = res['error']?.toString() ??
+                                                    'easyparcel.verify_failed'.tr();
+                                              }
+                                            });
+                                          } catch (e) {
+                                            setDialogState(() {
+                                              isTesting = false;
+                                              testError = e.toString();
+                                            });
+                                          }
+                                        },
+                                  icon: isTesting
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Icon(Icons.verified_user_outlined, size: 16),
+                                  label: Text(
+                                    'easyparcel.test_connection_btn'.tr(),
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                if (balanceText != null)
+                                  Expanded(
+                                    child: Text(
+                                      balanceText!,
+                                      style: const TextStyle(
+                                        color: Color(0xFF34D399),
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (testError != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                testError!,
+                                style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12),
+                              ),
+                            ],
+
+                            const SizedBox(height: 16),
+                            Divider(color: Colors.white.withValues(alpha: 0.10), height: 1),
+                            const SizedBox(height: 14),
+
+                            // Default Sender Pickup Info
+                            Text(
+                              'easyparcel.default_sender_title'.tr(),
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: senderNameCtrl,
+                                    style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                                    decoration: epInput('easyparcel.sender_name_hint'.tr()),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: senderPhoneCtrl,
+                                    style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                                    keyboardType: TextInputType.phone,
+                                    decoration: epInput('easyparcel.phone_hint'.tr()),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: senderAddrCtrl,
+                              style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                              decoration: epInput('easyparcel.address_hint'.tr()),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: TextField(
+                                    controller: senderPostcodeCtrl,
+                                    style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                                    keyboardType: TextInputType.number,
+                                    decoration: epInput('easyparcel.postcode_hint'.tr()),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 3,
+                                  child: TextField(
+                                    controller: senderCityCtrl,
+                                    style: const TextStyle(color: Colors.white, fontSize: 12.5),
+                                    decoration: epInput('easyparcel.city_hint'.tr()),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 3,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.25),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: kMalaysiaStates.any((s) => s['code'] == senderState)
+                                            ? senderState
+                                            : 'sgr',
+                                        isExpanded: true,
+                                        dropdownColor: const Color(0xFF141827),
+                                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                                        items: kMalaysiaStates.map((s) {
+                                          return DropdownMenuItem<String>(
+                                            value: s['code'],
+                                            child: Text(s['name']!, overflow: TextOverflow.ellipsis),
+                                          );
+                                        }).toList(),
+                                        onChanged: (v) {
+                                          if (v != null) setDialogState(() => senderState = v);
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                if (cfg.isConnected) ...[
+                                  TextButton(
+                                    onPressed: isSaving
+                                        ? null
+                                        : () async {
+                                            setDialogState(() => isSaving = true);
+                                            try {
+                                              await epService.disconnect(businessId: _businessId);
+                                              if (ctx.mounted) Navigator.pop(ctx, 'disconnected');
+                                            } catch (e) {
+                                              setDialogState(() {
+                                                isSaving = false;
+                                                testError = e.toString();
+                                              });
+                                            }
+                                          },
+                                    child: Text(
+                                      'integrations.disconnect_btn'.tr(),
+                                      style: const TextStyle(color: Color(0xFFFCA5A5), fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                TextButton(
+                                  onPressed: isSaving ? null : () => Navigator.pop(ctx),
+                                  child: Text(
+                                    'common.cancel'.tr(),
+                                    style: const TextStyle(color: Colors.white70),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: item.brandColor,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                  ),
+                                  onPressed: isSaving
+                                      ? null
+                                      : () async {
+                                          final key = apiKeyCtrl.text.trim();
+                                          if (key.isEmpty) {
+                                            setDialogState(() => testError = 'integrations.enter_id_error'.tr());
+                                            return;
+                                          }
+                                          setDialogState(() {
+                                            isSaving = true;
+                                            testError = null;
+                                          });
+                                          try {
+                                            final updated = EasyParcelConfig(
+                                              isConnected: true,
+                                              environment: environment,
+                                              apiKey: key,
+                                              senderName: senderNameCtrl.text.trim(),
+                                              senderPhone: senderPhoneCtrl.text.trim(),
+                                              senderAddr1: senderAddrCtrl.text.trim(),
+                                              senderCity: senderCityCtrl.text.trim(),
+                                              senderPostcode: senderPostcodeCtrl.text.trim(),
+                                              senderState: senderState,
+                                              autoSync: true,
+                                            );
+                                            await epService.saveConfig(updated, businessId: _businessId);
+                                            if (ctx.mounted) Navigator.pop(ctx, 'connected');
+                                          } catch (e) {
+                                            setDialogState(() {
+                                              isSaving = false;
+                                              testError = e.toString();
+                                            });
+                                          }
+                                        },
+                                  child: isSaving
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : Text(
+                                          cfg.isConnected
+                                              ? 'integrations.save_btn'.tr()
+                                              : 'integrations.connect_btn'.tr(),
+                                          style: const TextStyle(fontWeight: FontWeight.w700),
+                                        ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    apiKeyCtrl.dispose();
+    senderNameCtrl.dispose();
+    senderPhoneCtrl.dispose();
+    senderAddrCtrl.dispose();
+    senderCityCtrl.dispose();
+    senderPostcodeCtrl.dispose();
+
+    if (actionResult == 'connected' || actionResult == 'disconnected') {
+      await _loadConfigs();
+      if (mounted) {
+        showGlassToast(
+          context,
+          actionResult == 'connected'
+              ? 'integrations.connected_toast'.tr(args: [item.name])
+              : 'integrations.disconnected_toast'.tr(args: [item.name]),
+        );
+      }
+    }
+  }
+
   Future<void> _openConfigDialog(_IntegrationItem item) async {
     if (item.defaultStatus == _IntegrationStatus.comingSoon) {
       showGlassToast(context, 'integrations.coming_soon_toast'.tr(args: [item.name]));
+      return;
+    }
+
+    if (item.id == 'easyparcel') {
+      await _openEasyParcelConfigDialog(item);
       return;
     }
 
