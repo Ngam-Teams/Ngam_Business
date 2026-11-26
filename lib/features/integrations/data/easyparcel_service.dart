@@ -115,6 +115,34 @@ class EasyParcelRate {
     required this.price,
   });
 
+  static String _formatDelivery(dynamic raw) {
+    if (raw == null) return '1-3 working day(s)';
+    Map<String, dynamic>? obj;
+    if (raw is Map) {
+      obj = Map<String, dynamic>.from(raw);
+    } else if (raw is String) {
+      final t = raw.trim();
+      if (t.isEmpty) return '1-3 working day(s)';
+      if (t.startsWith('{')) {
+        try {
+          final decoded = jsonDecode(t);
+          if (decoded is Map) obj = Map<String, dynamic>.from(decoded);
+        } catch (_) {
+          return t;
+        }
+      } else {
+        return t;
+      }
+    }
+    if (obj != null && obj['value'] != null) {
+      final val = obj['value'].toString().trim();
+      final type = (obj['type'] ?? 'days').toString().toLowerCase();
+      if (type.contains('hour')) return '$val hour(s)';
+      return '$val working day(s)';
+    }
+    return raw.toString();
+  }
+
   factory EasyParcelRate.fromJson(Map<String, dynamic> json) {
     return EasyParcelRate(
       rateId: json['rate_id']?.toString() ?? '',
@@ -126,7 +154,7 @@ class EasyParcelRate {
       courierName: json['courier_name']?.toString() ?? '',
       courierLogo: json['courier_logo']?.toString() ?? '',
       pickupDate: json['pickup_date']?.toString() ?? '',
-      delivery: json['delivery']?.toString() ?? '',
+      delivery: _formatDelivery(json['delivery']),
       price: (json['price'] as num?)?.toDouble() ??
           double.tryParse(json['price']?.toString() ?? '0') ??
           0.0,
