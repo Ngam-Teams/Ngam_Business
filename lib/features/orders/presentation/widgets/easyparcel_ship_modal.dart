@@ -620,32 +620,37 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
   }
 
   Widget _buildBookingForm() {
-    if (!_config.isConnected) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.amber.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.info_outline_rounded, color: Colors.amber),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'easyparcel.not_connected_hint'.tr(),
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_config.isPlatformMode) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10B981).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.bolt_rounded, color: Color(0xFF34D399), size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'easyparcel.platform_banner_title'.tr(),
+                    style: const TextStyle(
+                      color: Color(0xFF34D399),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         // Sender Details
         _buildSectionTitle('easyparcel.sender_section'.tr(), Icons.storefront_rounded),
         const SizedBox(height: 8),
@@ -911,7 +916,9 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
             contentPadding: EdgeInsets.zero,
             activeThumbColor: _epPink,
             title: Text(
-              'easyparcel.auto_pay_label'.tr(),
+              _config.isPlatformMode
+                  ? 'easyparcel.auto_pay_platform_label'.tr()
+                  : 'easyparcel.auto_pay_label'.tr(),
               style: const TextStyle(color: Colors.white, fontSize: 12.5),
             ),
             value: _autoPay,

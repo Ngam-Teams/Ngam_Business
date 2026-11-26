@@ -26,6 +26,7 @@ const List<Map<String, String>> kMalaysiaStates = [
 
 class EasyParcelConfig {
   final bool isConnected;
+  final String mode; // 'platform' (Ngam managed, default) | 'custom' (merchant own key)
   final String environment; // 'demo' | 'live'
   final String apiKey;
   final String senderName;
@@ -39,6 +40,7 @@ class EasyParcelConfig {
 
   const EasyParcelConfig({
     this.isConnected = false,
+    this.mode = 'platform',
     this.environment = 'demo',
     this.apiKey = '',
     this.senderName = '',
@@ -51,12 +53,15 @@ class EasyParcelConfig {
     this.autoSync = true,
   });
 
+  bool get isPlatformMode => mode != 'custom';
+
   factory EasyParcelConfig.fromRow(Map<String, dynamic> row) {
     final cfg = row['config'] is Map
         ? Map<String, dynamic>.from(row['config'] as Map)
         : <String, dynamic>{};
     return EasyParcelConfig(
       isConnected: row['is_connected'] == true,
+      mode: (cfg['mode']?.toString() == 'custom') ? 'custom' : 'platform',
       environment: (row['environment']?.toString() == 'live') ? 'live' : 'demo',
       apiKey: row['api_key']?.toString() ?? '',
       senderName: cfg['sender_name']?.toString() ?? '',
@@ -71,6 +76,7 @@ class EasyParcelConfig {
   }
 
   Map<String, dynamic> toConfigJson() => {
+        'mode': mode,
         'sender_name': senderName,
         'sender_phone': senderPhone,
         'sender_addr1': senderAddr1,
@@ -301,7 +307,7 @@ class EasyParcelService {
         'provider': 'easyparcel',
         'is_connected': cfg.isConnected,
         'environment': cfg.environment,
-        'api_key': cfg.apiKey,
+        'api_key': cfg.isPlatformMode ? null : cfg.apiKey,
         'config': cfg.toConfigJson(),
         'last_synced_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
@@ -318,6 +324,7 @@ class EasyParcelService {
     final current = await getConfig(businessId: bizId);
     final updated = EasyParcelConfig(
       isConnected: false,
+      mode: current.mode,
       environment: current.environment,
       apiKey: current.apiKey,
       senderName: current.senderName,

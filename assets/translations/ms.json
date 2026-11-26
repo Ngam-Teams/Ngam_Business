@@ -1929,6 +1929,12 @@
     "err_select_courier": "Sila pilih perkhidmatan kurier terlebih dahulu.",
     "err_fill_addresses": "Sila lengkapkan nama, telefon dan alamat pengirim serta penerima.",
     "err_no_customer_phone": "Nombor telefon pelanggan tiada bagi pesanan ini.",
-    "whatsapp_tracking_msg": "Hai! Pesanan {} anda telah dihantar melalui {}.\nNo. Tracking: {}\nJejak di sini: {}"
+    "whatsapp_tracking_msg": "Hai! Pesanan {} anda telah dihantar melalui {}.\nNo. Tracking: {}\nJejak di sini: {}",
+    "platform_banner_title": "Dikuasakan oleh Logistik Ngam (Aktif Serta-Merta)",
+    "platform_banner_desc": "Tiada akaun atau kunci API EasyParcel diperlukan! Sahkan alamat pengambilan kedai anda dan tekan Aktifkan untuk pos ke seluruh Malaysia melalui PosLaju, J&T, Ninja Van & DHL.",
+    "use_own_account_label": "Guna akaun EasyParcel sendiri (Pilihan)",
+    "activate_btn": "Aktifkan EasyParcel",
+    "err_sender_pickup_required": "Sila masukkan nama kedai, nombor telefon dan poskod 5-digit yang sah.",
+    "auto_pay_platform_label": "Sahkan penghantaran & jana AWB PDF serta-merta"
   }
 }

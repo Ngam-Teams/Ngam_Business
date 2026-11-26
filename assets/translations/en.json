@@ -1929,6 +1929,12 @@
     "err_select_courier": "Please select a courier service first.",
     "err_fill_addresses": "Please fill in sender and receiver name, phone, and address.",
     "err_no_customer_phone": "Customer phone number is not available for this order.",
-    "whatsapp_tracking_msg": "Hi! Your order {} has been shipped via {}.\nTracking No: {}\nTrack here: {}"
+    "whatsapp_tracking_msg": "Hi! Your order {} has been shipped via {}.\nTracking No: {}\nTrack here: {}",
+    "platform_banner_title": "Powered by Ngam Logistics (Instant Activation)",
+    "platform_banner_desc": "No EasyParcel account or API key needed! Just confirm your store pickup address and click Activate to ship nationwide via PosLaju, J&T, Ninja Van & DHL.",
+    "use_own_account_label": "Use my own EasyParcel account (Optional)",
+    "activate_btn": "Activate EasyParcel",
+    "err_sender_pickup_required": "Please enter your store name, phone number, and valid 5-digit postcode.",
+    "auto_pay_platform_label": "Confirm shipment & generate AWB PDF immediately"
   }
 }

@@ -2,5 +2,5 @@
   "version": "1.0.92",
   "build_number": 72,
   "released_at": "2026-11-26T14:20:00Z",
-  "changelog": "Integrasi penuh EasyParcel Malaysia: sambung kunci API (mod Demo/Live), semak baki kredit, semak harga kurier (PosLaju, J&T, Ninja Van, DHL), tempah & jana AWB PDF terus daripada pesanan, serta semakan tracking langsung."
+  "changelog": "Naik taraf EasyParcel ke Mod Platform Ngam (Aktif 1-Klik): peniaga tidak perlu daftar akaun atau masukkan API key EasyParcel lagi — hanya sahkan alamat pengambilan kedai untuk terus pos melalui PosLaju, J&T, Ninja Van & DHL."
 }
