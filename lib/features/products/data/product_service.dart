@@ -176,7 +176,7 @@ class ProductService {
 
   bool _isMissingMediaColumnError(Object error) {
     final msg = error.toString().toLowerCase();
-    return (msg.contains('image_urls') || msg.contains('video_url')) &&
+    return (msg.contains('image_urls') || msg.contains('video_url') || msg.contains('weight_kg')) &&
         (msg.contains('pgrst204') ||
             msg.contains('schema cache') ||
             msg.contains('column') ||
@@ -200,6 +200,7 @@ class ProductService {
     bool trackInventory = true,
     int lowStockThreshold = 5,
     String unit = 'pcs',
+    double weightKg = 0.5,
     List<String> tags = const [],
     bool isAvailable = true,
     bool isFeatured = false,
@@ -253,6 +254,7 @@ class ProductService {
         'track_inventory': trackInventory,
         'low_stock_threshold': lowStockThreshold,
         'unit': unit,
+        'weight_kg': weightKg,
         'tags': tags,
         'is_active': isAvailable,
         'is_featured': isFeatured,
@@ -302,7 +304,8 @@ class ProductService {
         if (_isMissingMediaColumnError(insertErr)) {
           final fallbackData = Map<String, dynamic>.from(data)
             ..remove('image_urls')
-            ..remove('video_url');
+            ..remove('video_url')
+            ..remove('weight_kg');
           final response = await _client
               .from('business_products')
               .insert(fallbackData)
@@ -423,7 +426,8 @@ class ProductService {
         if (_isMissingMediaColumnError(updateErr)) {
           final fallbackUpdates = Map<String, dynamic>.from(updates)
             ..remove('image_urls')
-            ..remove('video_url');
+            ..remove('video_url')
+            ..remove('weight_kg');
           await _client.from('business_products').update(fallbackUpdates).eq('id', productId);
           logProductUpdate(fallbackUpdates);
           return true;

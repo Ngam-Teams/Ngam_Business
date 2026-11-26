@@ -1940,6 +1940,7 @@
     "status_awb_ready": "AWB GENERATED",
     "status_pending_ship": "READY TO SHIP",
     "customer_selected_courier": "Customer selected & paid: {} (RM {})",
-    "customer_selected_courier_only": "Customer selected: {}"
+    "customer_selected_courier_only": "Customer selected: {}",
+    "product_weight_label": "Shipping Weight (kg)"
   }
 }

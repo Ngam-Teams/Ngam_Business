@@ -602,4 +602,25 @@ class EasyParcelService {
       return null;
     }
   }
+
+  /// Calculate total parcel weight (kg) from `order_items` joined with `business_products.weight_kg`
+  Future<double> estimateOrderWeightKg(String orderId) async {
+    try {
+      final items = await _client
+          .from('order_items')
+          .select('quantity, business_products(weight_kg)')
+          .eq('order_id', orderId);
+      if (items.isNotEmpty) {
+        double total = 0.0;
+        for (final row in items) {
+          final qty = (row['quantity'] as num?)?.toInt() ?? 1;
+          final prod = row['business_products'];
+          final w = (prod is Map ? (prod['weight_kg'] as num?)?.toDouble() : null) ?? 0.5;
+          total += (w > 0 ? w : 0.5) * qty;
+        }
+        if (total > 0) return total.clamp(0.1, 50.0);
+      }
+    } catch (_) {}
+    return 1.0;
+  }
 }

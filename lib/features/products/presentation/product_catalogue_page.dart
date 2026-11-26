@@ -629,6 +629,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   // Product Inventory
   final _stockController = TextEditingController(text: '0');
   final _lowStockController = TextEditingController(text: '5');
+  final _weightController = TextEditingController(text: '0.5');
   final _skuController = TextEditingController();
   final _barcodeController = TextEditingController();
   String _selectedUnit = 'pcs';
@@ -686,6 +687,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
 
       _stockController.text = p.stock.toString();
       _lowStockController.text = p.lowStockThreshold.toString();
+      _weightController.text = p.weightKg.toString();
       _skuController.text = p.sku ?? '';
       _barcodeController.text = p.barcode ?? '';
       _selectedUnit = p.unit;
@@ -730,6 +732,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     _taxRateController.dispose();
     _stockController.dispose();
     _lowStockController.dispose();
+    _weightController.dispose();
     _skuController.dispose();
     _barcodeController.dispose();
     _depositController.dispose();
@@ -971,6 +974,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     final taxRate = double.tryParse(_taxRateController.text) ?? 0.0;
     final stock = int.tryParse(_stockController.text) ?? 0;
     final lowStock = int.tryParse(_lowStockController.text) ?? 5;
+    final weightKg = (double.tryParse(_weightController.text.trim()) ?? 0.5).clamp(0.0, 999.0);
     final deposit = double.tryParse(_depositController.text) ?? 0.0;
     final maxPax = int.tryParse(_maxPaxController.text) ?? 1;
 
@@ -1002,6 +1006,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         'track_inventory': _trackInventory,
         'low_stock_threshold': lowStock,
         'unit': _selectedUnit,
+        'weight_kg': weightKg,
         'is_active': _isAvailable,
         'is_featured': _isFeatured,
         'is_halal': _isHalal,
@@ -1041,6 +1046,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         trackInventory: _trackInventory,
         lowStockThreshold: lowStock,
         unit: _selectedUnit,
+        weightKg: weightKg,
         isAvailable: _isAvailable,
         isFeatured: _isFeatured,
         isHalal: _isHalal,
@@ -1428,10 +1434,28 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                       ),
                       const SizedBox(height: 12),
 
-                      TextFormField(
-                        controller: _barcodeController,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: _inputDecoration('Barcode / UPC', Icons.qr_code_scanner_rounded),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _weightController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              style: const TextStyle(color: Colors.white),
+                              decoration: _inputDecoration(
+                                'easyparcel.product_weight_label'.tr(),
+                                Icons.scale_outlined,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _barcodeController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: _inputDecoration('Barcode / UPC', Icons.qr_code_scanner_rounded),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 10),
 

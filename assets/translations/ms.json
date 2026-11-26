@@ -1940,6 +1940,7 @@
     "status_awb_ready": "AWB DIJANA",
     "status_pending_ship": "SEDIA UNTUK POS",
     "customer_selected_courier": "Pelanggan pilih & bayar: {} (RM {})",
-    "customer_selected_courier_only": "Pilihan pelanggan: {}"
+    "customer_selected_courier_only": "Pilihan pelanggan: {}",
+    "product_weight_label": "Berat Penghantaran (kg)"
   }
 }

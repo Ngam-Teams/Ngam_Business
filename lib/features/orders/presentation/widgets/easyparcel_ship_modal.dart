@@ -157,6 +157,9 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
       _sendState = EasyParcelService.guessStateCode(receiverAddr);
     }
 
+    final estimatedWeight = await _service.estimateOrderWeightKg(widget.order.id);
+    _weightCtrl.text = estimatedWeight.toStringAsFixed(estimatedWeight % 1 == 0 ? 1 : 2);
+
     if (!mounted) return;
     setState(() {
       _config = cfg;

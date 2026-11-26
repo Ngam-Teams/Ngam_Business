@@ -23,6 +23,7 @@ class ProductModel {
   final bool trackInventory;
   final int lowStockThreshold;
   final String unit; // 'pcs', 'pack', 'kg', 'g', 'portion', 'cup', 'box', 'set'
+  final double weightKg;
   final List<String> tags;
   final bool isAvailable;
   final bool isFeatured;
@@ -57,6 +58,7 @@ class ProductModel {
     this.trackInventory = true,
     this.lowStockThreshold = 5,
     this.unit = 'pcs',
+    this.weightKg = 0.5,
     this.tags = const [],
     this.isAvailable = true,
     this.isFeatured = false,
@@ -133,6 +135,7 @@ class ProductModel {
       trackInventory: json['track_inventory'] as bool? ?? true,
       lowStockThreshold: (json['low_stock_threshold'] as num?)?.toInt() ?? 5,
       unit: json['unit'] as String? ?? 'pcs',
+      weightKg: (json['weight_kg'] as num?)?.toDouble() ?? 0.5,
       tags: (json['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
       isAvailable: json['is_active'] as bool? ?? (json['is_available'] as bool? ?? true),
       isFeatured: json['is_featured'] as bool? ?? false,
@@ -167,6 +170,7 @@ class ProductModel {
         'track_inventory': trackInventory,
         'low_stock_threshold': lowStockThreshold,
         'unit': unit,
+        'weight_kg': weightKg,
         'tags': tags,
         'is_active': isAvailable,
         'is_featured': isFeatured,
