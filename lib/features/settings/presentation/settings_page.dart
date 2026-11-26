@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../widgets/glass_toast.dart';
 import '../../auth/data/auth_service.dart';
+import '../../integrations/data/easyparcel_service.dart';
 import '../data/business_service.dart';
 import '../../../core/services/app_update_service.dart';
 
@@ -23,6 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _signingOut = false;
   bool _loadingBusiness = true;
   Map<String, dynamic>? _businessProfile;
+  EasyParcelConfig? _shippingConfig;
 
   String get _userEmail =>
       _client.auth.currentUser?.email ?? 'Unknown';
@@ -37,6 +39,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _loadingBusiness = _businessProfile == null;
     BusinessService.profileNotifier.addListener(_onProfileUpdated);
     _loadBusiness();
+    _loadShippingStatus();
   }
 
   void _onProfileUpdated() {
@@ -66,6 +69,15 @@ class _SettingsPageState extends State<SettingsPage> {
         _loadingBusiness = false;
       });
     }
+  }
+
+  Future<void> _loadShippingStatus() async {
+    try {
+      final cfg = await EasyParcelService().getConfig();
+      if (mounted) {
+        setState(() => _shippingConfig = cfg);
+      }
+    } catch (_) {}
   }
 
   Future<void> _signOut() async {
@@ -368,6 +380,25 @@ class _SettingsPageState extends State<SettingsPage> {
             label: 'settings.operating_hours'.tr(),
             icon: HugeIcons.strokeRoundedTime02,
             onTap: () => context.push('/operating-hours'),
+          ),
+          const Divider(height: 24, color: Color(0x1AFFFFFF)),
+          _buildNavRow(
+            label: 'shipping_settings.settings_row_title'.tr(),
+            subtitle: _shippingConfig == null
+                ? null
+                : (_shippingConfig!.isConnected
+                    ? 'shipping_settings.settings_row_active'.tr(
+                        args: [
+                          (kMalaysiaCouriers.length - _shippingConfig!.disabledCouriers.length)
+                              .toString(),
+                        ],
+                      )
+                    : 'shipping_settings.settings_row_off'.tr()),
+            icon: HugeIcons.strokeRoundedDeliveryTruck01,
+            onTap: () async {
+              await context.push('/shipping-settings');
+              _loadShippingStatus();
+            },
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(

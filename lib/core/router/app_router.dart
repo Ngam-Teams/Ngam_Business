@@ -24,6 +24,7 @@ import '../../features/reviews/presentation/customer_reviews_page.dart';
 import '../../features/promotions/presentation/promotions_page.dart';
 import '../../features/inventory/presentation/inventory_page.dart';
 import '../../features/settings/presentation/operating_hours_page.dart';
+import '../../features/settings/presentation/shipping_settings_page.dart';
 import '../../features/customers/presentation/customer_insights_page.dart';
 import '../../features/payouts/presentation/payouts_page.dart';
 import '../../features/qr/presentation/qr_generator_page.dart';
@@ -481,6 +482,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/operating-hours',
       builder: (context, state) => const OperatingHoursPage(),
+    ),
+    GoRoute(
+      path: '/shipping-settings',
+      builder: (context, state) => const ShippingSettingsPage(),
     ),
     GoRoute(
       path: '/customers',

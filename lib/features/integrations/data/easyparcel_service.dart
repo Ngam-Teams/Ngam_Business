@@ -24,6 +24,23 @@ const List<Map<String, String>> kMalaysiaStates = [
   {'code': 'lbn', 'name': 'W.P. Labuan'},
 ];
 
+/// Curated Malaysia EasyParcel courier catalog for merchant ON/OFF & Preferred controls.
+const List<Map<String, String>> kMalaysiaCouriers = [
+  {'key': 'dhl', 'name': 'DHL eCommerce', 'tag': 'reliable', 'color': '0xFFF59E0B'},
+  {'key': 'poslaju', 'name': 'Pos Laju', 'tag': 'reliable', 'color': '0xFFEF4444'},
+  {'key': 'ninjavan', 'name': 'Ninja Van', 'tag': 'reliable', 'color': '0xFFDC2626'},
+  {'key': 'spx', 'name': 'SPX Xpress', 'tag': 'reliable', 'color': '0xFFF97316'},
+  {'key': 'flash', 'name': 'Flash Express', 'tag': 'reliable', 'color': '0xFFEAB308'},
+  {'key': 'citylink', 'name': 'City-Link Express', 'tag': 'reliable', 'color': '0xFF3B82F6'},
+  {'key': 'gdex', 'name': 'GDEX', 'tag': 'reliable', 'color': '0xFF2563EB'},
+  {'key': 'jnt', 'name': 'J&T Express', 'tag': 'standard', 'color': '0xFFE11D48'},
+  {'key': 'skynet', 'name': 'SkyNet', 'tag': 'standard', 'color': '0xFF0EA5E9'},
+  {'key': 'pgeon', 'name': 'Pgeon Delivery', 'tag': 'standard', 'color': '0xFFEC4899'},
+  {'key': 'lex', 'name': 'Lazada Express (LEX)', 'tag': 'standard', 'color': '0xFF6366F1'},
+  {'key': 'lineclear', 'name': 'Line Clear Express', 'tag': 'standard', 'color': '0xFF14B8A6'},
+  {'key': 'abx', 'name': 'ABX Express', 'tag': 'standard', 'color': '0xFF8B5CF6'},
+];
+
 class EasyParcelConfig {
   final bool isConnected;
   final String mode; // 'platform' (Ngam managed, default) | 'custom' (merchant own key)
@@ -37,6 +54,10 @@ class EasyParcelConfig {
   final String senderPostcode;
   final String senderState; // EasyParcel state code e.g. 'sgr', 'kul'
   final bool autoSync;
+  final List<String> disabledCouriers; // canonical keys e.g. ['jnt']
+  final String preferredCourier; // canonical key e.g. 'dhl' or ''
+  final String serviceMode; // 'all' | 'pickup' | 'dropoff'
+  final String checkoutMode; // 'customer_choice' | 'auto_best'
 
   const EasyParcelConfig({
     this.isConnected = false,
@@ -51,14 +72,63 @@ class EasyParcelConfig {
     this.senderPostcode = '',
     this.senderState = 'sgr',
     this.autoSync = true,
+    this.disabledCouriers = const [],
+    this.preferredCourier = '',
+    this.serviceMode = 'all',
+    this.checkoutMode = 'customer_choice',
   });
 
   bool get isPlatformMode => mode != 'custom';
+
+  EasyParcelConfig copyWith({
+    bool? isConnected,
+    String? mode,
+    String? environment,
+    String? apiKey,
+    String? senderName,
+    String? senderPhone,
+    String? senderAddr1,
+    String? senderAddr2,
+    String? senderCity,
+    String? senderPostcode,
+    String? senderState,
+    bool? autoSync,
+    List<String>? disabledCouriers,
+    String? preferredCourier,
+    String? serviceMode,
+    String? checkoutMode,
+  }) {
+    return EasyParcelConfig(
+      isConnected: isConnected ?? this.isConnected,
+      mode: mode ?? this.mode,
+      environment: environment ?? this.environment,
+      apiKey: apiKey ?? this.apiKey,
+      senderName: senderName ?? this.senderName,
+      senderPhone: senderPhone ?? this.senderPhone,
+      senderAddr1: senderAddr1 ?? this.senderAddr1,
+      senderAddr2: senderAddr2 ?? this.senderAddr2,
+      senderCity: senderCity ?? this.senderCity,
+      senderPostcode: senderPostcode ?? this.senderPostcode,
+      senderState: senderState ?? this.senderState,
+      autoSync: autoSync ?? this.autoSync,
+      disabledCouriers: disabledCouriers ?? this.disabledCouriers,
+      preferredCourier: preferredCourier ?? this.preferredCourier,
+      serviceMode: serviceMode ?? this.serviceMode,
+      checkoutMode: checkoutMode ?? this.checkoutMode,
+    );
+  }
 
   factory EasyParcelConfig.fromRow(Map<String, dynamic> row) {
     final cfg = row['config'] is Map
         ? Map<String, dynamic>.from(row['config'] as Map)
         : <String, dynamic>{};
+    final rawDisabled = cfg['disabled_couriers'];
+    final disabled = rawDisabled is List
+        ? rawDisabled.map((e) => e.toString().toLowerCase().trim()).where((e) => e.isNotEmpty).toList()
+        : <String>[];
+    final svcMode = cfg['service_mode']?.toString().toLowerCase().trim() ?? 'all';
+    final chkMode = cfg['checkout_mode']?.toString().toLowerCase().trim() ?? 'customer_choice';
+
     return EasyParcelConfig(
       isConnected: row['is_connected'] == true,
       mode: (cfg['mode']?.toString() == 'custom') ? 'custom' : 'platform',
@@ -72,6 +142,10 @@ class EasyParcelConfig {
       senderPostcode: cfg['sender_postcode']?.toString() ?? '',
       senderState: cfg['sender_state']?.toString() ?? 'sgr',
       autoSync: cfg['auto_sync'] != false,
+      disabledCouriers: disabled,
+      preferredCourier: cfg['preferred_courier']?.toString().toLowerCase().trim() ?? '',
+      serviceMode: (svcMode == 'pickup' || svcMode == 'dropoff') ? svcMode : 'all',
+      checkoutMode: chkMode == 'auto_best' ? 'auto_best' : 'customer_choice',
     );
   }
 
@@ -85,6 +159,10 @@ class EasyParcelConfig {
         'sender_postcode': senderPostcode,
         'sender_state': senderState,
         'auto_sync': autoSync,
+        'disabled_couriers': disabledCouriers,
+        'preferred_courier': preferredCourier,
+        'service_mode': serviceMode,
+        'checkout_mode': checkoutMode,
       };
 }
 

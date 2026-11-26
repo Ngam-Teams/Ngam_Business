@@ -251,6 +251,7 @@ class GlassNavButton extends StatelessWidget {
           '/staff-management',
           '/product-catalogue',
           '/operating-hours',
+          '/shipping-settings',
           '/inventory',
           '/feed-studio',
           '/promotions',

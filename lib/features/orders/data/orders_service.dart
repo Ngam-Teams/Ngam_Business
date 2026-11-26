@@ -24,6 +24,9 @@ class OrderModel {
   final String? trackingNumber;
   final String? trackingUrl;
   final String? awbPdfUrl;
+  final double shippingFee;
+  final String? shippingServiceId;
+  final String? shippingCourierId;
   final DateTime createdAt;
 
   OrderModel({
@@ -43,8 +46,20 @@ class OrderModel {
     this.trackingNumber,
     this.trackingUrl,
     this.awbPdfUrl,
+    this.shippingFee = 0.0,
+    this.shippingServiceId,
+    this.shippingCourierId,
     required this.createdAt,
   });
+
+  /// Net product sales excluding courier postage fee.
+  double get netProductTotal => (total - shippingFee).clamp(0.0, double.infinity);
+
+  /// True when customer already chose a courier at checkout (ready for 1-click AWB).
+  bool get hasCustomerChosenCourier =>
+      (shippingServiceId != null && shippingServiceId!.isNotEmpty) ||
+      (courierName != null && courierName!.isNotEmpty) ||
+      (notes != null && notes!.contains('[Kurier:'));
 
   /// 14-char official Ngam reference (`NP...` for POS orders, `NO...` for online/store orders)
   String get refCode => source == 'pos'
@@ -73,6 +88,9 @@ class OrderModel {
       trackingNumber: json['tracking_number'] as String?,
       trackingUrl: json['tracking_url'] as String?,
       awbPdfUrl: json['awb_pdf_url'] as String?,
+      shippingFee: (json['shipping_fee'] as num?)?.toDouble() ?? 0.0,
+      shippingServiceId: json['shipping_service_id']?.toString(),
+      shippingCourierId: json['shipping_courier_id']?.toString(),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -94,6 +112,9 @@ class OrderModel {
     if (trackingNumber != null) 'tracking_number': trackingNumber,
     if (trackingUrl != null) 'tracking_url': trackingUrl,
     if (awbPdfUrl != null) 'awb_pdf_url': awbPdfUrl,
+    if (shippingFee > 0) 'shipping_fee': shippingFee,
+    if (shippingServiceId != null) 'shipping_service_id': shippingServiceId,
+    if (shippingCourierId != null) 'shipping_courier_id': shippingCourierId,
     'created_at': createdAt.toIso8601String(),
   };
 }

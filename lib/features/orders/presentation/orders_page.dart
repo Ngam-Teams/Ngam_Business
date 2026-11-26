@@ -1577,54 +1577,122 @@ class _OrdersPageState extends State<OrdersPage> {
                       ),
                     ),
 
-                    if (order.status != 'cancelled' && order.status != 'refunded') ...[
+                    if (order.shippingFee > 0) ...[
                       const SizedBox(height: 8),
                       Container(
                         width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEC008C).withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFEC008C).withValues(alpha: 0.42)),
+                          color: Colors.white.withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
                         ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: () async {
-                              await EasyParcelShipModal.show(
-                                modalCtx,
-                                order: order,
-                                onShipmentCreated: () {
-                                  if (mounted) setState(() {});
-                                },
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.local_shipping_rounded, size: 18, color: Color(0xFFEC008C)),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      (order.trackingNumber != null && order.trackingNumber!.isNotEmpty)
-                                          ? 'easyparcel.view_shipment_btn'.tr(args: [order.trackingNumber!])
-                                          : 'easyparcel.ship_order_btn'.tr(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Color(0xFFF472B6),
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'easyparcel.merchant_net_sales'.tr(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
                                   ),
-                                ],
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'RM ${order.netProductTotal.toStringAsFixed(2)}',
+                                  style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'easyparcel.shipping_fee_label'.tr(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 12),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'RM ${order.shippingFee.toStringAsFixed(2)}',
+                                  style: const TextStyle(color: Color(0xFFF472B6), fontSize: 12.5, fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    if (order.status != 'cancelled' && order.status != 'refunded') ...[
+                      const SizedBox(height: 8),
+                      Builder(
+                        builder: (_) {
+                          final hasAwb = order.trackingNumber != null && order.trackingNumber!.isNotEmpty;
+                          final isQuickReady = !hasAwb && order.hasCustomerChosenCourier;
+                          final accent = isQuickReady ? const Color(0xFF10B981) : const Color(0xFFEC008C);
+                          final textColor = isQuickReady ? const Color(0xFF34D399) : const Color(0xFFF472B6);
+                          return Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: accent.withValues(alpha: isQuickReady ? 0.14 : 0.10),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: accent.withValues(alpha: 0.45)),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () async {
+                                  await EasyParcelShipModal.show(
+                                    modalCtx,
+                                    order: order,
+                                    onShipmentCreated: () {
+                                      if (mounted) setState(() {});
+                                    },
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        isQuickReady ? Icons.print_rounded : Icons.local_shipping_rounded,
+                                        size: 18,
+                                        color: accent,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          hasAwb
+                                              ? 'easyparcel.view_shipment_btn'.tr(args: [order.trackingNumber!])
+                                              : (isQuickReady
+                                                  ? 'easyparcel.one_click_arrange_btn'.tr()
+                                                  : 'easyparcel.ship_order_btn'.tr()),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: textColor,
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
                     ],
 

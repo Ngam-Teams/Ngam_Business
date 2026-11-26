@@ -77,6 +77,7 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
   List<EasyParcelRate> _rates = [];
   EasyParcelRate? _selectedRate;
   String? _rateError;
+  bool _showFullForm = true;
 
   @override
   void initState() {
@@ -228,7 +229,7 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
       _rates = result.rates;
       _rateError = result.error;
       if (_rates.isNotEmpty) {
-        if (customerChoice.serviceId != null) {
+        if (customerChoice.serviceId != null && customerChoice.serviceId!.isNotEmpty) {
           final exact = _rates.where((r) => r.serviceId == customerChoice.serviceId).toList();
           if (exact.isNotEmpty) {
             _selectedRate = exact.first;
@@ -240,12 +241,33 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
           } else {
             _selectedRate = _rates.first;
           }
+        } else if (customerChoice.courierName != null && customerChoice.courierName!.isNotEmpty) {
+          final byName = _rates.where(
+            (r) => r.courierName.toLowerCase().contains(customerChoice.courierName!.toLowerCase()),
+          ).toList();
+          _selectedRate = byName.isNotEmpty ? byName.first : _rates.first;
         } else {
           _selectedRate = _rates.first;
+        }
+
+        // If customer already chose courier & all addresses are ready, collapse long form for 1-click AWB!
+        if (_isExpressReady && customerChoice.courierName != null) {
+          _showFullForm = false;
         }
       }
     });
   }
+
+  bool get _isExpressReady =>
+      _selectedRate != null &&
+      _pickNameCtrl.text.trim().isNotEmpty &&
+      _pickPhoneCtrl.text.trim().isNotEmpty &&
+      _pickAddrCtrl.text.trim().isNotEmpty &&
+      _pickPostcodeCtrl.text.trim().length >= 5 &&
+      _sendNameCtrl.text.trim().isNotEmpty &&
+      _sendPhoneCtrl.text.trim().isNotEmpty &&
+      _sendAddrCtrl.text.trim().isNotEmpty &&
+      _sendPostcodeCtrl.text.trim().length >= 5;
 
   ({String? courierName, String? serviceId, String? paidPrice}) _extractCustomerChosenCourier() {
     final notes = widget.order.notes ?? '';
@@ -253,14 +275,22 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
       r'\[Kurier:\s*([^|\]]+)(?:\|\s*Service:\s*([^|\]]+))?(?:\|\s*Pos:\s*RM([0-9.]+))?\]',
       caseSensitive: false,
     ).firstMatch(notes);
+    final svcId = (widget.order.shippingServiceId != null && widget.order.shippingServiceId!.isNotEmpty)
+        ? widget.order.shippingServiceId!.trim()
+        : m?.group(2)?.trim();
+    final paid = widget.order.shippingFee > 0
+        ? widget.order.shippingFee.toStringAsFixed(2)
+        : m?.group(3)?.trim();
     return (
-      courierName: m?.group(1)?.trim() ?? widget.order.courierName?.trim(),
-      serviceId: m?.group(2)?.trim(),
-      paidPrice: m?.group(3)?.trim(),
+      courierName: widget.order.courierName?.trim().isNotEmpty == true
+          ? widget.order.courierName!.trim()
+          : m?.group(1)?.trim(),
+      serviceId: svcId,
+      paidPrice: paid,
     );
   }
 
-  Future<void> _bookShipment() async {
+  Future<void> _bookShipment({bool autoOpenAwb = false}) async {
     final rate = _selectedRate;
     if (rate == null) {
       showGlassToast(context, 'easyparcel.err_select_courier'.tr(), isError: true);
@@ -272,6 +302,7 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
         _sendNameCtrl.text.trim().isEmpty ||
         _sendPhoneCtrl.text.trim().isEmpty ||
         _sendAddrCtrl.text.trim().isEmpty) {
+      setState(() => _showFullForm = true);
       showGlassToast(context, 'easyparcel.err_fill_addresses'.tr(), isError: true);
       return;
     }
@@ -285,7 +316,7 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
         rate: rate,
         weight: weight,
         content: _contentCtrl.text.trim().isEmpty ? 'Parcel' : _contentCtrl.text.trim(),
-        value: widget.order.total > 0 ? widget.order.total : 10.0,
+        value: widget.order.netProductTotal > 0 ? widget.order.netProductTotal : 10.0,
         reference: widget.order.refCode,
         autoPay: _autoPay,
         sender: {
@@ -331,6 +362,9 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
           showGlassToast(context, 'easyparcel.warn_insufficient_credit'.tr(), isError: true);
         } else {
           showGlassToast(context, 'easyparcel.book_success'.tr());
+          if (autoOpenAwb && created.awbPdfUrl != null && created.awbPdfUrl!.isNotEmpty) {
+            _openUrl(created.awbPdfUrl);
+          }
         }
       } else {
         setState(() => _booking = false);
@@ -720,6 +754,178 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
             ),
           ),
         ],
+        if (_isExpressReady && !_showFullForm && _selectedRate != null) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF10B981).withValues(alpha: 0.16),
+                  _epPink.withValues(alpha: 0.10),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.45)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: _selectedRate!.courierLogo.isNotEmpty
+                          ? Image.network(
+                              _selectedRate!.courierLogo,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.local_shipping_rounded,
+                                color: _epPink,
+                                size: 20,
+                              ),
+                            )
+                          : const Icon(Icons.local_shipping_rounded, color: _epPink, size: 20),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _selectedRate!.courierName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_selectedRate!.serviceDetail.toUpperCase()} • ${_selectedRate!.delivery} • ${_weightCtrl.text.trim()} kg',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.68), fontSize: 11.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'RM ${_selectedRate!.price.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Color(0xFF34D399),
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.storefront_rounded, size: 13, color: Color(0xFF38BDF8)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${_pickNameCtrl.text.trim()} (${_pickPostcodeCtrl.text.trim()})',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_rounded, size: 13, color: _epPink),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${_sendNameCtrl.text.trim()} (${_sendPostcodeCtrl.text.trim()}) — ${_sendAddrCtrl.text.trim()}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.78), fontSize: 11.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    onPressed: _booking ? null : () => _bookShipment(autoOpenAwb: true),
+                    icon: _booking
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.print_rounded, size: 18),
+                    label: Text(
+                      _booking
+                          ? 'easyparcel.booking_in_progress'.tr()
+                          : 'easyparcel.one_click_confirm_btn'.tr(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _showFullForm = true),
+                    icon: const Icon(Icons.edit_outlined, size: 14, color: Colors.white70),
+                    label: Text(
+                      'easyparcel.edit_details_btn'.tr(),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
         if (_config.isPlatformMode) ...[
           Container(
             width: double.infinity,
@@ -1045,10 +1251,13 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
                     : 'easyparcel.book_and_pay_btn'.tr(args: [
                         (_selectedRate?.price ?? 0).toStringAsFixed(2),
                       ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
           ),
+        ],
         ],
       ],
     );

@@ -53,18 +53,26 @@ class AnalyticsService {
       final startOfDay = DateTime(today.year, today.month, today.day).toIso8601String();
       final startOfMonth = DateTime(today.year, today.month, 1).toIso8601String();
 
+      Future<List<dynamic>> fetchOrdersSafe(String cols, String sinceIso) async {
+        try {
+          return await _client
+              .from('orders')
+              .select('$cols, shipping_fee')
+              .eq('business_id', businessId)
+              .gte('created_at', sinceIso);
+        } catch (_) {
+          return await _client
+              .from('orders')
+              .select(cols)
+              .eq('business_id', businessId)
+              .gte('created_at', sinceIso);
+        }
+      }
+
       // Run queries concurrently with an 8-second total timeout
       final responses = await Future.wait([
-        _client
-            .from('orders')
-            .select('total, created_at, status, payment_status')
-            .eq('business_id', businessId)
-            .gte('created_at', startOfDay),
-        _client
-            .from('orders')
-            .select('total, status, payment_status, source, payment_method, created_at')
-            .eq('business_id', businessId)
-            .gte('created_at', startOfMonth),
+        fetchOrdersSafe('total, created_at, status, payment_status', startOfDay),
+        fetchOrdersSafe('total, status, payment_status, source, payment_method, created_at', startOfMonth),
         _client
             .from('business_products')
             .select('id')
@@ -104,7 +112,9 @@ class AnalyticsService {
           continue;
         }
         validTodayOrders++;
-        todayRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
+        final orderTotal = (o['total'] as num?)?.toDouble() ?? 0.0;
+        final shipFee = (o['shipping_fee'] as num?)?.toDouble() ?? 0.0;
+        todayRevenue += (orderTotal - shipFee).clamp(0.0, double.infinity);
         if (st == 'pending') {
           pendingOrders++;
         }
@@ -121,7 +131,9 @@ class AnalyticsService {
             paySt == 'refund_pending') {
           continue;
         }
-        monthlyRevenue += (o['total'] as num?)?.toDouble() ?? 0.0;
+        final orderTotal = (o['total'] as num?)?.toDouble() ?? 0.0;
+        final shipFee = (o['shipping_fee'] as num?)?.toDouble() ?? 0.0;
+        monthlyRevenue += (orderTotal - shipFee).clamp(0.0, double.infinity);
       }
 
       final List<Map<String, dynamic>> recentActivities = [];

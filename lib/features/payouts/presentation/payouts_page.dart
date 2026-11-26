@@ -139,13 +139,21 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
       }
 
       if (businessId != null && businessId.isNotEmpty) {
-        final orders = await Supabase.instance.client
-            .from('orders')
-            .select('total, status, payment_status, payment_method, payment_splits')
-            .eq('business_id', businessId);
+        List<dynamic> orders;
+        try {
+          orders = await Supabase.instance.client
+              .from('orders')
+              .select('total, shipping_fee, status, payment_status, payment_method, payment_splits')
+              .eq('business_id', businessId);
+        } catch (_) {
+          orders = await Supabase.instance.client
+              .from('orders')
+              .select('total, status, payment_status, payment_method, payment_splits')
+              .eq('business_id', businessId);
+        }
         double completedRev = 0.0;
         double pendingRev = 0.0;
-        for (final o in (orders as List)) {
+        for (final o in orders) {
           final st = (o['status'] ?? '').toString().toLowerCase();
           final paySt = (o['payment_status'] ?? 'paid').toString().toLowerCase();
           if (st == 'cancelled' ||
@@ -156,6 +164,7 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
             continue;
           }
 
+          final shipFee = (o['shipping_fee'] as num?)?.toDouble() ?? 0.0;
           double cashlessAmt = 0.0;
           final splits = o['payment_splits'];
           if (splits is List && splits.isNotEmpty) {
@@ -174,6 +183,9 @@ class _PayoutsPageState extends State<PayoutsPage> with SingleTickerProviderStat
               cashlessAmt = (o['total'] as num?)?.toDouble() ?? 0.0;
             }
           }
+
+          // Exclude platform-settled courier postage from merchant product payout
+          cashlessAmt = (cashlessAmt - shipFee).clamp(0.0, double.infinity);
 
           if (cashlessAmt <= 0) continue;
 
