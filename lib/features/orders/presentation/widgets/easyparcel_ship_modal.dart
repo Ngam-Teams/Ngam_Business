@@ -115,30 +115,61 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
     _pickNameCtrl.text = cfg.senderName.isNotEmpty ? cfg.senderName : bizName;
     _pickPhoneCtrl.text = cfg.senderPhone.isNotEmpty ? cfg.senderPhone : bizPhone;
     _pickAddrCtrl.text = cfg.senderAddr1.isNotEmpty ? cfg.senderAddr1 : bizAddr;
-    _pickCityCtrl.text = cfg.senderCity;
     _pickPostcodeCtrl.text = cfg.senderPostcode.isNotEmpty
         ? cfg.senderPostcode
         : EasyParcelService.extractPostcode(bizAddr);
+    _pickCityCtrl.text = cfg.senderCity.isNotEmpty
+        ? cfg.senderCity
+        : EasyParcelService.extractCity(_pickAddrCtrl.text);
     _pickState = cfg.senderState.isNotEmpty
         ? cfg.senderState
         : EasyParcelService.guessStateCode(bizAddr);
 
-    // Pre-fill receiver address from order notes if any address/postcode was written
-    if (widget.order.notes != null && widget.order.notes!.trim().isNotEmpty) {
-      final notes = widget.order.notes!.trim();
-      final extractedPost = EasyParcelService.extractPostcode(notes);
-      if (extractedPost.isNotEmpty) {
-        _sendPostcodeCtrl.text = extractedPost;
-        _sendAddrCtrl.text = notes;
-        _sendState = EasyParcelService.guessStateCode(notes);
+    // 1. Auto-extract customer delivery address from order notes `(Alamat: ...)`
+    String receiverAddr = EasyParcelService.extractDeliveryAddress(widget.order.notes);
+    if (receiverAddr.isEmpty && widget.order.notes != null) {
+      final rawNotes = widget.order.notes!.trim();
+      if (EasyParcelService.extractPostcode(rawNotes).isNotEmpty) {
+        receiverAddr = rawNotes;
       }
     }
 
+    // 2. Fallback to customer's saved `user_address` / `user_phone` in `public.users`
+    if (receiverAddr.isEmpty || _sendPhoneCtrl.text.trim().isEmpty) {
+      final custInfo = await _service.fetchCustomerAddress(
+        widget.order.customerId ?? widget.order.ownerUserId,
+      );
+      if (receiverAddr.isEmpty && (custInfo['address'] ?? '').isNotEmpty) {
+        receiverAddr = custInfo['address']!;
+      }
+      if (_sendPhoneCtrl.text.trim().isEmpty && (custInfo['phone'] ?? '').isNotEmpty) {
+        _sendPhoneCtrl.text = custInfo['phone']!;
+      }
+      if (_sendNameCtrl.text.trim().isEmpty && (custInfo['name'] ?? '').isNotEmpty) {
+        _sendNameCtrl.text = custInfo['name']!;
+      }
+    }
+
+    if (receiverAddr.isNotEmpty) {
+      _sendAddrCtrl.text = receiverAddr;
+      _sendPostcodeCtrl.text = EasyParcelService.extractPostcode(receiverAddr);
+      _sendCityCtrl.text = EasyParcelService.extractCity(receiverAddr);
+      _sendState = EasyParcelService.guessStateCode(receiverAddr);
+    }
+
+    if (!mounted) return;
     setState(() {
       _config = cfg;
       _shipment = existing;
       _loadingConfig = false;
     });
+
+    // 3. Auto-check courier rates immediately if both sender & receiver postcodes are ready!
+    if (existing == null &&
+        _pickPostcodeCtrl.text.trim().length >= 5 &&
+        _sendPostcodeCtrl.text.trim().length >= 5) {
+      _checkRates();
+    }
   }
 
   @override

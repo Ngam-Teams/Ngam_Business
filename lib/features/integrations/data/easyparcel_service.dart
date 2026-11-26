@@ -244,6 +244,47 @@ class EasyParcelService {
     return match?.group(0) ?? '';
   }
 
+  /// Extract clean delivery address from Ngam order notes (e.g. `(Alamat: No 12, ... 43000 Kajang, Selangor)`)
+  static String extractDeliveryAddress(String? notes) {
+    if (notes == null || notes.trim().isEmpty) return '';
+    final alamatMatch = RegExp(r'\(Alamat:\s*([^)]+)\)', caseSensitive: false).firstMatch(notes);
+    if (alamatMatch != null) {
+      return alamatMatch.group(1)?.trim() ?? '';
+    }
+    return '';
+  }
+
+  /// Guess city name from a Malaysian address (typically right after the 5-digit postcode)
+  static String extractCity(String? address) {
+    if (address == null || address.isEmpty) return '';
+    final match = RegExp(r'\b\d{5}\s+([A-Za-z\s]{2,30})').firstMatch(address);
+    if (match != null) {
+      final raw = (match.group(1) ?? '').split(',').first.trim();
+      if (raw.isNotEmpty) return raw;
+    }
+    return '';
+  }
+
+  /// Fetch saved customer address/phone from `public.users` if order notes had no address
+  Future<Map<String, String>> fetchCustomerAddress(String? customerId) async {
+    if (customerId == null || customerId.isEmpty) return {};
+    try {
+      final row = await _client
+          .from('users')
+          .select('user_address, user_phone, user_name')
+          .eq('id', customerId)
+          .maybeSingle();
+      if (row == null) return {};
+      return {
+        'address': row['user_address']?.toString().trim() ?? '',
+        'phone': row['user_phone']?.toString().trim() ?? '',
+        'name': row['user_name']?.toString().trim() ?? '',
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
   /// Fetch saved EasyParcel configuration from Supabase (with local cache fallback)
   Future<EasyParcelConfig> getConfig({String? businessId}) async {
     final bizId = businessId ?? await _resolveBusinessId();
