@@ -1,6 +1,6 @@
 {
-  "version": "1.0.89",
-  "build_number": 69,
-  "released_at": "2026-11-26T00:53:04Z",
-  "changelog": "Guna gaya iOS 26 Balanced Frosted Glass pada Bottom Sheet (blur 18 + lapisan kaca gelap nipis 0.48 + kad dalaman 0.65) supaya teks 100% jelas dibaca sambil mengekalkan efek kaca lut sinar di latar belakang."
+  "version": "1.0.90",
+  "build_number": 70,
+  "released_at": "2026-11-26T01:04:25Z",
+  "changelog": "Baiki modal & Bottom Sheet Butiran Pesanan supaya tidak gelap pekat: turunkan barrierColor dialog (0.75 -> 0.25), guna blur 20 + gradient frosted glass berkilau lembut dan kad dalaman kaca lut sinar."
 }

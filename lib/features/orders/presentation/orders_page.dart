@@ -417,7 +417,7 @@ class _OrdersPageState extends State<OrdersPage> {
     if (isLargeScreen) {
       showDialog(
         context: context,
-        barrierColor: Colors.black.withValues(alpha: 0.75),
+        barrierColor: Colors.black.withValues(alpha: 0.25),
         builder: (modalCtx) => Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -438,7 +438,7 @@ class _OrdersPageState extends State<OrdersPage> {
         isScrollControlled: true,
         useSafeArea: true,
         backgroundColor: Colors.transparent,
-        barrierColor: Colors.black.withValues(alpha: 0.38),
+        barrierColor: Colors.black.withValues(alpha: 0.25),
         builder: (modalCtx) => ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(modalCtx).size.height * 0.88,
@@ -530,20 +530,28 @@ class _OrdersPageState extends State<OrdersPage> {
         return ClipRRect(
           borderRadius: borderRadius,
           child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 18.0, sigmaY: 18.0),
+            filter: ui.ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
             child: Container(
               decoration: BoxDecoration(
-                // iOS 26 Balanced Frosted Liquid Glass (readable + ambient glow)
-                color: const Color(0xFF0B0E1A).withValues(alpha: 0.48),
+                // iOS 26 Luminous Frosted Glass (creamy blur + specular sheen, never flat black)
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.14),
+                    const Color(0xFF1A2238).withValues(alpha: 0.36),
+                    const Color(0xFF0E1424).withValues(alpha: 0.44),
+                  ],
+                ),
                 borderRadius: borderRadius,
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: Colors.white.withValues(alpha: 0.24),
                   width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDialog ? 0.45 : 0.3),
-                    blurRadius: isDialog ? 28 : 18,
+                    color: Colors.black.withValues(alpha: isDialog ? 0.35 : 0.28),
+                    blurRadius: isDialog ? 28 : 20,
                     offset: Offset(0, isDialog ? 12 : -4),
                   ),
                 ],
@@ -654,9 +662,9 @@ class _OrdersPageState extends State<OrdersPage> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF111626).withValues(alpha: 0.65),
+                          color: Colors.white.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
                         ),
                         child: Row(
                           children: [
@@ -764,9 +772,9 @@ class _OrdersPageState extends State<OrdersPage> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF111626).withValues(alpha: 0.65),
+                          color: Colors.white.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
                         ),
                         child: Column(
                           children: [
@@ -932,9 +940,9 @@ class _OrdersPageState extends State<OrdersPage> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF111626).withValues(alpha: 0.65),
+                          color: Colors.white.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
                         ),
                         child: (cachedItems != null && cachedItems.isNotEmpty)
                             ? Column(
@@ -1059,9 +1067,9 @@ class _OrdersPageState extends State<OrdersPage> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF111626).withValues(alpha: 0.65),
+                            color: Colors.white.withValues(alpha: 0.06),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

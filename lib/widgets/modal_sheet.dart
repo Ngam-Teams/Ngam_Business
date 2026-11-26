@@ -18,7 +18,7 @@ class ModalSheet {
       isScrollControlled: true,
       useSafeArea: false,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withValues(alpha: 0.38),
+      barrierColor: Colors.black.withValues(alpha: 0.25),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: initialChildSize,
         minChildSize: minChildSize,
@@ -35,30 +35,39 @@ class ModalSheet {
             shape: const LiquidRoundedSuperellipse(borderRadius: 28.0),
             settings: LiquidGlassSettings(
               thickness: 0.1,
-              blur: 18.0,
+              blur: 20.0,
               refractiveIndex: 1.0,
               glassColor: Colors.transparent,
               lightAngle: 45.0,
-              lightIntensity: isDark ? 0.1 : 0.2,
+              lightIntensity: isDark ? 0.12 : 0.2,
               ambientStrength: 1.0,
               saturation: 1.0,
               chromaticAberration: 0.0,
             ),
             child: Container(
               decoration: BoxDecoration(
-                // iOS 26 Balanced Frosted Liquid Glass (readable + ambient glow)
-                color: isDark
-                    ? const Color(0xFF0B0E1A).withValues(alpha: 0.48)
-                    : Colors.white.withValues(alpha: 0.72),
+                // iOS 26 Luminous Frosted Glass (creamy blur + specular sheen, never flat black)
+                color: isDark ? null : Colors.white.withValues(alpha: 0.72),
+                gradient: isDark
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.14),
+                          const Color(0xFF1A2238).withValues(alpha: 0.36),
+                          const Color(0xFF0E1424).withValues(alpha: 0.44),
+                        ],
+                      )
+                    : null,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: isDark ? 0.16 : 0.45),
+                  color: Colors.white.withValues(alpha: isDark ? 0.24 : 0.45),
                   width: 1.0,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-                    blurRadius: 18,
+                    color: Colors.black.withValues(alpha: isDark ? 0.28 : 0.08),
+                    blurRadius: 20,
                     offset: const Offset(0, -4),
                   ),
                 ],
