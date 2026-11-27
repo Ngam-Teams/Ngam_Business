@@ -104,27 +104,26 @@ class _EasyParcelShipModalState extends State<EasyParcelShipModal> {
 
   Future<void> _initData() async {
     final cfg = await _service.getConfig();
-    final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+    final profile = await BusinessService().getBusinessProfile() ?? BusinessService.cachedProfile;
     final existing = _shipment ?? await _service.getOrderShipment(widget.order.id);
 
     if (!mounted) return;
 
-    final bizName = profile?['name']?.toString() ?? '';
-    final bizPhone = profile?['business_phone']?.toString() ?? '';
-    final bizAddr = profile?['address']?.toString() ?? '';
+    final biz = EasyParcelService.extractBusinessPickupDefaults(profile);
+    final hasSavedPickupAddr =
+        cfg.senderAddr1.trim().isNotEmpty || cfg.senderPostcode.trim().isNotEmpty;
 
-    _pickNameCtrl.text = cfg.senderName.isNotEmpty ? cfg.senderName : bizName;
-    _pickPhoneCtrl.text = cfg.senderPhone.isNotEmpty ? cfg.senderPhone : bizPhone;
-    _pickAddrCtrl.text = cfg.senderAddr1.isNotEmpty ? cfg.senderAddr1 : bizAddr;
-    _pickPostcodeCtrl.text = cfg.senderPostcode.isNotEmpty
+    _pickNameCtrl.text = cfg.senderName.trim().isNotEmpty ? cfg.senderName : (biz['name'] ?? '');
+    _pickPhoneCtrl.text = cfg.senderPhone.trim().isNotEmpty ? cfg.senderPhone : (biz['phone'] ?? '');
+    _pickAddrCtrl.text = cfg.senderAddr1.trim().isNotEmpty ? cfg.senderAddr1 : (biz['addr1'] ?? '');
+    _pickPostcodeCtrl.text = cfg.senderPostcode.trim().isNotEmpty
         ? cfg.senderPostcode
-        : EasyParcelService.extractPostcode(bizAddr);
-    _pickCityCtrl.text = cfg.senderCity.isNotEmpty
-        ? cfg.senderCity
-        : EasyParcelService.extractCity(_pickAddrCtrl.text);
-    _pickState = cfg.senderState.isNotEmpty
-        ? cfg.senderState
-        : EasyParcelService.guessStateCode(bizAddr);
+        : (biz['postcode'] ?? '');
+    _pickCityCtrl.text = cfg.senderCity.trim().isNotEmpty ? cfg.senderCity : (biz['city'] ?? '');
+    final bizState = biz['state'] ?? 'sgr';
+    _pickState = (hasSavedPickupAddr && cfg.senderState.trim().isNotEmpty)
+        ? cfg.senderState.trim()
+        : (bizState.isNotEmpty ? bizState : 'sgr');
 
     // 1. Auto-extract customer delivery address from order notes `(Alamat: ...)`
     String receiverAddr = EasyParcelService.extractDeliveryAddress(widget.order.notes);

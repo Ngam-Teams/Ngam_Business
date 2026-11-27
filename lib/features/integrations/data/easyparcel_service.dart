@@ -70,7 +70,7 @@ class EasyParcelConfig {
     this.senderAddr2 = '',
     this.senderCity = '',
     this.senderPostcode = '',
-    this.senderState = 'sgr',
+    this.senderState = '',
     this.autoSync = true,
     this.disabledCouriers = const [],
     this.preferredCourier = '',
@@ -140,7 +140,7 @@ class EasyParcelConfig {
       senderAddr2: cfg['sender_addr2']?.toString() ?? '',
       senderCity: cfg['sender_city']?.toString() ?? '',
       senderPostcode: cfg['sender_postcode']?.toString() ?? '',
-      senderState: cfg['sender_state']?.toString() ?? 'sgr',
+      senderState: cfg['sender_state']?.toString().trim() ?? '',
       autoSync: cfg['auto_sync'] != false,
       disabledCouriers: disabled,
       preferredCourier: cfg['preferred_courier']?.toString().toLowerCase().trim() ?? '',
@@ -321,15 +321,17 @@ class EasyParcelService {
     return (id != null && id.isNotEmpty) ? id : null;
   }
 
-  /// Guess EasyParcel state code from a free-text address or state string
+  /// Guess EasyParcel state code from a free-text address, state name, or state code.
   static String guessStateCode(String? raw) {
-    final text = (raw ?? '').toLowerCase();
-    if (text.contains('kuala lumpur') || text.contains('kl')) return 'kul';
+    final text = (raw ?? '').trim().toLowerCase();
+    if (text.isEmpty) return 'sgr';
+    if (kMalaysiaStates.any((s) => s['code'] == text)) return text;
+    if (text.contains('kuala lumpur') || RegExp(r'\bkl\b').hasMatch(text)) return 'kul';
     if (text.contains('putrajaya')) return 'pjy';
     if (text.contains('selangor') || text.contains('shah alam') || text.contains('petaling') || text.contains('subang') || text.contains('klang')) return 'sgr';
     if (text.contains('johor')) return 'jhr';
     if (text.contains('penang') || text.contains('pulau pinang')) return 'png';
-    if (text.contains('perak') || text.contains('ipoh')) return 'prk';
+    if (text.contains('perak') || text.contains('ipoh') || text.contains('taiping')) return 'prk';
     if (text.contains('kedah') || text.contains('alor setar')) return 'kdh';
     if (text.contains('perlis')) return 'pls';
     if (text.contains('negeri sembilan') || text.contains('seremban')) return 'nsn';
@@ -341,6 +343,41 @@ class EasyParcelService {
     if (text.contains('sabah') || text.contains('kota kinabalu')) return 'sbh';
     if (text.contains('labuan')) return 'lbn';
     return 'sgr';
+  }
+
+  /// Extract initial pickup address defaults from a Business Profile row (`businesses` table).
+  /// Supports both structured fields (`address_line`, `postcode`, `business_city`, `state`)
+  /// and legacy single-string fields (`address`, `business_address`).
+  static Map<String, String> extractBusinessPickupDefaults(Map<String, dynamic>? profile) {
+    String pick(List<String> keys) {
+      if (profile == null) return '';
+      for (final k in keys) {
+        final v = profile[k]?.toString().trim() ?? '';
+        if (v.isNotEmpty) return v;
+      }
+      return '';
+    }
+
+    final name = pick(['business_name', 'name']);
+    final phone = pick(['business_phone', 'phone', 'contact_phone']);
+    final addr1 = pick(['address_line', 'address', 'business_address']);
+    final directPostcode = pick(['postcode', 'business_postcode']);
+    final postcode = directPostcode.isNotEmpty ? directPostcode : extractPostcode(addr1);
+    final directCity = pick(['business_city', 'city']);
+    final city = directCity.isNotEmpty ? directCity : extractCity(addr1);
+    final rawState = pick(['state', 'business_state']);
+    final stateCode = rawState.isNotEmpty
+        ? guessStateCode(rawState)
+        : guessStateCode('$addr1 $city');
+
+    return {
+      'name': name,
+      'phone': phone,
+      'addr1': addr1,
+      'postcode': postcode,
+      'city': city,
+      'state': stateCode,
+    };
   }
 
   /// Extract a 5-digit Malaysian postcode from an address string if present

@@ -2,5 +2,5 @@
   "version": "1.0.92",
   "build_number": 72,
   "released_at": "2026-11-26T14:20:00Z",
-  "changelog": "Naik taraf variasi produk gaya Shopee: tetapkan harga tepat, stok & berat (kg) tersendiri bagi setiap variasi (auto-kesan berat dari nama seperti 400g/2kg), Harga Asas tidak lagi wajib diisi jika ada variasi, dan paparan julat harga min–maks pada kad katalog & POS."
+  "changelog": "Auto-isi alamat kutipan Ngam Shipping & AWB daripada Profil Kedai (jalan, poskod, bandar, negeri & telefon) secara lalai, sambil kekal boleh diubah suai atau disalin semula dengan 1 klik."
 }

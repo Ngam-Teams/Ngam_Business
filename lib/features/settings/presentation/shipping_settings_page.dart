@@ -72,15 +72,17 @@ class _ShippingSettingsPageState extends State<ShippingSettingsPage> {
     super.dispose();
   }
 
+  Map<String, dynamic>? _businessProfile;
+
   Future<void> _loadData() async {
     final cfg = await _service.getConfig();
-    final profile = BusinessService.cachedProfile ?? await BusinessService().getBusinessProfile();
+    final profile = await BusinessService().getBusinessProfile() ?? BusinessService.cachedProfile;
     if (!mounted) return;
 
-    final bizName = (profile?['business_name'] ?? profile?['name'] ?? '').toString();
-    final bizPhone = (profile?['business_phone'] ?? '').toString();
-    final bizAddr = (profile?['address'] ?? profile?['business_address'] ?? '').toString();
-    final bizCity = (profile?['business_city'] ?? '').toString();
+    _businessProfile = profile;
+    final biz = EasyParcelService.extractBusinessPickupDefaults(profile);
+    final hasSavedPickupAddr =
+        cfg.senderAddr1.trim().isNotEmpty || cfg.senderPostcode.trim().isNotEmpty;
 
     setState(() {
       _isEnabled = cfg.isConnected;
@@ -95,21 +97,41 @@ class _ShippingSettingsPageState extends State<ShippingSettingsPage> {
         ..addAll(cfg.disabledCouriers);
 
       _apiKeyCtrl.text = cfg.apiKey;
-      _nameCtrl.text = cfg.senderName.isNotEmpty ? cfg.senderName : bizName;
-      _phoneCtrl.text = cfg.senderPhone.isNotEmpty ? cfg.senderPhone : bizPhone;
-      _addr1Ctrl.text = cfg.senderAddr1.isNotEmpty ? cfg.senderAddr1 : bizAddr;
+      _nameCtrl.text = cfg.senderName.trim().isNotEmpty ? cfg.senderName : (biz['name'] ?? '');
+      _phoneCtrl.text = cfg.senderPhone.trim().isNotEmpty ? cfg.senderPhone : (biz['phone'] ?? '');
+      _addr1Ctrl.text = cfg.senderAddr1.trim().isNotEmpty ? cfg.senderAddr1 : (biz['addr1'] ?? '');
       _addr2Ctrl.text = cfg.senderAddr2;
-      _postcodeCtrl.text = cfg.senderPostcode.isNotEmpty
+      _postcodeCtrl.text = cfg.senderPostcode.trim().isNotEmpty
           ? cfg.senderPostcode
-          : EasyParcelService.extractPostcode(bizAddr);
-      _cityCtrl.text = cfg.senderCity.isNotEmpty
-          ? cfg.senderCity
-          : (bizCity.isNotEmpty ? bizCity : EasyParcelService.extractCity(_addr1Ctrl.text));
-      _stateCode = cfg.senderState.isNotEmpty
-          ? cfg.senderState
-          : EasyParcelService.guessStateCode(bizAddr);
+          : (biz['postcode'] ?? '');
+      _cityCtrl.text = cfg.senderCity.trim().isNotEmpty ? cfg.senderCity : (biz['city'] ?? '');
+      final bizState = biz['state'] ?? 'sgr';
+      _stateCode = (hasSavedPickupAddr && cfg.senderState.trim().isNotEmpty)
+          ? cfg.senderState.trim()
+          : (bizState.isNotEmpty ? bizState : 'sgr');
       _loading = false;
     });
+  }
+
+  void _applyBusinessProfileAddress() {
+    final biz = EasyParcelService.extractBusinessPickupDefaults(_businessProfile);
+    final hasAny = (biz['addr1'] ?? '').isNotEmpty ||
+        (biz['postcode'] ?? '').isNotEmpty ||
+        (biz['city'] ?? '').isNotEmpty ||
+        (biz['phone'] ?? '').isNotEmpty;
+    if (!hasAny) {
+      showGlassToast(context, 'shipping_settings.profile_address_empty_toast'.tr(), isError: true);
+      return;
+    }
+    setState(() {
+      if ((biz['name'] ?? '').isNotEmpty) _nameCtrl.text = biz['name']!;
+      if ((biz['phone'] ?? '').isNotEmpty) _phoneCtrl.text = biz['phone']!;
+      if ((biz['addr1'] ?? '').isNotEmpty) _addr1Ctrl.text = biz['addr1']!;
+      if ((biz['postcode'] ?? '').isNotEmpty) _postcodeCtrl.text = biz['postcode']!;
+      if ((biz['city'] ?? '').isNotEmpty) _cityCtrl.text = biz['city']!;
+      if ((biz['state'] ?? '').isNotEmpty) _stateCode = biz['state']!;
+    });
+    showGlassToast(context, 'shipping_settings.copied_from_profile_toast'.tr());
   }
 
   Future<void> _saveSettings() async {
@@ -927,7 +949,17 @@ class _ShippingSettingsPageState extends State<ShippingSettingsPage> {
             title: 'shipping_settings.pickup_title'.tr(),
             subtitle: 'shipping_settings.pickup_subtitle'.tr(),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _presetButton(
+              icon: Icons.store_mall_directory_outlined,
+              label: 'shipping_settings.use_store_profile_btn'.tr(),
+              color: _sky,
+              onTap: _applyBusinessProfileAddress,
+            ),
+          ),
+          const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= 480;
@@ -979,6 +1011,7 @@ class _ShippingSettingsPageState extends State<ShippingSettingsPage> {
                   ],
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
+                    key: ValueKey('state_$_stateCode'),
                     initialValue: kMalaysiaStates.any((s) => s['code'] == _stateCode)
                         ? _stateCode
                         : 'sgr',

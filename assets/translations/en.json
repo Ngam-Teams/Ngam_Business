@@ -2032,6 +2032,9 @@
     "err_postcode_required": "Please enter a valid 5-digit store pickup postcode before activating.",
     "err_min_one_courier": "Please keep at least 1 courier enabled.",
     "saved_enabled_toast": "Ngam Shipping settings saved & active!",
-    "saved_disabled_toast": "Courier shipping has been disabled for your store."
+    "saved_disabled_toast": "Courier shipping has been disabled for your store.",
+    "use_store_profile_btn": "Copy from Business Profile",
+    "copied_from_profile_toast": "Pickup address filled from Business Profile. You can still edit freely!",
+    "profile_address_empty_toast": "No address saved in Business Profile yet."
   }
 }

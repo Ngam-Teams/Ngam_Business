@@ -2032,6 +2032,9 @@
     "err_postcode_required": "Sila masukkan poskod kutipan kedai 5-digit yang sah sebelum mengaktifkan.",
     "err_min_one_courier": "Sila kekalkan sekurang-kurangnya 1 kurier aktif.",
     "saved_enabled_toast": "Tetapan Ngam Shipping disimpan & aktif!",
-    "saved_disabled_toast": "Penghantaran kurier kedai telah ditutup."
+    "saved_disabled_toast": "Penghantaran kurier kedai telah ditutup.",
+    "use_store_profile_btn": "Salin dari Profil Kedai",
+    "copied_from_profile_toast": "Alamat kutipan diisi dari Profil Kedai. Anda masih boleh ubah bila-bila masa!",
+    "profile_address_empty_toast": "Tiada alamat disimpan di Profil Kedai lagi."
   }
 }
