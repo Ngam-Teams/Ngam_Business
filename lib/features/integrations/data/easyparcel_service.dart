@@ -461,6 +461,24 @@ class EasyParcelService {
       },
       onConflict: 'business_id,provider',
     );
+
+    // Mirror public `shipping_enabled` flag into `business_settings.operating_hours`
+    // so customer apps can show the Delivery tab instantaneously.
+    try {
+      final bizService = BusinessService(client: _client);
+      final existingRow = await _client
+          .from('business_settings')
+          .select('operating_hours')
+          .eq('business_id', bizId)
+          .maybeSingle();
+      final opHours = (existingRow != null && existingRow['operating_hours'] is Map)
+          ? Map<String, dynamic>.from(existingRow['operating_hours'] as Map)
+          : <String, dynamic>{};
+      opHours['shipping_enabled'] = cfg.isConnected;
+      await bizService.saveBusinessSettings(bizId, {'operating_hours': opHours});
+    } catch (e) {
+      debugPrint('[EasyParcelService] Mirror shipping_enabled to business_settings failed: $e');
+    }
   }
 
   /// Disconnect EasyParcel
