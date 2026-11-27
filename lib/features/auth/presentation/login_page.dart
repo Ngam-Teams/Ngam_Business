@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../../core/services/app_update_service.dart';
+import '../../settings/models/business_type_catalog.dart';
 import '../data/auth_service.dart';
 
 // =============================================================================
@@ -39,6 +40,7 @@ class _LoginPageState extends State<LoginPage>
   final _regBusinessNameController = TextEditingController();
   final _regEmailController = TextEditingController();
   final _regPasswordController = TextEditingController();
+  String? _regBusinessTypeId;
   bool _regObscurePassword = true;
   bool _regSuccess = false;
 
@@ -245,6 +247,7 @@ class _LoginPageState extends State<LoginPage>
         email: _regEmailController.text.trim(),
         password: _regPasswordController.text,
         businessName: _regBusinessNameController.text.trim(),
+        businessTypeId: _regBusinessTypeId,
       );
 
       if (mounted) {
@@ -861,8 +864,381 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
+  List<BusinessTypeItem> _smartSuggestionsForName() {
+    final name = _regBusinessNameController.text.trim();
+    if (name.length < 3) return const [];
+    final ranked = BusinessTypeCatalog.searchRanked(name);
+    // Only show suggestions when the query actually narrowed down from the full catalog
+    if (ranked.isEmpty || ranked.length >= BusinessTypeCatalog.allTypes.length) {
+      return const [];
+    }
+    return ranked.take(3).toList();
+  }
+
+  Future<void> _showRegisterBusinessTypePicker() async {
+    String selectedCat = 'all';
+    String query = '';
+    final searchCtrl = TextEditingController();
+    const brandGreen = Color(0xFF44CF6C);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final items = BusinessTypeCatalog.searchRanked(
+            query,
+            categoryGroup: selectedCat,
+          );
+          final maxH = MediaQuery.of(ctx).size.height * 0.78;
+          return Container(
+            height: maxH,
+            decoration: BoxDecoration(
+              color: const Color(0xFF10121E),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 14, 12, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'business_type.register_picker_title'.tr(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      controller: searchCtrl,
+                      onChanged: (v) => setModalState(() => query = v),
+                      style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                      decoration: InputDecoration(
+                        hintText: 'business_type.search_hint'.tr(),
+                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                        prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54, size: 19),
+                        suffixIcon: query.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                                onPressed: () {
+                                  searchCtrl.clear();
+                                  setModalState(() => query = '');
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.white.withValues(alpha: 0.06),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: brandGreen, width: 1.4),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 36,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      scrollDirection: Axis.horizontal,
+                      itemCount: BusinessTypeCatalog.categories.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (_, idx) {
+                        final cat = BusinessTypeCatalog.categories[idx];
+                        final active = cat == selectedCat;
+                        return GestureDetector(
+                          onTap: () => setModalState(() => selectedCat = cat),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: active ? brandGreen : Colors.white.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'business_type.categories.$cat'.tr(),
+                                style: TextStyle(
+                                  color: active ? Colors.black : Colors.white70,
+                                  fontSize: 11.5,
+                                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: items.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                'business_type.no_results_title'.tr(),
+                                style: const TextStyle(color: Colors.white54, fontSize: 13),
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                            itemCount: items.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            itemBuilder: (_, idx) {
+                              final item = items[idx];
+                              final selected = _regBusinessTypeId == item.id;
+                              return InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () {
+                                  setState(() => _regBusinessTypeId = item.id);
+                                  Navigator.of(ctx).pop();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: selected
+                                        ? brandGreen.withValues(alpha: 0.14)
+                                        : Colors.white.withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: selected
+                                          ? brandGreen
+                                          : Colors.white.withValues(alpha: 0.09),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 38,
+                                        height: 38,
+                                        decoration: BoxDecoration(
+                                          color: selected
+                                              ? brandGreen.withValues(alpha: 0.22)
+                                              : Colors.white.withValues(alpha: 0.06),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Center(
+                                          child: HugeIcon(
+                                            icon: item.icon,
+                                            color: selected ? brandGreen : Colors.white70,
+                                            size: 19,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              item.nameKey.tr(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'business_type.categories.${item.categoryGroup}'.tr(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: Colors.white54,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (selected)
+                                        const Icon(
+                                          Icons.check_circle_rounded,
+                                          color: brandGreen,
+                                          size: 20,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    searchCtrl.dispose();
+  }
+
+  Widget _buildRegisterBusinessTypeField(BuildContext context) {
+    final selectedItem = _regBusinessTypeId != null
+        ? BusinessTypeCatalog.findById(_regBusinessTypeId)
+        : null;
+    final suggestions = _smartSuggestionsForName();
+    const brandGreen = Color(0xFF44CF6C);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'business_type.register_field_label'.tr(),
+          style: GoogleFonts.inter(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.0,
+            color: textSecondary,
+          ),
+        ),
+        const SizedBox(height: 6),
+        InkWell(
+          onTap: _showRegisterBusinessTypePicker,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: selectedItem != null
+                    ? brandGreen.withValues(alpha: 0.55)
+                    : Colors.white.withValues(alpha: 0.14),
+              ),
+            ),
+            child: Row(
+              children: [
+                if (selectedItem != null)
+                  HugeIcon(icon: selectedItem.icon, color: brandGreen, size: 18)
+                else
+                  const Icon(Icons.category_outlined, color: textSecondary, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    selectedItem != null
+                        ? selectedItem.nameKey.tr()
+                        : 'business_type.register_field_hint'.tr(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: selectedItem != null ? textPrimary : textSecondary.withValues(alpha: 0.7),
+                      fontSize: 13.5,
+                      fontWeight: selectedItem != null ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                const Icon(Icons.keyboard_arrow_down_rounded, color: textSecondary, size: 19),
+              ],
+            ),
+          ),
+        ),
+        if (suggestions.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'business_type.register_suggestions_label'.tr(),
+            style: GoogleFonts.inter(
+              fontSize: 10.5,
+              color: textSecondary.withValues(alpha: 0.8),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: suggestions.map((item) {
+              final active = _regBusinessTypeId == item.id;
+              return GestureDetector(
+                onTap: () => setState(() => _regBusinessTypeId = item.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? brandGreen.withValues(alpha: 0.22)
+                        : Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(
+                      color: active ? brandGreen : Colors.white.withValues(alpha: 0.14),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      HugeIcon(
+                        icon: item.icon,
+                        color: active ? brandGreen : Colors.white70,
+                        size: 13,
+                      ),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          item.nameKey.tr(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: active ? brandGreen : Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
-  // 2. THE REGISTER CARD (3 Clean Fields: Business Name, Email, Password)
+  // 2. THE REGISTER CARD (Business Name, Business Type, Email, Password)
   // ───────────────────────────────────────────────────────────────────────────
   Widget _buildRegisterCard(BuildContext context) {
     return KeyedSubtree(
@@ -911,6 +1287,7 @@ class _LoginPageState extends State<LoginPage>
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: _regBusinessNameController,
+                      onChanged: (_) => setState(() {}),
                       style: GoogleFonts.inter(color: textPrimary, fontSize: 13.5),
                       textCapitalization: TextCapitalization.words,
                       decoration: _inputDecoration(
@@ -920,6 +1297,10 @@ class _LoginPageState extends State<LoginPage>
                       validator: (val) =>
                           (val == null || val.trim().isEmpty) ? 'Sila masukkan nama perniagaan' : null,
                     ),
+                    const SizedBox(height: 14),
+
+                    // Field 1B: Business Type Selector (with smart name-based suggestions)
+                    _buildRegisterBusinessTypeField(context),
                     const SizedBox(height: 14),
 
                     // Field 2: Business Email Address

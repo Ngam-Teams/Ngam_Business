@@ -651,8 +651,39 @@ class BusinessTypeCatalog {
     'beauty': 'barbershop',
     'auto': 'workshop',
     'retail': 'minimarket',
-    'services': 'home_cleaning',
   };
+
+  /// Smart default service modes based on chosen business type (merchants can freely
+  /// toggle Walk-In, Booking, or Order ON/OFF anytime in Business Profile).
+  static ({bool walkIn, bool booking, bool order}) recommendedServiceModes(String? businessTypeId) {
+    final item = findById(businessTypeId);
+    if (item == null) {
+      return (walkIn: false, booking: false, order: true);
+    }
+    if (item.categoryGroup == 'retail' || item.id == 'pet_shop') {
+      return (walkIn: false, booking: false, order: true);
+    }
+    if (item.categoryGroup == 'fnb' || item.id == 'pet_cafe') {
+      return (
+        walkIn: false,
+        booking: item.bookingMode == 'time_slot',
+        order: true,
+      );
+    }
+    if (item.categoryGroup == 'stay' || item.bookingMode == 'overnight') {
+      return (walkIn: false, booking: true, order: false);
+    }
+    return (walkIn: true, booking: true, order: false);
+  }
+
+  static List<String> recommendedServiceModeList(String? businessTypeId) {
+    final m = recommendedServiceModes(businessTypeId);
+    return [
+      if (m.walkIn) 'walkin',
+      if (m.booking) 'booking',
+      if (m.order) 'order',
+    ];
+  }
 
   /// Flexible multi-word search ranked by how many searched words match
   /// (plus field relevance weight), so items containing more matching words

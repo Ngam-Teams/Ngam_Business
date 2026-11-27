@@ -20,7 +20,7 @@ class BusinessTypePage extends StatefulWidget {
 }
 
 class _BusinessTypePageState extends State<BusinessTypePage> {
-  late String _selectedId;
+  String? _selectedId;
   String _selectedCategory = 'all';
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
@@ -32,11 +32,10 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
     final initial = widget.initialSelectedId?.trim();
     if (initial != null && initial.isNotEmpty) {
       final item = BusinessTypeCatalog.findById(initial);
-      _selectedId = item?.id ?? 'restaurant';
+      _selectedId = item?.id;
     } else {
       final cached = BusinessService.cachedProfile;
-      final resolved = _extractTypeFromProfile(cached);
-      _selectedId = resolved ?? 'restaurant';
+      _selectedId = _extractTypeFromProfile(cached);
       _syncCurrentTypeFromServer();
     }
   }
@@ -55,7 +54,7 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
       }
     }
     final industry = profile['business_industry']?.toString().trim();
-    if (industry != null && industry.isNotEmpty) {
+    if (industry != null && industry.isNotEmpty && industry.toLowerCase() != 'services') {
       return BusinessTypeCatalog.findById(industry)?.id;
     }
     return null;
@@ -85,42 +84,51 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
   }
 
   Future<void> _handleSave() async {
-    if (_isSaving) return;
+    final chosenId = _selectedId;
+    if (_isSaving || chosenId == null || chosenId.isEmpty) return;
     setState(() => _isSaving = true);
 
     try {
       final bizService = BusinessService();
       final profile = await bizService.getBusinessProfile();
       final bizId = profile?['id']?.toString();
-      final selectedItem = BusinessTypeCatalog.findById(_selectedId);
+      final selectedItem = BusinessTypeCatalog.findById(chosenId);
 
       if (bizId != null && bizId.isNotEmpty) {
-        final dbIndustry = BusinessTypeCatalog.toDbIndustry(_selectedId);
+        final dbIndustry = BusinessTypeCatalog.toDbIndustry(chosenId);
         final categoryGroup = selectedItem?.categoryGroup ?? 'home_services';
         final bookingMode = selectedItem?.bookingMode ?? 'none';
 
         await bizService.updateBusinessProfile(bizId, {
           'business_industry': dbIndustry,
           'category_group': categoryGroup,
-          'business_type': _selectedId,
+          'business_type': chosenId,
           'booking_mode': bookingMode,
         });
 
-        // Also mirror 3-layer taxonomy inside business_settings.operating_hours
+        // Mirror 3-layer taxonomy inside business_settings.operating_hours
+        // and seed smart default service modes only if not yet customized.
         final existingSettings = profile?['settings'];
         final opHours = (existingSettings is Map && existingSettings['operating_hours'] is Map)
             ? Map<String, dynamic>.from(existingSettings['operating_hours'] as Map)
             : <String, dynamic>{};
-        opHours['business_type'] = _selectedId;
+        opHours['business_type'] = chosenId;
         opHours['category_group'] = categoryGroup;
         opHours['booking_mode'] = bookingMode;
+        if (opHours['service_modes'] == null) {
+          final rec = BusinessTypeCatalog.recommendedServiceModes(chosenId);
+          opHours['service_modes'] = BusinessTypeCatalog.recommendedServiceModeList(chosenId);
+          opHours['enable_walkin'] = rec.walkIn;
+          opHours['enable_booking'] = rec.booking;
+          opHours['enable_order'] = rec.order;
+        }
         await bizService.saveBusinessSettings(bizId, {'operating_hours': opHours});
       }
 
       if (mounted) {
         showGlassToast(context, 'business_type.save_success'.tr());
         if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop(_selectedId);
+          Navigator.of(context).pop(chosenId);
         } else {
           GlassNavButton.safeNavBack(context, fallbackRoute: '/settings');
         }
@@ -134,24 +142,13 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
     }
   }
 
-  Color _bookingModeColor(String mode) {
-    switch (mode) {
-      case 'overnight':
-        return const Color(0xFFA855F7);
-      case 'time_slot':
-        return const Color(0xFF38BDF8);
-      default:
-        return const Color(0xFFF59E0B);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final useGrid = screenWidth >= 640;
-    final activeItem = BusinessTypeCatalog.findById(_selectedId);
+    final activeItem = _selectedId != null ? BusinessTypeCatalog.findById(_selectedId) : null;
     final filtered = _filteredItems;
 
     // Follow app theme background seamlessly in both Dark & Light modes
@@ -198,7 +195,7 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: _isSaving ? null : _handleSave,
+                onPressed: (_isSaving || _selectedId == null) ? null : _handleSave,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: brandGreen,
                   foregroundColor: Colors.black,
@@ -415,11 +412,6 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
                               color: brandGreen,
                               isDark: isDark,
                             ),
-                            _buildBadge(
-                              label: 'business_type.booking_modes.${activeItem.bookingMode}'.tr(),
-                              color: _bookingModeColor(activeItem.bookingMode),
-                              isDark: isDark,
-                            ),
                           ],
                         ),
                       ],
@@ -549,7 +541,6 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
     required Color brandGreen,
   }) {
     final isSelected = item.id == _selectedId;
-    final modeColor = _bookingModeColor(item.bookingMode);
 
     return InkWell(
       onTap: () => setState(() => _selectedId = item.id),
@@ -651,11 +642,6 @@ class _BusinessTypePageState extends State<BusinessTypePage> {
                             color: isDark ? Colors.white70 : const Color(0xFF475569),
                           ),
                         ),
-                      ),
-                      _buildBadge(
-                        label: 'business_type.booking_modes.${item.bookingMode}'.tr(),
-                        color: modeColor,
-                        isDark: isDark,
                       ),
                     ],
                   ),

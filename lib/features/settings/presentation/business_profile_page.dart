@@ -37,7 +37,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   final _nameController = TextEditingController();
   final _handleController = TextEditingController();
   bool _isHandleCustomized = false;
-  String _selectedIndustry = 'services';
+  String? _selectedIndustry;
   final _regNoController = TextEditingController();
   final _sstNoController = TextEditingController();
 
@@ -67,8 +67,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   int _slotDuration = 30;
   int _estimatedWaitMinutes = 15;
   final _chairsController = TextEditingController(text: '1');
-  bool _enableWalkIn = true;
-  bool _enableBooking = true;
+  bool _enableWalkIn = false;
+  bool _enableBooking = false;
   bool _enableOrder = true;
   Map<String, dynamic> _existingOperatingHours = {};
 
@@ -152,13 +152,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       }
     }
 
-    final rawIndustry = (granularType ?? data['business_industry'] as String? ?? 'restaurant').toLowerCase();
-    final matched = BusinessTypeCatalog.findById(rawIndustry);
-    if (matched != null) {
-      _selectedIndustry = matched.id;
-    } else {
-      _selectedIndustry = 'restaurant';
-    }
+    final legacyInd = (data['business_industry'] as String?)?.trim().toLowerCase();
+    final rawIndustry = (granularType != null && granularType.isNotEmpty)
+        ? granularType.toLowerCase()
+        : (legacyInd != null && legacyInd.isNotEmpty && legacyInd != 'services' ? legacyInd : null);
+    final matched = rawIndustry != null ? BusinessTypeCatalog.findById(rawIndustry) : null;
+    _selectedIndustry = matched?.id;
 
     _regNoController.text = data['business_registration_number'] ?? '';
     _sstNoController.text = data['sst_number'] ?? '';
@@ -182,6 +181,8 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     _coverUrl = data['business_cover_url'];
     _latitude = (data['latitude'] as num?)?.toDouble();
     _longitude = (data['longitude'] as num?)?.toDouble();
+
+    bool hasExplicitServiceModes = false;
 
     // Load Settings if present
     if (data['settings'] != null) {
@@ -209,24 +210,29 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         }
 
         if (opHours['service_modes'] is List) {
+          hasExplicitServiceModes = true;
           final modes = (opHours['service_modes'] as List)
               .map((e) => e.toString().toLowerCase())
               .toList();
           _enableWalkIn = modes.contains('walkin');
           _enableBooking = modes.contains('booking');
           _enableOrder = modes.contains('order');
-        } else {
-          if (opHours.containsKey('enable_walkin')) {
-            _enableWalkIn = opHours['enable_walkin'] != false;
-          }
-          if (opHours.containsKey('enable_booking')) {
-            _enableBooking = opHours['enable_booking'] != false;
-          }
-          if (opHours.containsKey('enable_order')) {
-            _enableOrder = opHours['enable_order'] != false;
-          }
+        } else if (opHours.containsKey('enable_walkin') ||
+            opHours.containsKey('enable_booking') ||
+            opHours.containsKey('enable_order')) {
+          hasExplicitServiceModes = true;
+          _enableWalkIn = opHours['enable_walkin'] == true;
+          _enableBooking = opHours['enable_booking'] == true;
+          _enableOrder = opHours['enable_order'] == true;
         }
       }
+    }
+
+    if (!hasExplicitServiceModes) {
+      final rec = BusinessTypeCatalog.recommendedServiceModes(_selectedIndustry);
+      _enableWalkIn = rec.walkIn;
+      _enableBooking = rec.booking;
+      _enableOrder = rec.order;
     }
 
     // Load Compliance if present
@@ -300,17 +306,19 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     }
 
     final dbIndustry = BusinessTypeCatalog.toDbIndustry(_selectedIndustry);
-    final selectedTypeItem = BusinessTypeCatalog.findById(_selectedIndustry);
-    final categoryGroup = selectedTypeItem?.categoryGroup ?? 'home_services';
-    final bookingMode = selectedTypeItem?.bookingMode ?? 'none';
+    final selectedTypeItem = _selectedIndustry != null
+        ? BusinessTypeCatalog.findById(_selectedIndustry)
+        : null;
+    final categoryGroup = selectedTypeItem?.categoryGroup;
+    final bookingMode = selectedTypeItem?.bookingMode;
 
-    final businessData = {
+    final businessData = <String, dynamic>{
       'business_name': _nameController.text.trim(),
       'business_handle': cleanHandle,
       'business_industry': dbIndustry,
-      'category_group': categoryGroup,
-      'business_type': _selectedIndustry,
-      'booking_mode': bookingMode,
+      if (categoryGroup != null) 'category_group': categoryGroup,
+      if (_selectedIndustry != null) 'business_type': _selectedIndustry,
+      if (bookingMode != null) 'booking_mode': bookingMode,
       'business_registration_number': _regNoController.text.trim().isNotEmpty
           ? _regNoController.text.trim()
           : 'PENDING-REG',
@@ -332,7 +340,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     };
 
     if (!_enableWalkIn && !_enableBooking && !_enableOrder) {
-      setState(() => _enableWalkIn = true);
+      setState(() => _enableOrder = true);
     }
 
     final serviceModesList = <String>[
@@ -343,9 +351,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
 
     final mergedOperatingHours = <String, dynamic>{
       ..._existingOperatingHours,
-      'business_type': _selectedIndustry,
-      'category_group': categoryGroup,
-      'booking_mode': bookingMode,
+      if (_selectedIndustry != null) 'business_type': _selectedIndustry,
+      if (categoryGroup != null) 'category_group': categoryGroup,
+      if (bookingMode != null) 'booking_mode': bookingMode,
       'open_time': _formatTimeOfDay(_openTime),
       'close_time': _formatTimeOfDay(_closeTime),
       'days': _existingOperatingHours['days'] ??
@@ -414,7 +422,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           businessName: _nameController.text.trim().isNotEmpty
               ? _nameController.text.trim()
               : 'My Business',
-          businessIndustry: _selectedIndustry,
+          businessIndustry: _selectedIndustry ?? 'services',
         );
         _businessId = created['id'];
       }
@@ -1260,14 +1268,13 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
   }
 
   Widget _buildIndustrySelector() {
-    final active = BusinessTypeCatalog.findById(_selectedIndustry) ?? BusinessTypeCatalog.allTypes.first;
+    final active = _selectedIndustry != null
+        ? BusinessTypeCatalog.findById(_selectedIndustry)
+        : null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const brandGreen = Color(0xFF44CF6C);
-    final modeColor = active.bookingMode == 'overnight'
-        ? const Color(0xFFA855F7)
-        : (active.bookingMode == 'time_slot'
-            ? const Color(0xFF38BDF8)
-            : const Color(0xFFF59E0B));
+    const amberAccent = Color(0xFFF59E0B);
+    final accent = active != null ? brandGreen : amberAccent;
 
     final labelColor = isDark ? Colors.white70 : const Color(0xFF475569);
     final cardBg = isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white;
@@ -1293,10 +1300,17 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         ),
         InkWell(
           onTap: () async {
-            final result = await context.push<String>('/business-type?current=$_selectedIndustry');
-            if (result != null && mounted) {
+            final query = _selectedIndustry != null ? '?current=$_selectedIndustry' : '';
+            final result = await context.push<String>('/business-type$query');
+            if (result != null && result.isNotEmpty && mounted) {
               setState(() {
                 _selectedIndustry = result;
+                if (_existingOperatingHours['service_modes'] == null) {
+                  final rec = BusinessTypeCatalog.recommendedServiceModes(result);
+                  _enableWalkIn = rec.walkIn;
+                  _enableBooking = rec.booking;
+                  _enableOrder = rec.order;
+                }
               });
             }
           },
@@ -1307,7 +1321,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
               color: cardBg,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: brandGreen.withValues(alpha: isDark ? 0.35 : 0.45),
+                color: accent.withValues(alpha: isDark ? 0.38 : 0.48),
                 width: 1.2,
               ),
             ),
@@ -1322,13 +1336,13 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: brandGreen.withValues(alpha: 0.15),
+                        color: accent.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
                         child: HugeIcon(
-                          icon: active.icon,
-                          color: brandGreen,
+                          icon: active?.icon ?? HugeIcons.strokeRoundedStore03,
+                          color: accent,
                           size: 22,
                         ),
                       ),
@@ -1339,7 +1353,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            active.nameKey.tr(),
+                            active != null
+                                ? active.nameKey.tr()
+                                : 'business_type.not_selected_title'.tr(),
                             style: TextStyle(
                               color: titleColor,
                               fontWeight: FontWeight.w700,
@@ -1351,7 +1367,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            active.descKey.tr(),
+                            active != null
+                                ? active.descKey.tr()
+                                : 'business_type.not_selected_desc'.tr(),
                             style: TextStyle(
                               color: descColor,
                               fontSize: 11.5,
@@ -1368,7 +1386,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                 const SizedBox(height: 12),
                 Divider(height: 1, color: dividerColor),
                 const SizedBox(height: 10),
-                // Bottom Row: Responsive Wrap of Category + Booking Mode + Action Button
+                // Bottom Row: Responsive Wrap of Category + Action Button (no auto mode badge)
                 SizedBox(
                   width: double.infinity,
                   child: Wrap(
@@ -1377,65 +1395,63 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                     alignment: WrapAlignment.spaceBetween,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                            decoration: BoxDecoration(
-                              color: brandGreen.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                            child: Text(
-                              'business_type.categories.${active.categoryGroup}'.tr(),
-                              style: const TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: brandGreen,
-                              ),
+                      if (active != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            color: brandGreen.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: Text(
+                            'business_type.categories.${active.categoryGroup}'.tr(),
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: brandGreen,
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                            decoration: BoxDecoration(
-                              color: modeColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                            child: Text(
-                              'business_type.booking_modes.${active.bookingMode}'.tr(),
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: modeColor,
-                              ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            color: amberAccent.withValues(alpha: 0.16),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: Text(
+                            'business_type.not_selected_badge'.tr(),
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: amberAccent,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: brandGreen.withValues(alpha: 0.14),
+                          color: accent.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: brandGreen.withValues(alpha: 0.3)),
+                          border: Border.all(color: accent.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'business_type.change_type'.tr(),
-                              style: const TextStyle(
+                              active != null
+                                  ? 'business_type.change_type'.tr()
+                                  : 'business_type.choose_type'.tr(),
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: brandGreen,
+                                color: accent,
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(
+                            Icon(
                               Icons.arrow_forward_ios_rounded,
                               size: 11,
-                              color: brandGreen,
+                              color: accent,
                             ),
                           ],
                         ),

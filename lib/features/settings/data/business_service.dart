@@ -350,12 +350,25 @@ class BusinessService {
       }
 
       final initialHandle = generateHandleFromName(cleanName);
+      final metaTypeId = user.userMetadata?['business_type']?.toString().trim();
+      final matchedType = (metaTypeId != null && metaTypeId.isNotEmpty)
+          ? BusinessTypeCatalog.findById(metaTypeId)
+          : null;
+      final dbIndustry = matchedType != null
+          ? BusinessTypeCatalog.toDbIndustry(matchedType.id)
+          : 'services';
 
-      final newProfile = await _client.from('businesses').insert({
+      Map<String, dynamic>? newProfile;
+      final insertPayload = <String, dynamic>{
         'owner_user_id': user.id,
         'business_name': cleanName,
         'business_handle': initialHandle,
-        'business_industry': 'services',
+        'business_industry': dbIndustry,
+        if (matchedType != null) ...{
+          'business_type': matchedType.id,
+          'category_group': matchedType.categoryGroup,
+          'booking_mode': matchedType.bookingMode,
+        },
         'business_registration_number': 'PENDING-REG',
         'address_line': '',
         'postcode': '',
@@ -364,12 +377,21 @@ class BusinessService {
         'business_country': 'Malaysia',
         'status': 'active',
         'platform_fee_percent': 2.00,
-      }).select().maybeSingle();
+      };
+      try {
+        newProfile = await _client.from('businesses').insert(insertPayload).select().maybeSingle();
+      } catch (_) {
+        final fallbackPayload = Map<String, dynamic>.from(insertPayload)
+          ..remove('business_type')
+          ..remove('category_group')
+          ..remove('booking_mode');
+        newProfile = await _client.from('businesses').insert(fallbackPayload).select().maybeSingle();
+      }
 
       if (newProfile != null) {
         final profile = Map<String, dynamic>.from(newProfile);
-        // Initialize default settings row
-        await initDefaultSettings(profile['id']);
+        // Initialize default settings row with smart service modes
+        await initDefaultSettings(profile['id'], businessTypeId: matchedType?.id);
         await _saveProfileToCache(profile);
         return profile;
       }
@@ -550,15 +572,29 @@ class BusinessService {
   }
 
   /// Initialize default settings row for a business
-  Future<void> initDefaultSettings(String businessId) async {
+  Future<void> initDefaultSettings(String businessId, {String? businessTypeId}) async {
     try {
+      final matched = (businessTypeId != null && businessTypeId.isNotEmpty)
+          ? BusinessTypeCatalog.findById(businessTypeId)
+          : null;
+      final rec = BusinessTypeCatalog.recommendedServiceModes(matched?.id);
+      final opHours = <String, dynamic>{
+        'open_time': '09:00',
+        'close_time': '22:00',
+        'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+        if (matched != null) ...{
+          'business_type': matched.id,
+          'category_group': matched.categoryGroup,
+          'booking_mode': matched.bookingMode,
+          'service_modes': BusinessTypeCatalog.recommendedServiceModeList(matched.id),
+          'enable_walkin': rec.walkIn,
+          'enable_booking': rec.booking,
+          'enable_order': rec.order,
+        },
+      };
       await _client.from('business_settings').upsert({
         'business_id': businessId,
-        'operating_hours': {
-          'open_time': '09:00',
-          'close_time': '22:00',
-          'days': ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-        },
+        'operating_hours': opHours,
         'is_halal': false,
         'total_chairs': 1,
         'slot_duration': 30,

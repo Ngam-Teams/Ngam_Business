@@ -7,6 +7,7 @@ import '../../loyalty/data/loyalty_service.dart';
 import '../../payroll/data/payroll_service.dart';
 import '../../queue/data/queue_service.dart';
 import '../../settings/data/business_service.dart';
+import '../../settings/models/business_type_catalog.dart';
 
 /// AuthService — handles sign in, sign out, and session state.
 class AuthService {
@@ -119,11 +120,19 @@ class AuthService {
     required String email,
     required String password,
     required String businessName,
+    String? businessTypeId,
   }) async {
+    final matchedType = (businessTypeId != null && businessTypeId.trim().isNotEmpty)
+        ? BusinessTypeCatalog.findById(businessTypeId.trim())
+        : null;
+
     final response = await _client.auth.signUp(
       email: email.trim(),
       password: password,
-      data: {'business_name': businessName},
+      data: {
+        'business_name': businessName,
+        if (matchedType != null) 'business_type': matchedType.id,
+      },
     );
     
     // Attempt to manually assign the tenant_admin role if RLS allows it
@@ -149,14 +158,39 @@ class AuthService {
       } catch (_) {}
 
       try {
-        await _client.from('businesses').insert({
+        final dbIndustry = matchedType != null
+            ? BusinessTypeCatalog.toDbIndustry(matchedType.id)
+            : 'services';
+        final bizPayload = <String, dynamic>{
           'owner_user_id': response.user!.id,
           'business_name': businessName.trim().isNotEmpty ? businessName.trim() : 'My Business',
-          'business_industry': 'services',
+          'business_industry': dbIndustry,
+          if (matchedType != null) ...{
+            'business_type': matchedType.id,
+            'category_group': matchedType.categoryGroup,
+            'booking_mode': matchedType.bookingMode,
+          },
           'business_registration_number': 'PENDING-REG',
           'status': 'active',
           'platform_fee_percent': 2.00,
-        });
+        };
+        Map<String, dynamic>? createdBiz;
+        try {
+          createdBiz = await _client.from('businesses').insert(bizPayload).select('id').maybeSingle();
+        } catch (_) {
+          final fallback = Map<String, dynamic>.from(bizPayload)
+            ..remove('business_type')
+            ..remove('category_group')
+            ..remove('booking_mode');
+          createdBiz = await _client.from('businesses').insert(fallback).select('id').maybeSingle();
+        }
+        final bizId = createdBiz?['id']?.toString();
+        if (bizId != null && bizId.isNotEmpty) {
+          await BusinessService(client: _client).initDefaultSettings(
+            bizId,
+            businessTypeId: matchedType?.id,
+          );
+        }
       } catch (_) {
         // Handled lazily by BusinessService.getBusinessProfile
       }

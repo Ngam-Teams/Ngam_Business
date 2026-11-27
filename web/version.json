@@ -2,5 +2,5 @@
   "version": "1.0.92",
   "build_number": 72,
   "released_at": "2026-11-26T14:20:00Z",
-  "changelog": "Segerakkan status aktif Ngam Shipping ke tetapan kedai secara automatik supaya tab Penghantaran (Delivery) muncul serta-merta di troli pelanggan."
+  "changelog": "Tambah pemilih Jenis Perniagaan & cadangan pintar masa daftar, buang fallback lalai Home & Office Cleaning serta lencana mod automatik, dan guna mod operasi lalai yang sesuai mengikut jenis kedai."
 }
