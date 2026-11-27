@@ -74,13 +74,92 @@ class ProductModel {
 
   bool get isService => itemType == 'service';
   bool get isProduct => !isService;
-  bool get hasDiscount => compareAtPrice != null && compareAtPrice! > price;
-  double? get discountPercent => hasDiscount ? (((compareAtPrice! - price) / compareAtPrice!) * 100) : null;
-  double? get profitMargin => (costPrice != null && costPrice! > 0 && price > costPrice!)
-      ? (((price - costPrice!) / price) * 100)
+
+  /// Standalone exact price for a variant; falls back to product `price` if unset.
+  double variantEffectivePrice(Map<String, dynamic> v) {
+    final vp = (v['price'] as num?)?.toDouble() ??
+        double.tryParse(v['price']?.toString() ?? '') ??
+        0.0;
+    return vp > 0 ? vp : price;
+  }
+
+  /// Per-variant stock if stored on the variant, else null.
+  int? variantStock(Map<String, dynamic> v) {
+    final raw = v['stock'];
+    if (raw == null) return null;
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw.toString());
+  }
+
+  /// Smart-parse weight in kg from text like `400g` -> 0.4, `2kg` -> 2.0, `10 kg` -> 10.0.
+  static double? parseWeightKgFromName(String rawName) {
+    final name = rawName.toLowerCase();
+    final kgMatch = RegExp(r'(\d+(?:\.\d+)?)\s*kg\b').firstMatch(name);
+    if (kgMatch != null) {
+      final parsed = double.tryParse(kgMatch.group(1) ?? '');
+      if (parsed != null && parsed > 0) return parsed;
+    }
+    final gMatch = RegExp(r'(\d+(?:\.\d+)?)\s*g(?:m|ram|rams)?\b').firstMatch(name);
+    if (gMatch != null) {
+      final parsed = double.tryParse(gMatch.group(1) ?? '');
+      if (parsed != null && parsed > 0) return (parsed / 1000.0).clamp(0.05, 500.0);
+    }
+    return null;
+  }
+
+  /// Per-variant shipping weight (kg): explicit `weight_kg` -> name parse -> product `weightKg`.
+  double variantWeightKg(Map<String, dynamic> v) {
+    final raw = v['weight_kg'];
+    final explicit = raw is num ? raw.toDouble() : double.tryParse(raw?.toString() ?? '');
+    if (explicit != null && explicit > 0) return explicit;
+    final fromName = parseWeightKgFromName((v['name'] ?? '').toString());
+    if (fromName != null) return fromName;
+    return weightKg > 0 ? weightKg : 0.5;
+  }
+
+  bool get hasVariants => variants.isNotEmpty;
+
+  double get minPrice {
+    if (variants.isEmpty) return price;
+    final prices = variants.map(variantEffectivePrice).where((p) => p > 0).toList();
+    if (prices.isEmpty) return price;
+    return prices.reduce((a, b) => a < b ? a : b);
+  }
+
+  double get maxPrice {
+    if (variants.isEmpty) return price;
+    final prices = variants.map(variantEffectivePrice).where((p) => p > 0).toList();
+    if (prices.isEmpty) return price;
+    return prices.reduce((a, b) => a > b ? a : b);
+  }
+
+  bool get hasPriceRange => variants.isNotEmpty && (maxPrice - minPrice).abs() >= 0.005;
+
+  /// Shopee-style price display (`RM 17.90 - RM 280.80` when variants span a range).
+  String get formattedPriceRange {
+    if (hasPriceRange) {
+      return 'RM ${minPrice.toStringAsFixed(2)} - RM ${maxPrice.toStringAsFixed(2)}';
+    }
+    return 'RM ${minPrice.toStringAsFixed(2)}';
+  }
+
+  bool get hasVariantStock => variants.any((v) => variantStock(v) != null);
+
+  int get effectiveTotalStock {
+    if (variants.isNotEmpty && hasVariantStock) {
+      return variants.fold<int>(0, (sum, v) => sum + ((variantStock(v) ?? 0).clamp(0, 999999)));
+    }
+    return stock;
+  }
+
+  bool get hasDiscount => compareAtPrice != null && compareAtPrice! > minPrice && minPrice > 0;
+  double? get discountPercent => hasDiscount ? (((compareAtPrice! - minPrice) / compareAtPrice!) * 100) : null;
+  double? get profitMargin => (costPrice != null && costPrice! > 0 && minPrice > costPrice!)
+      ? (((minPrice - costPrice!) / minPrice) * 100)
       : null;
-  bool get isLowStock => isProduct && trackInventory && stock <= lowStockThreshold && stock > 0;
-  bool get isOutOfStock => isProduct && trackInventory && stock <= 0;
+  bool get isLowStock =>
+      isProduct && trackInventory && effectiveTotalStock <= lowStockThreshold && effectiveTotalStock > 0;
+  bool get isOutOfStock => isProduct && trackInventory && effectiveTotalStock <= 0;
 
   List<String> get galleryImages {
     final out = <String>[];

@@ -2,5 +2,5 @@
   "version": "1.0.92",
   "build_number": 72,
   "released_at": "2026-11-26T14:20:00Z",
-  "changelog": "Tambah pemilih Jenis Perniagaan & cadangan pintar masa daftar, buang fallback lalai Home & Office Cleaning serta lencana mod automatik, dan guna mod operasi lalai yang sesuai mengikut jenis kedai."
+  "changelog": "Naik taraf variasi produk gaya Shopee: tetapkan harga tepat, stok & berat (kg) tersendiri bagi setiap variasi (auto-kesan berat dari nama seperti 400g/2kg), Harga Asas tidak lagi wajib diisi jika ada variasi, dan paparan julat harga min–maks pada kad katalog & POS."
 }

@@ -1923,31 +1923,41 @@ class _PosPageState extends State<PosPage> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'RM ${product.price.toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF42A5F5),
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                      if (product.isProduct && product.trackInventory)
-                                        Text(
-                                          product.isOutOfStock ? 'Habis stok' : '${product.stock} dlm stok',
-                                          style: TextStyle(
-                                            color: product.isOutOfStock
-                                                ? Colors.redAccent
-                                                : (product.isLowStock ? const Color(0xFFFF9800) : Colors.white38),
-                                            fontSize: 9.5,
-                                            fontWeight: FontWeight.w600,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            product.formattedPriceRange,
+                                            maxLines: 1,
+                                            style: const TextStyle(
+                                              color: Color(0xFF42A5F5),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                            ),
                                           ),
                                         ),
-                                    ],
+                                        if (product.isProduct && product.trackInventory)
+                                          Text(
+                                            product.isOutOfStock ? 'Habis stok' : '${product.effectiveTotalStock} dlm stok',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: product.isOutOfStock
+                                                  ? Colors.redAccent
+                                                  : (product.isLowStock ? const Color(0xFFFF9800) : Colors.white38),
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
+                                  const SizedBox(width: 6),
                                   Container(
                                     padding: const EdgeInsets.all(2.5),
                                     decoration: BoxDecoration(
@@ -2039,34 +2049,43 @@ class _PosPageState extends State<PosPage> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'RM ${product.price.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF42A5F5),
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                if (product.isProduct && product.trackInventory)
-                                  Text(
-                                    product.isOutOfStock
-                                        ? 'Habis stok'
-                                        : (product.isLowStock
-                                            ? 'Tinggal ${product.stock} ${product.unit}'
-                                            : 'Baki: ${product.stock} ${product.unit}'),
-                                    style: TextStyle(
-                                      color: product.isOutOfStock
-                                          ? Colors.redAccent
-                                          : (product.isLowStock ? const Color(0xFFFF9800) : Colors.white38),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      product.formattedPriceRange,
+                                      maxLines: 1,
+                                      style: const TextStyle(
+                                        color: Color(0xFF42A5F5),
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                                   ),
-                              ],
+                                  if (product.isProduct && product.trackInventory)
+                                    Text(
+                                      product.isOutOfStock
+                                          ? 'Habis stok'
+                                          : (product.isLowStock
+                                              ? 'Tinggal ${product.effectiveTotalStock} ${product.unit}'
+                                              : 'Baki: ${product.effectiveTotalStock} ${product.unit}'),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: product.isOutOfStock
+                                            ? Colors.redAccent
+                                            : (product.isLowStock ? const Color(0xFFFF9800) : Colors.white38),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                             Container(
                               width: 24,

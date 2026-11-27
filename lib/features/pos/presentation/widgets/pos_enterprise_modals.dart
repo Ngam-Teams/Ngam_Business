@@ -238,8 +238,10 @@ class _PosItemModifierModalState extends State<PosItemModifierModal> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        'Harga Asal: RM ${widget.product.price.toStringAsFixed(2)} • Pilih Varian & Tambahan',
+                        '${widget.product.formattedPriceRange} • Pilih Varian & Tambahan',
                         style: const TextStyle(color: Colors.white54, fontSize: 11.5),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -274,19 +276,16 @@ class _PosItemModifierModalState extends State<PosItemModifierModal> {
                       runSpacing: 8,
                       children: _availableVariants.map((v) {
                         final vName = v['name']?.toString() ?? 'Standard';
+                        final exactPrice = widget.product.variantEffectivePrice(v);
                         final vDelta = (v['price_delta'] as num?)?.toDouble() ??
-                            (v['price'] != null
-                                ? ((v['price'] as num).toDouble() - widget.product.price)
-                                : 0.0);
+                            (exactPrice - widget.product.price);
                         final isSel = _selectedVariant == vName;
 
                         return ChoiceChip(
                           label: Text(
-                            vDelta > 0
-                                ? '$vName (+RM ${vDelta.toStringAsFixed(2)})'
-                                : (vDelta < 0
-                                    ? '$vName (-RM ${vDelta.abs().toStringAsFixed(2)})'
-                                    : vName),
+                            exactPrice > 0
+                                ? '$vName • RM ${exactPrice.toStringAsFixed(2)}'
+                                : vName,
                           ),
                           selected: isSel,
                           selectedColor: const Color(0xFF42A5F5),

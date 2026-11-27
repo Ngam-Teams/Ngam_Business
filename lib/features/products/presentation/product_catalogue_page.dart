@@ -521,12 +521,19 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
                         crossAxisAlignment: CrossAxisAlignment.baseline,
                         textBaseline: TextBaseline.alphabetic,
                         children: [
-                          Text(
-                            'RM ${item.price.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: Color(0xFF42A5F5),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                item.formattedPriceRange,
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  color: Color(0xFF42A5F5),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
                             ),
                           ),
                           if (item.hasDiscount) ...[
@@ -549,9 +556,9 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
                         if (item.isOutOfStock)
                           const Text('Out of Stock', style: TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold))
                         else if (item.isLowStock)
-                          Text('Low: ${item.stock} ${item.unit}', style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.w600))
+                          Text('Low: ${item.effectiveTotalStock} ${item.unit}', style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 10, fontWeight: FontWeight.w600))
                         else if (item.trackInventory)
-                          Text('${item.stock} ${item.unit} in stock', style: const TextStyle(color: Colors.white54, fontSize: 10))
+                          Text('${item.effectiveTotalStock} ${item.unit} in stock', style: const TextStyle(color: Colors.white54, fontSize: 10))
                         else
                           const Text('In Stock', style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.w600)),
                       ] else ...[
@@ -864,6 +871,46 @@ class _AddProductSheetState extends State<_AddProductSheet> {
     });
   }
 
+  double? get _variantMinPrice {
+    final prices = _variants
+        .map((v) => (v['price'] as num?)?.toDouble() ?? double.tryParse(v['price']?.toString() ?? '') ?? 0.0)
+        .where((p) => p > 0)
+        .toList();
+    if (prices.isEmpty) return null;
+    return prices.reduce((a, b) => a < b ? a : b);
+  }
+
+  double? get _variantMaxPrice {
+    final prices = _variants
+        .map((v) => (v['price'] as num?)?.toDouble() ?? double.tryParse(v['price']?.toString() ?? '') ?? 0.0)
+        .where((p) => p > 0)
+        .toList();
+    if (prices.isEmpty) return null;
+    return prices.reduce((a, b) => a > b ? a : b);
+  }
+
+  String get _variantPriceRangeText {
+    final minP = _variantMinPrice ?? 0.0;
+    final maxP = _variantMaxPrice ?? minP;
+    if ((maxP - minP).abs() >= 0.005) {
+      return 'RM ${minP.toStringAsFixed(2)} - RM ${maxP.toStringAsFixed(2)}';
+    }
+    return 'RM ${minP.toStringAsFixed(2)}';
+  }
+
+  bool get _hasVariantStocks => _variants.any((v) {
+        final raw = v['stock'];
+        if (raw == null) return false;
+        if (raw is num) return true;
+        return int.tryParse(raw.toString()) != null;
+      });
+
+  int get _totalVariantStock => _variants.fold<int>(0, (sum, v) {
+        final raw = v['stock'];
+        final s = raw is num ? raw.toInt() : (int.tryParse(raw?.toString() ?? '') ?? 0);
+        return sum + (s < 0 ? 0 : s);
+      });
+
   void _addVariantDialog() {
     showDialog(
       context: context,
@@ -872,11 +919,20 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         title: 'products.add_variant'.tr(),
         nameLabel: 'products.variant_name'.tr(),
         priceLabel: 'products.variant_price'.tr(),
-        initialPrice: _priceController.text,
+        initialPrice: (double.tryParse(_priceController.text.trim()) ?? 0) > 0
+            ? _priceController.text.trim()
+            : '',
         submitLabel: 'common.add'.tr(),
-        onAdd: (name, pr) {
+        showStockAndWeight: _itemType == 'product',
+        requirePositivePrice: true,
+        onAdd: (name, pr, stock, weightKg) {
           setState(() {
-            _variants.add({'name': name, 'price': pr});
+            _variants.add({
+              'name': name,
+              'price': pr,
+              if (stock != null) 'stock': stock,
+              if (weightKg != null) 'weight_kg': weightKg,
+            });
           });
         },
       ),
@@ -886,7 +942,18 @@ class _AddProductSheetState extends State<_AddProductSheet> {
   void _editVariantDialog(int index) {
     final item = _variants[index];
     final currentName = (item['name'] ?? '').toString();
-    final currentPrice = ((item['price'] as num?) ?? 0.0).toStringAsFixed(2);
+    final currentPrice = ((item['price'] as num?)?.toDouble() ??
+            double.tryParse(item['price']?.toString() ?? '') ??
+            0.0)
+        .toStringAsFixed(2);
+    final rawStock = item['stock'];
+    final currentStock = rawStock is num
+        ? rawStock.toInt().toString()
+        : (rawStock?.toString() ?? '');
+    final rawWeight = item['weight_kg'];
+    final currentWeight = rawWeight is num
+        ? rawWeight.toDouble().toString()
+        : (rawWeight?.toString() ?? '');
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.45),
@@ -896,10 +963,19 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         priceLabel: 'products.variant_price'.tr(),
         initialName: currentName,
         initialPrice: currentPrice,
+        initialStock: currentStock,
+        initialWeight: currentWeight,
         submitLabel: 'common.save'.tr(),
-        onAdd: (name, pr) {
+        showStockAndWeight: _itemType == 'product',
+        requirePositivePrice: true,
+        onAdd: (name, pr, stock, weightKg) {
           setState(() {
-            _variants[index] = {'name': name, 'price': pr};
+            _variants[index] = {
+              'name': name,
+              'price': pr,
+              if (stock != null) 'stock': stock,
+              if (weightKg != null) 'weight_kg': weightKg,
+            };
           });
         },
       ),
@@ -916,7 +992,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         priceLabel: 'products.modifier_price'.tr(),
         initialPrice: '0.00',
         submitLabel: 'common.add'.tr(),
-        onAdd: (name, pr) {
+        onAdd: (name, pr, _, __) {
           setState(() {
             _modifiers.add({'name': name, 'price': pr});
           });
@@ -939,7 +1015,7 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         initialName: currentName,
         initialPrice: currentPrice,
         submitLabel: 'common.save'.tr(),
-        onAdd: (name, pr) {
+        onAdd: (name, pr, _, __) {
           setState(() {
             _modifiers[index] = {'name': name, 'price': pr};
           });
@@ -950,7 +1026,9 @@ class _AddProductSheetState extends State<_AddProductSheet> {
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
-      final msg = 'products.validation_required_fields'.tr();
+      final msg = _variants.isNotEmpty
+          ? 'products.validation_name_required'.tr()
+          : 'products.validation_required_fields'.tr();
       setState(() => _saveError = msg);
       showGlassToast(context, msg, isError: true);
       if (_scrollController.hasClients) {
@@ -968,11 +1046,19 @@ class _AddProductSheetState extends State<_AddProductSheet> {
       _saveError = null;
     });
 
-    final price = double.tryParse(_priceController.text) ?? 0.0;
+    final enteredPrice = double.tryParse(_priceController.text.trim()) ?? 0.0;
+    // Shopee-style: when variations exist, auto-sync base price to the lowest variation price
+    // so catalog & DB queries never show RM 0.00 even if the base price field was left blank.
+    final price = (_variants.isNotEmpty && (_variantMinPrice ?? 0) > 0)
+        ? _variantMinPrice!
+        : enteredPrice;
     final compareAt = double.tryParse(_compareAtPriceController.text);
     final costPrice = double.tryParse(_costPriceController.text);
     final taxRate = double.tryParse(_taxRateController.text) ?? 0.0;
-    final stock = int.tryParse(_stockController.text) ?? 0;
+    final enteredStock = int.tryParse(_stockController.text.trim()) ?? 0;
+    final stock = (_variants.isNotEmpty && _hasVariantStocks)
+        ? _totalVariantStock
+        : enteredStock;
     final lowStock = int.tryParse(_lowStockController.text) ?? 5;
     final weightKg = (double.tryParse(_weightController.text.trim()) ?? 0.5).clamp(0.0, 999.0);
     final deposit = double.tryParse(_depositController.text) ?? 0.0;
@@ -1308,6 +1394,60 @@ class _AddProductSheetState extends State<_AddProductSheet> {
 
                     // ─── Pricing & Costs ─────────────────────────────────────
                     _buildSectionHeader('Pricing & Margins'),
+                    if (_variants.isNotEmpty) ...[
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF42A5F5).withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF42A5F5).withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 1),
+                              child: Icon(
+                                Icons.auto_awesome_rounded,
+                                color: Color(0xFF42A5F5),
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'products.variant_price_auto_banner'.tr(
+                                      args: [_variantPriceRangeText],
+                                    ),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'products.variant_price_auto_hint'.tr(),
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.7),
+                                      fontSize: 11,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     Row(
                       children: [
                         Expanded(
@@ -1315,9 +1455,19 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                             controller: _priceController,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            decoration: _inputDecoration('Selling Price (RM) *', HugeIcons.strokeRoundedMoney01),
+                            decoration: _inputDecoration(
+                              _variants.isNotEmpty
+                                  ? 'products.selling_price_optional_variants'.tr()
+                                  : 'products.selling_price_required'.tr(),
+                              HugeIcons.strokeRoundedMoney01,
+                            ),
                             onChanged: (_) => setState(() {}),
-                            validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                            validator: (v) {
+                              if (_variants.isNotEmpty) return null;
+                              return (v == null || v.trim().isEmpty)
+                                  ? 'products.field_required'.tr()
+                                  : null;
+                            },
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1370,9 +1520,13 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                           children: [
                             const Icon(Icons.trending_up, color: Color(0xFF10B981), size: 16),
                             const SizedBox(width: 8),
-                            Text(
-                              'Profit: RM ${profit.toStringAsFixed(2)} per unit  •  Margin: ${margin.toStringAsFixed(1)}%',
-                              style: const TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold),
+                            Expanded(
+                              child: Text(
+                                'Profit: RM ${profit.toStringAsFixed(2)} per unit  •  Margin: ${margin.toStringAsFixed(1)}%',
+                                style: const TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),
@@ -1383,6 +1537,42 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                     // ─── Conditional: Product Inventory Section ──────────────
                     if (_itemType == 'product') ...[
                       _buildSectionHeader('Inventory & Stock'),
+                      if (_variants.isNotEmpty && _hasVariantStocks) ...[
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.13),
+                            borderRadius: BorderRadius.circular(11),
+                            border: Border.all(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.inventory_2_outlined,
+                                color: Color(0xFF10B981),
+                                size: 15,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'products.variant_stock_auto_banner'.tr(
+                                    args: ['$_totalVariantStock', _selectedUnit],
+                                  ),
+                                  style: const TextStyle(
+                                    color: Color(0xFF10B981),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       Row(
                         children: [
                           Expanded(
@@ -1572,13 +1762,25 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildSectionHeader('Variants & Options (${_variants.length})'),
+                        Expanded(
+                          child: _buildSectionHeader('Variants & Options (${_variants.length})'),
+                        ),
                         TextButton.icon(
                           onPressed: _addVariantDialog,
                           icon: const Icon(Icons.add, color: Color(0xFF42A5F5), size: 16),
-                          label: const Text('Add Variant', style: TextStyle(color: Color(0xFF42A5F5), fontSize: 12)),
+                          label: Text(
+                            'products.add_variant'.tr(),
+                            style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 12),
+                          ),
                         ),
                       ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'products.variants_section_hint'.tr(),
+                        style: const TextStyle(color: Colors.white38, fontSize: 11.5),
+                      ),
                     ),
                     if (_variants.isEmpty)
                       const Text('No variants added (e.g. Regular, Large)', style: TextStyle(color: Colors.white30, fontSize: 12))
@@ -1588,8 +1790,26 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                         runSpacing: 8,
                         children: List.generate(_variants.length, (i) {
                           final v = _variants[i];
+                          final vPrice = (v['price'] as num?)?.toDouble() ??
+                              double.tryParse(v['price']?.toString() ?? '') ??
+                              0.0;
+                          final vStockRaw = v['stock'];
+                          final vStock = vStockRaw is num
+                              ? vStockRaw.toInt()
+                              : int.tryParse(vStockRaw?.toString() ?? '');
+                          final vWeightRaw = v['weight_kg'];
+                          final vWeight = vWeightRaw is num
+                              ? vWeightRaw.toDouble()
+                              : double.tryParse(vWeightRaw?.toString() ?? '');
+                          final parts = <String>[
+                            '${v['name'] ?? ''}',
+                            'RM ${vPrice.toStringAsFixed(2)}',
+                            if (vStock != null) 'products.variant_stock_short'.tr(args: ['$vStock']),
+                            if (vWeight != null && vWeight > 0)
+                              '${vWeight % 1 == 0 ? vWeight.toStringAsFixed(0) : vWeight.toString()}kg',
+                          ];
                           return _buildEditableOptionChip(
-                            label: '${v['name']} • RM ${(v['price'] as num).toStringAsFixed(2)}',
+                            label: parts.join(' • '),
                             onTap: () => _editVariantDialog(i),
                             onDelete: () => setState(() => _variants.removeAt(i)),
                           );
@@ -2262,8 +2482,12 @@ class _OptionInputDialog extends StatefulWidget {
   final String priceLabel;
   final String initialName;
   final String initialPrice;
+  final String initialStock;
+  final String initialWeight;
   final String submitLabel;
-  final void Function(String name, double price) onAdd;
+  final bool showStockAndWeight;
+  final bool requirePositivePrice;
+  final void Function(String name, double price, int? stock, double? weightKg) onAdd;
 
   const _OptionInputDialog({
     required this.title,
@@ -2271,7 +2495,11 @@ class _OptionInputDialog extends StatefulWidget {
     required this.priceLabel,
     this.initialName = '',
     required this.initialPrice,
+    this.initialStock = '',
+    this.initialWeight = '',
     required this.submitLabel,
+    this.showStockAndWeight = false,
+    this.requirePositivePrice = false,
     required this.onAdd,
   });
 
@@ -2282,24 +2510,58 @@ class _OptionInputDialog extends StatefulWidget {
 class _OptionInputDialogState extends State<_OptionInputDialog> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _priceCtrl;
+  late final TextEditingController _stockCtrl;
+  late final TextEditingController _weightCtrl;
+  bool _weightEditedManually = false;
+  String? _errorText;
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.initialName);
     _priceCtrl = TextEditingController(text: widget.initialPrice);
+    _stockCtrl = TextEditingController(text: widget.initialStock);
+    _weightCtrl = TextEditingController(text: widget.initialWeight);
+    _weightEditedManually = widget.initialWeight.trim().isNotEmpty;
+    if (widget.showStockAndWeight) {
+      _nameCtrl.addListener(_maybeAutoFillWeight);
+    }
+  }
+
+  void _maybeAutoFillWeight() {
+    if (_weightEditedManually) return;
+    final detected = ProductModel.parseWeightKgFromName(_nameCtrl.text);
+    if (detected != null) {
+      final formatted = detected % 1 == 0
+          ? detected.toStringAsFixed(0)
+          : detected.toString();
+      if (_weightCtrl.text != formatted) {
+        _weightCtrl.text = formatted;
+      }
+    }
   }
 
   @override
   void dispose() {
+    if (widget.showStockAndWeight) {
+      _nameCtrl.removeListener(_maybeAutoFillWeight);
+    }
     _nameCtrl.dispose();
     _priceCtrl.dispose();
+    _stockCtrl.dispose();
+    _weightCtrl.dispose();
     super.dispose();
   }
 
-  InputDecoration _glassFieldDecoration(String label, bool isDark) {
+  InputDecoration _glassFieldDecoration(String label, bool isDark, {String? helperText}) {
     return InputDecoration(
       labelText: label,
+      helperText: helperText,
+      helperMaxLines: 2,
+      helperStyle: TextStyle(
+        color: isDark ? Colors.white38 : Colors.black45,
+        fontSize: 10.5,
+      ),
       labelStyle: TextStyle(
         color: isDark ? Colors.white60 : Colors.black54,
         fontSize: 12.5,
@@ -2328,15 +2590,41 @@ class _OptionInputDialogState extends State<_OptionInputDialog> {
     );
   }
 
+  void _handleSubmit() {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      setState(() => _errorText = 'products.variant_name_required'.tr());
+      return;
+    }
+    final pr = double.tryParse(_priceCtrl.text.trim());
+    if (widget.requirePositivePrice && (pr == null || pr <= 0)) {
+      setState(() => _errorText = 'products.variant_price_required'.tr());
+      return;
+    }
+    final stock = widget.showStockAndWeight && _stockCtrl.text.trim().isNotEmpty
+        ? int.tryParse(_stockCtrl.text.trim())
+        : null;
+    final weightKg = widget.showStockAndWeight && _weightCtrl.text.trim().isNotEmpty
+        ? double.tryParse(_weightCtrl.text.trim())
+        : null;
+    widget.onAdd(
+      name,
+      pr ?? 0.0,
+      stock != null && stock >= 0 ? stock : null,
+      weightKg != null && weightKg > 0 ? weightKg : null,
+    );
+    Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
+        constraints: const BoxConstraints(maxWidth: 420),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
@@ -2360,83 +2648,137 @@ class _OptionInputDialogState extends State<_OptionInputDialog> {
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.title,
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _nameCtrl,
-                    autofocus: true,
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontSize: 14,
-                    ),
-                    decoration: _glassFieldDecoration(widget.nameLabel, isDark),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _priceCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontSize: 14,
-                    ),
-                    decoration: _glassFieldDecoration(widget.priceLabel, isDark),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          'common.cancel'.tr(),
-                          style: TextStyle(
-                            color: isDark ? Colors.white60 : Colors.black54,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF42A5F5),
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 18, vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _nameCtrl,
+                      autofocus: true,
+                      onChanged: (_) {
+                        if (_errorText != null) setState(() => _errorText = null);
+                      },
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontSize: 14,
+                      ),
+                      decoration: _glassFieldDecoration(widget.nameLabel, isDark),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _priceCtrl,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) {
+                        if (_errorText != null) setState(() => _errorText = null);
+                      },
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontSize: 14,
+                      ),
+                      decoration: _glassFieldDecoration(widget.priceLabel, isDark),
+                    ),
+                    if (widget.showStockAndWeight) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _stockCtrl,
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black87,
+                                fontSize: 14,
+                              ),
+                              decoration: _glassFieldDecoration(
+                                'products.variant_stock'.tr(),
+                                isDark,
+                              ),
+                            ),
                           ),
-                        ),
-                        onPressed: () {
-                          final name = _nameCtrl.text.trim();
-                          final pr = double.tryParse(_priceCtrl.text) ?? 0.0;
-                          if (name.isNotEmpty) {
-                            widget.onAdd(name, pr);
-                            Navigator.pop(context);
-                          }
-                        },
-                        child: Text(
-                          widget.submitLabel,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _weightCtrl,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(decimal: true),
+                              onChanged: (v) {
+                                _weightEditedManually = v.trim().isNotEmpty;
+                              },
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black87,
+                                fontSize: 14,
+                              ),
+                              decoration: _glassFieldDecoration(
+                                'products.variant_weight'.tr(),
+                                isDark,
+                                helperText: 'products.variant_weight_hint'.tr(),
+                              ),
+                            ),
                           ),
+                        ],
+                      ),
+                    ],
+                    if (_errorText != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        _errorText!,
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
-                  ),
-                ],
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'common.cancel'.tr(),
+                            style: TextStyle(
+                              color: isDark ? Colors.white60 : Colors.black54,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF42A5F5),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 10),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: _handleSubmit,
+                          child: Text(
+                            widget.submitLabel,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
