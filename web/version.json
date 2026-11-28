@@ -2,5 +2,5 @@
   "version": "1.0.92",
   "build_number": 72,
   "released_at": "2026-11-26T14:20:00Z",
-  "changelog": "Auto-isi alamat kutipan Ngam Shipping & AWB daripada Profil Kedai (jalan, poskod, bandar, negeri & telefon) secara lalai, sambil kekal boleh diubah suai atau disalin semula dengan 1 klik."
+  "changelog": "Tambah Matriks Variasi 2-Tingkat gaya Shopee (cth. Warna × Saiz dengan praset XS–2XL, Isi Pantas Semua, pautan gambar galeri & harga/stok/berat per kombinasi) serta paparan harga terendah yang kemas pada kad katalog & POS."
 }

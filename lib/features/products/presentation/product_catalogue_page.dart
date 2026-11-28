@@ -526,7 +526,7 @@ class _ProductCataloguePageState extends State<ProductCataloguePage> {
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                item.formattedPriceRange,
+                                item.formattedMinPrice,
                                 maxLines: 1,
                                 style: const TextStyle(
                                   color: Color(0xFF42A5F5),
@@ -971,11 +971,34 @@ class _AddProductSheetState extends State<_AddProductSheet> {
         onAdd: (name, pr, stock, weightKg) {
           setState(() {
             _variants[index] = {
+              ...item,
               'name': name,
               'price': pr,
-              if (stock != null) 'stock': stock,
-              if (weightKg != null) 'weight_kg': weightKg,
-            };
+              if (stock != null) 'stock': stock else 'stock': null,
+              if (weightKg != null) 'weight_kg': weightKg else 'weight_kg': null,
+            }..removeWhere((k, v) => v == null);
+          });
+        },
+      ),
+    );
+  }
+
+  void _openTwoTierMatrixDialog() {
+    final existingUrls = _galleryItems
+        .map((g) => g.existingUrl ?? '')
+        .where((u) => u.trim().isNotEmpty)
+        .toList();
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => _TwoTierVariantMatrixDialog(
+        existingVariants: _variants,
+        galleryUrls: existingUrls,
+        defaultPrice: double.tryParse(_priceController.text.trim()) ?? 0.0,
+        defaultWeightKg: double.tryParse(_weightController.text.trim()) ?? 0.5,
+        onSave: (generatedVariants) {
+          setState(() {
+            _variants = generatedVariants;
           });
         },
       ),
@@ -1758,23 +1781,42 @@ class _AddProductSheetState extends State<_AddProductSheet> {
                     ),
                     const SizedBox(height: 16),
 
-                    // ─── Variants (Size / Flavor) ────────────────────────────
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // ─── Variants (Size / Flavor / 2-Tier Matrix) ────────────
+                    _buildSectionHeader('Variants & Options (${_variants.length})'),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
                       children: [
-                        Expanded(
-                          child: _buildSectionHeader('Variants & Options (${_variants.length})'),
-                        ),
                         TextButton.icon(
                           onPressed: _addVariantDialog,
-                          icon: const Icon(Icons.add, color: Color(0xFF42A5F5), size: 16),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            backgroundColor: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.add, color: Color(0xFF42A5F5), size: 15),
                           label: Text(
                             'products.add_variant'.tr(),
-                            style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 12),
+                            style: const TextStyle(color: Color(0xFF42A5F5), fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ),
+                        if (_itemType == 'product')
+                          TextButton.icon(
+                            onPressed: _openTwoTierMatrixDialog,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              backgroundColor: const Color(0xFF8B5CF6).withValues(alpha: 0.16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.grid_view_rounded, color: Color(0xFFA78BFA), size: 15),
+                            label: Text(
+                              'products.two_tier_matrix_btn'.tr(),
+                              style: const TextStyle(color: Color(0xFFA78BFA), fontSize: 12, fontWeight: FontWeight.w600),
+                            ),
+                          ),
                       ],
                     ),
+                    const SizedBox(height: 6),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
@@ -2779,6 +2821,904 @@ class _OptionInputDialogState extends State<_OptionInputDialog> {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TwoTierVariantMatrixDialog extends StatefulWidget {
+  final List<Map<String, dynamic>> existingVariants;
+  final List<String> galleryUrls;
+  final double defaultPrice;
+  final double defaultWeightKg;
+  final void Function(List<Map<String, dynamic>> variants) onSave;
+
+  const _TwoTierVariantMatrixDialog({
+    required this.existingVariants,
+    required this.galleryUrls,
+    required this.defaultPrice,
+    required this.defaultWeightKg,
+    required this.onSave,
+  });
+
+  @override
+  State<_TwoTierVariantMatrixDialog> createState() =>
+      _TwoTierVariantMatrixDialogState();
+}
+
+class _TwoTierVariantMatrixDialogState
+    extends State<_TwoTierVariantMatrixDialog> {
+  late final TextEditingController _t1LabelCtrl;
+  late final TextEditingController _t2LabelCtrl;
+  final TextEditingController _t1InputCtrl = TextEditingController();
+  final TextEditingController _t2InputCtrl = TextEditingController();
+  final TextEditingController _bulkPriceCtrl = TextEditingController();
+  final TextEditingController _bulkStockCtrl = TextEditingController();
+  final TextEditingController _bulkWeightCtrl = TextEditingController();
+
+  final List<String> _tier1Options = [];
+  final List<String> _tier2Options = [];
+  final Map<String, String> _tier1Images = {};
+
+  // Keyed by "$t1||$t2"
+  final Map<String, TextEditingController> _priceCtrls = {};
+  final Map<String, TextEditingController> _stockCtrls = {};
+  final Map<String, TextEditingController> _weightCtrls = {};
+  String? _errorText;
+
+  static const _clothingSizePreset = ['XS', 'S', 'M', 'L', 'XL', '2XL'];
+
+  String _comboKey(String t1, String t2) => '$t1||$t2';
+
+  @override
+  void initState() {
+    super.initState();
+    String initT1Label = 'Color';
+    String initT2Label = 'Size';
+    for (final v in widget.existingVariants) {
+      final l1 = (v['tier1_label'] ?? '').toString().trim();
+      final l2 = (v['tier2_label'] ?? '').toString().trim();
+      if (l1.isNotEmpty) initT1Label = l1;
+      if (l2.isNotEmpty) initT2Label = l2;
+      final v1 = (v['tier1_value'] ?? '').toString().trim();
+      final v2 = (v['tier2_value'] ?? '').toString().trim();
+      if (v1.isNotEmpty && !_tier1Options.contains(v1)) {
+        _tier1Options.add(v1);
+      }
+      if (v2.isNotEmpty && !_tier2Options.contains(v2)) {
+        _tier2Options.add(v2);
+      }
+      final img = (v['image_url'] ?? '').toString().trim();
+      if (v1.isNotEmpty && img.isNotEmpty) {
+        _tier1Images[v1] = img;
+      }
+      if (v1.isNotEmpty && v2.isNotEmpty) {
+        final key = _comboKey(v1, v2);
+        final pr = (v['price'] as num?)?.toDouble() ??
+            double.tryParse(v['price']?.toString() ?? '') ??
+            0.0;
+        final st = v['stock'];
+        final wt = v['weight_kg'];
+        _priceCtrls[key] = TextEditingController(
+          text: pr > 0 ? pr.toStringAsFixed(2) : '',
+        );
+        _stockCtrls[key] = TextEditingController(
+          text: st != null ? st.toString() : '',
+        );
+        _weightCtrls[key] = TextEditingController(
+          text: wt != null ? wt.toString() : '',
+        );
+      }
+    }
+    _t1LabelCtrl = TextEditingController(text: initT1Label);
+    _t2LabelCtrl = TextEditingController(text: initT2Label);
+    if (widget.defaultPrice > 0) {
+      _bulkPriceCtrl.text = widget.defaultPrice.toStringAsFixed(2);
+    }
+    if (widget.defaultWeightKg > 0) {
+      _bulkWeightCtrl.text = widget.defaultWeightKg.toString();
+    }
+    _ensureComboControllers();
+  }
+
+  void _ensureComboControllers() {
+    for (final t1 in _tier1Options) {
+      for (final t2 in _tier2Options) {
+        final key = _comboKey(t1, t2);
+        _priceCtrls.putIfAbsent(
+          key,
+          () => TextEditingController(text: _bulkPriceCtrl.text.trim()),
+        );
+        _stockCtrls.putIfAbsent(
+          key,
+          () => TextEditingController(text: _bulkStockCtrl.text.trim()),
+        );
+        _weightCtrls.putIfAbsent(
+          key,
+          () => TextEditingController(text: _bulkWeightCtrl.text.trim()),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _t1LabelCtrl.dispose();
+    _t2LabelCtrl.dispose();
+    _t1InputCtrl.dispose();
+    _t2InputCtrl.dispose();
+    _bulkPriceCtrl.dispose();
+    _bulkStockCtrl.dispose();
+    _bulkWeightCtrl.dispose();
+    for (final c in _priceCtrls.values) {
+      c.dispose();
+    }
+    for (final c in _stockCtrls.values) {
+      c.dispose();
+    }
+    for (final c in _weightCtrls.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addTier1Option() {
+    final val = _t1InputCtrl.text.trim();
+    if (val.isEmpty) return;
+    if (!_tier1Options.contains(val)) {
+      setState(() {
+        _tier1Options.add(val);
+        _t1InputCtrl.clear();
+        _errorText = null;
+        _ensureComboControllers();
+      });
+    } else {
+      _t1InputCtrl.clear();
+    }
+  }
+
+  void _addTier2Option() {
+    final val = _t2InputCtrl.text.trim();
+    if (val.isEmpty) return;
+    if (!_tier2Options.contains(val)) {
+      setState(() {
+        _tier2Options.add(val);
+        _t2InputCtrl.clear();
+        _errorText = null;
+        _ensureComboControllers();
+      });
+    } else {
+      _t2InputCtrl.clear();
+    }
+  }
+
+  void _applyClothingSizePreset() {
+    setState(() {
+      for (final sz in _clothingSizePreset) {
+        if (!_tier2Options.contains(sz)) _tier2Options.add(sz);
+      }
+      _errorText = null;
+      _ensureComboControllers();
+    });
+  }
+
+  void _applyBulkToAll() {
+    final bp = _bulkPriceCtrl.text.trim();
+    final bs = _bulkStockCtrl.text.trim();
+    final bw = _bulkWeightCtrl.text.trim();
+    setState(() {
+      for (final t1 in _tier1Options) {
+        for (final t2 in _tier2Options) {
+          final key = _comboKey(t1, t2);
+          if (bp.isNotEmpty) _priceCtrls[key]?.text = bp;
+          if (bs.isNotEmpty) _stockCtrls[key]?.text = bs;
+          if (bw.isNotEmpty) _weightCtrls[key]?.text = bw;
+        }
+      }
+      _errorText = null;
+    });
+  }
+
+  void _pickTier1Photo(String t1Val) {
+    if (widget.galleryUrls.isEmpty) return;
+    final current = _tier1Images[t1Val];
+    showDialog<void>(
+      context: context,
+      builder: (pCtx) => Dialog(
+        backgroundColor: const Color(0xFF141826),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                t1Val,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      setState(() => _tier1Images.remove(t1Val));
+                      Navigator.pop(pCtx);
+                    },
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: current == null
+                              ? const Color(0xFF42A5F5)
+                              : Colors.white12,
+                          width: current == null ? 2 : 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.block_rounded,
+                        color: Colors.white54,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  ...widget.galleryUrls.map((url) {
+                    final sel = current == url;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => _tier1Images[t1Val] = url);
+                        Navigator.pop(pCtx);
+                      },
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: sel
+                                ? const Color(0xFF42A5F5)
+                                : Colors.white12,
+                            width: sel ? 2 : 1,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(9),
+                          child: Image.network(url, fit: BoxFit.cover),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleSave() {
+    if (_tier1Options.isEmpty || _tier2Options.isEmpty) {
+      setState(() => _errorText = 'products.matrix_err_missing_tiers'.tr());
+      return;
+    }
+    final t1Label = _t1LabelCtrl.text.trim().isEmpty
+        ? 'Color'
+        : _t1LabelCtrl.text.trim();
+    final t2Label = _t2LabelCtrl.text.trim().isEmpty
+        ? 'Size'
+        : _t2LabelCtrl.text.trim();
+
+    final out = <Map<String, dynamic>>[];
+    for (final t1 in _tier1Options) {
+      for (final t2 in _tier2Options) {
+        final key = _comboKey(t1, t2);
+        final pr = double.tryParse(_priceCtrls[key]?.text.trim() ?? '');
+        if (pr == null || pr <= 0) {
+          setState(() => _errorText = 'products.matrix_err_invalid_price'.tr());
+          return;
+        }
+        final stText = _stockCtrls[key]?.text.trim() ?? '';
+        final st = stText.isNotEmpty ? int.tryParse(stText) : null;
+        final wtText = _weightCtrls[key]?.text.trim() ?? '';
+        final wt = wtText.isNotEmpty ? double.tryParse(wtText) : null;
+        final img = _tier1Images[t1];
+
+        out.add({
+          'name': '$t1 / $t2',
+          'tier1_label': t1Label,
+          'tier1_value': t1,
+          'tier2_label': t2Label,
+          'tier2_value': t2,
+          'price': pr,
+          if (st != null && st >= 0) 'stock': st,
+          if (wt != null && wt > 0) 'weight_kg': wt,
+          if (img != null && img.isNotEmpty) 'image_url': img,
+        });
+      }
+    }
+    widget.onSave(out);
+    Navigator.pop(context);
+  }
+
+  InputDecoration _miniField(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: Colors.white54, fontSize: 11),
+      isDense: true,
+      filled: true,
+      fillColor: Colors.white.withValues(alpha: 0.05),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF42A5F5), width: 1.2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final comboCount = _tier1Options.length * _tier2Options.length;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 540,
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF101322).withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 10, 10),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.grid_view_rounded,
+                          color: Color(0xFFA78BFA),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'products.two_tier_matrix_title'.tr(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              Text(
+                                'products.two_tier_matrix_subtitle'.tr(),
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(color: Colors.white12, height: 1),
+
+                  // Scrollable Body
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Tier 1 Setup
+                          TextField(
+                            controller: _t1LabelCtrl,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                            decoration: _miniField('products.tier1_name_label'.tr()),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _t1InputCtrl,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                  onSubmitted: (_) => _addTier1Option(),
+                                  decoration: _miniField('products.tier1_add_hint'.tr()),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: _addTier1Option,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF42A5F5),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 11,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: Text(
+                                  'common.add'.tr(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_tier1Options.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            if (widget.galleryUrls.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  'products.matrix_tier1_photo_hint'.tr(),
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 10.5,
+                                  ),
+                                ),
+                              ),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: _tier1Options.map((val) {
+                                final thumb = _tier1Images[val];
+                                return InputChip(
+                                  avatar: thumb != null
+                                      ? CircleAvatar(
+                                          backgroundImage: NetworkImage(thumb),
+                                        )
+                                      : (widget.galleryUrls.isNotEmpty
+                                          ? const Icon(
+                                              Icons.image_outlined,
+                                              size: 14,
+                                              color: Color(0xFF42A5F5),
+                                            )
+                                          : null),
+                                  label: Text(
+                                    val,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  backgroundColor:
+                                      Colors.white.withValues(alpha: 0.08),
+                                  deleteIconColor: Colors.white54,
+                                  onPressed: widget.galleryUrls.isNotEmpty
+                                      ? () => _pickTier1Photo(val)
+                                      : null,
+                                  onDeleted: () => setState(() {
+                                    _tier1Options.remove(val);
+                                    _tier1Images.remove(val);
+                                  }),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+
+                          const SizedBox(height: 16),
+
+                          // Tier 2 Setup
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _t2LabelCtrl,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                  decoration: _miniField('products.tier2_name_label'.tr()),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                onPressed: _applyClothingSizePreset,
+                                style: TextButton.styleFrom(
+                                  backgroundColor:
+                                      const Color(0xFF8B5CF6).withValues(alpha: 0.18),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.checkroom_rounded,
+                                  size: 14,
+                                  color: Color(0xFFA78BFA),
+                                ),
+                                label: Text(
+                                  'products.preset_clothing_sizes'.tr(),
+                                  style: const TextStyle(
+                                    color: Color(0xFFA78BFA),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _t2InputCtrl,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                  onSubmitted: (_) => _addTier2Option(),
+                                  decoration: _miniField('products.tier2_add_hint'.tr()),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: _addTier2Option,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF42A5F5),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 11,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: Text(
+                                  'common.add'.tr(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_tier2Options.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: _tier2Options.map((val) {
+                                return InputChip(
+                                  label: Text(
+                                    val,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  backgroundColor:
+                                      Colors.white.withValues(alpha: 0.08),
+                                  deleteIconColor: Colors.white54,
+                                  onDeleted: () => setState(() {
+                                    _tier2Options.remove(val);
+                                  }),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+
+                          const SizedBox(height: 16),
+
+                          // Quick Fill All Bar
+                          if (comboCount > 0) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF42A5F5).withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: const Color(0xFF42A5F5).withValues(alpha: 0.28),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'products.apply_all_title'.tr(),
+                                    style: const TextStyle(
+                                      color: Color(0xFF42A5F5),
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _bulkPriceCtrl,
+                                          keyboardType: const TextInputType
+                                              .numberWithOptions(decimal: true),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12.5,
+                                          ),
+                                          decoration: _miniField(
+                                            'products.matrix_price_short'.tr(),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _bulkStockCtrl,
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12.5,
+                                          ),
+                                          decoration: _miniField(
+                                            'products.matrix_stock_short'.tr(),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _bulkWeightCtrl,
+                                          keyboardType: const TextInputType
+                                              .numberWithOptions(decimal: true),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12.5,
+                                          ),
+                                          decoration: _miniField(
+                                            'products.matrix_weight_short'.tr(),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: _applyBulkToAll,
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: const Color(0xFF42A5F5),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 6,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'products.apply_all_btn'.tr(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'products.combinations_title'
+                                  .tr(args: ['$comboCount']),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ..._tier1Options.expand(
+                              (t1) => _tier2Options.map((t2) {
+                                final key = _comboKey(t1, t2);
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.08),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '$t1 / $t2',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 3,
+                                            child: TextField(
+                                              controller: _priceCtrls[key],
+                                              keyboardType: const TextInputType
+                                                  .numberWithOptions(decimal: true),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12.5,
+                                              ),
+                                              decoration: _miniField(
+                                                'products.matrix_price_short'.tr(),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            flex: 2,
+                                            child: TextField(
+                                              controller: _stockCtrls[key],
+                                              keyboardType: TextInputType.number,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12.5,
+                                              ),
+                                              decoration: _miniField(
+                                                'products.matrix_stock_short'.tr(),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            flex: 2,
+                                            child: TextField(
+                                              controller: _weightCtrls[key],
+                                              keyboardType: const TextInputType
+                                                  .numberWithOptions(decimal: true),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12.5,
+                                              ),
+                                              decoration: _miniField(
+                                                'products.matrix_weight_short'.tr(),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ),
+                          ] else
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Text(
+                                'products.matrix_empty_hint'.tr(),
+                                style: const TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+
+                          if (_errorText != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              _errorText!,
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const Divider(color: Colors.white12, height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'common.cancel'.tr(),
+                            style: const TextStyle(color: Colors.white60),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: comboCount > 0 ? _handleSave : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF42A5F5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 18,
+                              vertical: 11,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'products.matrix_save_btn'
+                                .tr(args: ['$comboCount']),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

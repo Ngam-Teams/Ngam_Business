@@ -135,10 +135,13 @@ class ProductModel {
 
   bool get hasPriceRange => variants.isNotEmpty && (maxPrice - minPrice).abs() >= 0.005;
 
-  /// Shopee-style price display (`RM 17.90 - RM 280.80` when variants span a range).
+  /// Clean single lowest price for front catalogue & POS cards (`RM 17.90`).
+  String get formattedMinPrice => 'RM ${minPrice.toStringAsFixed(2)}';
+
+  /// Compact Shopee-style price range (`RM 17.90 - 280.80` when variants span a range).
   String get formattedPriceRange {
     if (hasPriceRange) {
-      return 'RM ${minPrice.toStringAsFixed(2)} - RM ${maxPrice.toStringAsFixed(2)}';
+      return 'RM ${minPrice.toStringAsFixed(2)} - ${maxPrice.toStringAsFixed(2)}';
     }
     return 'RM ${minPrice.toStringAsFixed(2)}';
   }

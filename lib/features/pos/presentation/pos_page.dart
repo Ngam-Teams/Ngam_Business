@@ -1932,7 +1932,7 @@ class _PosPageState extends State<PosPage> {
                                           fit: BoxFit.scaleDown,
                                           alignment: Alignment.centerLeft,
                                           child: Text(
-                                            product.formattedPriceRange,
+                                            product.formattedMinPrice,
                                             maxLines: 1,
                                             style: const TextStyle(
                                               color: Color(0xFF42A5F5),
@@ -2058,7 +2058,7 @@ class _PosPageState extends State<PosPage> {
                                     fit: BoxFit.scaleDown,
                                     alignment: Alignment.centerLeft,
                                     child: Text(
-                                      product.formattedPriceRange,
+                                      product.formattedMinPrice,
                                       maxLines: 1,
                                       style: const TextStyle(
                                         color: Color(0xFF42A5F5),
