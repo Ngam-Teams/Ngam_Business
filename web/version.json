@@ -1,6 +1,6 @@
 {
-  "version": "1.0.93",
-  "build_number": 73,
-  "released_at": "2026-11-28T04:03:20Z",
-  "changelog": "Kemaskan baris Penghantaran Kurier di Tetapan, auto-isi alamat kutipan dari Profil Kedai, variasi gaya Shopee (1-tingkat & 2-tingkat Warna × Saiz) serta paparan harga terendah pada kad katalog & POS."
+  "version": "1.0.94",
+  "build_number": 74,
+  "released_at": "2026-11-28T04:17:28Z",
+  "changelog": "Perbaiki kekunci terjemahan mentah 'dashboard.action_Bookings' pada halaman Tetapan kepada label penuh 'Tempahan & Janji Temu' / 'Bookings & Appointments'."
 }

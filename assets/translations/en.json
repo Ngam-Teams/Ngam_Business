@@ -142,7 +142,8 @@
     "message_placeholder": "Write broadcast message here...",
     "send_via_wa": "Send via WhatsApp",
     "no_activity": "No recent activity recorded",
-    "action_integrations": "Integrations\n& Apps"
+    "action_integrations": "Integrations\n& Apps",
+    "action_bookings": "Bookings & Appointments"
   },
   "orders": {
     "title": "Orders",

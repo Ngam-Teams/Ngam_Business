@@ -443,7 +443,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(height: 24, color: Color(0x1AFFFFFF)),
           _buildNavRow(
-            label: 'dashboard.action_Bookings'.tr(),
+            label: 'dashboard.action_bookings'.tr(),
             icon: HugeIcons.strokeRoundedCalendar03,
             onTap: () => context.push('/appointments'),
           ),

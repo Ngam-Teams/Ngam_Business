@@ -142,7 +142,8 @@
     "message_placeholder": "Tulis mesej hebahan di sini...",
     "send_via_wa": "Hantar Menerusi WhatsApp",
     "no_activity": "Tiada aktiviti terkini direkodkan",
-    "action_integrations": "Integrasi &\nAplikasi"
+    "action_integrations": "Integrasi &\nAplikasi",
+    "action_bookings": "Tempahan & Janji Temu"
   },
   "orders": {
     "title": "Pesanan",
