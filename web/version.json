@@ -1,6 +1,6 @@
 {
-  "version": "1.0.94",
-  "build_number": 74,
-  "released_at": "2026-11-28T04:17:28Z",
-  "changelog": "Perbaiki kekunci terjemahan mentah 'dashboard.action_Bookings' pada halaman Tetapan kepada label penuh 'Tempahan & Janji Temu' / 'Bookings & Appointments'."
+  "version": "1.0.95",
+  "build_number": 75,
+  "released_at": "2026-11-28T06:08:55Z",
+  "changelog": "Perbaiki kemas kini PWA Ngam Business: salin _headers no-cache ke Cloudflare Pages dan tambah auto cache-busting pada flutter_bootstrap.js setiap kali deploy."
 }
