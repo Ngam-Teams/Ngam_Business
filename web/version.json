@@ -2,5 +2,5 @@
   "version": "1.0.92",
   "build_number": 72,
   "released_at": "2026-11-26T14:20:00Z",
-  "changelog": "Tambah Matriks Variasi 2-Tingkat gaya Shopee (cth. Warna × Saiz dengan praset XS–2XL, Isi Pantas Semua, pautan gambar galeri & harga/stok/berat per kombinasi) serta paparan harga terendah yang kemas pada kad katalog & POS."
+  "changelog": "Kemaskan baris Penghantaran Kurier di halaman Tetapan (buang label '(Ngam Shipping)' dan teks status biru di bawah)."
 }
